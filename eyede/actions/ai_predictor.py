@@ -1,5 +1,5 @@
 """
-EyeDE - Asynchronous AI Code Predictor & Heuristic Engine (Phase 4)
+IDEye - Asynchronous AI Code Predictor & Heuristic Engine (Phase 4)
 QThread worker that queries Ollama or OpenAI-compatible LLM endpoints with
 fail-safe heuristic fallback engine guaranteeing exactly 6 code suggestions.
 """
@@ -418,7 +418,7 @@ class AIPredictorWorker(QThread):
         if not self._running:
             return
 
-        self.status_changed.emit(f"⏳ Consultando {self.provider.upper()} ({self.model})...")
+        self.status_changed.emit(f"Consultando {self.provider.upper()} ({self.model})...")
 
         suggestions: List[str] = []
         error_msg: str = ""
@@ -441,7 +441,7 @@ class AIPredictorWorker(QThread):
         if len(suggestions) < 6:
             if error_msg:
                 self.prediction_failed.emit(error_msg)
-            self.status_changed.emit("⚡ Motor Heurístico Activo")
+            self.status_changed.emit("Motor Heurístico Activo")
             heuristic_suggestions = generate_heuristic_predictions(self.context_text, self.local_symbols)
             combined = []
             for s in suggestions:

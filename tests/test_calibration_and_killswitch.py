@@ -446,7 +446,8 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
         invocations from background worker threads (like pynput daemon thread).
         """
         import threading
-        app = EyeDEApplication(camera_index="synthetic", force_calibrate=False, threaded=False)
+        temp_profile = os.path.join(tempfile.gettempdir(), "test_cross_thread_calib.json")
+        app = EyeDEApplication(camera_index="synthetic", profile_path=temp_profile, force_calibrate=False, threaded=False)
         self.assertFalse(app._is_shutting_down)
 
         worker_thread_executed = []

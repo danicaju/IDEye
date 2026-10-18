@@ -1,5 +1,5 @@
 """
-EyeDE - Live AST & Context Reader Module (Phase 4)
+IDEye - Live AST & Context Reader Module (Phase 4)
 Non-intrusive source context reader with error-tolerant dual AST + Regex extraction
 of variables, arguments, functions, and classes.
 Guarantees crash-free execution against SyntaxError, UnicodeDecodeError, and missing files.

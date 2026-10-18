@@ -1,5 +1,5 @@
 """
-Global Hotkey Manager Module for EyeDE (Emergency Killswitch & Reset)
+Global Hotkey Manager Module for IDEye (Emergency Killswitch & Reset)
 Listens for OS-level global keyboard shortcuts (e.g. Ctrl+Alt+Q, F12, Ctrl+Alt+R)
 even when the transparent overlay or IDE window has focus.
 """
@@ -77,10 +77,10 @@ class GlobalHotkeyManager(QObject):
 
     def _on_emergency_exit(self) -> None:
         """Callback from pynput thread when emergency exit shortcut is pressed."""
-        print("\n[HotkeyManager] 🚨 EMERGENCY EXIT TRIGGERED (Ctrl+Alt+Q / F12)")
+        print("\n[HotkeyManager] EMERGENCY EXIT TRIGGERED (Ctrl+Alt+Q / F12)")
         self.emergency_exit_requested.emit()
 
     def _on_emergency_reset(self) -> None:
         """Callback from pynput thread when emergency calibration reset is pressed."""
-        print("\n[HotkeyManager] 🔄 EMERGENCY RESET TRIGGERED (Ctrl+Alt+R)")
+        print("\n[HotkeyManager] EMERGENCY RESET TRIGGERED (Ctrl+Alt+R)")
         self.emergency_reset_requested.emit()

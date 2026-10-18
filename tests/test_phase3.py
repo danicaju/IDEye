@@ -1,5 +1,5 @@
 """
-Unit & Integration Test Suite for EyeDE Phase 3
+Unit & Integration Test Suite for IDEye Phase 3
 Tests Hierarchical Menu Trees (3x3 Layout), CodeInjector (Clipboard Preservation & Multiplatform),
 Stuck Modifier Keys Audit, Non-Blocking Worker Execution, Sticky Submenu Transitions,
 and Breadcrumb Rendering in OverlayWindow.

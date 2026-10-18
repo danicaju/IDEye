@@ -1,5 +1,5 @@
 """
-Unit & Integration Test Suite for EyeDE Phase 2
+Unit & Integration Test Suite for IDEye Phase 2
 Tests PyQt6 Multi-threading (QThread), Thread-Safety, 5-Point Calibration Math,
 Window Flags (No-Focus Audit), Translucent HUD, Reading Mode, and Memory Safety (.copy()).
 """

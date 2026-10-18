@@ -1,5 +1,5 @@
 """
-EyeDE Actions Package - OS input and code injection (Phase 3-4)
+IDEye Actions Package - OS input and code injection (Phase 3-4)
 """
 
 from eyede.actions.code_injector import (

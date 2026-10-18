@@ -1,12 +1,12 @@
 """
-EyeDE - Hierarchical 3x3 Menu Trees Module (Phase 3)
+IDEye - Hierarchical 3x3 Menu Trees Module (Phase 3)
 Defines MenuAction and MenuNode dataclasses, complete 3x3 navigation hierarchy,
 sticky mode transitions, and mathematical validation protocol.
 
 Golden Rules of Gaze Ergonomics:
 1. Every grid layout has EXACTLY 9 cells (indices 0 to 8).
-2. The Center Cell (Index 4) is ALWAYS '👁️ PAUSA / MODO LECTURA' across all menus.
-3. In any submenu (Level >= 2), the Bottom-Left Cell (Index 6) is ALWAYS '⬅ VOLVER ATRÁS'.
+2. The Center Cell (Index 4) is ALWAYS ' PAUSA / MODO LECTURA' across all menus.
+3. In any submenu (Level >= 2), the Bottom-Left Cell (Index 6) is ALWAYS ' VOLVER ATRÁS'.
 4. Sticky Submenus (NAV, EDIT, FORMAT) stay active for repetitive actions until 'VOLVER' is chosen.
 5. Non-sticky actions automatically return to 'ROOT' after injecting a snippet.
 """
@@ -28,7 +28,7 @@ class MenuAction:
     cursor_offset_up: int = 0
     sticky: bool = False
     submenu_id: Optional[str] = None
-    icon: str = "⚡"
+    icon: str = ""
 
 
 @dataclass
@@ -53,7 +53,7 @@ def create_pause_action(key_num: str = "5") -> MenuAction:
         label=f"{key_num}: PAUSA / LECTURA",
         hint="Zona de Reposo (Mire y Clic)",
         action_type="PAUSE",
-        icon="👁️",
+        icon="",
         sticky=False,
     )
 
@@ -66,7 +66,7 @@ def create_back_action(parent_id: str = "ROOT", key_num: str = "7") -> MenuActio
         hint="Regresar al nivel anterior",
         action_type="BACK",
         submenu_id=parent_id,
-        icon="⬅",
+        icon="",
         sticky=False,
     )
 
@@ -107,7 +107,7 @@ def populate_ai_prediction_items(
             hint="Sugerencia IA / Snippet",
             action_type="SNIPPET",
             snippet=pred_text,
-            icon="⚡",
+            icon="",
         )
 
     return [
@@ -124,7 +124,7 @@ def populate_ai_prediction_items(
             label="9: REGENERAR IA",
             hint="Re-ejecutar predicciones contextuales",
             action_type="AI_REFRESH",
-            icon="🔄",
+            icon="",
         ),
     ]
 
@@ -155,7 +155,7 @@ def populate_local_symbol_items(
             hint="Variable local",
             action_type="SNIPPET",
             snippet=sym,
-            icon="⚡",
+            icon="",
         )
 
     return [
@@ -183,10 +183,10 @@ def populate_exit_confirm_items(parent_id: str = "ROOT") -> List[MenuAction]:
         return MenuAction(
             id=item_id,
             label=f"{slot_num}: CANCELAR",
-            hint="Permanecer en EyeDE (Seguro)",
+            hint="Permanecer en IDEye (Seguro)",
             action_type="BACK",
             submenu_id=parent_id,
-            icon="↩",
+            icon="",
             sticky=False,
         )
 
@@ -194,9 +194,9 @@ def populate_exit_confirm_items(parent_id: str = "ROOT") -> List[MenuAction]:
         MenuAction(
             id="CONFIRM_EXIT",
             label="1: CONFIRMAR SALIR",
-            hint="Cerrar EyeDE definitivamente",
+            hint="Cerrar IDEye definitivamente",
             action_type="EXIT",
-            icon="❌",
+            icon="",
             sticky=False,
         ),
         _make_cancel("2", "CANCEL_EXIT_2"),
@@ -212,7 +212,7 @@ def populate_exit_confirm_items(parent_id: str = "ROOT") -> List[MenuAction]:
 
 def build_menu_tree() -> Dict[str, MenuNode]:
     """
-    Constructs and returns the full hierarchical menu tree for EyeDE Phase 3.
+    Constructs and returns the full hierarchical menu tree for IDEye Phase 3.
     Guarantees every node has exactly 9 items, Index 4 is Pause, and Index 6 in submenus is Back.
     """
     tree: Dict[str, MenuNode] = {}
@@ -227,7 +227,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="if, elif, else, for, while, try",
             action_type="SUBMENU",
             submenu_id="FLOW",
-            icon="📁",
+            icon="",
         ),
         MenuAction(
             id="INSERT_LOOP",
@@ -235,7 +235,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="def, class, import, lambda",
             action_type="SUBMENU",
             submenu_id="STRUCT",
-            icon="📁",
+            icon="",
         ),
         MenuAction(
             id="INSERT_OPERATORS",
@@ -243,15 +243,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="=, ==, !=, +, and, (), []",
             action_type="SUBMENU",
             submenu_id="OPERATORS",
-            icon="📁",
+            icon="",
         ),
         MenuAction(
             id="INSERT_VARS",
             label="4: NAVEGACIÓN CURSOR",
-            hint="⬆ ⬇ ⬅ ➡ Home End (Sticky)",
+            hint="    Home End (Sticky)",
             action_type="SUBMENU",
             submenu_id="NAV",
-            icon="📁",
+            icon="",
         ),
         create_pause_action("5"),
         MenuAction(
@@ -260,7 +260,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Letras, vars (i, data, self)",
             action_type="SUBMENU",
             submenu_id="T9",
-            icon="📁",
+            icon="",
         ),
         MenuAction(
             id="ACTION_BACKSPACE",
@@ -268,7 +268,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Borrar, Undo, Redo (Sticky)",
             action_type="SUBMENU",
             submenu_id="EDIT",
-            icon="📁",
+            icon="",
         ),
         MenuAction(
             id="ACTION_ENTER_TAB",
@@ -276,7 +276,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Enter, Tab, Espacio (Sticky)",
             action_type="SUBMENU",
             submenu_id="FORMAT",
-            icon="📁",
+            icon="",
         ),
         MenuAction(
             id="MENU_SNIPPETS",
@@ -284,7 +284,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Predicción contextual y snippets",
             action_type="SUBMENU",
             submenu_id="SNIPPETS",
-            icon="⚡",
+            icon="",
         ),
     ]
 
@@ -308,7 +308,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="if :",
             cursor_offset_left=1,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="FLOW_ELIF",
@@ -317,7 +317,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="elif :",
             cursor_offset_left=1,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="FLOW_ELSE",
@@ -325,7 +325,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Rama else con salto",
             action_type="SNIPPET",
             snippet="else:\n    ",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="FLOW_FOR_RANGE",
@@ -334,7 +334,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="for i in range():",
             cursor_offset_left=2,
-            icon="⚡",
+            icon="",
         ),
         create_pause_action("5"),
         MenuAction(
@@ -344,7 +344,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="for x in :",
             cursor_offset_left=1,
-            icon="⚡",
+            icon="",
         ),
         create_back_action("ROOT", "7"),
         MenuAction(
@@ -354,7 +354,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="while :",
             cursor_offset_left=1,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="FLOW_TRY_RET_SUB",
@@ -362,7 +362,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="try-except, return, raise",
             action_type="SUBMENU",
             submenu_id="FLOW_TRY_RET",
-            icon="📁",
+            icon="",
         ),
     ]
 
@@ -383,15 +383,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="try:\n    \nexcept Exception as e:\n    ",
             cursor_offset_up=2,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="RET_VAL",
-            label="2: return ",
+            label="2: return",
             hint="Retorno con espacio",
             action_type="SNIPPET",
             snippet="return ",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="RET_NONE",
@@ -399,7 +399,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Retorno nulo",
             action_type="SNIPPET",
             snippet="return None",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="RET_TRUE",
@@ -407,7 +407,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Retorno booleano True",
             action_type="SNIPPET",
             snippet="return True",
-            icon="⚡",
+            icon="",
         ),
         create_pause_action("5"),
         MenuAction(
@@ -416,7 +416,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Retorno booleano False",
             action_type="SNIPPET",
             snippet="return False",
-            icon="⚡",
+            icon="",
         ),
         create_back_action("FLOW", "7"),
         MenuAction(
@@ -426,7 +426,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet='raise Exception("")',
             cursor_offset_left=2,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="PASS_STMT",
@@ -434,7 +434,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Sentencia pass",
             action_type="SNIPPET",
             snippet="pass",
-            icon="⚡",
+            icon="",
         ),
     ]
 
@@ -458,7 +458,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="def ():",
             cursor_offset_left=3,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="STRUCT_CLASS",
@@ -467,24 +467,24 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="class :",
             cursor_offset_left=1,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="STRUCT_IMPORT_SUB",
-            label="3: IMPORTAR 📁",
+            label="3: IMPORTAR",
             hint="import, from ... import",
             action_type="SUBMENU",
             submenu_id="STRUCT_IMPORT",
-            icon="📁",
+            icon="",
         ),
         MenuAction(
             id="STRUCT_LAMBDA",
-            label="4: lambda ",
+            label="4: lambda",
             hint="Función anónima",
             action_type="SNIPPET",
             snippet="lambda : ",
             cursor_offset_left=2,
-            icon="⚡",
+            icon="",
         ),
         create_pause_action("5"),
         MenuAction(
@@ -494,7 +494,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="print()",
             cursor_offset_left=1,
-            icon="⚡",
+            icon="",
         ),
         create_back_action("ROOT", "7"),
         MenuAction(
@@ -504,7 +504,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="len()",
             cursor_offset_left=1,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="STRUCT_SUPER",
@@ -512,7 +512,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Constructor clase padre",
             action_type="SNIPPET",
             snippet="super().__init__()",
-            icon="⚡",
+            icon="",
         ),
     ]
 
@@ -528,20 +528,20 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     struct_import_items = [
         MenuAction(
             id="IMP_DIRECT",
-            label="1: import ",
+            label="1: import",
             hint="Sentencia import",
             action_type="SNIPPET",
             snippet="import ",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="IMP_FROM",
-            label="2: from ... import ",
+            label="2: from ... import",
             hint="Importación selectiva",
             action_type="SNIPPET",
             snippet="from  import ",
             cursor_offset_left=8,
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="IMP_SYS_OS",
@@ -549,7 +549,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Imports del sistema",
             action_type="SNIPPET",
             snippet="import sys, os\n",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="IMP_NUMPY",
@@ -557,25 +557,25 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Import numpy",
             action_type="SNIPPET",
             snippet="import numpy as np\n",
-            icon="⚡",
+            icon="",
         ),
         create_pause_action("5"),
         MenuAction(
             id="IMP_AS",
-            label="6:  as ",
+            label="6:  as",
             hint="Alias de módulo",
             action_type="SNIPPET",
             snippet=" as ",
-            icon="⚡",
+            icon="",
         ),
         create_back_action("STRUCT", "7"),
         MenuAction(
             id="IMP_TYPING",
-            label="8: from typing import ",
+            label="8: from typing import",
             hint="Tipado estático",
             action_type="SNIPPET",
             snippet="from typing import ",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="IMP_ALL",
@@ -584,7 +584,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             action_type="SNIPPET",
             snippet="__all__ = []",
             cursor_offset_left=1,
-            icon="⚡",
+            icon="",
         ),
     ]
 
@@ -607,7 +607,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Asignación",
             action_type="SNIPPET",
             snippet=" = ",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="OP_EQ",
@@ -615,7 +615,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Comparación igualdad",
             action_type="SNIPPET",
             snippet=" == ",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="OP_NEQ",
@@ -623,7 +623,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Comparación desigualdad",
             action_type="SNIPPET",
             snippet=" != ",
-            icon="⚡",
+            icon="",
         ),
         MenuAction(
             id="OP_PLUSEQ",
@@ -631,33 +631,33 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="Suma acumulativa",
             action_type="SNIPPET",
             snippet=" += ",
-            icon="⚡",
+            icon="",
         ),
         create_pause_action("5"),
         MenuAction(
             id="OP_LOGICAL_SUB",
-            label="6: and / or 📁",
+            label="6: and / or",
             hint="Operadores lógicos",
             action_type="SUBMENU",
             submenu_id="OP_LOGICAL",
-            icon="📁",
+            icon="",
         ),
         create_back_action("ROOT", "7"),
         MenuAction(
             id="OP_DELIMITERS_SUB",
-            label='8: () [] {} / "" \'\' 📁',
+            label='8: () [] {} / "" \'\' ',
             hint="Delimitadores, llaves y comillas",
             action_type="SUBMENU",
             submenu_id="OP_DELIMITERS",
-            icon="📁",
+            icon="",
         ),
         MenuAction(
             id="OP_PUNCT_SUB",
-            label="9: : / , / . 📁",
+            label="9: : / , / .",
             hint="Dos puntos, coma, punto",
             action_type="SUBMENU",
             submenu_id="OP_PUNCT",
-            icon="📁",
+            icon="",
         ),
     ]
 
@@ -671,15 +671,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     )
 
     op_logical_items = [
-        MenuAction(id="OP_AND", label="1: and", hint="Lógico AND", action_type="SNIPPET", snippet=" and ", icon="⚡"),
-        MenuAction(id="OP_OR", label="2: or", hint="Lógico OR", action_type="SNIPPET", snippet=" or ", icon="⚡"),
-        MenuAction(id="OP_NOT", label="3: not", hint="Lógico NOT", action_type="SNIPPET", snippet="not ", icon="⚡"),
-        MenuAction(id="OP_IN", label="4: in", hint="Pertenencia in", action_type="SNIPPET", snippet=" in ", icon="⚡"),
+        MenuAction(id="OP_AND", label="1: and", hint="Lógico AND", action_type="SNIPPET", snippet=" and ", icon=""),
+        MenuAction(id="OP_OR", label="2: or", hint="Lógico OR", action_type="SNIPPET", snippet=" or ", icon=""),
+        MenuAction(id="OP_NOT", label="3: not", hint="Lógico NOT", action_type="SNIPPET", snippet="not ", icon=""),
+        MenuAction(id="OP_IN", label="4: in", hint="Pertenencia in", action_type="SNIPPET", snippet=" in ", icon=""),
         create_pause_action("5"),
-        MenuAction(id="OP_IS", label="6: is", hint="Identidad is", action_type="SNIPPET", snippet=" is ", icon="⚡"),
+        MenuAction(id="OP_IS", label="6: is", hint="Identidad is", action_type="SNIPPET", snippet=" is ", icon=""),
         create_back_action("OPERATORS", "7"),
-        MenuAction(id="OP_IS_NOT", label="8: is not", hint="Identidad no es", action_type="SNIPPET", snippet=" is not ", icon="⚡"),
-        MenuAction(id="OP_NOT_IN", label="9: not in", hint="No pertenencia", action_type="SNIPPET", snippet=" not in ", icon="⚡"),
+        MenuAction(id="OP_IS_NOT", label="8: is not", hint="Identidad no es", action_type="SNIPPET", snippet=" is not ", icon=""),
+        MenuAction(id="OP_NOT_IN", label="9: not in", hint="No pertenencia", action_type="SNIPPET", snippet=" not in ", icon=""),
     ]
 
     tree["OP_LOGICAL"] = MenuNode(
@@ -692,15 +692,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     )
 
     op_delim_items = [
-        MenuAction(id="DELIM_PAREN", label="1: ()", hint="Paréntesis con cursor centrado", action_type="SNIPPET", snippet="()", cursor_offset_left=1, icon="⚡"),
-        MenuAction(id="DELIM_BRACKET", label="2: []", hint="Corchetes con cursor centrado", action_type="SNIPPET", snippet="[]", cursor_offset_left=1, icon="⚡"),
-        MenuAction(id="DELIM_BRACE", label="3: {}", hint="Llaves con cursor centrado", action_type="SNIPPET", snippet="{}", cursor_offset_left=1, icon="⚡"),
-        MenuAction(id="DELIM_DQUOTE", label='4: ""', hint="Comillas dobles centradas", action_type="SNIPPET", snippet='""', cursor_offset_left=1, icon="⚡"),
+        MenuAction(id="DELIM_PAREN", label="1: ()", hint="Paréntesis con cursor centrado", action_type="SNIPPET", snippet="()", cursor_offset_left=1, icon=""),
+        MenuAction(id="DELIM_BRACKET", label="2: []", hint="Corchetes con cursor centrado", action_type="SNIPPET", snippet="[]", cursor_offset_left=1, icon=""),
+        MenuAction(id="DELIM_BRACE", label="3: {}", hint="Llaves con cursor centrado", action_type="SNIPPET", snippet="{}", cursor_offset_left=1, icon=""),
+        MenuAction(id="DELIM_DQUOTE", label='4: ""', hint="Comillas dobles centradas", action_type="SNIPPET", snippet='""', cursor_offset_left=1, icon=""),
         create_pause_action("5"),
-        MenuAction(id="DELIM_SQUOTE", label="6: ''", hint="Comillas simples centradas", action_type="SNIPPET", snippet="''", cursor_offset_left=1, icon="⚡"),
+        MenuAction(id="DELIM_SQUOTE", label="6: ''", hint="Comillas simples centradas", action_type="SNIPPET", snippet="''", cursor_offset_left=1, icon=""),
         create_back_action("OPERATORS", "7"),
-        MenuAction(id="DELIM_FSTR", label='8: f""', hint="F-string con cursor centrado", action_type="SNIPPET", snippet='f""', cursor_offset_left=1, icon="⚡"),
-        MenuAction(id="DELIM_DOCSTR", label='9: """..."""', hint="Docstring triple centrado", action_type="SNIPPET", snippet='""""""', cursor_offset_left=3, icon="⚡"),
+        MenuAction(id="DELIM_FSTR", label='8: f""', hint="F-string con cursor centrado", action_type="SNIPPET", snippet='f""', cursor_offset_left=1, icon=""),
+        MenuAction(id="DELIM_DOCSTR", label='9: """..."""', hint="Docstring triple centrado", action_type="SNIPPET", snippet='""""""', cursor_offset_left=3, icon=""),
     ]
 
     tree["OP_DELIMITERS"] = MenuNode(
@@ -713,15 +713,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     )
 
     op_punct_items = [
-        MenuAction(id="PUNCT_COLON", label="1: :", hint="Dos puntos con espacio", action_type="SNIPPET", snippet=": ", icon="⚡"),
-        MenuAction(id="PUNCT_COMMA", label="2: ,", hint="Coma con espacio", action_type="SNIPPET", snippet=", ", icon="⚡"),
-        MenuAction(id="PUNCT_DOT", label="3: .", hint="Punto de acceso", action_type="SNIPPET", snippet=".", icon="⚡"),
-        MenuAction(id="PUNCT_ARROW", label="4: ->", hint="Retorno de tipo flecha", action_type="SNIPPET", snippet=" -> ", icon="⚡"),
+        MenuAction(id="PUNCT_COLON", label="1: :", hint="Dos puntos con espacio", action_type="SNIPPET", snippet=": ", icon=""),
+        MenuAction(id="PUNCT_COMMA", label="2: ,", hint="Coma con espacio", action_type="SNIPPET", snippet=", ", icon=""),
+        MenuAction(id="PUNCT_DOT", label="3: .", hint="Punto de acceso", action_type="SNIPPET", snippet=".", icon=""),
+        MenuAction(id="PUNCT_ARROW", label="4: ->", hint="Retorno de tipo flecha", action_type="SNIPPET", snippet=" -> ", icon=""),
         create_pause_action("5"),
-        MenuAction(id="PUNCT_UNDERSCORE", label="6: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="⚡"),
+        MenuAction(id="PUNCT_UNDERSCORE", label="6: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
         create_back_action("OPERATORS", "7"),
-        MenuAction(id="PUNCT_SEMICOLON", label="8: ;", hint="Punto y coma", action_type="SNIPPET", snippet="; ", icon="⚡"),
-        MenuAction(id="PUNCT_SCOPE", label="9: ::", hint="Resolución de ámbito", action_type="SNIPPET", snippet="::", icon="⚡"),
+        MenuAction(id="PUNCT_SEMICOLON", label="8: ;", hint="Punto y coma", action_type="SNIPPET", snippet="; ", icon=""),
+        MenuAction(id="PUNCT_SCOPE", label="9: ::", hint="Resolución de ámbito", action_type="SNIPPET", snippet="::", icon=""),
     ]
 
     tree["OP_PUNCT"] = MenuNode(
@@ -737,15 +737,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # 5. CURSOR NAVIGATION (STICKY SUBMENU)
     # =========================================================================
     nav_items = [
-        MenuAction(id="NAV_UP", label="1: ⬆ Arriba", hint="Flecha Arriba", action_type="KEY", key_name="UP", sticky=True, icon="⚡"),
-        MenuAction(id="NAV_DOWN", label="2: ⬇ Abajo", hint="Flecha Abajo", action_type="KEY", key_name="DOWN", sticky=True, icon="⚡"),
-        MenuAction(id="NAV_LEFT", label="3: ⬅ Izquierda", hint="Flecha Izquierda", action_type="KEY", key_name="LEFT", sticky=True, icon="⚡"),
-        MenuAction(id="NAV_RIGHT", label="4: ➡ Derecha", hint="Flecha Derecha", action_type="KEY", key_name="RIGHT", sticky=True, icon="⚡"),
+        MenuAction(id="NAV_UP", label="1:  Arriba", hint="Flecha Arriba", action_type="KEY", key_name="UP", sticky=True, icon=""),
+        MenuAction(id="NAV_DOWN", label="2:  Abajo", hint="Flecha Abajo", action_type="KEY", key_name="DOWN", sticky=True, icon=""),
+        MenuAction(id="NAV_LEFT", label="3:  Izquierda", hint="Flecha Izquierda", action_type="KEY", key_name="LEFT", sticky=True, icon=""),
+        MenuAction(id="NAV_RIGHT", label="4:  Derecha", hint="Flecha Derecha", action_type="KEY", key_name="RIGHT", sticky=True, icon=""),
         create_pause_action("5"),
-        MenuAction(id="NAV_HOME", label="6: Inicio Línea", hint="Tecla Home / Inicio", action_type="KEY", key_name="HOME", sticky=True, icon="⚡"),
+        MenuAction(id="NAV_HOME", label="6: Inicio Línea", hint="Tecla Home / Inicio", action_type="KEY", key_name="HOME", sticky=True, icon=""),
         create_back_action("ROOT", "7"),
-        MenuAction(id="NAV_END", label="8: Fin Línea", hint="Tecla End / Fin", action_type="KEY", key_name="END", sticky=True, icon="⚡"),
-        MenuAction(id="NAV_WORD", label="9: Saltar Palabra", hint="Ctrl + Derecha", action_type="KEY", key_name="WORD_RIGHT", sticky=True, icon="⚡"),
+        MenuAction(id="NAV_END", label="8: Fin Línea", hint="Tecla End / Fin", action_type="KEY", key_name="END", sticky=True, icon=""),
+        MenuAction(id="NAV_WORD", label="9: Saltar Palabra", hint="Ctrl + Derecha", action_type="KEY", key_name="WORD_RIGHT", sticky=True, icon=""),
     ]
 
     tree["NAV"] = MenuNode(
@@ -761,15 +761,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # 6. EDITING / DELETION (STICKY SUBMENU)
     # =========================================================================
     edit_items = [
-        MenuAction(id="EDIT_BACKSPACE", label="1: Borrar Carácter", hint="Backspace", action_type="KEY", key_name="BACKSPACE", sticky=True, icon="⚡"),
-        MenuAction(id="EDIT_DEL_WORD", label="2: Borrar Palabra", hint="Ctrl + Backspace", action_type="KEY", key_name="CTRL_BACKSPACE", sticky=True, icon="⚡"),
-        MenuAction(id="EDIT_DEL_LINE", label="3: Borrar Línea", hint="Ctrl+Shift+K", action_type="KEY", key_name="DELETE_LINE", sticky=True, icon="⚡"),
-        MenuAction(id="EDIT_UNDO", label="4: Deshacer", hint="Ctrl + Z", action_type="KEY", key_name="UNDO", sticky=True, icon="⚡"),
+        MenuAction(id="EDIT_BACKSPACE", label="1: Borrar Carácter", hint="Backspace", action_type="KEY", key_name="BACKSPACE", sticky=True, icon=""),
+        MenuAction(id="EDIT_DEL_WORD", label="2: Borrar Palabra", hint="Ctrl + Backspace", action_type="KEY", key_name="CTRL_BACKSPACE", sticky=True, icon=""),
+        MenuAction(id="EDIT_DEL_LINE", label="3: Borrar Línea", hint="Ctrl+Shift+K", action_type="KEY", key_name="DELETE_LINE", sticky=True, icon=""),
+        MenuAction(id="EDIT_UNDO", label="4: Deshacer", hint="Ctrl + Z", action_type="KEY", key_name="UNDO", sticky=True, icon=""),
         create_pause_action("5"),
-        MenuAction(id="EDIT_REDO", label="6: Rehacer", hint="Ctrl + Y", action_type="KEY", key_name="REDO", sticky=True, icon="⚡"),
+        MenuAction(id="EDIT_REDO", label="6: Rehacer", hint="Ctrl + Y", action_type="KEY", key_name="REDO", sticky=True, icon=""),
         create_back_action("ROOT", "7"),
-        MenuAction(id="EDIT_COMMENT", label="8: Comentar", hint="Ctrl + /", action_type="KEY", key_name="COMMENT", sticky=True, icon="⚡"),
-        MenuAction(id="ACTION_EXIT_MENU", label="9: SALIR 📁", hint="Cerrar EyeDE (Confirmación)", action_type="SUBMENU", submenu_id="EXIT_CONFIRM", icon="❌"),
+        MenuAction(id="EDIT_COMMENT", label="8: Comentar", hint="Ctrl + /", action_type="KEY", key_name="COMMENT", sticky=True, icon=""),
+        MenuAction(id="ACTION_EXIT_MENU", label="9: SALIR", hint="Cerrar IDEye (Confirmación)", action_type="SUBMENU", submenu_id="EXIT_CONFIRM", icon=""),
     ]
 
     tree["EDIT"] = MenuNode(
@@ -785,15 +785,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # 7. SPACE / FORMATTING (STICKY SUBMENU)
     # =========================================================================
     format_items = [
-        MenuAction(id="FMT_ENTER", label="1: ENTER", hint="Salto de línea", action_type="KEY", key_name="ENTER", sticky=True, icon="⚡"),
-        MenuAction(id="FMT_TAB", label="2: TAB", hint="Tabulador / Indentar", action_type="KEY", key_name="TAB", sticky=True, icon="⚡"),
-        MenuAction(id="FMT_UNINDENT", label="3: SHIFT + TAB", hint="Des-indentar", action_type="KEY", key_name="SHIFT_TAB", sticky=True, icon="⚡"),
-        MenuAction(id="FMT_SPACE", label="4: ESPACIO", hint="Barra espaciadora", action_type="KEY", key_name="SPACE", sticky=True, icon="⚡"),
+        MenuAction(id="FMT_ENTER", label="1: ENTER", hint="Salto de línea", action_type="KEY", key_name="ENTER", sticky=True, icon=""),
+        MenuAction(id="FMT_TAB", label="2: TAB", hint="Tabulador / Indentar", action_type="KEY", key_name="TAB", sticky=True, icon=""),
+        MenuAction(id="FMT_UNINDENT", label="3: SHIFT + TAB", hint="Des-indentar", action_type="KEY", key_name="SHIFT_TAB", sticky=True, icon=""),
+        MenuAction(id="FMT_SPACE", label="4: ESPACIO", hint="Barra espaciadora", action_type="KEY", key_name="SPACE", sticky=True, icon=""),
         create_pause_action("5"),
-        MenuAction(id="FMT_2ENTER", label="6: 2x ENTER", hint="Doble salto de línea", action_type="KEY", key_name="ENTER_TWICE", sticky=True, icon="⚡"),
+        MenuAction(id="FMT_2ENTER", label="6: 2x ENTER", hint="Doble salto de línea", action_type="KEY", key_name="ENTER_TWICE", sticky=True, icon=""),
         create_back_action("ROOT", "7"),
-        MenuAction(id="FMT_4SPACES", label="8: 4x ESPACIOS", hint="Indentación manual", action_type="SNIPPET", snippet="    ", sticky=True, icon="⚡"),
-        MenuAction(id="FMT_COLON_ENTER", label="9: : + ENTER", hint="Dos puntos y salto indentado", action_type="SNIPPET", snippet=":\n    ", sticky=True, icon="⚡"),
+        MenuAction(id="FMT_4SPACES", label="8: 4x ESPACIOS", hint="Indentación manual", action_type="SNIPPET", snippet="    ", sticky=True, icon=""),
+        MenuAction(id="FMT_COLON_ENTER", label="9: : + ENTER", hint="Dos puntos y salto indentado", action_type="SNIPPET", snippet=":\n    ", sticky=True, icon=""),
     ]
 
     tree["FORMAT"] = MenuNode(
@@ -825,15 +825,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # 9. T9 KEYBOARD & IDENTIFIERS (2-HOP HIERARCHY)
     # =========================================================================
     t9_root_items = [
-        MenuAction(id="T9_GRP_AE", label="1: a - e 📁", hint="Letras a, b, c, d, e", action_type="SUBMENU", submenu_id="T9_AE", icon="📁"),
-        MenuAction(id="T9_GRP_FJ", label="2: f - j 📁", hint="Letras f, g, h, i, j", action_type="SUBMENU", submenu_id="T9_FJ", icon="📁"),
-        MenuAction(id="T9_GRP_KO", label="3: k - o 📁", hint="Letras k, l, m, n, o", action_type="SUBMENU", submenu_id="T9_KO", icon="📁"),
-        MenuAction(id="T9_GRP_PT", label="4: p - t 📁", hint="Letras p, q, r, s, t", action_type="SUBMENU", submenu_id="T9_PT", icon="📁"),
+        MenuAction(id="T9_GRP_AE", label="1: a - e", hint="Letras a, b, c, d, e", action_type="SUBMENU", submenu_id="T9_AE", icon=""),
+        MenuAction(id="T9_GRP_FJ", label="2: f - j", hint="Letras f, g, h, i, j", action_type="SUBMENU", submenu_id="T9_FJ", icon=""),
+        MenuAction(id="T9_GRP_KO", label="3: k - o", hint="Letras k, l, m, n, o", action_type="SUBMENU", submenu_id="T9_KO", icon=""),
+        MenuAction(id="T9_GRP_PT", label="4: p - t", hint="Letras p, q, r, s, t", action_type="SUBMENU", submenu_id="T9_PT", icon=""),
         create_pause_action("5"),
-        MenuAction(id="T9_GRP_UZ", label="6: u - z 📁", hint="Letras u, v, w, x, y, z", action_type="SUBMENU", submenu_id="T9_UZ", icon="📁"),
+        MenuAction(id="T9_GRP_UZ", label="6: u - z", hint="Letras u, v, w, x, y, z", action_type="SUBMENU", submenu_id="T9_UZ", icon=""),
         create_back_action("ROOT", "7"),
-        MenuAction(id="T9_GRP_LOCAL_VARS", label="8: VARIABLES ARCHIVO 📁", hint="Símbolos del archivo actual", action_type="SUBMENU", submenu_id="T9_LOCAL_VARS", icon="📁"),
-        MenuAction(id="T9_GRP_VARS", label="9: VARS: i, x, self 📁", hint="Variables habituales", action_type="SUBMENU", submenu_id="T9_VARS", icon="📁"),
+        MenuAction(id="T9_GRP_LOCAL_VARS", label="8: VARIABLES ARCHIVO", hint="Símbolos del archivo actual", action_type="SUBMENU", submenu_id="T9_LOCAL_VARS", icon=""),
+        MenuAction(id="T9_GRP_VARS", label="9: VARS: i, x, self", hint="Variables habituales", action_type="SUBMENU", submenu_id="T9_VARS", icon=""),
     ]
 
     tree["T9"] = MenuNode(
@@ -856,15 +856,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
 
     # T9 Frequent Variables (i, j, x, data, result, self)
     t9_vars_items = [
-        MenuAction(id="VAR_I", label="1: i", hint="Variable contador i", action_type="SNIPPET", snippet="i", icon="⚡"),
-        MenuAction(id="VAR_J", label="2: j", hint="Variable contador j", action_type="SNIPPET", snippet="j", icon="⚡"),
-        MenuAction(id="VAR_X", label="3: x", hint="Variable x", action_type="SNIPPET", snippet="x", icon="⚡"),
-        MenuAction(id="VAR_SELF", label="4: self", hint="Referencia de instancia", action_type="SNIPPET", snippet="self", icon="⚡"),
+        MenuAction(id="VAR_I", label="1: i", hint="Variable contador i", action_type="SNIPPET", snippet="i", icon=""),
+        MenuAction(id="VAR_J", label="2: j", hint="Variable contador j", action_type="SNIPPET", snippet="j", icon=""),
+        MenuAction(id="VAR_X", label="3: x", hint="Variable x", action_type="SNIPPET", snippet="x", icon=""),
+        MenuAction(id="VAR_SELF", label="4: self", hint="Referencia de instancia", action_type="SNIPPET", snippet="self", icon=""),
         create_pause_action("5"),
-        MenuAction(id="VAR_DATA", label="6: data", hint="Identificador data", action_type="SNIPPET", snippet="data", icon="⚡"),
+        MenuAction(id="VAR_DATA", label="6: data", hint="Identificador data", action_type="SNIPPET", snippet="data", icon=""),
         create_back_action("T9", "7"),
-        MenuAction(id="VAR_RESULT", label="8: result", hint="Identificador result", action_type="SNIPPET", snippet="result", icon="⚡"),
-        MenuAction(id="VAR_ITEM", label="9: item", hint="Identificador item", action_type="SNIPPET", snippet="item", icon="⚡"),
+        MenuAction(id="VAR_RESULT", label="8: result", hint="Identificador result", action_type="SNIPPET", snippet="result", icon=""),
+        MenuAction(id="VAR_ITEM", label="9: item", hint="Identificador item", action_type="SNIPPET", snippet="item", icon=""),
     ]
 
     tree["T9_VARS"] = MenuNode(
@@ -878,15 +878,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
 
     # T9 Frequent Values (True, False, None, 0, 1, [], {})
     t9_vals_items = [
-        MenuAction(id="VAL_TRUE", label="1: True", hint="Booleano True", action_type="SNIPPET", snippet="True", icon="⚡"),
-        MenuAction(id="VAL_FALSE", label="2: False", hint="Booleano False", action_type="SNIPPET", snippet="False", icon="⚡"),
-        MenuAction(id="VAL_NONE", label="3: None", hint="Valor None", action_type="SNIPPET", snippet="None", icon="⚡"),
-        MenuAction(id="VAL_ZERO", label="4: 0", hint="Entero cero", action_type="SNIPPET", snippet="0", icon="⚡"),
+        MenuAction(id="VAL_TRUE", label="1: True", hint="Booleano True", action_type="SNIPPET", snippet="True", icon=""),
+        MenuAction(id="VAL_FALSE", label="2: False", hint="Booleano False", action_type="SNIPPET", snippet="False", icon=""),
+        MenuAction(id="VAL_NONE", label="3: None", hint="Valor None", action_type="SNIPPET", snippet="None", icon=""),
+        MenuAction(id="VAL_ZERO", label="4: 0", hint="Entero cero", action_type="SNIPPET", snippet="0", icon=""),
         create_pause_action("5"),
-        MenuAction(id="VAL_ONE", label="6: 1", hint="Entero uno", action_type="SNIPPET", snippet="1", icon="⚡"),
+        MenuAction(id="VAL_ONE", label="6: 1", hint="Entero uno", action_type="SNIPPET", snippet="1", icon=""),
         create_back_action("T9", "7"),
-        MenuAction(id="VAL_EMPTY_LIST", label="8: []", hint="Lista vacía", action_type="SNIPPET", snippet="[]", cursor_offset_left=1, icon="⚡"),
-        MenuAction(id="VAL_EMPTY_DICT", label="9: {}", hint="Diccionario vacío", action_type="SNIPPET", snippet="{}", cursor_offset_left=1, icon="⚡"),
+        MenuAction(id="VAL_EMPTY_LIST", label="8: []", hint="Lista vacía", action_type="SNIPPET", snippet="[]", cursor_offset_left=1, icon=""),
+        MenuAction(id="VAL_EMPTY_DICT", label="9: {}", hint="Diccionario vacío", action_type="SNIPPET", snippet="{}", cursor_offset_left=1, icon=""),
     ]
 
     tree["T9_VALS"] = MenuNode(
@@ -904,15 +904,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: A - E",
         breadcrumb_label="a-e",
         items=[
-            MenuAction(id="CH_A", label="1: a", action_type="SNIPPET", snippet="a", icon="⚡"),
-            MenuAction(id="CH_B", label="2: b", action_type="SNIPPET", snippet="b", icon="⚡"),
-            MenuAction(id="CH_C", label="3: c", action_type="SNIPPET", snippet="c", icon="⚡"),
-            MenuAction(id="CH_D", label="4: d", action_type="SNIPPET", snippet="d", icon="⚡"),
+            MenuAction(id="CH_A", label="1: a", action_type="SNIPPET", snippet="a", icon=""),
+            MenuAction(id="CH_B", label="2: b", action_type="SNIPPET", snippet="b", icon=""),
+            MenuAction(id="CH_C", label="3: c", action_type="SNIPPET", snippet="c", icon=""),
+            MenuAction(id="CH_D", label="4: d", action_type="SNIPPET", snippet="d", icon=""),
             create_pause_action("5"),
-            MenuAction(id="CH_E", label="6: e", action_type="SNIPPET", snippet="e", icon="⚡"),
+            MenuAction(id="CH_E", label="6: e", action_type="SNIPPET", snippet="e", icon=""),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_AE", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="⚡"),
-            MenuAction(id="CH_SP_AE", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="⚡"),
+            MenuAction(id="CH_UND_AE", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
+            MenuAction(id="CH_SP_AE", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
         ],
         parent_id="T9",
         sticky=False,
@@ -924,15 +924,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: F - J",
         breadcrumb_label="f-j",
         items=[
-            MenuAction(id="CH_F", label="1: f", action_type="SNIPPET", snippet="f", icon="⚡"),
-            MenuAction(id="CH_G", label="2: g", action_type="SNIPPET", snippet="g", icon="⚡"),
-            MenuAction(id="CH_H", label="3: h", action_type="SNIPPET", snippet="h", icon="⚡"),
-            MenuAction(id="CH_I", label="4: i", action_type="SNIPPET", snippet="i", icon="⚡"),
+            MenuAction(id="CH_F", label="1: f", action_type="SNIPPET", snippet="f", icon=""),
+            MenuAction(id="CH_G", label="2: g", action_type="SNIPPET", snippet="g", icon=""),
+            MenuAction(id="CH_H", label="3: h", action_type="SNIPPET", snippet="h", icon=""),
+            MenuAction(id="CH_I", label="4: i", action_type="SNIPPET", snippet="i", icon=""),
             create_pause_action("5"),
-            MenuAction(id="CH_J", label="6: j", action_type="SNIPPET", snippet="j", icon="⚡"),
+            MenuAction(id="CH_J", label="6: j", action_type="SNIPPET", snippet="j", icon=""),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_FJ", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="⚡"),
-            MenuAction(id="CH_SP_FJ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="⚡"),
+            MenuAction(id="CH_UND_FJ", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
+            MenuAction(id="CH_SP_FJ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
         ],
         parent_id="T9",
         sticky=False,
@@ -944,15 +944,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: K - O",
         breadcrumb_label="k-o",
         items=[
-            MenuAction(id="CH_K", label="1: k", action_type="SNIPPET", snippet="k", icon="⚡"),
-            MenuAction(id="CH_L", label="2: l", action_type="SNIPPET", snippet="l", icon="⚡"),
-            MenuAction(id="CH_M", label="3: m", action_type="SNIPPET", snippet="m", icon="⚡"),
-            MenuAction(id="CH_N", label="4: n", action_type="SNIPPET", snippet="n", icon="⚡"),
+            MenuAction(id="CH_K", label="1: k", action_type="SNIPPET", snippet="k", icon=""),
+            MenuAction(id="CH_L", label="2: l", action_type="SNIPPET", snippet="l", icon=""),
+            MenuAction(id="CH_M", label="3: m", action_type="SNIPPET", snippet="m", icon=""),
+            MenuAction(id="CH_N", label="4: n", action_type="SNIPPET", snippet="n", icon=""),
             create_pause_action("5"),
-            MenuAction(id="CH_O", label="6: o", action_type="SNIPPET", snippet="o", icon="⚡"),
+            MenuAction(id="CH_O", label="6: o", action_type="SNIPPET", snippet="o", icon=""),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_KO", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="⚡"),
-            MenuAction(id="CH_SP_KO", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="⚡"),
+            MenuAction(id="CH_UND_KO", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
+            MenuAction(id="CH_SP_KO", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
         ],
         parent_id="T9",
         sticky=False,
@@ -964,15 +964,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: P - T",
         breadcrumb_label="p-t",
         items=[
-            MenuAction(id="CH_P", label="1: p", action_type="SNIPPET", snippet="p", icon="⚡"),
-            MenuAction(id="CH_Q", label="2: q", action_type="SNIPPET", snippet="q", icon="⚡"),
-            MenuAction(id="CH_R", label="3: r", action_type="SNIPPET", snippet="r", icon="⚡"),
-            MenuAction(id="CH_S", label="4: s", action_type="SNIPPET", snippet="s", icon="⚡"),
+            MenuAction(id="CH_P", label="1: p", action_type="SNIPPET", snippet="p", icon=""),
+            MenuAction(id="CH_Q", label="2: q", action_type="SNIPPET", snippet="q", icon=""),
+            MenuAction(id="CH_R", label="3: r", action_type="SNIPPET", snippet="r", icon=""),
+            MenuAction(id="CH_S", label="4: s", action_type="SNIPPET", snippet="s", icon=""),
             create_pause_action("5"),
-            MenuAction(id="CH_T", label="6: t", action_type="SNIPPET", snippet="t", icon="⚡"),
+            MenuAction(id="CH_T", label="6: t", action_type="SNIPPET", snippet="t", icon=""),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_PT", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="⚡"),
-            MenuAction(id="CH_SP_PT", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="⚡"),
+            MenuAction(id="CH_UND_PT", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
+            MenuAction(id="CH_SP_PT", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
         ],
         parent_id="T9",
         sticky=False,
@@ -984,15 +984,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: U - Z",
         breadcrumb_label="u-z",
         items=[
-            MenuAction(id="CH_U", label="1: u", action_type="SNIPPET", snippet="u", icon="⚡"),
-            MenuAction(id="CH_V", label="2: v", action_type="SNIPPET", snippet="v", icon="⚡"),
-            MenuAction(id="CH_W", label="3: w", action_type="SNIPPET", snippet="w", icon="⚡"),
-            MenuAction(id="CH_X", label="4: x", action_type="SNIPPET", snippet="x", icon="⚡"),
+            MenuAction(id="CH_U", label="1: u", action_type="SNIPPET", snippet="u", icon=""),
+            MenuAction(id="CH_V", label="2: v", action_type="SNIPPET", snippet="v", icon=""),
+            MenuAction(id="CH_W", label="3: w", action_type="SNIPPET", snippet="w", icon=""),
+            MenuAction(id="CH_X", label="4: x", action_type="SNIPPET", snippet="x", icon=""),
             create_pause_action("5"),
-            MenuAction(id="CH_Y", label="6: y", action_type="SNIPPET", snippet="y", icon="⚡"),
+            MenuAction(id="CH_Y", label="6: y", action_type="SNIPPET", snippet="y", icon=""),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_Z", label="8: z", action_type="SNIPPET", snippet="z", icon="⚡"),
-            MenuAction(id="CH_SP_UZ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="⚡"),
+            MenuAction(id="CH_Z", label="8: z", action_type="SNIPPET", snippet="z", icon=""),
+            MenuAction(id="CH_SP_UZ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
         ],
         parent_id="T9",
         sticky=False,

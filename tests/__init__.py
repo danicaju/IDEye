@@ -1,3 +1,3 @@
 """
-EyeDE Automated Forensic Test Suite
+IDEye Automated Forensic Test Suite
 """

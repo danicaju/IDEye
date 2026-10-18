@@ -1,5 +1,5 @@
 """
-Unit and Integration Test Suite for EyeDE Phase 1
+Unit and Integration Test Suite for IDEye Phase 1
 Tests Zero-Division safety, Face Loss resilience, State Machine debouncing,
 Blink suppression, Distance-adaptive calibration, Layout visibility, and Threaded Lifecycle.
 """

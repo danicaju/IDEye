@@ -1,4 +1,4 @@
-# EyeDE (L2C / Vistax Engine) - Dependencies
+# IDEye (L2C / Vistax Engine) - Dependencies
 
 # Core Vision & Mathematics (Fase 1)
 opencv-python>=4.8.0

@@ -1,5 +1,5 @@
 """
-EyeDE - Main Entrypoint & Grid Orchestrator (Phase 1)
+IDEye - Main Entrypoint & Grid Orchestrator (Phase 1)
 3x3 Macro-Block Grid with Threaded Hybrid Gaze Tracking & Facial Gesture (MAR) Trigger.
 
 Architecture:
@@ -58,7 +58,7 @@ from PyQt6.QtCore import Qt, QObject, QTimer
 
 class EyeDEMainApp:
     """
-    Orchestrates the Phase 1 EyeDE interface:
+    Orchestrates the Phase 1 IDEye interface:
     - Threaded webcam capture with 478 MediaPipe landmarks.
     - Estimates smoothed hybrid gaze coordinates (Head + Iris with EMA and blink suppression).
     - Detects mouth opening (MAR) with debouncing & cooldown to fire CLICK events.
@@ -72,7 +72,7 @@ class EyeDEMainApp:
         camera_index: Union[int, str] = config.CAMERA_INDEX,
         canvas_width: int = config.FRAME_WIDTH,
         canvas_height: int = config.FRAME_HEIGHT,
-        window_name: str = "EyeDE - Phase 1: Macro-Grid Vision Engine",
+        window_name: str = "IDEye - Phase 1: Macro-Grid Vision Engine",
         threaded: bool = True,
     ):
         self.canvas_width = canvas_width
@@ -165,7 +165,7 @@ class EyeDEMainApp:
         """Triggered via global emergency reset hotkey (Ctrl+Alt+R)."""
         if self.gaze_estimator is not None:
             self.gaze_estimator.reset()
-        self.status_message = "🔄 Calibración reseteada a baselines seguras"
+        self.status_message = "Calibración reseteada a baselines seguras"
         self.status_message_time = time.time()
 
     def _get_block_rect(self, row: int, col: int) -> Tuple[int, int, int, int]:
@@ -399,7 +399,7 @@ class EyeDEMainApp:
         cv2.line(canvas, (0, self.header_height), (self.canvas_width, self.header_height), config.COLOR_GRID_BORDER, 1)
 
         # Brand
-        brand = "EyeDE v0.1.0 [FASE 1: Tracking Hibrido + Gestos]"
+        brand = "IDEye v0.1.0 [FASE 1: Tracking Hibrido + Gestos]"
         cv2.putText(canvas, brand, (15, 24), cv2.FONT_HERSHEY_DUPLEX, 0.52, (255, 215, 0), 1, cv2.LINE_AA)
 
         # Status guide
@@ -408,17 +408,17 @@ class EyeDEMainApp:
 
         # Tracking status badge
         if not face_detected:
-            status_text = "⚠️ ROSTRO PERDIDO"
+            status_text = "ROSTRO PERDIDO"
             status_color = config.COLOR_WARNING
         elif self.is_paused:
-            status_text = "⏸ EN REPOSO / PAUSA"
+            status_text = "EN REPOSO / PAUSA"
             status_color = config.COLOR_PAUSED_BORDER
         elif is_calibrated:
             sens_pct = int(self.gaze_estimator.distance_scale * 100)
-            status_text = f"● SEGUIMIENTO [{sens_pct}% Sens]"
+            status_text = f"SEGUIMIENTO [{sens_pct}% Sens]"
             status_color = config.COLOR_BAR_READY
         else:
-            status_text = "● ACTIVO [Pulsa C]"
+            status_text = "ACTIVO [Pulsa C]"
             status_color = (0, 180, 255)
 
         cv2.putText(canvas, status_text, (self.canvas_width - 240, 24), cv2.FONT_HERSHEY_DUPLEX, 0.44, status_color, 1, cv2.LINE_AA)
@@ -440,15 +440,15 @@ class EyeDEMainApp:
         action = block_info["action"]
         label = block_info["label"]
 
-        print(f"\n[EyeDE ACTION] [CLICK] Disparado en Bloque {block_idx + 1}: '{label}'")
+        print(f"\n[IDEye ACTION] [CLICK] Disparado en Bloque {block_idx + 1}: '{label}'")
         print(f"               Accion: {action} | Coordenada: (X={norm_x:.3f}, Y={norm_y:.3f})")
 
         if action == "PAUSE_RESUME":
             self.is_paused = not self.is_paused
             state_str = "PAUSADO (Zona de reposo)" if self.is_paused else "REANUDADO"
-            print(f"[EyeDE ACTION] Estado de seguimiento: {state_str}")
+            print(f"[IDEye ACTION] Estado de seguimiento: {state_str}")
         elif action == "ACTION_EXIT":
-            print("[EyeDE ACTION] Bloque SALIR activado. Cerrando aplicacion...")
+            print("[IDEye ACTION] Bloque SALIR activado. Cerrando aplicacion...")
 
     def run(self, max_frames: Optional[int] = None) -> None:
         """
@@ -458,7 +458,7 @@ class EyeDEMainApp:
             max_frames: Optional frame limit (useful for non-blocking automated testing).
         """
         print("=" * 60)
-        print("  EyeDE - Motor de Vision, Tracking Hibrido y Gestos (Fase 1)")
+        print("  IDEye - Motor de Vision, Tracking Hibrido y Gestos (Fase 1)")
         print("=" * 60)
         print("Inicializando subsistemas de vision y FaceMesh (478 landmarks)...")
 
@@ -591,7 +591,7 @@ class EyeDEMainApp:
                     curr_idx = modes.index(self.gaze_estimator.tracking_mode) if self.gaze_estimator.tracking_mode in modes else 0
                     next_mode = modes[(curr_idx + 1) % len(modes)]
                     self.gaze_estimator.set_tracking_mode(next_mode)
-                    mode_names = {"PURE_IRIS": "👁️ Solo Iris (Recomendado)", "HYBRID": "🔄 Híbrido", "HEAD_PRIMARY": "👤 Solo Cabeza"}
+                    mode_names = {"PURE_IRIS": "Solo Iris", "HYBRID": "Híbrido", "HEAD_PRIMARY": "Solo Cabeza (Recomendado)"}
                     self.status_message = f"Modo: {mode_names.get(next_mode, next_mode)}"
                     self.status_message_time = time.time()
                     print(f"[INFO] Modo de seguimiento cambiado a: {next_mode}")
@@ -610,7 +610,11 @@ class EyeDEMainApp:
                 self.hotkey_manager.stop()
             self.tracker.release()
             cv2.destroyAllWindows()
-            print("[INFO] EyeDE finalizado limpiamente.")
+            print("[INFO] IDEye finalizado limpiamente.")
+
+
+# Brand alias for Phase 1 main app
+IDEyeMainApp = EyeDEMainApp
 
 
 class EyeDEApplication(QObject):
@@ -721,9 +725,9 @@ class EyeDEApplication(QObject):
         if hasattr(self.tracker, "gaze_estimator") and self.tracker.gaze_estimator is not None:
             self.tracker.gaze_estimator.set_tracking_mode(mode)
         mode_names = {
-            "PURE_IRIS": "👁️ Solo Iris (Recomendado)",
-            "HYBRID": "🔄 Híbrido",
-            "HEAD_PRIMARY": "👤 Solo Cabeza",
+            "PURE_IRIS": "Solo Iris",
+            "HYBRID": "Híbrido",
+            "HEAD_PRIMARY": "Solo Cabeza (Recomendado)",
         }
         display_name = mode_names.get(mode, mode)
         if self.overlay is not None:
@@ -739,14 +743,14 @@ class EyeDEApplication(QObject):
                 if 0 <= block_idx < len(curr_node.items):
                     item = curr_node.items[block_idx]
                     label = item.label
-                    msg = f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action} (Nodo: {self.overlay.current_node_id})"
+                    msg = f"\n[IDEye ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action} (Nodo: {self.overlay.current_node_id})"
                     try:
                         print(msg)
                     except UnicodeEncodeError:
                         print(msg.encode("ascii", errors="replace").decode("ascii"))
                     return
             label = config.MACRO_BLOCKS[block_idx]["label"] if 0 <= block_idx < len(config.MACRO_BLOCKS) else f"Block {block_idx}"
-            msg = f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action}"
+            msg = f"\n[IDEye ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action}"
             try:
                 print(msg)
             except UnicodeEncodeError:
@@ -770,6 +774,8 @@ class EyeDEApplication(QObject):
         """Launches the full-screen 5-point calibration interface."""
         print("[INFO] Launching 5-Point Calibration UI...")
         self.overlay.hide()
+        if hasattr(self, "debug_widget") and self.debug_widget is not None:
+            self.debug_widget.hide()
 
         self.calibration_ui = CalibrationUI(
             gaze_estimator=self.tracker.gaze_estimator,
@@ -783,7 +789,7 @@ class EyeDEApplication(QObject):
         self.calibration_ui.showFullScreen()
 
     def _on_calibration_finished(self, succeeded: bool) -> None:
-        """Handles calibration completion/cancellation and restores overlay."""
+        """Handles calibration completion/cancellation and restores overlay and debug widget."""
         print(f"[INFO] Calibration completed (succeeded={succeeded}). Restoring overlay HUD.")
         if self.calibration_ui is not None:
             try:
@@ -799,6 +805,8 @@ class EyeDEApplication(QObject):
             self.calibration_ui = None
 
         self.overlay.show()
+        if hasattr(self, "debug_widget") and self.debug_widget is not None:
+            self.debug_widget.show()
 
     def reset_calibration(self) -> None:
         """
@@ -841,7 +849,7 @@ class EyeDEApplication(QObject):
             self.debug_widget.lbl_damping.setText("Anti-Temblor (Filtro 1€): Nivel 6")
 
         if self.overlay is not None:
-            self.overlay.last_action_desc = "🔄 Calibración reseteada"
+            self.overlay.last_action_desc = "Calibración reseteada"
             self.overlay.update()
 
     def _setup_tray_icon(self) -> None:
@@ -865,35 +873,35 @@ class EyeDEApplication(QObject):
                 painter.drawEllipse(2, 2, 28, 28)
                 painter.setPen(QColor(15, 23, 42))
                 painter.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
-                painter.drawText(0, 0, 32, 32, Qt.AlignmentFlag.AlignCenter, "E")
+                painter.drawText(0, 0, 32, 32, Qt.AlignmentFlag.AlignCenter, "I")
                 painter.end()
                 self.tray_icon.setIcon(QIcon(pixmap))
 
-            self.tray_icon.setToolTip("EyeDE - Control Ocular Activo (Ctrl+Alt+Q para salir)")
+            self.tray_icon.setToolTip("IDEye - Control Ocular Activo (Ctrl+Alt+Q para salir)")
 
             tray_menu = QMenu()
-            action_title = tray_menu.addAction("EyeDE - Control Ocular")
+            action_title = tray_menu.addAction("IDEye - Control Ocular")
             action_title.setEnabled(False)
             tray_menu.addSeparator()
 
-            action_mode = tray_menu.addAction("👁️ Cambiar Modo Seguimiento [T]")
+            action_mode = tray_menu.addAction("Cambiar Modo Seguimiento [T]")
             action_mode.triggered.connect(self.debug_widget.cycle_tracking_mode)
             tray_menu.addSeparator()
 
-            action_recalib = tray_menu.addAction("🎯 Recalibrar (5 puntos)")
+            action_recalib = tray_menu.addAction("Recalibrar (5 puntos)")
             action_recalib.triggered.connect(self.launch_calibration)
 
-            action_reset = tray_menu.addAction("🔄 Resetear Calibración")
+            action_reset = tray_menu.addAction("Resetear Calibración")
             action_reset.triggered.connect(self.reset_calibration)
 
             tray_menu.addSeparator()
-            action_exit = tray_menu.addAction("🚨 Salida de Emergencia (Ctrl+Alt+Q)")
+            action_exit = tray_menu.addAction("Salida de Emergencia (Ctrl+Alt+Q)")
             action_exit.triggered.connect(self.shutdown)
 
             self.tray_icon.setContextMenu(tray_menu)
             self.tray_icon.show()
         except Exception as e:
-            print(f"[EyeDE] Warning: Could not initialize system tray: {e}")
+            print(f"[IDEye] Warning: Could not initialize system tray: {e}")
             self.tray_icon = None
 
     def start(self) -> None:
@@ -918,7 +926,12 @@ class EyeDEApplication(QObject):
         if active_f:
             self.debug_widget.set_linked_file(active_f)
 
-        if not has_profile or self.force_calibrate:
+        if self.camera_index == "synthetic" and not self.force_calibrate:
+            # Synthetic simulation mode for automated testing / headless verification:
+            # Directly show overlay and debug widget without blocking on interactive human calibration.
+            self.overlay.show()
+            self.debug_widget.show()
+        elif not has_profile or self.force_calibrate:
             print("[INFO] No calibration profile found. Starting initial 5-point calibration...")
             self.debug_widget.show()
             self.launch_calibration()
@@ -939,7 +952,7 @@ class EyeDEApplication(QObject):
         if self._is_shutting_down:
             return
         self._is_shutting_down = True
-        print("\n[INFO] Gracefully shutting down EyeDE Phase 2...")
+        print("\n[INFO] Gracefully shutting down IDEye Phase 2...")
 
         if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
             self.hotkey_manager.stop()
@@ -962,7 +975,7 @@ class EyeDEApplication(QObject):
             self.calibration_ui.close()
 
         self.qapp.quit()
-        print("[INFO] EyeDE Phase 2 terminated cleanly.")
+        print("[INFO] IDEye Phase 2 terminated cleanly.")
 
     def run(self) -> int:
         """Runs the Qt event loop until termination."""
@@ -970,9 +983,13 @@ class EyeDEApplication(QObject):
         return self.qapp.exec()
 
 
+# Brand alias for full IDEye naming
+IDEyeApplication = EyeDEApplication
+
+
 def main():
     """CLI Entry point."""
-    parser = argparse.ArgumentParser(description="EyeDE - Assistive Eye-Tracking IDE (Phase 2)")
+    parser = argparse.ArgumentParser(description="IDEye - Assistive Eye-Tracking IDE (Phase 2)")
     parser.add_argument("--camera", default=config.CAMERA_INDEX, help="Camera device index or 'synthetic'")
     parser.add_argument("--calibrate", action="store_true", help="Force 5-point calibration on startup")
     parser.add_argument("--profile", default=config.CALIBRATION_PROFILE_PATH, help="Path to calibration profile JSON")

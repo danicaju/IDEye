@@ -1,6 +1,6 @@
 <div align="center">
 
-# 👁️ EyeDE (Vistax L2C Engine)
+# IDEye (Vistax L2C Engine)
 **The Look-To-Code (L2C) Engine for Hands-Free, Silent Software Engineering**
 
 [![English](https://img.shields.io/badge/Language-English-blue?style=flat-square)](README.md)
@@ -19,34 +19,34 @@
 ---
 
 <!-- TODO: Replace with a 15-second GIF recorded with OBS showing you coding in VS Code with the HUD overlay -->
-![EyeDE Demo Placeholder](https://via.placeholder.com/900x450/0d1117/58a6ff?text=Insert+GIF+Demo:+EyeDE+3x3+HUD+Injecting+Code+into+VS+Code)
+![IDEye Demo Placeholder](https://via.placeholder.com/900x450/0d1117/58a6ff?text=Insert+GIF+Demo:+IDEye+3x3+HUD+Injecting+Code+into+VS+Code)
 
 </div>
 
-## ⚡ The Problem & Why EyeDE Exists
+## The Problem & Why IDEye Exists
 
 Developers experiencing severe RSI, carpal tunnel, motor disabilities, or temporary injuries face a major barrier when trying to write code:
 1. **Voice-coding tools (Talon, Cursorless)** are amazing, but require constant vocalization—failing in shared offices, libraries, late-night sessions, or for users with speech impairments.
 2. **On-screen keyboards (OptiKey)** force letter-by-letter typing (`f`-`o`-`r`-`space`...) and practically require $300–$1,000 specialized infrared eye-trackers (Tobii) because standard webcams suffer from a 100–150px dispersion jitter.
 3. **Webcam mouse drivers (Project Gameface, eViacam)** only move the OS cursor; clicking tiny 15px IDE symbols or suffering from the *"Midas Touch" problem* (dwell-time clicking fatigue) makes programming agonizingly slow.
 
-**EyeDE (Vistax)** solves this by rethinking the programming interface from first principles: combining a **3x3 Macro-Zone AST HUD**, **hybrid head+iris webcam tracking**, **instant zero-dwell facial-gesture triggers**, and **live AST/LLM context prediction**.
+**IDEye (Vistax)** solves this by rethinking the programming interface from first principles: combining a **3x3 Macro-Zone AST HUD**, **hybrid head+iris webcam tracking**, **instant zero-dwell facial-gesture triggers**, and **live AST/LLM context prediction**.
 
-### 📊 State-of-the-Art Comparison
+### State-of-the-Art Comparison
 
 | Feature / Tool | Standard Webcam ($0) | 100% Silent (No Voice) | AST / Macro Code Injection | Live Local Variable Awareness |
 | :--- | :---: | :---: | :---: | :---: |
-| **Talon Voice / Cursorless** | ❌ | ❌ | ✅ | ✅ |
-| **OptiKey** | ⚠️ *(IR Recommended)* | ✅ | ❌ *(Char-by-char)* | ❌ |
-| **Google Project Gameface** | ✅ | ✅ | ❌ *(Mouse driver only)* | ❌ |
-| **👁️ EyeDE (Vistax L2C)** | **✅ Yes** | **✅ Yes** | **✅ Yes (3x3 Macro-HUD)** | **✅ Yes (AST + AI)** |
+| **Talon Voice / Cursorless** | No | No | Si | Si |
+| **OptiKey** | Parcial *(IR Recommended)* | Si | No *(Char-by-char)* | No |
+| **Google Project Gameface** | Si | Si | No *(Mouse driver only)* | No |
+| ** IDEye (Vistax L2C)** | **Si Yes** | **Si Yes** | **Si Yes (3x3 Macro-HUD)** | **Si Yes (AST + AI)** |
 
 ---
 
-## 🧠 Core Innovations
+## Core Innovations
 
 ### 1. Hybrid Gaze + Head Vector with EMA & Blink Suppression
-Standard webcam pupil tracking lacks dynamic range at normal monitor distances. EyeDE fuses the normalized iris offset with the 3D nose-tip anchor vector, suppresses vertical jumps during natural eyelid blinks, and smooths the output via an **Exponential Moving Average (EMA)**:
+Standard webcam pupil tracking lacks dynamic range at normal monitor distances. IDEye fuses the normalized iris offset with the 3D nose-tip anchor vector, suppresses vertical jumps during natural eyelid blinks, and smooths the output via an **Exponential Moving Average (EMA)**:
 
 $$\mathbf{P}_{raw} = \alpha_{head} \cdot \mathbf{V}_{nose} + (1 - \alpha_{head}) \cdot \mathbf{V}_{iris}$$
 
@@ -55,7 +55,7 @@ $$\mathbf{S}_t = \gamma \cdot \mathbf{P}_{raw} + (1 - \gamma) \cdot \mathbf{S}_{
 Where $\alpha_{head} \approx 0.60$ provides macro stability across screen corners and $1 - \alpha_{head} \approx 0.40$ allows fast micro-adjustments with the eyes.
 
 ### 2. Zero-Dwell "Midas Touch" Elimination
-Instead of staring at a button for 1.5 seconds to click (which causes severe eye strain and accidental clicks while reading), EyeDE decouples navigation from selection:
+Instead of staring at a button for 1.5 seconds to click (which causes severe eye strain and accidental clicks while reading), IDEye decouples navigation from selection:
 * **Look** to highlight any of the 9 Macro-Zones.
 * **Slightly open your mouth** (monitored via real-time **MAR — Mouth Aspect Ratio** with a 150ms debounce state machine) to trigger an instant, zero-latency `CLICK`.
 
@@ -67,41 +67,41 @@ Half-written code rarely compiles. `ContextReader` combines Python's native `ast
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```text
 +-------------------------------------------------------------------------+
-|                        CAMERA TRACKER (QThread)                         |
-|  OpenCV Capture -> MediaPipe FaceMesh (478 pts) -> Iris + Nose Vectors  |
+| CAMERA TRACKER (QThread) |
+| OpenCV Capture -> MediaPipe FaceMesh (478 pts) -> Iris + Nose Vectors |
 +-------------------+---------------------------------+-------------------+
-                    | pyqtSignal(x, y)                | pyqtSignal("MOUTH_CLICK")
-                    v                                 v
+ | pyqtSignal(x, y) | pyqtSignal("MOUTH_CLICK")
+ v v
 +-------------------------------------------------------------------------+
-|                    PYQT6 NO-FOCUS OVERLAY (Main GUI)                    |
-|   [0: FLOW]      [1: FUNC/CLASS]  [2: OPERATORS]                        |
-|   [3: CURSOR]    [4: 👁️ PAUSE]     [5: LOCAL VARS / T9]                  |
-|   [6: EDIT/UNDO] [7: ENTER/TAB]   [8: ⚡ AI PREDICTOR]                   |
+| PYQT6 NO-FOCUS OVERLAY (Main GUI) |
+| [0: FLOW] [1: FUNC/CLASS] [2: OPERATORS] |
+| [3: CURSOR] [4: PAUSE] [5: LOCAL VARS / T9] |
+| [6: EDIT/UNDO] [7: ENTER/TAB] [8: AI PREDICTOR] |
 +-------------------+---------------------------------+-------------------+
-                    |                                 |
-                    v                                 v
-+-----------------------------------+   +---------------------------------+
-|      CODE INJECTOR ENGINE         |   |   CONTEXT & AI ENGINE (QThread) |
-| - Clipboard Atomic Swap (Ctrl+V)  |   | - Live AST + Regex Symbol Parse |
-| - Auto Cursor Offset Reposition   |   | - Async Ollama / OpenAI Client  |
-| - Sticky vs. Auto-Return Nodes    |   | - Zero-Latency Heuristic Backup |
-+-----------------------------------+   +---------------------------------+
-                    |                                 |
-                    +----------------+----------------+
-                                     |
-                                     v
-                    +---------------------------------+
-                    |   TARGET IDE (VS Code, etc.)    |
-                    +---------------------------------+
+ | |
+ v v
++-----------------------------------+ +---------------------------------+
+| CODE INJECTOR ENGINE | | CONTEXT & AI ENGINE (QThread) |
+| - Clipboard Atomic Swap (Ctrl+V) | | - Live AST + Regex Symbol Parse |
+| - Auto Cursor Offset Reposition | | - Async Ollama / OpenAI Client |
+| - Sticky vs. Auto-Return Nodes | | - Zero-Latency Heuristic Backup |
++-----------------------------------+ +---------------------------------+
+ | |
+ +----------------+----------------+
+ |
+ v
+ +---------------------------------+
+ | TARGET IDE (VS Code, etc.) |
+ +---------------------------------+
 ```
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 * **Python 3.10+** (Python 3.12 recommended)
@@ -125,98 +125,98 @@ source venv/bin/activate
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Launch EyeDE
+# 4. Launch IDEye
 python main.py
 ```
 
-### 🖥️ Desktop Application Launchers
+### Desktop Application Launchers
 
-EyeDE includes native Windows desktop launchers with custom high-DPI branding:
+IDEye includes native Windows desktop launchers with custom high-DPI branding:
 
-* **Desktop Shortcut (`EyeDE.lnk`)**: Direct double-clickable icon on your Windows Desktop with the official `{ 👁️ }` branding.
-* **Silent Launcher (`EyeDE.vbs`)**: Launches EyeDE immediately with zero command-line console flash.
-* **Batch Launcher (`EyeDE.bat`)**: Quick launcher for standard execution.
-* **Debug Launcher (`EyeDE_debug.bat`)**: Launches with live terminal output for parameter tuning and tracking metrics.
-* **Standalone Native Executable (`build_app.py`)**: Compiles EyeDE into a self-contained `dist/EyeDE/EyeDE.exe` with bundled MediaPipe, PyQt6, and asset models.
+* **Desktop Shortcut (`IDEye.lnk`)**: Direct double-clickable icon on your Windows Desktop with the official `{ IDEye }` branding.
+* **Silent Launcher (`IDEye.vbs`)**: Launches IDEye immediately with zero command-line console flash.
+* **Batch Launcher (`IDEye.bat`)**: Quick launcher for standard execution.
+* **Debug Launcher (`IDEye_debug.bat`)**: Launches with live terminal output for parameter tuning and tracking metrics.
+* **Standalone Native Executable (`build_app.py`)**: Compiles IDEye into a self-contained `dist/IDEye/IDEye.exe` with bundled MediaPipe, PyQt6, and asset models.
 
 ### CLI Arguments
 
 ```bash
-python main.py                    # Standard launch with camera & saved calibration
-python main.py --recalibrate      # Force the 5-point visual calibration wizard on startup
+python main.py # Standard launch with camera & saved calibration
+python main.py --recalibrate # Force the 5-point visual calibration wizard on startup
 python main.py --camera synthetic # Run headlessly with synthetic face landmarks (for testing/demo)
 ```
 
 ### 5-Point Quick Calibration
-On first launch (or with `--recalibrate`), EyeDE launches the **5-Point Visual Calibration Screen**:
+On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual Calibration Screen**:
 1. Look at the glowing target in the **Center** and slightly open your mouth.
 2. Repeat for the **4 screen corners** (Top-Left, Top-Right, Bottom-Left, Bottom-Right).
 3. The bilinear mapping matrix is calculated and saved to `calibration_profile.json`. Open VS Code, place your cursor in any `.py` file, and start coding!
 
 ---
 
-## 🎮 Runtime Controls & Shortcuts
+## Runtime Controls & Shortcuts
 
 | Key | Action | Description |
 | :--- | :--- | :--- |
-| **`Ctrl+Alt+Q` / `F12`** | **🚨 Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down EyeDE from anywhere in the OS, even when VS Code has focus |
-| **`Ctrl+Alt+R`** | **🔄 Emergency Reset** | Immediately clears 5-point calibration weights and reverts to safe neutral mapping |
+| **`Ctrl+Alt+Q` / `F12`** | ** Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down IDEye from anywhere in the OS, even when VS Code has focus |
+| **`Ctrl+Alt+R`** | ** Emergency Reset** | Immediately clears 5-point calibration weights and reverts to safe neutral mapping |
 | **`[T]`** | **Cycle Tracking Mode** | Switch between **`PURE_IRIS`** (Solo Iris - 100% eyes, zero head required), **`HYBRID`** (VOR-compensated fusion), and **`HEAD_PRIMARY`** |
 | **`[C]`** | **Center Recalibration** | Look at the screen center and press `C` to reset your neutral anchor |
 | **`[+]` / `[-]`** | **Sensitivity Adjust** | Increase or decrease gaze tracking sensitivity on the fly |
 | **`[P]` / `[Space]`** | **Pause / Reading Mode** | Dim HUD to 10% opacity so you can read code without accidental clicks |
 | **`[M]`** | **Toggle Mini-Feed** | Show or hide the bottom camera preview and MAR meter |
 | **`[Q]` / `[ESC]`** | **Safe Exit** | Release camera handles and gracefully stop all worker threads |
-| **Eye Exit** | **[❌ SALIR] Hands-Free** | Gaze at the top-right header `[❌ SALIR]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
+| **Eye Exit** | **[No SALIR] Hands-Free** | Gaze at the top-right header `[No SALIR]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 IDEye/
-├── main.py                      # Root launcher (`python main.py`)
-├── config.py                    # Root configuration wrapper
-├── requirements.txt             # Project dependencies
-├── pytest.ini                   # Pytest configuration & warning filters
-├── calibration_profile.json      # Saved 5-point bilinear calibration profile
+├── main.py # Root launcher (`python main.py`)
+├── config.py # Root configuration wrapper
+├── requirements.txt # Project dependencies
+├── pytest.ini # Pytest configuration & warning filters
+├── calibration_profile.json # Saved 5-point bilinear calibration profile
 ├── eyede/
-│   ├── config.py                # Tracking weights, MAR thresholds, HUD styles, LLM settings
-│   ├── main.py                  # PyQt6 application lifecycle & signal dispatcher
-│   ├── core/
-│   │   ├── camera_tracker.py    # QThread OpenCV + MediaPipe FaceMesh (478 pts) pipeline
-│   │   ├── gaze_estimator.py    # Hybrid gaze math, blink suppression, 5-pt calibration & EMA
-│   │   └── gesture_detector.py  # MAR calculation & debounced state machine
-│   ├── ui/
-│   │   ├── overlay_window.py    # Transparent No-Focus PyQt6 3x3 Macro-Grid HUD
-│   │   ├── calibration_ui.py    # Fullscreen 5-point visual calibration wizard
-│   │   ├── debug_widget.py      # Mini camera feed, live tracking mode toggles & controls
-│   │   └── icon_manager.py      # Vector SVG pre-rendering, caching & glassmorphic badges
-│   ├── assets/
-│   │   └── icons/               # High-DPI neon SVG icon suite (logo, flow, AI, exit, etc.)
-│   └── actions/
-│       ├── code_injector.py     # Non-blocking atomic clipboard snippet injection & cursor offsets
-│       ├── menu_trees.py        # 3x3 hierarchical syntax trees & sticky node definitions
-│       ├── context_reader.py    # Fault-tolerant AST + Regex local symbol extractor
-│       └── ai_predictor.py      # Async LLM QThread worker + syntactic heuristic fallback
-└── tests/                       # 296 automated unit & integration tests
-    ├── test_phase1.py           # Core computer vision & MAR state machine tests
-    ├── test_phase2.py           # PyQt6 QThread, non-focus window flags & calibration math
-    ├── test_phase3.py           # Syntax tree validation & code injection tests
-    ├── test_phase4.py           # ContextReader AST/Regex & AIPredictorWorker tests
-    ├── test_vision_math.py      # GazeEstimator boundary clipping & zero-division audits
-    ├── test_menu_integrity.py   # Recursive 9-cell tree verification
-    ├── test_code_injector.py    # Modifier key recovery & clipboard safety tests
-    ├── test_context_and_ai.py   # Syntax-error tolerance & LLM JSON resilience tests
-    ├── test_calibration_and_killswitch.py # Tikhonov regularized mapping & emergency hotkeys
-    └── test_tracking_modes_and_handsfree_exit.py # Pure Iris, VOR decoupling & hands-free exit
+│ ├── config.py # Tracking weights, MAR thresholds, HUD styles, LLM settings
+│ ├── main.py # PyQt6 application lifecycle & signal dispatcher
+│ ├── core/
+│ │ ├── camera_tracker.py # QThread OpenCV + MediaPipe FaceMesh (478 pts) pipeline
+│ │ ├── gaze_estimator.py # Hybrid gaze math, blink suppression, 5-pt calibration & EMA
+│ │ └── gesture_detector.py # MAR calculation & debounced state machine
+│ ├── ui/
+│ │ ├── overlay_window.py # Transparent No-Focus PyQt6 3x3 Macro-Grid HUD
+│ │ ├── calibration_ui.py # Fullscreen 5-point visual calibration wizard
+│ │ ├── debug_widget.py # Mini camera feed, live tracking mode toggles & controls
+│ │ └── icon_manager.py # Vector SVG pre-rendering, caching & glassmorphic badges
+│ ├── assets/
+│ │ └── icons/ # High-DPI neon SVG icon suite (logo, flow, AI, exit, etc.)
+│ └── actions/
+│ ├── code_injector.py # Non-blocking atomic clipboard snippet injection & cursor offsets
+│ ├── menu_trees.py # 3x3 hierarchical syntax trees & sticky node definitions
+│ ├── context_reader.py # Fault-tolerant AST + Regex local symbol extractor
+│ └── ai_predictor.py # Async LLM QThread worker + syntactic heuristic fallback
+└── tests/ # 296 automated unit & integration tests
+ ├── test_phase1.py # Core computer vision & MAR state machine tests
+ ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
+ ├── test_phase3.py # Syntax tree validation & code injection tests
+ ├── test_phase4.py # ContextReader AST/Regex & AIPredictorWorker tests
+ ├── test_vision_math.py # GazeEstimator boundary clipping & zero-division audits
+ ├── test_menu_integrity.py # Recursive 9-cell tree verification
+ ├── test_code_injector.py # Modifier key recovery & clipboard safety tests
+ ├── test_context_and_ai.py # Syntax-error tolerance & LLM JSON resilience tests
+ ├── test_calibration_and_killswitch.py # Tikhonov regularized mapping & emergency hotkeys
+ └── test_tracking_modes_and_handsfree_exit.py # Pure Iris, VOR decoupling & hands-free exit
 ```
 
 ---
 
-## 🧪 Testing & QA
+## Testing & QA
 
-EyeDE includes a comprehensive hardware-mocked test suite covering mathematical edge cases, recursive menu tree integrity, modifier-key safety, and AST fault tolerance:
+IDEye includes a comprehensive hardware-mocked test suite covering mathematical edge cases, recursive menu tree integrity, modifier-key safety, and AST fault tolerance:
 
 ```bash
 pytest -v
@@ -231,7 +231,7 @@ pytest -v
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [x] **Phase 1:** Hybrid Iris + Head tracking with EMA smoothing & MAR mouth-click trigger.
 - [x] **Phase 2:** PyQt6 `WindowDoesNotAcceptFocus` transparent HUD & 5-point JSON calibration.
@@ -242,10 +242,10 @@ pytest -v
 
 ---
 
-## 🤝 Contributing & License
+## Contributing & License
 
 Contributions, accessibility feedback, and PRs are welcome! Licensed under the **MIT License**.
 
 <div align="center">
-  <sub>Built with ❤️ by <b>Daniel Casado Juan</b></sub>
+ <sub>Built by <b>Daniel Casado Juan</b></sub>
 </div>

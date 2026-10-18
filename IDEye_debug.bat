@@ -1,9 +1,9 @@
 @echo off
-:: EyeDE - Debug Console Launcher (Shows logs & real-time output)
-title EyeDE - Look-To-Code (Debug Mode)
+:: IDEye - Debug Console Launcher (Shows logs & real-time output)
+title IDEye - Look-To-Code (Debug Mode)
 cd /d "%~dp0"
 echo ========================================================
-echo   EyeDE - Launching with Console Logging
+echo   IDEye - Launching with Console Logging
 echo ========================================================
 if exist "venv\Scripts\python.exe" (
     "venv\Scripts\python.exe" main.py %*

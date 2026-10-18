@@ -1,5 +1,5 @@
 """
-Overlay Window Module for EyeDE (Phase 2 & 3)
+Overlay Window Module for IDEye (Phase 2 & 3)
 Transparent, Non-Focus-Stealing 3x3 Macro-Block Grid Overlay with Hierarchical
 Syntax Navigation Trees, Real-Time Code Injection, and Breadcrumb Status Bar.
 
@@ -9,8 +9,8 @@ Features:
 - Ensures external IDEs (e.g. VS Code, PyCharm) NEVER lose keyboard focus or cursor blink.
 - Renders hierarchical 3x3 Menu Trees (build_menu_tree):
     * Root Menu (Flow, Struct, Operators, Nav, Pause, T9, Edit, Format, Snippets).
-    * Submenus with visual indicators ('📁' for submenus, '⚡' for actions, '👁️' for pause, '⬅' for back).
-- Top Breadcrumb Bar displaying current navigation path (e.g. '📁 RAÍZ > FLUJO') and last executed action.
+    * Submenus with visual indicators ('SUBMENU', 'ACCION', 'PAUSA', 'VOLVER').
+- Top Breadcrumb Bar displaying current navigation path (e.g. 'RAIZ > FLUJO') and last executed action.
 - Sticky submenu mode for repetitive actions (Nav, Edit, Format).
 - Non-blocking CodeInjector integration: snippets pasted via clipboard with cursor centering and keystrokes.
 - Block 4 (Center: 'PAUSA / MODO LECTURA') toggles HUD opacity to 10% and inhibits actions during reading.
@@ -125,7 +125,7 @@ class OverlayWindow(QWidget):
         self.margin: float = 8.0
 
         # Window title for identification
-        self.setWindowTitle("EyeDE - Gaze Macro Grid HUD (Phase 3)")
+        self.setWindowTitle("IDEye - Gaze Macro Grid HUD (Phase 3)")
 
         # 4. Pre-allocated rendering objects to prevent 30/60 FPS GC pressure and memory leaks
         self._font_header_pill = QFont("Segoe UI", 9, QFont.Weight.Bold)
@@ -137,7 +137,7 @@ class OverlayWindow(QWidget):
         self._font_badge = QFont("Segoe UI", 8, QFont.Weight.Bold)
 
         # Header bar styles (Acrylic Glassmorphism)
-        self._brush_header_bg = QBrush(QColor(13, 17, 23, 235))
+        self._brush_header_bg = QBrush(QColor(13, 17, 23, 160))
         self._pen_header_border = QPen(QColor(48, 54, 61, 200), 1.5)
         self._pen_header_left = QPen(QColor(240, 246, 252))
         self._pen_header_center = QPen(QColor(248, 113, 113))
@@ -226,16 +226,16 @@ class OverlayWindow(QWidget):
             "DEFAULT": QPen(QColor(100, 116, 139, 180), 2.0),
         }
         self._cat_badges = {
-            "FLOW": ("⚡ FLUJO", QColor(34, 211, 238)),
-            "STRUCT": ("⚡ ESTRUCTURA", QColor(251, 191, 36)),
-            "OPERATORS": ("⚡ OPERADOR", QColor(192, 132, 252)),
-            "NAV": ("⚡ NAVEGACIÓN", QColor(96, 165, 250)),
-            "PAUSE": ("👁️ REPOSO", QColor(52, 211, 153)),
-            "BACK": ("⬅ VOLVER", QColor(244, 114, 182)),
-            "EDIT": ("⚡ EDICIÓN", QColor(129, 140, 248)),
-            "AI": ("🤖 IA / CÓDIGO", QColor(240, 171, 252)),
-            "EXIT": ("🚨 SALIR", QColor(248, 113, 113)),
-            "DEFAULT": ("⚡ ACCIÓN", QColor(148, 163, 184)),
+            "FLOW": ("FLUJO", QColor(34, 211, 238)),
+            "STRUCT": ("ESTRUCTURA", QColor(251, 191, 36)),
+            "OPERATORS": ("OPERADOR", QColor(192, 132, 252)),
+            "NAV": ("NAVEGACIÓN", QColor(96, 165, 250)),
+            "PAUSE": ("REPOSO", QColor(52, 211, 153)),
+            "BACK": ("VOLVER", QColor(244, 114, 182)),
+            "EDIT": ("EDICIÓN", QColor(129, 140, 248)),
+            "AI": ("IA / CÓDIGO", QColor(240, 171, 252)),
+            "EXIT": ("SALIR", QColor(248, 113, 113)),
+            "DEFAULT": ("ACCIÓN", QColor(148, 163, 184)),
         }
 
         # High-visibility Dual-ring Gaze Pointer Reticle
@@ -287,7 +287,7 @@ class OverlayWindow(QWidget):
         """Called when a user explicitly links a Python script."""
         if self.context_reader:
             self.context_reader.set_active_file(file_path)
-            self.last_action_desc = f"📂 Vinculado: {os.path.basename(file_path)}"
+            self.last_action_desc = f"Vinculado: {os.path.basename(file_path)}"
             if self.current_node_id == "T9_LOCAL_VARS":
                 self._refresh_local_symbols()
             self.update()
@@ -305,7 +305,7 @@ class OverlayWindow(QWidget):
         """
         Triggers async AIPredictorWorker.
         Prevents duplicate workers if one is already running (QA Requirement 3).
-        Sets overlay to loading state '⏳ Analizando...' and updates 6 blocks dynamically.
+        Sets overlay to loading state 'Analizando...' and updates 6 blocks dynamically.
         Extracts context non-blockingly on worker thread.
         """
         if self.ai_predictor_worker is not None:
@@ -320,18 +320,18 @@ class OverlayWindow(QWidget):
                 pass
 
         loading_preds = [
-            "⏳ Analizando...",
-            "⏳ Analizando...",
-            "⏳ Analizando...",
-            "⏳ Analizando...",
-            "⏳ Analizando...",
-            "⏳ Analizando...",
+            "Analizando...",
+            "Analizando...",
+            "Analizando...",
+            "Analizando...",
+            "Analizando...",
+            "Analizando...",
         ]
         if "SNIPPETS" in self.menu_tree:
             self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(loading_preds, parent_id="ROOT")
         self.is_ai_predicting = True
-        self.last_action_desc = "⏳ IA Analizando..."
-        self.ai_status_updated.emit("⏳ Consultando IA...")
+        self.last_action_desc = "IA Analizando..."
+        self.ai_status_updated.emit("Consultando IA...")
         self.update()
 
         self.ai_predictor_worker = AIPredictorWorker(
@@ -357,7 +357,7 @@ class OverlayWindow(QWidget):
         if "SNIPPETS" in self.menu_tree:
             self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(predictions, parent_id="ROOT")
         self.is_ai_predicting = False
-        self.last_action_desc = "⚡ 6 Sugerencias IA Listas"
+        self.last_action_desc = "6 Sugerencias IA Listas"
         self.ai_status_updated.emit("Listo (6 sugerencias)")
         self.update()
 
@@ -369,7 +369,7 @@ class OverlayWindow(QWidget):
     @pyqtSlot(str)
     def _on_ai_prediction_failed(self, error_msg: str) -> None:
         """Handles prediction failure notification."""
-        self.ai_status_updated.emit(f"⚠️ {error_msg}")
+        self.ai_status_updated.emit(f"Error: {error_msg}")
 
     @pyqtSlot()
     def _on_ai_worker_finished(self) -> None:
@@ -477,7 +477,7 @@ class OverlayWindow(QWidget):
                 self.menu_tree["EXIT_CONFIRM"].parent_id = prev_node
                 self.menu_tree["EXIT_CONFIRM"].items = populate_exit_confirm_items(parent_id=prev_node)
             self.navigate_to("EXIT_CONFIRM")
-            self.last_action_desc = "⚠️ Confirmar Salida"
+            self.last_action_desc = "Confirmar Salida"
             self.update()
             return
 
@@ -508,7 +508,7 @@ class OverlayWindow(QWidget):
         # 1. Pause / Reading Mode Trigger (Center block or PAUSE action)
         if target_block == 4 or item.action_type == "PAUSE":
             self.toggle_reading_mode()
-            self.last_action_desc = "👁️ Modo Reposo Activo"
+            self.last_action_desc = "Modo Reposo Activo"
             self.block_activated.emit(target_block, "PAUSE_RESUME")
             return
 
@@ -517,7 +517,7 @@ class OverlayWindow(QWidget):
             target_id = item.submenu_id or curr_node.parent_id or "ROOT"
             self.navigate_to(target_id)
             target_title = self.menu_tree[target_id].title if target_id in self.menu_tree else "RAÍZ"
-            self.last_action_desc = f"⬅ Volver a {target_title}"
+            self.last_action_desc = f"Volver a {target_title}"
             self.block_activated.emit(target_block, item.id)
             return
 
@@ -526,7 +526,7 @@ class OverlayWindow(QWidget):
             target_id = item.submenu_id
             if target_id and target_id in self.menu_tree:
                 self.navigate_to(target_id)
-                self.last_action_desc = f"📁 Menú: {self.menu_tree[target_id].title}"
+                self.last_action_desc = f"Menú: {self.menu_tree[target_id].title}"
             self.block_activated.emit(target_block, item.id)
             return
 
@@ -544,7 +544,7 @@ class OverlayWindow(QWidget):
 
             # Execute injection via non-blocking worker thread
             self.code_injector.execute_action(item)
-            self.last_action_desc = f"{item.icon} {item.label}"
+            self.last_action_desc = f"{item.icon} {item.label}" if item.icon else item.label
             self.action_executed.emit(item.id, self.last_action_desc)
             self.block_activated.emit(target_block, item.id)
 
@@ -570,7 +570,7 @@ class OverlayWindow(QWidget):
         """Programmatically executes a MenuAction directly on the overlay."""
         if item.action_type == "PAUSE":
             self.toggle_reading_mode()
-            self.last_action_desc = "👁️ Modo Reposo Activo"
+            self.last_action_desc = "Modo Reposo Activo"
             self.block_activated.emit(target_block, "PAUSE_RESUME")
             return
 
@@ -578,7 +578,7 @@ class OverlayWindow(QWidget):
             target_id = item.submenu_id or (self.current_node.parent_id if self.current_node else "ROOT") or "ROOT"
             self.navigate_to(target_id)
             target_title = self.menu_tree[target_id].title if target_id in self.menu_tree else "RAÍZ"
-            self.last_action_desc = f"⬅ Volver a {target_title}"
+            self.last_action_desc = f"Volver a {target_title}"
             self.block_activated.emit(target_block, item.id)
             return
 
@@ -586,13 +586,13 @@ class OverlayWindow(QWidget):
             target_id = item.submenu_id
             if target_id and target_id in self.menu_tree:
                 self.navigate_to(target_id)
-                self.last_action_desc = f"📁 Menú: {self.menu_tree[target_id].title}"
+                self.last_action_desc = f"Menú: {self.menu_tree[target_id].title}"
             self.block_activated.emit(target_block, item.id)
             return
 
         if item.action_type in ("SNIPPET", "KEY"):
             self.code_injector.execute_action(item)
-            self.last_action_desc = f"{item.icon} {item.label}"
+            self.last_action_desc = f"{item.icon} {item.label}" if item.icon else item.label
             self.action_executed.emit(item.id, self.last_action_desc)
             self.block_activated.emit(target_block, item.id)
             return
@@ -719,21 +719,21 @@ class OverlayWindow(QWidget):
             painter.drawRoundedRect(pill_rect, 5.0, 5.0)
             painter.setPen(self._color_pill_text)
             painter.setFont(self._font_header_pill)
-            painter.drawText(pill_rect, Qt.AlignmentFlag.AlignCenter, "👁️ MODO LECTURA")
+            painter.drawText(pill_rect, Qt.AlignmentFlag.AlignCenter, "MODO LECTURA")
         else:
             painter.setBrush(self._brush_pill_edit)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRoundedRect(pill_rect, 5.0, 5.0)
             painter.setPen(self._color_pill_text)
             painter.setFont(self._font_header_pill)
-            painter.drawText(pill_rect, Qt.AlignmentFlag.AlignCenter, "⚡ MODO EDICIÓN")
+            painter.drawText(pill_rect, Qt.AlignmentFlag.AlignCenter, "MODO EDICIÓN")
 
         # Breadcrumb trail text
         breadcrumb_path = get_breadcrumb_path(self.menu_tree, self.current_node_id).replace(" > ", " › ")
         if curr_node and curr_node.sticky:
-            breadcrumb_path += "  [📌 FIJO]"
+            breadcrumb_path += "  [FIJO]"
 
-        left_text = f"📁 {breadcrumb_path}"
+        left_text = breadcrumb_path
         text_start_x = pill_rect.right() + 12.0
         max_left_w = int(header_rect.width() * 0.25)
         painter.setPen(self._pen_header_left)
@@ -748,7 +748,7 @@ class OverlayWindow(QWidget):
             elided_left,
         )
 
-        # Far Right: Hands-free Gaze-Selectable & Mouth-Clickable Exit Target [❌ SALIR]
+        # Far Right: Hands-free Gaze-Selectable & Mouth-Clickable Exit Target [SALIR]
         exit_btn_w = 110.0
         self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 7.0, exit_btn_w, pill_h)
 
@@ -781,7 +781,7 @@ class OverlayWindow(QWidget):
         )
 
         # Center: Emergency Hotkey Documentation Pill
-        emergency_text = "🚨 Emergencia: Ctrl+Alt+Q para salir"
+        emergency_text = "Emergencia: Ctrl+Alt+Q para salir"
         center_pill_w = 230.0
         center_pill_rect = QRectF(header_rect.center().x() - center_pill_w * 0.5, header_rect.y() + 7.0, center_pill_w, pill_h)
         painter.setBrush(QBrush(QColor(239, 68, 68, 25)))
@@ -793,7 +793,7 @@ class OverlayWindow(QWidget):
         painter.drawText(center_pill_rect, Qt.AlignmentFlag.AlignCenter, emergency_text)
 
         # Right-Center: Last executed action pill
-        last_action_str = f"✨ Última: {self.last_action_desc}"
+        last_action_str = f"Última: {self.last_action_desc}"
         max_right_w = int(header_rect.width() * 0.22)
         right_pill_rect = QRectF(self.header_exit_rect.left() - max_right_w - 8.0, header_rect.y() + 7.0, max_right_w, pill_h)
         painter.setBrush(QBrush(QColor(56, 189, 248, 22)))
@@ -835,16 +835,26 @@ class OverlayWindow(QWidget):
             is_hover = (self.hovered_block == i)
             cat = self._get_category_for_item(item, i)
 
-            # Opacity logic
+            # Opacity logic:
+            # - bg_opacity: Translucent glass background so editor code underneath is clearly visible
+            # - content_opacity: High-contrast typography & vector icons (WCAG AAA) for effortless legibility
             if self.reading_mode:
                 if i == 4:
-                    block_opacity = 0.90 if (is_active_click or is_hover) else 0.40
+                    bg_opacity = 0.90 if (is_active_click or is_hover) else 0.35
+                    content_opacity = 1.0 if (is_active_click or is_hover) else 0.85
                 else:
-                    block_opacity = self.current_opacity
+                    bg_opacity = self.current_opacity
+                    content_opacity = self.current_opacity * 0.4
             else:
-                block_opacity = self.current_opacity
-
-            painter.setOpacity(block_opacity)
+                if is_active_click:
+                    bg_opacity = 0.90
+                    content_opacity = 1.0
+                elif is_hover:
+                    bg_opacity = min(1.0, max(0.65, self.current_opacity * 3.0))
+                    content_opacity = 1.0
+                else:
+                    bg_opacity = self.current_opacity
+                    content_opacity = 0.95
 
             # Pre-allocated styling determination (zero allocations per frame)
             if is_active_click:
@@ -874,8 +884,15 @@ class OverlayWindow(QWidget):
                 text_color = self._color_default_text
                 hint_color = self._color_default_hint
 
-            # Draw card rounded rectangle
+            # 1. Draw card background with translucent glassmorphic opacity
+            painter.setOpacity(bg_opacity)
             painter.setBrush(block_brush)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(rect, 12.0, 12.0)
+
+            # 2. Draw card frame border and content with crisp, readable opacity
+            painter.setOpacity(content_opacity)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(border_pen)
             painter.drawRoundedRect(rect, 12.0, 12.0)
 
@@ -905,11 +922,11 @@ class OverlayWindow(QWidget):
                 IconManager.instance().render_icon(painter, icon_name, card_icon_rect)
 
             # Determine labels
-            label_text = f"{item.icon} {item.label}"
+            label_text = f"{item.icon} {item.label}" if item.icon else item.label
             hint_text = item.hint
 
             if self.reading_mode and i == 4:
-                label_text = "👁️ 5: REANUDAR"
+                label_text = "5: REANUDAR"
                 hint_text = "Modo Lectura Activo (Mire y Abra Boca)"
 
             # Draw main label (reserving width on the right to prevent overlap with top-right vector badge)
@@ -944,13 +961,13 @@ class OverlayWindow(QWidget):
                 badge_text, badge_color = badge_info
 
                 if item.action_type == "SUBMENU":
-                    badge_text = "📁 SUBMENÚ"
+                    badge_text = "SUBMENÚ"
                     badge_color = self._color_badge_submenu
                 elif item.action_type == "BACK":
-                    badge_text = "⬅ VOLVER"
+                    badge_text = "VOLVER"
                     badge_color = self._color_badge_back
                 elif item.sticky:
-                    badge_text = "📌 FIJO"
+                    badge_text = "FIJO"
                     badge_color = self._color_badge_sticky
 
                 if badge_text:
@@ -969,7 +986,7 @@ class OverlayWindow(QWidget):
         # 3. Refined High-Visibility Dual-Ring Reticle with Glow Aura
         # =====================================================================
         if not self.reading_mode or self.hovered_block == 4:
-            painter.setOpacity(self.current_opacity if not self.reading_mode else 0.90)
+            painter.setOpacity(0.95 if not self.reading_mode else 0.85)
             gx, gy = self.current_gaze
             cx = gx * w
             cy = gy * h

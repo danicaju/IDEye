@@ -1,5 +1,5 @@
 """
-Debug & Monitor Widget for EyeDE (Phase 2 & Overhaul)
+Debug & Monitor Widget for IDEye (Phase 2 & Overhaul)
 Compact floating window displaying live webcam feed, real-time FPS meter,
 tracking stability indicator, interactive sensitivity/damping sliders, and controls.
 
@@ -45,7 +45,7 @@ except ImportError:
 
 class DebugWidget(QWidget):
     """
-    Compact floating debug & monitor window for EyeDE with interactive tuning controls.
+    Compact floating debug & monitor window for IDEye with interactive tuning controls.
     """
 
     recalibrate_requested = pyqtSignal()
@@ -64,7 +64,7 @@ class DebugWidget(QWidget):
         self._last_frame_time: Optional[float] = None
         self._fps: float = 30.0
 
-        self.setWindowTitle("EyeDE - Monitor y Depuración")
+        self.setWindowTitle("IDEye - Monitor y Depuración")
         app_icon = IconManager.instance().get_app_icon()
         if not app_icon.isNull():
             self.setWindowIcon(app_icon)
@@ -186,11 +186,11 @@ class DebugWidget(QWidget):
         stats_layout = QHBoxLayout()
         stats_layout.setSpacing(8)
 
-        self.lbl_fps = QLabel("⚡ 30.0 FPS", self)
+        self.lbl_fps = QLabel("30.0 FPS", self)
         self.lbl_fps.setStyleSheet("font-size: 11px; font-weight: bold; color: #38bdf8;")
         stats_layout.addWidget(self.lbl_fps, alignment=Qt.AlignmentFlag.AlignLeft)
 
-        self.lbl_stability = QLabel("🟢 100% Fijación", self)
+        self.lbl_stability = QLabel("100% Fijación", self)
         self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
         stats_layout.addWidget(self.lbl_stability, alignment=Qt.AlignmentFlag.AlignRight)
 
@@ -226,7 +226,7 @@ class DebugWidget(QWidget):
         mode_layout.setContentsMargins(6, 6, 6, 6)
         mode_layout.setSpacing(4)
 
-        lbl_mode = QLabel("👁️ MODO DE SEGUIMIENTO (Tecla [T])", mode_frame)
+        lbl_mode = QLabel("MODO DE SEGUIMIENTO (Tecla [T])", mode_frame)
         lbl_mode.setStyleSheet("font-size: 10px; font-weight: bold; color: #38bdf8;")
         mode_layout.addWidget(lbl_mode)
 
@@ -234,21 +234,21 @@ class DebugWidget(QWidget):
         btn_mode_layout = QHBoxLayout()
         btn_mode_layout.setSpacing(4)
 
-        self.btn_mode_iris = QPushButton("👁️ Solo Iris", mode_frame)
+        self.btn_mode_iris = QPushButton("Solo Iris", mode_frame)
         self.btn_mode_iris.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.btn_mode_iris.setToolTip("Modo Solo Iris (Recomendado): Alcance horizontal total solo con los ojos")
+        self.btn_mode_iris.setToolTip("Modo Solo Iris: Alcance horizontal total solo con los ojos")
         self.btn_mode_iris.clicked.connect(lambda: self.set_tracking_mode_by_name("PURE_IRIS"))
         btn_mode_layout.addWidget(self.btn_mode_iris)
 
-        self.btn_mode_hybrid = QPushButton("🔄 Híbrido", mode_frame)
+        self.btn_mode_hybrid = QPushButton("Híbrido", mode_frame)
         self.btn_mode_hybrid.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_mode_hybrid.setToolTip("Modo Híbrido: Fusión Cabeza + Iris con compensación RVO")
         self.btn_mode_hybrid.clicked.connect(lambda: self.set_tracking_mode_by_name("HYBRID"))
         btn_mode_layout.addWidget(self.btn_mode_hybrid)
 
-        self.btn_mode_head = QPushButton("👤 Cabeza", mode_frame)
+        self.btn_mode_head = QPushButton("Cabeza", mode_frame)
         self.btn_mode_head.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.btn_mode_head.setToolTip("Modo Solo Cabeza: Control por orientación de cabeza")
+        self.btn_mode_head.setToolTip("Modo Solo Cabeza: Control por orientación de cabeza (Recomendado)")
         self.btn_mode_head.clicked.connect(lambda: self.set_tracking_mode_by_name("HEAD_PRIMARY"))
         btn_mode_layout.addWidget(self.btn_mode_head)
 
@@ -256,9 +256,9 @@ class DebugWidget(QWidget):
 
         self.combo_mode = QComboBox(mode_frame)
         self.combo_mode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.combo_mode.addItem("👁️ Solo Iris (Recomendado)", "PURE_IRIS")
-        self.combo_mode.addItem("🔄 Híbrido (Cabeza + Iris)", "HYBRID")
-        self.combo_mode.addItem("👤 Solo Cabeza (Pose)", "HEAD_PRIMARY")
+        self.combo_mode.addItem("Solo Iris", "PURE_IRIS")
+        self.combo_mode.addItem("Híbrido (Cabeza + Iris)", "HYBRID")
+        self.combo_mode.addItem("Solo Cabeza (Recomendado)", "HEAD_PRIMARY")
         self.combo_mode.setStyleSheet("""
             QComboBox {
                 background-color: #1e293b;
@@ -292,7 +292,7 @@ class DebugWidget(QWidget):
         slider_layout.setContentsMargins(6, 6, 6, 6)
         slider_layout.setSpacing(4)
 
-        lbl_section = QLabel("🎛️ CONTROLES DE SENSIBILIDAD Y TEMBLOR", slider_frame)
+        lbl_section = QLabel("CONTROLES DE SENSIBILIDAD Y TEMBLOR", slider_frame)
         lbl_section.setStyleSheet("font-size: 10px; font-weight: bold; color: #cbd5e1;")
         slider_layout.addWidget(lbl_section)
 
@@ -337,20 +337,20 @@ class DebugWidget(QWidget):
         ai_layout = QVBoxLayout()
         ai_layout.setSpacing(2)
 
-        self.lbl_active_file = QLabel("📄 Archivo: [Auto-detectar .py]", self)
+        self.lbl_active_file = QLabel("Archivo: [Auto-detectar .py]", self)
         self.lbl_active_file.setStyleSheet("font-size: 10px; color: #38bdf8;")
         ai_layout.addWidget(self.lbl_active_file)
 
         provider_name = getattr(config, "LLM_PROVIDER", "ollama").upper()
         model_name = getattr(config, "LLM_MODEL", "codellama")
-        self.lbl_ai_engine = QLabel(f"⚡ Motor IA: {provider_name} ({model_name})", self)
+        self.lbl_ai_engine = QLabel(f"Motor IA: {provider_name} ({model_name})", self)
         self.lbl_ai_engine.setStyleSheet("font-size: 10px; color: #a7f3d0;")
         ai_layout.addWidget(self.lbl_ai_engine)
 
         main_layout.addLayout(ai_layout)
 
         # 8. File Link Button
-        self.btn_link_file = QPushButton("📂 Vincular Archivo .py", self)
+        self.btn_link_file = QPushButton("Vincular Archivo .py", self)
         self.btn_link_file.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_link_file.clicked.connect(self._on_link_file_clicked)
         main_layout.addWidget(self.btn_link_file)
@@ -359,19 +359,19 @@ class DebugWidget(QWidget):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(6)
 
-        self.btn_recalibrate = QPushButton("🎯 Recalibrar", self)
+        self.btn_recalibrate = QPushButton("Recalibrar", self)
         self.btn_recalibrate.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_recalibrate.clicked.connect(self.recalibrate_requested.emit)
         btn_layout.addWidget(self.btn_recalibrate)
 
-        self.btn_reset = QPushButton("🔄 Reset", self)
+        self.btn_reset = QPushButton("Reset", self)
         self.btn_reset.setObjectName("btnReset")
         self.btn_reset.setToolTip("Resetear calibración y amortiguación a valores por defecto")
         self.btn_reset.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_reset.clicked.connect(self._on_reset_clicked)
         btn_layout.addWidget(self.btn_reset)
 
-        self.btn_exit = QPushButton("🚨 Salir", self)
+        self.btn_exit = QPushButton("Salir", self)
         self.btn_exit.setObjectName("btnExit")
         self.btn_exit.setToolTip("Salida inmediata de la aplicación")
         self.btn_exit.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -403,7 +403,7 @@ class DebugWidget(QWidget):
             self.btn_link_file.setIcon(link_icon)
 
         # 10. Emergency Hotkey Documentation Label
-        self.lbl_emergency_hint = QLabel("🚨 Emergencia: Ctrl+Alt+Q para salir", self)
+        self.lbl_emergency_hint = QLabel("Emergencia: Ctrl+Alt+Q para salir", self)
         self.lbl_emergency_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_emergency_hint.setStyleSheet("font-size: 10px; font-weight: bold; color: #f87171; padding: 2px;")
         main_layout.addWidget(self.lbl_emergency_hint)
@@ -457,12 +457,12 @@ class DebugWidget(QWidget):
         """Updates the active file label."""
         if file_path:
             name = os.path.basename(file_path)
-            self.lbl_active_file.setText(f"📄 Archivo: {name}")
+            self.lbl_active_file.setText(f"Archivo: {name}")
 
     @pyqtSlot(str)
     def update_ai_status(self, status: str) -> None:
         """Updates the AI engine status label."""
-        self.lbl_ai_engine.setText(f"⚡ IA: {status}")
+        self.lbl_ai_engine.setText(f"IA: {status}")
 
     @pyqtSlot(float)
     def update_mar(self, current_mar: float) -> None:
@@ -504,7 +504,7 @@ class DebugWidget(QWidget):
             if dt > 0.001:
                 cur_fps = 1.0 / dt
                 self._fps = 0.90 * self._fps + 0.10 * cur_fps
-                self.lbl_fps.setText(f"⚡ {self._fps:.1f} FPS")
+                self.lbl_fps.setText(f"{self._fps:.1f} FPS")
         self._last_frame_time = now
 
         # 2. Tracking Stability update from GazeEstimator if attached
@@ -513,10 +513,10 @@ class DebugWidget(QWidget):
             is_fix = getattr(self.gaze_estimator, "is_fixated", True)
             pct = int(score * 100)
             if is_fix:
-                self.lbl_stability.setText(f"🟢 Fijación: {pct}%")
+                self.lbl_stability.setText(f"Fijación: {pct}%")
                 self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
             else:
-                self.lbl_stability.setText(f"🟡 Sácada / Ojo")
+                self.lbl_stability.setText("Sácada / Movimiento")
                 self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #fbbf24;")
 
         if frame_or_qimage is None:

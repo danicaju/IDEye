@@ -1,5 +1,5 @@
 """
-Calibration UI Module for EyeDE (Phase 2)
+Calibration UI Module for IDEye (Phase 2)
 Full-screen interactive 5-Point Gaze Calibration Window.
 
 Guides the user through 5 sequential calibration points:
@@ -36,7 +36,7 @@ except ImportError:
 
 class CalibrationUI(QWidget):
     """
-    Full-screen 5-point calibration interface for EyeDE.
+    Full-screen 5-point calibration interface for IDEye.
     """
 
     calibration_finished = pyqtSignal(bool)  # Emits True if succeeded, False if cancelled
@@ -64,6 +64,7 @@ class CalibrationUI(QWidget):
         self.samples_buffer: List[Tuple[float, float]] = []
         self.latest_raw_gaze: Tuple[float, float] = (0.5, 0.5)
         self.is_completed: bool = False
+        self._finished_emitted: bool = False
         self.status_message: str = "Mire al punto central y abra la boca para registrar"
 
         # Animation timer for target pulsing
@@ -77,10 +78,11 @@ class CalibrationUI(QWidget):
         self._sample_timer.timeout.connect(self._collect_sample_tick)
 
         # UI configuration
-        self.setWindowTitle("EyeDE - Calibración Visual de 5 Puntos")
+        self.setWindowTitle("IDEye - Calibración Visual de 5 Puntos")
         app_icon = IconManager.instance().get_app_icon()
         if not app_icon.isNull():
             self.setWindowIcon(app_icon)
+        self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint)
         self.setStyleSheet("background-color: #12151c;")
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -187,11 +189,15 @@ class CalibrationUI(QWidget):
             self.update()
             QTimer.singleShot(700, lambda: self._finish_and_emit(True))
         else:
-            self.status_message = "⚠️ Calibración fallida: datos degenerados. Usando perfil previo o por defecto."
+            self.status_message = "Calibración fallida: datos degenerados. Usando perfil previo o por defecto."
             self.update()
             QTimer.singleShot(1200, lambda: self._finish_and_emit(False))
 
     def _finish_and_emit(self, succeeded: bool) -> None:
+        if self._finished_emitted:
+            return
+        self._finished_emitted = True
+        self.is_completed = True
         self._anim_timer.stop()
         self._sample_timer.stop()
         self.calibration_finished.emit(succeeded)
@@ -203,12 +209,18 @@ class CalibrationUI(QWidget):
             if not self.is_sampling and not self.is_completed:
                 self.start_sampling()
         elif event.key() == Qt.Key.Key_Escape:
-            self._anim_timer.stop()
-            self._sample_timer.stop()
-            self.calibration_finished.emit(False)
-            self.close()
+            self._finish_and_emit(False)
         else:
             super().keyPressEvent(event)
+
+    def closeEvent(self, event) -> None:
+        """Ensures animation timers stop and signals calibration termination on window close."""
+        self._anim_timer.stop()
+        self._sample_timer.stop()
+        if not self._finished_emitted:
+            self._finished_emitted = True
+            self.calibration_finished.emit(False)
+        super().closeEvent(event)
 
     def mousePressEvent(self, event) -> None:
         """Mouse click also triggers sampling for active calibration point."""

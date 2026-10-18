@@ -1,3 +1,3 @@
 """
-EyeDE package test suite mirror
+IDEye package test suite mirror
 """

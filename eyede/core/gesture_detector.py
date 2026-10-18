@@ -1,5 +1,5 @@
 """
-Gesture Detector Module for EyeDE (Phase 1)
+Gesture Detector Module for IDEye (Phase 1)
 Detects intentional facial triggers, specifically the Mouth Aspect Ratio (MAR)
 for hands-free clicking with debouncing, cooldown, and zero-division protection.
 """

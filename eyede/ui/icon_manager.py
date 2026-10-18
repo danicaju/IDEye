@@ -1,5 +1,5 @@
 """
-EyeDE - Vector Icon Manager
+IDEye - Vector Icon Manager
 Pre-loads, caches, and renders neon/glassmorphic SVG icons using QSvgRenderer.
 Guarantees clean rendering, no memory leaks, and safe fallbacks if files are missing.
 """
@@ -15,7 +15,7 @@ _ICONS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 
 class IconManager:
     """
-    Singleton-style manager that caches QSvgRenderer instances for EyeDE vector icons.
+    Singleton-style manager that caches QSvgRenderer instances for IDEye vector icons.
     """
     _instance: Optional["IconManager"] = None
 

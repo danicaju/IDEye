@@ -1,5 +1,5 @@
 """
-EyeDE Core Package - Vision, Tracking and Gestures
+IDEye Core Package - Vision, Tracking and Gestures
 """
 try:
     from eyede.core.gesture_detector import GestureDetector, GestureState

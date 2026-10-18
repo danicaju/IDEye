@@ -1,5 +1,5 @@
 """
-Root launcher for EyeDE (L2C / Vistax)
+Root launcher for IDEye
 Allows running `python main.py` directly from workspace root: c:\\Users\\danic\\Desktop\\IDEye
 """
 

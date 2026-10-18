@@ -1,5 +1,5 @@
 @echo off
-:: EyeDE - Direct Desktop Launcher (Silent)
+:: IDEye - Direct Desktop Launcher (Silent)
 cd /d "%~dp0"
 if exist "venv\Scripts\pythonw.exe" (
     start "" "venv\Scripts\pythonw.exe" main.py %*

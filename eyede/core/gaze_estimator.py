@@ -1,5 +1,5 @@
 """
-Hybrid Gaze Estimator Module for EyeDE (Phase 1)
+Hybrid Gaze Estimator Module for IDEye (Phase 1)
 Combines relative iris offset with head pose (nose tip anchor),
 applies neutral center calibration, and smoothes with an Exponential Moving Average (EMA).
 """
@@ -24,6 +24,7 @@ except ImportError:
 TRACKING_MODE_PURE_IRIS = getattr(config, "TRACKING_MODE_PURE_IRIS", "PURE_IRIS") if config else "PURE_IRIS"
 TRACKING_MODE_HYBRID = getattr(config, "TRACKING_MODE_HYBRID", "HYBRID") if config else "HYBRID"
 TRACKING_MODE_HEAD_PRIMARY = getattr(config, "TRACKING_MODE_HEAD_PRIMARY", "HEAD_PRIMARY") if config else "HEAD_PRIMARY"
+DEFAULT_TRACKING_MODE = getattr(config, "DEFAULT_TRACKING_MODE", TRACKING_MODE_HEAD_PRIMARY) if config else TRACKING_MODE_HEAD_PRIMARY
 
 
 class OneEuroFilter:
@@ -133,7 +134,7 @@ class GazeEstimator:
         if tracking_mode is not None:
             self.tracking_mode = str(tracking_mode).upper()
         else:
-            self.tracking_mode = "HYBRID"
+            self.tracking_mode = DEFAULT_TRACKING_MODE
 
         # Base sensitivity multipliers
         self.base_head_sensitivity_x = float(head_sensitivity_x)
@@ -456,8 +457,12 @@ class GazeEstimator:
             combined_x = di_x
             combined_y = di_y
         elif self.tracking_mode == "HEAD_PRIMARY":
+            # Ergonomic head pose optimization:
+            # Cervical pitch has a naturally restricted anatomical range compared to yaw.
+            # Applying a 2.8x vertical head gain allows gentle, fatigue-free head tilts to effortlessly
+            # reach the top and bottom macro-grid rows (Y < 0.20 and Y > 0.80) without neck strain.
             combined_x = 0.95 * dh_x + 0.05 * di_x
-            combined_y = 0.95 * dh_y + 0.05 * di_y
+            combined_y = (2.8 * dh_y) + (0.05 * di_y)
         else:  # "HYBRID"
             # VOR Decoupling / Compensation:
             # When user turns head left (dh_x < 0) and eyes counter-rotate right (di_x > 0),
@@ -621,8 +626,11 @@ class GazeEstimator:
             else:
                 self.is_fixated = False
                 self.stability_score = max(0.0, 0.5 - min(0.5, dist_to_anchor))
-                # Outside deadzone: sliding leash prevents limit-cycle side-to-side oscillation
-                if dist_to_anchor > 2.5 * self.fixation_deadzone:
+                # Outside deadzone: sliding leash prevents limit-cycle side-to-side oscillation.
+                # Head movement is continuous/anatomical rather than ballistic saccades, so HEAD_PRIMARY
+                # uses a 4.0x leash multiplier to prevent stick-slip freezing during intentional head shifts.
+                snap_multiplier = 4.0 if self.tracking_mode == "HEAD_PRIMARY" else 2.5
+                if dist_to_anchor > snap_multiplier * self.fixation_deadzone:
                     # Saccade / large intentional movement: snap anchor to target
                     self.fixation_anchor_x = target_x
                     self.fixation_anchor_y = target_y

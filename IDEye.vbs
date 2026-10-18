@@ -1,4 +1,4 @@
-' EyeDE - Silent Launcher (Zero console flash)
+' IDEye - Silent Launcher (Zero console flash)
 Set WshShell = CreateObject("WScript.Shell")
 scriptDir = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
 WshShell.CurrentDirectory = scriptDir

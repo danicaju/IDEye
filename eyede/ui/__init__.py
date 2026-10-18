@@ -1,3 +1,3 @@
 """
-EyeDE UI Package - Phase 2-4 UI components
+IDEye UI Package - Phase 2-4 UI components
 """

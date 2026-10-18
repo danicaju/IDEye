@@ -1,5 +1,5 @@
 """
-EyeDE - Code Injector Module (Phase 3)
+IDEye - Code Injector Module (Phase 3)
 Non-blocking, OS-level code and keystroke injector with clipboard preservation,
 cross-platform modifier mapping, and guaranteed stuck-modifier protection.
 
@@ -144,7 +144,7 @@ class CodeInjector:
         self._stop_event.clear()
         self._worker_thread = threading.Thread(
             target=self._worker_loop,
-            name="EyeDE-CodeInjector-Worker",
+            name="IDEye-CodeInjector-Worker",
             daemon=True,
         )
         self._worker_thread.start()

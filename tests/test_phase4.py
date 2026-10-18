@@ -1,5 +1,5 @@
 """
-Unit & Integration Test Suite for EyeDE Phase 4
+Unit & Integration Test Suite for IDEye Phase 4
 Tests Live AST Context Reader, Error-Tolerant AST/Regex Symbol Extraction,
 Asynchronous AIPredictorWorker (Ollama & Fallback Heuristic Engine),
 Thread Deduplication, MenuTree Layout Integrity with Dynamic Nodes,

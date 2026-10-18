@@ -1,5 +1,5 @@
 """
-EyeDE - Configuration Module (Phase 1)
+IDEye - Configuration Module (Phase 1)
 Central configuration for camera tracking, hybrid gaze estimation,
 gesture trigger thresholds, and UI display parameters.
 """
@@ -61,7 +61,7 @@ LANDMARK_MOUTH_CORNER_RIGHT: int = 308
 TRACKING_MODE_PURE_IRIS: str = "PURE_IRIS"
 TRACKING_MODE_HYBRID: str = "HYBRID"
 TRACKING_MODE_HEAD_PRIMARY: str = "HEAD_PRIMARY"
-DEFAULT_TRACKING_MODE: str = TRACKING_MODE_PURE_IRIS
+DEFAULT_TRACKING_MODE: str = TRACKING_MODE_HEAD_PRIMARY
 
 # Default balance for HYBRID mode: 60% head/nose vector, 40% iris vector
 HEAD_WEIGHT: float = 0.60
@@ -165,13 +165,13 @@ MINI_FEED_MARGIN: int = 16
 # ==============================================================================
 # Phase 2: PyQt6 Overlay, Debug & 5-Point Calibration Parameters
 # ==============================================================================
-# Overlay HUD opacities
-OVERLAY_OPACITY_ACTIVE: float = 0.88
-OVERLAY_OPACITY_READING: float = 0.10
+# Overlay HUD opacities (High-transparency glassmorphic design)
+OVERLAY_OPACITY_ACTIVE: float = 0.22
+OVERLAY_OPACITY_READING: float = 0.08
 
 # RGBA colors for PyQt6 Overlay (0-255)
-OVERLAY_COLOR_BG = (15, 20, 28, 195)
-OVERLAY_COLOR_BORDER = (45, 55, 75, 180)
+OVERLAY_COLOR_BG = (15, 20, 28, 120)
+OVERLAY_COLOR_BORDER = (56, 189, 248, 180)
 OVERLAY_BORDER_WIDTH: int = 2
 
 OVERLAY_COLOR_HOVER = (28, 44, 72, 235)

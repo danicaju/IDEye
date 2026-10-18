@@ -1,5 +1,5 @@
 """
-Camera Tracker Module for EyeDE (Phase 2)
+Camera Tracker Module for IDEye (Phase 2)
 Handles OpenCV webcam capture and MediaPipe FaceMesh processing
 with 478 refined 3D landmarks for iris and facial tracking.
 

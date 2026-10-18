@@ -1,6 +1,6 @@
 """
-EyeDE - Desktop Application Builder (PyInstaller)
-Compiles EyeDE into a native Windows desktop executable with custom icon and bundled assets.
+IDEye - Desktop Application Builder (PyInstaller)
+Compiles IDEye into a native Windows desktop executable with custom icon and bundled assets.
 """
 
 import os
@@ -15,7 +15,7 @@ MAIN_PY = os.path.join(ROOT_DIR, "main.py")
 
 def build():
     print("=" * 60)
-    print("  EyeDE - Building Native Windows Desktop Executable")
+    print("  IDEye - Building Native Windows Desktop Executable")
     print("=" * 60)
 
     if not os.path.exists(ICON_PATH):
@@ -28,7 +28,7 @@ def build():
         "PyInstaller",
         "--noconfirm",
         "--clean",
-        "--name=EyeDE",
+        "--name=IDEye",
         "--windowed",  # No console window popup
         f"--icon={ICON_PATH}",
         f"--add-data={ASSETS_DIR};eyede/assets",
@@ -65,8 +65,8 @@ def build():
         print(f"[ERROR] PyInstaller failed with exit code {result.returncode}")
         return False
 
-    dist_dir = os.path.join(ROOT_DIR, "dist", "EyeDE")
-    exe_path = os.path.join(dist_dir, "EyeDE.exe")
+    dist_dir = os.path.join(ROOT_DIR, "dist", "IDEye")
+    exe_path = os.path.join(dist_dir, "IDEye.exe")
     print("-" * 60)
     if os.path.exists(exe_path):
         print(f"[SUCCESS] Native desktop executable generated at:\n  {exe_path}")

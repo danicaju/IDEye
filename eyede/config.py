@@ -102,7 +102,7 @@ MIN_EYE_HEIGHT_RATIO: float = 0.008
 NOMINAL_INTEROCULAR_DIST: float = 0.28
 
 # ==============================================================================
-# Gesture Detector (MAR Trigger) Parameters
+# Gesture Detector (MAR & Asymmetric Eye-Wink) Parameters
 # ==============================================================================
 # Mouth Aspect Ratio threshold for detecting slightly open mouth
 MAR_THRESHOLD: float = 0.45
@@ -112,6 +112,20 @@ MAR_RELEASE_THRESHOLD: float = 0.35
 CLICK_HOLD_TIME_SEC: float = 0.15
 # Cooldown duration (seconds) after a successful click before another can occur
 CLICK_COOLDOWN_SEC: float = 0.35
+
+# Asymmetric Eye-Wink Detection (EAR) Parameters
+# Scale-invariant Eye Aspect Ratio thresholds
+EAR_WINK_CLOSE_THRESHOLD: float = 0.16  # Below this, eye is considered closed
+EAR_WINK_OPEN_THRESHOLD: float = 0.22   # Above this, eye is considered open
+WINK_MIN_HOLD_SEC: float = 0.15         # Minimum hold duration (150ms)
+WINK_MAX_HOLD_SEC: float = 0.45         # Maximum hold duration (450ms)
+WINK_COOLDOWN_SEC: float = 0.40         # Cooldown between winks (400ms)
+
+# MediaPipe 478 Landmark Indices for EAR Calculation
+# Left eye (outer corner 33, top outer 160, top inner 158, inner corner 133, bottom inner 153, bottom outer 144)
+LANDMARK_LEFT_EYE_EAR_INDICES: tuple = (33, 160, 158, 133, 153, 144)
+# Right eye (inner corner 362, top inner 385, top outer 387, outer corner 263, bottom outer 373, bottom inner 380)
+LANDMARK_RIGHT_EYE_EAR_INDICES: tuple = (362, 385, 387, 263, 373, 380)
 
 # ==============================================================================
 # Macro-Bloques Grid Layout (3x3 Matrix)
@@ -216,11 +230,12 @@ CALIBRATION_PROFILE_PATH: str = "calibration_profile.json"
 CALIBRATION_SAMPLES_PER_POINT: int = 15
 CALIBRATION_SAMPLE_DELAY_SEC: float = 0.02
 
-# Debug widget sizing
+# Debug widget sizing & overlay right docking margin
 DEBUG_WINDOW_WIDTH: int = 340
 DEBUG_WINDOW_HEIGHT: int = 640
 DEBUG_FEED_WIDTH: int = 300
 DEBUG_FEED_HEIGHT: int = 170
+OVERLAY_GRID_RIGHT_MARGIN: int = 364  # Clears space on screen so 3x3 grid never collides with debug widget
 
 # ==============================================================================
 # Phase 4: Live AST Context Reader & AI Code Predictor Settings

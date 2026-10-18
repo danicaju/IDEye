@@ -162,6 +162,8 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+Q` / `F12`** | ** Botón de Emergencia (Killswitch)** | **Atajo global en todo el SO**: apaga IDEye limpiamente de inmediato, incluso cuando VS Code tiene el foco |
 | **`Ctrl+Alt+R`** | ** Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
 | **`[A]`** | **Alternar AST Adaptativo** | Activa/desactiva menús contextuales en vivo (adapta los 9 bloques a funciones, try/except, bucles, etc.) |
+| **Guiño Derecho** | **Pausar / Ocultar Totalmente** | Oculta el HUD al 100% para despejar la pantalla; otro guiño derecho lo muestra de nuevo |
+| **Guiño Izquierdo** | **Volver Atrás / Deshacer** | Regresa al menú anterior o ejecuta Deshacer (Ctrl+Z) si estás en la raíz |
 | **`[T]`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`PURE_IRIS`** (Solo Iris - 100% ojos sin girar la cabeza), **`HYBRID`** (Fusión compensada por VOR) y **`HEAD_PRIMARY`** |
 | **`[C]`** | **Recalibrar Centro** | Mira al centro de la pantalla y pulsa `C` para fijar tu ancla neutra |
 | **`[+]` / `[-]`** | **Ajustar Sensibilidad** | Aumenta o disminuye la sensibilidad de seguimiento sobre la marcha |
@@ -200,7 +202,7 @@ IDEye/
 │ ├── menu_trees.py # Árboles de sintaxis jerárquica 3x3 y nodos pegajosos
 │ ├── context_reader.py # Extractor de símbolos AST + Regex tolerante a errores
 │ └── ai_predictor.py # Worker QThread asíncrono para IA con respaldo heurístico
-└── tests/ # Suite de 386 pruebas automatizadas de unidad e integración
+└── tests/ # Suite de 432 pruebas automatizadas de unidad e integración
  ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
  ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
  ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
@@ -224,11 +226,11 @@ pytest -v
 ```
 
 ```text
-============================ 386 passed in 11.78s =============================
+============================ 432 passed in 12.42s =============================
 ```
 
 > [!NOTE]
-> Todos los 386 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet.
+> Todos los 432 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet.
 
 ---
 

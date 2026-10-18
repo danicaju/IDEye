@@ -248,17 +248,29 @@ class CameraTracker(QThread):
         iris_offset_y = 0.010 * math.cos(self._synthetic_tick * 1.5)
 
         # Left eye
+        eye_top_l = norm_center_y - eye_span_y - 0.02
+        eye_bot_l = norm_center_y - eye_span_y + 0.02
         landmarks[config.LANDMARK_LEFT_EYE_OUTER] = _SyntheticLandmark(norm_center_x - 0.12, norm_center_y - eye_span_y)
         landmarks[config.LANDMARK_LEFT_EYE_INNER] = _SyntheticLandmark(norm_center_x - 0.04, norm_center_y - eye_span_y)
-        landmarks[config.LANDMARK_LEFT_EYE_TOP] = _SyntheticLandmark(norm_center_x - 0.08, norm_center_y - eye_span_y - 0.02)
-        landmarks[config.LANDMARK_LEFT_EYE_BOTTOM] = _SyntheticLandmark(norm_center_x - 0.08, norm_center_y - eye_span_y + 0.02)
+        landmarks[config.LANDMARK_LEFT_EYE_TOP] = _SyntheticLandmark(norm_center_x - 0.08, eye_top_l)
+        landmarks[config.LANDMARK_LEFT_EYE_BOTTOM] = _SyntheticLandmark(norm_center_x - 0.08, eye_bot_l)
+        landmarks[160] = _SyntheticLandmark(norm_center_x - 0.10, eye_top_l)
+        landmarks[158] = _SyntheticLandmark(norm_center_x - 0.06, eye_top_l)
+        landmarks[144] = _SyntheticLandmark(norm_center_x - 0.10, eye_bot_l)
+        landmarks[153] = _SyntheticLandmark(norm_center_x - 0.06, eye_bot_l)
         landmarks[config.LANDMARK_IRIS_LEFT_CENTER] = _SyntheticLandmark(norm_center_x - 0.08 + iris_offset_x, norm_center_y - eye_span_y + iris_offset_y)
 
         # Right eye
+        eye_top_r = norm_center_y - eye_span_y - 0.02
+        eye_bot_r = norm_center_y - eye_span_y + 0.02
         landmarks[config.LANDMARK_RIGHT_EYE_INNER] = _SyntheticLandmark(norm_center_x + 0.04, norm_center_y - eye_span_y)
         landmarks[config.LANDMARK_RIGHT_EYE_OUTER] = _SyntheticLandmark(norm_center_x + 0.12, norm_center_y - eye_span_y)
-        landmarks[config.LANDMARK_RIGHT_EYE_TOP] = _SyntheticLandmark(norm_center_x + 0.08, norm_center_y - eye_span_y - 0.02)
-        landmarks[config.LANDMARK_RIGHT_EYE_BOTTOM] = _SyntheticLandmark(norm_center_x + 0.08, norm_center_y - eye_span_y + 0.02)
+        landmarks[config.LANDMARK_RIGHT_EYE_TOP] = _SyntheticLandmark(norm_center_x + 0.08, eye_top_r)
+        landmarks[config.LANDMARK_RIGHT_EYE_BOTTOM] = _SyntheticLandmark(norm_center_x + 0.08, eye_bot_r)
+        landmarks[385] = _SyntheticLandmark(norm_center_x + 0.06, eye_top_r)
+        landmarks[387] = _SyntheticLandmark(norm_center_x + 0.10, eye_top_r)
+        landmarks[380] = _SyntheticLandmark(norm_center_x + 0.06, eye_bot_r)
+        landmarks[373] = _SyntheticLandmark(norm_center_x + 0.10, eye_bot_r)
         landmarks[config.LANDMARK_IRIS_RIGHT_CENTER] = _SyntheticLandmark(norm_center_x + 0.08 + iris_offset_x, norm_center_y - eye_span_y + iris_offset_y)
 
         # Mouth (periodically open mouth to simulate facial click triggers)
@@ -352,8 +364,14 @@ class CameraTracker(QThread):
             # Thread-safe signal dispatching
             self.gaze_updated.emit(emit_gx, emit_gy)
             self.raw_gaze_updated.emit(emit_raw_x, emit_raw_y)
-            if clicked:
-                self.gesture_triggered.emit("MOUTH_CLICK")
+
+            # Emit all triggered gestures (MOUTH_CLICK, WINK_LEFT, WINK_RIGHT)
+            gestures = getattr(self.gesture_detector, "triggered_gestures", [])
+            if not gestures and clicked:
+                gestures = ["MOUTH_CLICK"]
+            for gesture in gestures:
+                self.gesture_triggered.emit(gesture)
+
             self.frame_ready.emit(annotated_frame, float(current_mar))
 
             elapsed = time.perf_counter() - t_start

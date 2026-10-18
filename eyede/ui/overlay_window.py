@@ -144,9 +144,11 @@ class OverlayWindow(QWidget):
         self.active_click_header_exit: bool = False
         self.header_exit_rect: QRectF = QRectF()
 
-        # Layout constants
+        # Layout constants & right dock margin (clears space for DebugWidget)
         self.breadcrumb_height: float = 42.0
         self.margin: float = 8.0
+        self.grid_right_margin: float = float(getattr(config, "OVERLAY_GRID_RIGHT_MARGIN", 364.0))
+        self.resize(1920, 1080)
 
         # Window title for identification
         self.setWindowTitle("IDEye - Gaze Macro Grid HUD (Phase 3)")
@@ -274,14 +276,60 @@ class OverlayWindow(QWidget):
         super().resizeEvent(event)
         self._update_header_exit_rect()
 
+    def showEvent(self, event) -> None:
+        """Ensures Win32 non-activating and topmost styles are reapplied when shown/restored."""
+        super().showEvent(event)
+        self._update_header_exit_rect()
+        if sys.platform == "win32":
+            self._apply_win32_no_activate()
+
+    def _get_effective_right_margin(self, w: float) -> float:
+        """
+        Returns the effective right margin to accommodate the docked DebugWidget
+        while guaranteeing normalized center gaze (0.5, 0.5) always lands on Center Block 4.
+        """
+        base_right_margin = float(getattr(self, "grid_right_margin", 364.0))
+        if w >= 1920.0:
+            return base_right_margin
+        return base_right_margin * (w / 1920.0)
+
+    def set_grid_right_margin(self, margin: float) -> None:
+        """Sets the reserved right margin to prevent HUD overlap with docked debug window."""
+        self.grid_right_margin = max(0.0, float(margin))
+        self._update_header_exit_rect()
+        self.update()
+
+    def get_block_rect(self, index: int) -> QRectF:
+        """Computes the QRectF bounding box for a given 3x3 block index."""
+        w = float(self.width()) if self.width() > 0 else 1920.0
+        h = float(self.height()) if self.height() > 0 else 1080.0
+        margin = self.margin
+        header_h = self.breadcrumb_height
+        avail_y = margin + header_h + margin
+        avail_h = max(1.0, h - avail_y - margin)
+        effective_right_margin = self._get_effective_right_margin(w)
+        avail_w = max(1.0, w - 2.0 * margin - effective_right_margin)
+        cell_w = avail_w / 3.0
+        cell_h = avail_h / 3.0
+        col = index % 3
+        row = index // 3
+        return QRectF(
+            margin + col * cell_w + 5.0,
+            avail_y + row * cell_h + 5.0,
+            max(1.0, cell_w - 10.0),
+            max(1.0, cell_h - 10.0),
+        )
+
     def _update_header_exit_rect(self) -> None:
         """Computes the interactive bounding box of the top-right exit button."""
         w = float(self.width()) if self.width() > 0 else 1920.0
-        margin = 12.0
-        header_h = 42.0
+        margin = self.margin
+        header_h = self.breadcrumb_height
         pill_h = header_h - 14.0
         exit_btn_w = 110.0
-        header_rect = QRectF(margin, margin, max(1.0, w - 2.0 * margin), header_h)
+        effective_right_margin = self._get_effective_right_margin(w)
+        header_w = max(1.0, w - 2.0 * margin - effective_right_margin)
+        header_rect = QRectF(margin, margin, header_w, header_h)
         self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 7.0, exit_btn_w, pill_h)
 
     def _apply_win32_no_activate(self) -> None:
@@ -450,8 +498,8 @@ class OverlayWindow(QWidget):
         # Determine 3x3 block index with card geometry alignment
         w = float(self.width()) if self.width() > 0 else 1920.0
         h = float(self.height()) if self.height() > 0 else 1080.0
-        margin = 12.0
-        header_h = 42.0
+        margin = self.margin
+        header_h = self.breadcrumb_height
         avail_y = margin + header_h + margin
         avail_h = max(1.0, h - avail_y - margin)
         cell_h = avail_h / 3.0
@@ -477,11 +525,12 @@ class OverlayWindow(QWidget):
         else:
             row = min(2, max(0, int((py - avail_y) / cell_h)))
 
-        avail_w = max(1.0, w - 2.0 * margin)
+        effective_right_margin = self._get_effective_right_margin(w)
+        avail_w = max(1.0, w - 2.0 * margin - effective_right_margin)
         cell_w = avail_w / 3.0
         if px < margin:
             col = 0
-        elif px >= w - margin:
+        elif px >= margin + avail_w:
             col = 2
         else:
             col = min(2, max(0, int((px - margin) / cell_w)))
@@ -506,10 +555,47 @@ class OverlayWindow(QWidget):
     @pyqtSlot(str)
     def on_gesture_triggered(self, gesture_name: str) -> None:
         """
-        Handles facial gesture triggers (e.g. 'MOUTH_CLICK').
-        Dispatches menu tree navigation or non-blocking code injection.
-        Guarantees that clicks are not accumulated in queue while an injection is active.
+        Handles facial gesture triggers:
+        - 'MOUTH_CLICK': Gaze macro selection, menu navigation, snippet insertion.
+        - 'WINK_RIGHT': Toggles Option B pause mode (hides/restores HUD completely).
+        - 'WINK_LEFT': Submenu 'Volver atrás' (parent menu node), or Undo 'Ctrl+Z' at ROOT.
         """
+        if gesture_name == "WINK_RIGHT":
+            self.toggle_reading_mode()
+            self.last_action_desc = "Modo Edición (HUD Restaurado)" if not self.reading_mode else "Modo Reposo (HUD Oculto)"
+            self.block_activated.emit(4, "PAUSE_RESUME")
+            return
+
+        if gesture_name == "WINK_LEFT":
+            if self.reading_mode:
+                return
+            if self.current_node_id != "ROOT":
+                target_id = (self.current_node.parent_id if self.current_node and self.current_node.parent_id else "ROOT") or "ROOT"
+                self.navigate_to(target_id)
+                target_title = self.menu_tree[target_id].title if target_id in self.menu_tree else "RAÍZ"
+                self.last_action_desc = f"Volver a {target_title}"
+                self.block_activated.emit(6, "ACTION_BACK")
+                self.update()
+                return
+            else:
+                if self.code_injector.is_busy:
+                    return
+                undo_action = MenuAction(
+                    id="ACTION_UNDO",
+                    label="Deshacer",
+                    hint="Ctrl+Z",
+                    action_type="KEY",
+                    key_name="UNDO",
+                    sticky=True,
+                    icon="↶",
+                )
+                self.code_injector.execute_action(undo_action)
+                self.last_action_desc = "Deshacer (Ctrl+Z)"
+                self.action_executed.emit("ACTION_UNDO", "Deshacer (Ctrl+Z)")
+                self.block_activated.emit(0, "ACTION_UNDO")
+                self.update()
+                return
+
         if gesture_name != "MOUTH_CLICK":
             return
 
@@ -698,13 +784,31 @@ class OverlayWindow(QWidget):
             self.update()
 
     def toggle_reading_mode(self) -> None:
-        """Toggles between Active HUD mode and 10% Opacity Reading Mode."""
+        """Toggles between Active HUD mode and Hidden/Reading Mode (Option B: full hide)."""
         self.reading_mode = not self.reading_mode
         self.current_opacity = config.OVERLAY_OPACITY_READING if self.reading_mode else config.OVERLAY_OPACITY_ACTIVE
         if self.reading_mode:
             self.hovered_block = None
+            self.hide()
+        else:
+            self.show()
+            self.raise_()
         self.reading_mode_toggled.emit(self.reading_mode)
         self.update()
+
+    def pause_hud(self) -> None:
+        """Pauses and hides the HUD completely (Option B)."""
+        if not self.reading_mode:
+            self.toggle_reading_mode()
+
+    def resume_hud(self) -> None:
+        """Resumes and restores the HUD completely (Option B)."""
+        if self.reading_mode:
+            self.toggle_reading_mode()
+
+    def toggle_pause(self) -> None:
+        """Toggles pause/hidden state of the HUD (Option B)."""
+        self.toggle_reading_mode()
 
     def trigger_click_flash(self, block_idx: int) -> None:
         """Triggers vibrant green active highlight on clicked block."""
@@ -765,7 +869,9 @@ class OverlayWindow(QWidget):
         # =====================================================================
         # 1. Top Breadcrumb Bar (Acrylic Glassmorphism)
         # =====================================================================
-        header_rect = QRectF(margin, margin, w - 2.0 * margin, header_h)
+        effective_right_margin = self._get_effective_right_margin(w)
+        header_w = max(1.0, w - 2.0 * margin - effective_right_margin)
+        header_rect = QRectF(margin, margin, header_w, header_h)
         painter.setOpacity(0.95 if not self.reading_mode else 0.30)
 
         # Header background pill
@@ -885,24 +991,11 @@ class OverlayWindow(QWidget):
         # =====================================================================
         # 2. 3x3 Grid Category Cards
         # =====================================================================
-        avail_y = margin + header_h + margin
-        avail_h = h - avail_y - margin
-        cell_w = (w - 2.0 * margin) / 3.0
-        cell_h = avail_h / 3.0
-
         for i in range(9):
             if i >= len(items):
                 continue
             item = items[i]
-            col = i % 3
-            row = i // 3
-
-            rect = QRectF(
-                margin + col * cell_w + 5.0,
-                avail_y + row * cell_h + 5.0,
-                cell_w - 10.0,
-                cell_h - 10.0,
-            )
+            rect = self.get_block_rect(i)
 
             is_active_click = (self.active_click_block == i)
             is_hover = (self.hovered_block == i)

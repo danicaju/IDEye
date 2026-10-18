@@ -1,13 +1,16 @@
 """
-Gesture Detector Module for IDEye (Phase 1)
-Detects intentional facial triggers, specifically the Mouth Aspect Ratio (MAR)
-for hands-free clicking with debouncing, cooldown, and zero-division protection.
+Gesture Detector Module for IDEye (Phase 1 & Asymmetric Winks)
+Detects intentional facial triggers:
+1. Mouth Aspect Ratio (MAR) for hands-free clicking with debouncing & cooldown.
+2. Scale-invariant Eye Aspect Ratio (EAR) for left and right eyes to detect
+   asymmetric eye-winks (WINK_LEFT, WINK_RIGHT) while cleanly discriminating
+   involuntary bilateral blinks and prolonged squint closures.
 """
 
 import math
 import time
 from enum import Enum
-from typing import Optional, Any, Tuple
+from typing import Optional, Any, Tuple, List, Union
 
 
 class GestureState(Enum):
@@ -17,16 +20,54 @@ class GestureState(Enum):
     TRIGGERED = "TRIGGERED"          # Click event fired, waiting for release & cooldown
 
 
+class GestureResult(tuple):
+    """
+    Backwards-compatible 3-tuple subclass for gesture detection results.
+    Unpacks as (clicked, current_mar, hold_progress) while exposing rich attributes:
+        .clicked (bool): True if mouth click triggered
+        .mar (float): Mouth Aspect Ratio
+        .progress (float): Mouth click hold progress [0.0, 1.0]
+        .gestures (List[str]): List of gestures triggered in this frame (e.g. ["WINK_LEFT"])
+        .last_gesture (Optional[str]): Latest gesture name
+    """
+
+    def __new__(
+        cls,
+        clicked: bool,
+        mar: float,
+        progress: float,
+        gestures: Optional[List[str]] = None,
+        last_gesture: Optional[str] = None,
+    ):
+        return super().__new__(cls, (bool(clicked), float(mar), float(progress)))
+
+    def __init__(
+        self,
+        clicked: bool,
+        mar: float,
+        progress: float,
+        gestures: Optional[List[str]] = None,
+        last_gesture: Optional[str] = None,
+    ):
+        self.clicked: bool = bool(clicked)
+        self.mar: float = float(mar)
+        self.progress: float = float(progress)
+        self.gestures: List[str] = gestures if gestures is not None else []
+        self.last_gesture: Optional[str] = last_gesture
+
+
 class GestureDetector:
     """
-    Detects mouth-open trigger gestures using inner lip landmarks from MediaPipe FaceMesh.
-    
-    Formula:
+    Detects facial triggers:
+    1. Mouth-open click using inner lip landmarks from MediaPipe FaceMesh.
+    2. Left and right eye winks using 6-point scale-invariant Eye Aspect Ratio (EAR)
+       with debounce (150ms-450ms hold) and cooldown (400ms).
+
+    Formula (MAR):
         MAR = ||p_top - p_bottom|| / (||p_left - p_right|| + eps)
-    
-    A CLICK is dispatched only when the mouth remains open above `mar_threshold`
-    for at least `hold_time_sec` (e.g., 150ms). A new click requires the mouth
-    to be closed (`mar < release_threshold`) and `cooldown_sec` to elapse.
+
+    Formula (EAR):
+        EAR = (||p_top1 - p_bot1|| + ||p_top2 - p_bot2||) / (2.0 * ||p_corner1 - p_corner2|| + eps)
     """
 
     def __init__(
@@ -39,6 +80,14 @@ class GestureDetector:
         bottom_lip_idx: int = 14,
         left_corner_idx: int = 78,
         right_corner_idx: int = 308,
+        ear_close_threshold: float = 0.16,
+        ear_open_threshold: float = 0.22,
+        wink_min_hold_sec: float = 0.15,
+        wink_max_hold_sec: float = 0.45,
+        wink_cooldown_sec: float = 0.40,
+        wink_trigger_on_release: bool = True,
+        left_eye_indices: Tuple[int, ...] = (33, 160, 158, 133, 153, 144),
+        right_eye_indices: Tuple[int, ...] = (362, 385, 387, 263, 373, 380),
     ):
         self.mar_threshold = float(mar_threshold)
         self.release_threshold = float(release_threshold)
@@ -50,7 +99,17 @@ class GestureDetector:
         self.left_corner_idx = left_corner_idx
         self.right_corner_idx = right_corner_idx
 
-        # State tracking
+        # Wink detection parameters
+        self.ear_close_threshold = float(ear_close_threshold)
+        self.ear_open_threshold = float(ear_open_threshold)
+        self.wink_min_hold_sec = float(wink_min_hold_sec)
+        self.wink_max_hold_sec = float(wink_max_hold_sec)
+        self.wink_cooldown_sec = float(wink_cooldown_sec)
+        self.wink_trigger_on_release = bool(wink_trigger_on_release)
+        self.left_eye_indices = left_eye_indices
+        self.right_eye_indices = right_eye_indices
+
+        # Mouth state tracking
         self.state: GestureState = GestureState.IDLE_CLOSED
         self.open_start_time: Optional[float] = None
         self.last_trigger_time: float = 0.0
@@ -58,6 +117,23 @@ class GestureDetector:
         self.current_mar: float = 0.0
         self.hold_progress: float = 0.0  # Normalized progress [0.0, 1.0] towards trigger
         self.total_clicks: int = 0
+
+        # Wink state tracking
+        self.current_left_ear: float = 0.0
+        self.current_right_ear: float = 0.0
+        self.left_wink_start_time: Optional[float] = None
+        self.left_wink_invalid: bool = False
+        self.left_wink_triggered: bool = False
+        self.last_left_wink_time: float = 0.0
+
+        self.right_wink_start_time: Optional[float] = None
+        self.right_wink_invalid: bool = False
+        self.right_wink_triggered: bool = False
+        self.last_right_wink_time: float = 0.0
+
+        self.last_wink_time: float = 0.0
+        self.triggered_gestures: List[str] = []
+        self.last_gesture: Optional[str] = None
 
     @staticmethod
     def _euclidean_distance_2d(p1: Any, p2: Any) -> float:
@@ -67,6 +143,8 @@ class GestureDetector:
         try:
             dx = float(p1.x - p2.x)
             dy = float(p1.y - p2.y)
+            if math.isnan(dx) or math.isnan(dy) or math.isinf(dx) or math.isinf(dy):
+                return 0.0
             return math.sqrt(dx * dx + dy * dy)
         except (AttributeError, TypeError, ValueError):
             return 0.0
@@ -80,7 +158,6 @@ class GestureDetector:
             return 0.0
 
         try:
-            # Handle both list/iterable of landmarks and protobuf RepeatedCompositeContainer
             landmarks = getattr(face_landmarks, "landmark", face_landmarks)
             if not landmarks:
                 return 0.0
@@ -93,44 +170,129 @@ class GestureDetector:
             d_vertical = self._euclidean_distance_2d(p_top, p_bottom)
             d_horizontal = self._euclidean_distance_2d(p_left, p_right)
 
-            # Defensive zero-division protection: enforce minimum non-zero denominator
-            eps = 1e-6
-            safe_denom = max(d_horizontal, eps)
-            mar = d_vertical / safe_denom
+            if d_horizontal < 1e-4:
+                return 0.0
+            mar = d_vertical / d_horizontal
 
-            # Clamp between 0.0 and 5.0 to guard against wild artifacts
+            if math.isnan(mar) or math.isinf(mar):
+                return 0.0
             return max(0.0, min(float(mar), 5.0))
 
         except (IndexError, AttributeError, TypeError, ValueError):
-            # Gracefully handle missing landmarks or unexpected format
             return 0.0
 
-    def process(self, face_landmarks: Any, current_time: Optional[float] = None) -> Tuple[bool, float, float]:
+    def compute_ear(self, face_landmarks: Any) -> Tuple[float, float]:
         """
-        Processes the current frame's landmarks and updates the state machine.
+        Calculates scale-invariant Eye Aspect Ratio (EAR) for left and right eyes safely.
+        Guarantees NO ZeroDivisionError if landmarks overlap.
+
+        Formula:
+            EAR = (||p_top1 - p_bot1|| + ||p_top2 - p_bot2||) / (2.0 * max(||p_corner1 - p_corner2||, eps))
+        Returns:
+            Tuple of (left_ear, right_ear).
+        """
+        if face_landmarks is None:
+            return 0.0, 0.0
+
+        try:
+            landmarks = getattr(face_landmarks, "landmark", face_landmarks)
+            if not landmarks:
+                return 0.0, 0.0
+
+            # Left eye
+            p_l_outer = landmarks[self.left_eye_indices[0]]   # 33
+            p_l_top1 = landmarks[self.left_eye_indices[1]]    # 160
+            p_l_top2 = landmarks[self.left_eye_indices[2]]    # 158
+            p_l_inner = landmarks[self.left_eye_indices[3]]   # 133
+            p_l_bot2 = landmarks[self.left_eye_indices[4]]    # 153
+            p_l_bot1 = landmarks[self.left_eye_indices[5]]    # 144
+
+            d_v_l1 = self._euclidean_distance_2d(p_l_top1, p_l_bot1)
+            d_v_l2 = self._euclidean_distance_2d(p_l_top2, p_l_bot2)
+            d_h_l = self._euclidean_distance_2d(p_l_outer, p_l_inner)
+            if d_h_l < 1e-4:
+                left_ear = 0.0
+            else:
+                ear_l = (d_v_l1 + d_v_l2) / (2.0 * d_h_l)
+                if math.isnan(ear_l) or math.isinf(ear_l):
+                    left_ear = 0.0
+                else:
+                    left_ear = max(0.0, min(float(ear_l), 5.0))
+
+            # Right eye
+            p_r_inner = landmarks[self.right_eye_indices[0]]  # 362
+            p_r_top1 = landmarks[self.right_eye_indices[1]]   # 385
+            p_r_top2 = landmarks[self.right_eye_indices[2]]   # 387
+            p_r_outer = landmarks[self.right_eye_indices[3]]  # 263
+            p_r_bot2 = landmarks[self.right_eye_indices[4]]   # 373
+            p_r_bot1 = landmarks[self.right_eye_indices[5]]   # 380
+
+            d_v_r1 = self._euclidean_distance_2d(p_r_top1, p_r_bot1)
+            d_v_r2 = self._euclidean_distance_2d(p_r_top2, p_r_bot2)
+            d_h_r = self._euclidean_distance_2d(p_r_inner, p_r_outer)
+            if d_h_r < 1e-4:
+                right_ear = 0.0
+            else:
+                ear_r = (d_v_r1 + d_v_r2) / (2.0 * d_h_r)
+                if math.isnan(ear_r) or math.isinf(ear_r):
+                    right_ear = 0.0
+                else:
+                    right_ear = max(0.0, min(float(ear_r), 5.0))
+
+            return left_ear, right_ear
+
+        except (IndexError, AttributeError, TypeError, ValueError):
+            return 0.0, 0.0
+
+    def compute_left_ear(self, face_landmarks: Any) -> float:
+        """Returns scale-invariant Eye Aspect Ratio (EAR) for the left eye."""
+        return self.compute_ear(face_landmarks)[0]
+
+    def compute_right_ear(self, face_landmarks: Any) -> float:
+        """Returns scale-invariant Eye Aspect Ratio (EAR) for the right eye."""
+        return self.compute_ear(face_landmarks)[1]
+
+    def process(
+        self,
+        face_landmarks: Any,
+        current_time: Optional[float] = None,
+    ) -> GestureResult:
+        """
+        Processes current frame landmarks and updates state machines for:
+        1. Mouth click gesture (MAR)
+        2. Eye wink gestures (WINK_LEFT, WINK_RIGHT)
 
         Args:
             face_landmarks: MediaPipe FaceMesh landmarks for a detected face.
             current_time: Optional timestamp (defaults to time.perf_counter()).
 
         Returns:
-            Tuple of:
-                - click_event (bool): True ONLY on the single frame when CLICK triggers.
-                - current_mar (float): The calculated Mouth Aspect Ratio.
-                - hold_progress (float): Normalized [0.0, 1.0] completion towards click.
+            GestureResult tuple (click_event, current_mar, hold_progress)
+            with .gestures list attribute containing triggered gestures.
         """
         now = time.perf_counter() if current_time is None else current_time
         self.current_mar = self.compute_mar(face_landmarks)
+        self.current_left_ear, self.current_right_ear = self.compute_ear(face_landmarks)
+        self.triggered_gestures = []
         click_event = False
 
-        # If face is lost, reset holding state to avoid ghost clicks
+        # If face is lost, reset holding states to avoid ghost triggers
         if face_landmarks is None:
             if self.state == GestureState.HOLDING_OPEN:
                 self.state = GestureState.IDLE_CLOSED
                 self.open_start_time = None
                 self.hold_progress = 0.0
-            return False, self.current_mar, self.hold_progress
+            self.left_wink_start_time = None
+            self.left_wink_invalid = False
+            self.left_wink_triggered = False
+            self.right_wink_start_time = None
+            self.right_wink_invalid = False
+            self.right_wink_triggered = False
+            return GestureResult(False, self.current_mar, self.hold_progress, [], self.last_gesture)
 
+        # ----------------------------------------------------------------------
+        # 1. Mouth Aspect Ratio (MAR) State Machine
+        # ----------------------------------------------------------------------
         is_open = self.current_mar >= self.mar_threshold
         is_closed = self.current_mar <= self.release_threshold
         time_since_trigger = now - self.last_trigger_time
@@ -138,14 +300,12 @@ class GestureDetector:
         if self.state == GestureState.IDLE_CLOSED:
             self.hold_progress = 0.0
             if is_open:
-                # Check cooldown before beginning a new hold cycle
                 if time_since_trigger >= self.cooldown_sec and self.released_since_trigger:
                     self.state = GestureState.HOLDING_OPEN
                     self.open_start_time = now
 
         elif self.state == GestureState.HOLDING_OPEN:
             if not is_open:
-                # User closed or twitched mouth before reaching threshold: abort hold
                 self.state = GestureState.IDLE_CLOSED
                 self.open_start_time = None
                 self.hold_progress = 0.0
@@ -154,26 +314,24 @@ class GestureDetector:
                 self.hold_progress = min(1.0, max(0.0, elapsed / max(self.hold_time_sec, 1e-6)))
 
                 if elapsed >= self.hold_time_sec:
-                    # Trigger condition met!
                     click_event = True
                     self.total_clicks += 1
                     self.last_trigger_time = now
                     self.released_since_trigger = False
                     self.state = GestureState.TRIGGERED
                     self.hold_progress = 1.0
+                    self.triggered_gestures.append("MOUTH_CLICK")
+                    self.last_gesture = "MOUTH_CLICK"
 
         elif self.state == GestureState.TRIGGERED:
-            # Check if user closed mouth below release threshold
             if is_closed:
                 self.released_since_trigger = True
                 self.hold_progress = 0.0
             else:
                 self.hold_progress = 0.0
 
-            # Once cooldown has elapsed AND mouth was closed at least once:
             if time_since_trigger >= self.cooldown_sec and self.released_since_trigger:
                 if is_open:
-                    # Seamlessly initiate new hold if mouth was opened after valid release
                     self.state = GestureState.HOLDING_OPEN
                     self.open_start_time = now
                     self.hold_progress = 0.0
@@ -182,13 +340,131 @@ class GestureDetector:
                     self.open_start_time = None
                     self.hold_progress = 0.0
 
-        return click_event, self.current_mar, self.hold_progress
+        # ----------------------------------------------------------------------
+        # 2. Eye Wink Detection State Machine (EAR)
+        # ----------------------------------------------------------------------
+        left_closed = self.current_left_ear < self.ear_close_threshold
+        right_closed = self.current_right_ear < self.ear_close_threshold
+        left_open = self.current_left_ear > self.ear_open_threshold
+        right_open = self.current_right_ear > self.ear_open_threshold
+
+        time_since_last_wink = now - self.last_wink_time
+
+        if left_closed and right_closed:
+            # Bilateral blink detected: invalidate active wink candidates
+            self.left_wink_start_time = None
+            self.left_wink_invalid = True
+            self.right_wink_start_time = None
+            self.right_wink_invalid = True
+        else:
+            # Evaluate Left Eye Wink Candidate (Left closed, Right open)
+            if left_closed and right_open:
+                if self.left_wink_start_time is None:
+                    if time_since_last_wink >= self.wink_cooldown_sec:
+                        self.left_wink_start_time = now
+                        self.left_wink_invalid = False
+                        self.left_wink_triggered = False
+                    else:
+                        # Attempted wink during active cooldown: mark invalid until full release
+                        self.left_wink_invalid = True
+                elif not self.left_wink_invalid:
+                    duration = now - self.left_wink_start_time
+                    if duration > self.wink_max_hold_sec:
+                        self.left_wink_invalid = True
+                    if not self.wink_trigger_on_release:
+                        if (
+                            (self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec)
+                            and not self.left_wink_triggered
+                        ):
+                            if time_since_last_wink >= self.wink_cooldown_sec:
+                                self.triggered_gestures.append("WINK_LEFT")
+                                self.last_gesture = "WINK_LEFT"
+                                self.last_wink_time = now
+                                self.last_left_wink_time = now
+                                self.left_wink_triggered = True
+
+            if self.left_wink_start_time is not None and not left_closed:
+                # Left eye released / reopened
+                duration = now - self.left_wink_start_time
+                if self.wink_trigger_on_release:
+                    if (self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec) and not self.left_wink_invalid:
+                        if time_since_last_wink >= self.wink_cooldown_sec:
+                            self.triggered_gestures.append("WINK_LEFT")
+                            self.last_gesture = "WINK_LEFT"
+                            self.last_wink_time = now
+                            self.last_left_wink_time = now
+                self.left_wink_start_time = None
+                self.left_wink_invalid = False
+                self.left_wink_triggered = False
+            elif not left_closed:
+                self.left_wink_invalid = False
+
+            # Evaluate Right Eye Wink Candidate (Right closed, Left open)
+            if right_closed and left_open:
+                if self.right_wink_start_time is None:
+                    if time_since_last_wink >= self.wink_cooldown_sec:
+                        self.right_wink_start_time = now
+                        self.right_wink_invalid = False
+                        self.right_wink_triggered = False
+                    else:
+                        # Attempted wink during active cooldown: mark invalid until full release
+                        self.right_wink_invalid = True
+                elif not self.right_wink_invalid:
+                    duration = now - self.right_wink_start_time
+                    if duration > self.wink_max_hold_sec:
+                        self.right_wink_invalid = True
+                    if not self.wink_trigger_on_release:
+                        if (
+                            (self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec)
+                            and not self.right_wink_triggered
+                        ):
+                            if time_since_last_wink >= self.wink_cooldown_sec:
+                                self.triggered_gestures.append("WINK_RIGHT")
+                                self.last_gesture = "WINK_RIGHT"
+                                self.last_wink_time = now
+                                self.last_right_wink_time = now
+                                self.right_wink_triggered = True
+
+            if self.right_wink_start_time is not None and not right_closed:
+                # Right eye released / reopened
+                duration = now - self.right_wink_start_time
+                if self.wink_trigger_on_release:
+                    if (self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec) and not self.right_wink_invalid:
+                        if time_since_last_wink >= self.wink_cooldown_sec:
+                            self.triggered_gestures.append("WINK_RIGHT")
+                            self.last_gesture = "WINK_RIGHT"
+                            self.last_wink_time = now
+                            self.last_right_wink_time = now
+                self.right_wink_start_time = None
+                self.right_wink_invalid = False
+                self.right_wink_triggered = False
+            elif not right_closed:
+                self.right_wink_invalid = False
+
+        return GestureResult(
+            click_event,
+            self.current_mar,
+            self.hold_progress,
+            self.triggered_gestures,
+            self.last_gesture,
+        )
 
     def reset(self) -> None:
-        """Resets the state machine and tracking metrics."""
+        """Resets the state machines and tracking metrics."""
         self.state = GestureState.IDLE_CLOSED
         self.open_start_time = None
         self.last_trigger_time = 0.0
         self.released_since_trigger = True
         self.current_mar = 0.0
         self.hold_progress = 0.0
+        self.current_left_ear = 0.0
+        self.current_right_ear = 0.0
+        self.left_wink_start_time = None
+        self.left_wink_invalid = False
+        self.left_wink_triggered = False
+        self.right_wink_start_time = None
+        self.right_wink_invalid = False
+        self.right_wink_triggered = False
+        self.last_wink_time = 0.0
+        self.triggered_gestures = []
+        self.last_gesture = None

@@ -517,11 +517,23 @@ class EyeDEMainApp:
                 hovered_block = self._get_hovered_block(gaze_x, gaze_y)
                 self.active_block_idx = hovered_block
 
-                # 4. Handle Click Trigger
+                # 4. Handle Click & Wink Triggers
                 if click_fired:
                     self.handle_click_event(hovered_block, gaze_x, gaze_y)
                     if self.macro_blocks[hovered_block]["action"] == "ACTION_EXIT":
                         break
+
+                triggered_winks = getattr(self.gesture_detector, "triggered_gestures", [])
+                if "WINK_RIGHT" in triggered_winks:
+                    self.is_paused = not self.is_paused
+                    self.status_message = "Modo reposo activado (Guiño derecho)" if self.is_paused else "Modo activo restaurado (Guiño derecho)"
+                    self.status_message_time = time.time()
+                    print(f"[INFO] {self.status_message}")
+
+                if "WINK_LEFT" in triggered_winks and not self.is_paused:
+                    self.status_message = "Guiño izquierdo: Volver / Deshacer"
+                    self.status_message_time = time.time()
+                    print(f"[INFO] {self.status_message}")
 
                 # 5. Create UI Canvas
                 canvas = np.full((self.canvas_height, self.canvas_width, 3), config.COLOR_BG, dtype=np.uint8)

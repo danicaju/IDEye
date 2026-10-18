@@ -57,6 +57,7 @@ class DebugWidget(QWidget):
     anti_jitter_changed = pyqtSignal(float)
     tracking_mode_changed = pyqtSignal(str)
     adaptive_ast_toggled = pyqtSignal(bool)
+    collapsed_toggled = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -75,6 +76,7 @@ class DebugWidget(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
+        self.is_collapsed: bool = False
         self._setup_ui()
 
         # Keyboard shortcut [T] and [A] active application-wide
@@ -185,7 +187,7 @@ class DebugWidget(QWidget):
             }
         """)
 
-        # 2. Top Stats Header: Live FPS Meter & Stability Indicator
+        # 2. Top Stats Header: Live FPS Meter & Stability Indicator & Collapse Button
         stats_layout = QHBoxLayout()
         stats_layout.setSpacing(8)
 
@@ -195,9 +197,36 @@ class DebugWidget(QWidget):
 
         self.lbl_stability = QLabel("100% Fijación", self)
         self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
-        stats_layout.addWidget(self.lbl_stability, alignment=Qt.AlignmentFlag.AlignRight)
+        stats_layout.addWidget(self.lbl_stability, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        self.btn_collapse = QPushButton("▲ Colapsar", self)
+        self.btn_collapse.setObjectName("btnCollapse")
+        self.btn_collapse.setStyleSheet("""
+            QPushButton#btnCollapse {
+                background-color: #1e293b;
+                border: 1px solid #334155;
+                border-radius: 4px;
+                padding: 2px 6px;
+                font-size: 10px;
+                color: #94a3b8;
+            }
+            QPushButton#btnCollapse:hover {
+                background-color: #334155;
+                color: #f8fafc;
+            }
+        """)
+        self.btn_collapse.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_collapse.setToolTip("Alternar modo barra compacta")
+        self.btn_collapse.clicked.connect(self.toggle_collapse)
+        stats_layout.addWidget(self.btn_collapse, alignment=Qt.AlignmentFlag.AlignRight)
 
         main_layout.addLayout(stats_layout)
+
+        # Collapsible content container
+        self.content_container = QWidget(self)
+        content_layout = QVBoxLayout(self.content_container)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(6)
 
         # 3. Camera Feed Thumbnail
         self.video_label = QLabel(self)
@@ -205,7 +234,7 @@ class DebugWidget(QWidget):
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.video_label.setStyleSheet("background-color: #070a12; border: 1px solid #1e293b; border-radius: 6px;")
         self.video_label.setText("Iniciando cámara...")
-        main_layout.addWidget(self.video_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        content_layout.addWidget(self.video_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # 4. MAR Progress Bar and Text
         mar_layout = QVBoxLayout()
@@ -220,7 +249,7 @@ class DebugWidget(QWidget):
         self.mar_bar.setTextVisible(True)
         mar_layout.addWidget(self.mar_bar)
 
-        main_layout.addLayout(mar_layout)
+        content_layout.addLayout(mar_layout)
 
         # 5. Tracking Mode Selector Frame (Pure Iris / Hybrid / Head Primary)
         mode_frame = QFrame(self)
@@ -286,7 +315,7 @@ class DebugWidget(QWidget):
         """)
         self.combo_mode.currentIndexChanged.connect(self._on_combo_mode_changed)
         mode_layout.addWidget(self.combo_mode)
-        main_layout.addWidget(mode_frame)
+        content_layout.addWidget(mode_frame)
 
         # 6. Interactive Tuning Sliders Frame
         slider_frame = QFrame(self)
@@ -334,7 +363,7 @@ class DebugWidget(QWidget):
         self.slider_damping.valueChanged.connect(self._on_slider_damping_changed)
         slider_layout.addWidget(self.slider_damping)
 
-        main_layout.addWidget(slider_frame)
+        content_layout.addWidget(slider_frame)
 
         # 7. Context & AI Engine Status
         ai_layout = QVBoxLayout()
@@ -354,7 +383,7 @@ class DebugWidget(QWidget):
         self.lbl_ast_context.setStyleSheet("font-size: 10px; font-weight: bold; color: #f472b6;")
         ai_layout.addWidget(self.lbl_ast_context)
 
-        main_layout.addLayout(ai_layout)
+        content_layout.addLayout(ai_layout)
 
         # 8. File Link & Adaptive AST Toggle Buttons
         link_adaptive_layout = QHBoxLayout()
@@ -371,7 +400,7 @@ class DebugWidget(QWidget):
         self.btn_toggle_adaptive.clicked.connect(self.toggle_adaptive_ast)
         link_adaptive_layout.addWidget(self.btn_toggle_adaptive)
 
-        main_layout.addLayout(link_adaptive_layout)
+        content_layout.addLayout(link_adaptive_layout)
 
         # 9. Action Buttons
         btn_layout = QHBoxLayout()
@@ -396,7 +425,7 @@ class DebugWidget(QWidget):
         self.btn_exit.clicked.connect(self.exit_requested.emit)
         btn_layout.addWidget(self.btn_exit)
 
-        main_layout.addLayout(btn_layout)
+        content_layout.addLayout(btn_layout)
 
         # Decorate buttons and window with neon vector icons
         icon_mgr = IconManager.instance()
@@ -428,10 +457,27 @@ class DebugWidget(QWidget):
         self.lbl_emergency_hint = QLabel("Emergencia: Ctrl+Alt+Q para salir", self)
         self.lbl_emergency_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_emergency_hint.setStyleSheet("font-size: 10px; font-weight: bold; color: #f87171; padding: 2px;")
-        main_layout.addWidget(self.lbl_emergency_hint)
+        content_layout.addWidget(self.lbl_emergency_hint)
+
+        main_layout.addWidget(self.content_container)
 
         self._update_mode_ui("PURE_IRIS")
         self._update_adaptive_ui()
+
+    def toggle_collapse(self) -> None:
+        """Toggles between expanded monitor window and sleek mini-bar mode."""
+        self.is_collapsed = not getattr(self, "is_collapsed", False)
+        if self.is_collapsed:
+            self.content_container.hide()
+            self.setFixedHeight(48)
+            self.btn_collapse.setText("▼ Expandir")
+            self.btn_collapse.setToolTip("Expandir monitor de depuración")
+        else:
+            self.content_container.show()
+            self.setFixedSize(config.DEBUG_WINDOW_WIDTH, config.DEBUG_WINDOW_HEIGHT)
+            self.btn_collapse.setText("▲ Colapsar")
+            self.btn_collapse.setToolTip("Colapsar a mini-barra")
+        self.collapsed_toggled.emit(self.is_collapsed)
 
     def _on_slider_sens_x_changed(self, value: int) -> None:
         val = value / 10.0

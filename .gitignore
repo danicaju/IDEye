@@ -1,5 +1,9 @@
 node_modules/
 tools/ideye-mcp/node_modules/
+venv/
+.venv/
+env/
+.pytest_cache/
 *.log
 .DS_Store
 dist/

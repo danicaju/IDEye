@@ -3,6 +3,9 @@
 # 👁️ EyeDE (Vistax L2C Engine)
 **The Look-To-Code (L2C) Engine for Hands-Free, Silent Software Engineering**
 
+[![English](https://img.shields.io/badge/Language-English-blue?style=flat-square)](README.md)
+[![Español](https://img.shields.io/badge/Idioma-Español-red?style=flat-square)](README.es.md)
+
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)

@@ -628,6 +628,13 @@ class EyeDEApplication:
 
     def _on_block_activated(self, block_idx: int, action: str) -> None:
         """Handles actions triggered from macro blocks."""
+        if hasattr(self.overlay, "current_node") and self.overlay.current_node:
+            curr_node = self.overlay.current_node
+            if 0 <= block_idx < len(curr_node.items):
+                item = curr_node.items[block_idx]
+                label = item.label
+                print(f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action} (Nodo: {self.overlay.current_node_id})")
+                return
         label = config.MACRO_BLOCKS[block_idx]["label"] if 0 <= block_idx < len(config.MACRO_BLOCKS) else f"Block {block_idx}"
         print(f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action}")
 

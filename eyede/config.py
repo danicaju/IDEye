@@ -104,7 +104,7 @@ MACRO_BLOCKS: List[Dict[str, Any]] = [
     {"index": 1, "key": "2", "label": "2: LOOP", "action": "INSERT_LOOP", "hint": "for / while"},
     {"index": 2, "key": "3", "label": "3: DEF / FUNC", "action": "INSERT_FUNC", "hint": "def function():"},
     {"index": 3, "key": "4", "label": "4: VARS", "action": "INSERT_VARS", "hint": "x = value"},
-    {"index": 4, "key": "5", "label": "5: CENTRO / PAUSA", "action": "PAUSE_RESUME", "hint": "Rest Zone"},
+    {"index": 4, "key": "5", "label": "5: PAUSA / MODO LECTURA", "action": "PAUSE_RESUME", "hint": "Rest Zone"},
     {"index": 5, "key": "6", "label": "6: OPERADORES", "action": "INSERT_OPERATORS", "hint": "== != + - * /"},
     {"index": 6, "key": "7", "label": "7: BORRAR", "action": "ACTION_BACKSPACE", "hint": "Delete / Undo"},
     {"index": 7, "key": "8", "label": "8: ENTER / TAB", "action": "ACTION_ENTER_TAB", "hint": "Newline / Indent"},
@@ -140,4 +140,52 @@ COLOR_PAUSED_BORDER: tuple = (0, 140, 255)
 MINI_FEED_WIDTH: int = 240
 MINI_FEED_HEIGHT: int = 150
 MINI_FEED_MARGIN: int = 16
+
+# ==============================================================================
+# Phase 2: PyQt6 Overlay, Debug & 5-Point Calibration Parameters
+# ==============================================================================
+# Overlay HUD opacities
+OVERLAY_OPACITY_ACTIVE: float = 0.85
+OVERLAY_OPACITY_READING: float = 0.10
+
+# RGBA colors for PyQt6 Overlay (0-255)
+OVERLAY_COLOR_BG = (22, 25, 32, 175)
+OVERLAY_COLOR_BORDER = (60, 68, 85, 200)
+OVERLAY_BORDER_WIDTH: int = 2
+
+OVERLAY_COLOR_HOVER = (42, 58, 88, 220)
+OVERLAY_HOVER_BORDER_COLOR = (255, 195, 45, 255)
+OVERLAY_HOVER_BORDER_WIDTH: int = 3
+
+OVERLAY_COLOR_CLICK = (35, 195, 95, 240)
+OVERLAY_CLICK_BORDER_COLOR = (120, 255, 170, 255)
+
+OVERLAY_COLOR_REST = (18, 20, 24, 90)
+OVERLAY_REST_BORDER_COLOR = (0, 140, 255, 180)
+
+OVERLAY_POINTER_COLOR = (255, 195, 40, 220)
+OVERLAY_POINTER_OUTLINE = (255, 255, 255, 240)
+OVERLAY_POINTER_RADIUS: int = 12
+
+OVERLAY_TEXT_COLOR = (240, 245, 250, 245)
+OVERLAY_TEXT_HINT_COLOR = (150, 160, 175, 210)
+OVERLAY_TEXT_HOVER_COLOR = (255, 255, 255, 255)
+
+# 5-Point Calibration targets (normalized coordinates)
+CALIBRATION_POINTS: List[Dict[str, Any]] = [
+    {"id": "CENTER", "name": "Centro", "screen": (0.5, 0.5)},
+    {"id": "TOP_LEFT", "name": "Arriba-Izquierda", "screen": (0.1, 0.1)},
+    {"id": "TOP_RIGHT", "name": "Arriba-Derecha", "screen": (0.9, 0.1)},
+    {"id": "BOTTOM_LEFT", "name": "Abajo-Izquierda", "screen": (0.1, 0.9)},
+    {"id": "BOTTOM_RIGHT", "name": "Abajo-Derecha", "screen": (0.9, 0.9)},
+]
+CALIBRATION_PROFILE_PATH: str = "calibration_profile.json"
+CALIBRATION_SAMPLES_PER_POINT: int = 15
+CALIBRATION_SAMPLE_DELAY_SEC: float = 0.02
+
+# Debug widget sizing
+DEBUG_WINDOW_WIDTH: int = 320
+DEBUG_WINDOW_HEIGHT: int = 280
+DEBUG_FEED_WIDTH: int = 280
+DEBUG_FEED_HEIGHT: int = 160
 

@@ -31,11 +31,20 @@ try:
     from eyede.core.camera_tracker import CameraTracker
     from eyede.core.gaze_estimator import GazeEstimator
     from eyede.core.gesture_detector import GestureDetector
+    from eyede.ui.overlay_window import OverlayWindow
+    from eyede.ui.debug_widget import DebugWidget
+    from eyede.ui.calibration_ui import CalibrationUI
 except ImportError:
     import config
     from core.camera_tracker import CameraTracker
     from core.gaze_estimator import GazeEstimator
     from core.gesture_detector import GestureDetector
+    from ui.overlay_window import OverlayWindow
+    from ui.debug_widget import DebugWidget
+    from ui.calibration_ui import CalibrationUI
+
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import Qt
 
 
 class EyeDEMainApp:
@@ -403,7 +412,7 @@ class EyeDEMainApp:
         action = block_info["action"]
         label = block_info["label"]
 
-        print(f"\n[EyeDE ACTION] 🎯 CLICK Disparado en Bloque {block_idx + 1}: '{label}'")
+        print(f"\n[EyeDE ACTION] [CLICK] Disparado en Bloque {block_idx + 1}: '{label}'")
         print(f"               Accion: {action} | Coordenada: (X={norm_x:.3f}, Y={norm_y:.3f})")
 
         if action == "PAUSE_RESUME":
@@ -515,15 +524,15 @@ class EyeDEMainApp:
                     # Calibrate center & distance-adaptive gain
                     if face_landmarks is not None and self.gaze_estimator.calibrate_center(face_landmarks):
                         scale_pct = int(self.gaze_estimator.distance_scale * 100)
-                        print(f"[INFO] 📍 Calibracion central completada. Escala de ganancia: {scale_pct}%.")
+                        print(f"[INFO] [CALIB] Calibracion central completada. Escala de ganancia: {scale_pct}%.")
                     else:
-                        print("[AVISO] ⚠️ No se pudo calibrar: rostro no detectado en el fotograma.")
+                        print("[AVISO] No se pudo calibrar: rostro no detectado en el fotograma.")
                 elif key in (ord('+'), ord('=')):
                     self.gaze_estimator.adjust_sensitivity(1.10)
-                    print(f"[INFO] 🔼 Sensibilidad aumentada (+10%).")
+                    print(f"[INFO] Sensibilidad aumentada (+10%).")
                 elif key in (ord('-'), ord('_')):
                     self.gaze_estimator.adjust_sensitivity(0.90)
-                    print(f"[INFO] 🔽 Sensibilidad reducida (-10%).")
+                    print(f"[INFO] Sensibilidad reducida (-10%).")
                 elif key in (ord('m'), ord('M')):
                     self.show_mini_feed = not self.show_mini_feed
                     print(f"[INFO] Mini-feed {'mostrado' if self.show_mini_feed else 'ocultado'}.")
@@ -534,7 +543,7 @@ class EyeDEMainApp:
                     self.gaze_estimator.reset()
                     self.gesture_detector.reset()
                     self.is_paused = False
-                    print("[INFO] 🔄 Estado y calibracion reseteados.")
+                    print("[INFO] Estado y calibracion reseteados.")
 
                 # Check if user closed the window directly with the 'X' button
                 try:
@@ -551,23 +560,211 @@ class EyeDEMainApp:
             print("[INFO] EyeDE finalizado limpiamente.")
 
 
+class EyeDEApplication:
+    """
+    Phase 2 PyQt6 Orchestrator:
+    - Sets up QApplication.
+    - Manages CameraTracker QThread lifecycle.
+    - Checks for calibration_profile.json:
+        If found: loads it and shows OverlayWindow + DebugWidget directly.
+        If missing (or if force_calibrate=True): launches CalibrationUI first,
+        then displays OverlayWindow + DebugWidget upon completion.
+    - Connects all Qt signals:
+        tracker.gaze_updated -> overlay.on_gaze_updated
+        tracker.gesture_triggered -> overlay.on_gesture_triggered
+        tracker.frame_ready -> debug_widget.on_frame_ready
+        debug_widget.recalibrate_requested -> launch_calibration()
+        debug_widget.exit_requested -> shutdown()
+        overlay.exit_requested -> shutdown()
+    - Clean shutdown handler:
+        Calls tracker.stop() and tracker.wait(2000)
+        Releases capture device, closes windows, ensures 0 zombie threads!
+    """
+
+    def __init__(
+        self,
+        camera_index: Union[int, str] = config.CAMERA_INDEX,
+        profile_path: str = config.CALIBRATION_PROFILE_PATH,
+        force_calibrate: bool = False,
+        threaded: bool = True,
+    ):
+        self.camera_index = camera_index
+        self.profile_path = profile_path
+        self.force_calibrate = force_calibrate
+        self.threaded = threaded
+
+        # Initialize QApplication
+        self.qapp = QApplication.instance() or QApplication(sys.argv if hasattr(sys, 'argv') else [])
+
+        # Core subsystems
+        self.tracker = CameraTracker(camera_index=self.camera_index, threaded=self.threaded)
+        self.overlay = OverlayWindow()
+        self.debug_widget = DebugWidget()
+        self.calibration_ui: Optional[CalibrationUI] = None
+        self._is_shutting_down: bool = False
+
+        self._setup_connections()
+        self._configure_geometry()
+
+    def _setup_connections(self) -> None:
+        """Connects signals between tracker, overlay, debug monitor, and lifecycle."""
+        # Tracker signals to Overlay
+        self.tracker.gaze_updated.connect(self.overlay.on_gaze_updated)
+        self.tracker.gesture_triggered.connect(self.overlay.on_gesture_triggered)
+
+        # Tracker signals to DebugWidget
+        self.tracker.frame_ready.connect(self.debug_widget.on_frame_ready)
+
+        # Overlay actions
+        self.overlay.block_activated.connect(self._on_block_activated)
+
+        # Controls from UI to application lifecycle
+        self.debug_widget.recalibrate_requested.connect(self.launch_calibration)
+        self.debug_widget.exit_requested.connect(self.shutdown)
+        self.overlay.exit_requested.connect(self.shutdown)
+
+        # Qt application about-to-quit hook
+        self.qapp.aboutToQuit.connect(self.shutdown)
+
+    def _on_block_activated(self, block_idx: int, action: str) -> None:
+        """Handles actions triggered from macro blocks."""
+        label = config.MACRO_BLOCKS[block_idx]["label"] if 0 <= block_idx < len(config.MACRO_BLOCKS) else f"Block {block_idx}"
+        print(f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action}")
+
+    def _configure_geometry(self) -> None:
+        """Configures geometry of overlay across screen and docks debug monitor."""
+        screen = QApplication.primaryScreen()
+        if screen:
+            screen_geo = screen.geometry()
+            self.overlay.setGeometry(screen_geo)
+            dw_x = screen_geo.x() + screen_geo.width() - config.DEBUG_WINDOW_WIDTH - 20
+            dw_y = screen_geo.y() + 40
+            self.debug_widget.move(max(0, dw_x), max(0, dw_y))
+        else:
+            self.overlay.resize(config.FRAME_WIDTH, config.FRAME_HEIGHT)
+
+    def launch_calibration(self) -> None:
+        """Launches the full-screen 5-point calibration interface."""
+        print("[INFO] Launching 5-Point Calibration UI...")
+        self.overlay.hide()
+
+        self.calibration_ui = CalibrationUI(
+            gaze_estimator=self.tracker.gaze_estimator,
+            profile_path=self.profile_path,
+        )
+        self.tracker.raw_gaze_updated.connect(self.calibration_ui.on_raw_gaze_updated)
+        self.tracker.gaze_updated.connect(self.calibration_ui.on_gaze_updated)
+        self.tracker.gesture_triggered.connect(self.calibration_ui.on_gesture_triggered)
+        self.calibration_ui.calibration_finished.connect(self._on_calibration_finished)
+
+        self.calibration_ui.showFullScreen()
+
+    def _on_calibration_finished(self, succeeded: bool) -> None:
+        """Handles calibration completion/cancellation and restores overlay."""
+        print(f"[INFO] Calibration completed (succeeded={succeeded}). Restoring overlay HUD.")
+        if self.calibration_ui is not None:
+            try:
+                self.tracker.raw_gaze_updated.disconnect(self.calibration_ui.on_raw_gaze_updated)
+            except Exception:
+                pass
+            try:
+                self.tracker.gaze_updated.disconnect(self.calibration_ui.on_gaze_updated)
+                self.tracker.gesture_triggered.disconnect(self.calibration_ui.on_gesture_triggered)
+            except Exception:
+                pass
+            self.calibration_ui.close()
+            self.calibration_ui = None
+
+        self.overlay.show()
+
+    def start(self) -> None:
+        """Starts tracker thread and displays UI."""
+        # Check if calibration profile exists
+        has_profile = os.path.exists(self.profile_path)
+        if has_profile and not self.force_calibrate:
+            print(f"[INFO] Loaded calibration profile from '{self.profile_path}'.")
+            self.tracker.gaze_estimator.load_calibration_profile(self.profile_path)
+
+        # Start CameraTracker QThread
+        started = self.tracker.start()
+        if not started:
+            print(f"[AVISO] No se pudo abrir la camara {self.tracker.camera_index}. Continuando...")
+
+        if not has_profile or self.force_calibrate:
+            print("[INFO] No calibration profile found. Starting initial 5-point calibration...")
+            self.debug_widget.show()
+            self.launch_calibration()
+        else:
+            self.overlay.show()
+            self.debug_widget.show()
+
+    def shutdown(self) -> None:
+        """
+        Gracefully terminates CameraTracker QThread and closes all windows.
+        Guarantees zero zombie threads and camera release.
+        """
+        if self._is_shutting_down:
+            return
+        self._is_shutting_down = True
+        print("\n[INFO] Gracefully shutting down EyeDE Phase 2...")
+
+        if self.tracker is not None:
+            self.tracker.stop()
+            if not self.tracker.wait(2000):
+                try:
+                    self.tracker.terminate()
+                    self.tracker.wait(500)
+                except Exception:
+                    pass
+            self.tracker.release()
+
+        if self.overlay is not None:
+            self.overlay.close()
+
+        if self.debug_widget is not None:
+            self.debug_widget.close()
+
+        if self.calibration_ui is not None:
+            self.calibration_ui.close()
+
+        self.qapp.quit()
+        print("[INFO] EyeDE Phase 2 terminated cleanly.")
+
+    def run(self) -> int:
+        """Runs the Qt event loop until termination."""
+        self.start()
+        return self.qapp.exec()
+
+
 def main():
     """CLI Entry point."""
-    parser = argparse.ArgumentParser(description="EyeDE Phase 1 - Gaze & Gesture Engine")
+    parser = argparse.ArgumentParser(description="EyeDE - Assistive Eye-Tracking IDE (Phase 2)")
     parser.add_argument("--camera", default=config.CAMERA_INDEX, help="Camera device index or 'synthetic'")
-    parser.add_argument("--width", type=int, default=config.FRAME_WIDTH, help="Canvas width")
-    parser.add_argument("--height", type=int, default=config.FRAME_HEIGHT, help="Canvas height")
-    parser.add_argument("--frames", type=int, default=None, help="Limit number of frames (for QA testing)")
+    parser.add_argument("--calibrate", action="store_true", help="Force 5-point calibration on startup")
+    parser.add_argument("--profile", default=config.CALIBRATION_PROFILE_PATH, help="Path to calibration profile JSON")
     parser.add_argument("--no-threads", action="store_true", help="Disable background worker thread")
+    parser.add_argument("--phase1", action="store_true", help="Run legacy Phase 1 OpenCV window instead of PyQt6")
+    parser.add_argument("--width", type=int, default=config.FRAME_WIDTH, help="Canvas width (Phase 1)")
+    parser.add_argument("--height", type=int, default=config.FRAME_HEIGHT, help="Canvas height (Phase 1)")
+    parser.add_argument("--frames", type=int, default=None, help="Limit number of frames (for QA testing)")
     args = parser.parse_args()
 
-    app = EyeDEMainApp(
-        camera_index=args.camera,
-        canvas_width=args.width,
-        canvas_height=args.height,
-        threaded=not args.no_threads,
-    )
-    app.run(max_frames=args.frames)
+    if args.phase1:
+        app = EyeDEMainApp(
+            camera_index=args.camera,
+            canvas_width=args.width,
+            canvas_height=args.height,
+            threaded=not args.no_threads,
+        )
+        app.run(max_frames=args.frames)
+    else:
+        app = EyeDEApplication(
+            camera_index=args.camera,
+            profile_path=args.profile,
+            force_calibrate=args.calibrate,
+            threaded=not args.no_threads,
+        )
+        sys.exit(app.run())
 
 
 if __name__ == "__main__":

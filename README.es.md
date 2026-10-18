@@ -129,6 +129,16 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### 🖥️ Lanzadores y Aplicación de Escritorio
+
+EyeDE incluye ejecutables y accesos directos nativos para Windows con el icono oficial de la app:
+
+* **Acceso Directo en el Escritorio (`EyeDE.lnk`)**: Icono en tu Escritorio de Windows con el logo `{ 👁️ }` para abrir la app con doble clic.
+* **Lanzador Silencioso (`EyeDE.vbs`)**: Inicia EyeDE instantáneamente sin parpadeo de ventana de consola CMD.
+* **Lanzador por Lotes (`EyeDE.bat`)**: Lanzador `.bat` estándar para iniciar con doble clic.
+* **Lanzador de Depuración (`EyeDE_debug.bat`)**: Inicia mostrando la consola para ver logs, métricas y diagnósticos.
+* **Ejecutable Nativo Standalone (`build_app.py`)**: Empaqueta EyeDE en un ejecutable independiente `dist/EyeDE/EyeDE.exe` con MediaPipe, OpenCV y PyQt6 integrados.
+
 ### Opciones de Línea de Comandos (CLI)
 
 ```bash

@@ -91,6 +91,10 @@ class OverlayWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
+        app_icon = IconManager.instance().get_app_icon()
+        if not app_icon.isNull():
+            self.setWindowIcon(app_icon)
+
         # Win32 OS-level non-activation protection
         if sys.platform == "win32":
             self._apply_win32_no_activate()

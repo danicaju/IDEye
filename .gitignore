@@ -10,3 +10,6 @@ dist/
 build/
 __pycache__/
 *.pyc
+*.spec
+*.bak
+build_log.txt

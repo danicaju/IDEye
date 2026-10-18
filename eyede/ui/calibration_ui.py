@@ -27,9 +27,11 @@ from PyQt6.QtWidgets import QWidget, QApplication
 try:
     import eyede.config as config
     from eyede.core.gaze_estimator import GazeEstimator
+    from eyede.ui.icon_manager import IconManager
 except ImportError:
     import config
     from core.gaze_estimator import GazeEstimator
+    from ui.icon_manager import IconManager
 
 
 class CalibrationUI(QWidget):
@@ -76,6 +78,9 @@ class CalibrationUI(QWidget):
 
         # UI configuration
         self.setWindowTitle("EyeDE - Calibración Visual de 5 Puntos")
+        app_icon = IconManager.instance().get_app_icon()
+        if not app_icon.isNull():
+            self.setWindowIcon(app_icon)
         self.setStyleSheet("background-color: #12151c;")
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 

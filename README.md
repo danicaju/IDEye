@@ -129,6 +129,16 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### 🖥️ Desktop Application Launchers
+
+EyeDE includes native Windows desktop launchers with custom high-DPI branding:
+
+* **Desktop Shortcut (`EyeDE.lnk`)**: Direct double-clickable icon on your Windows Desktop with the official `{ 👁️ }` branding.
+* **Silent Launcher (`EyeDE.vbs`)**: Launches EyeDE immediately with zero command-line console flash.
+* **Batch Launcher (`EyeDE.bat`)**: Quick launcher for standard execution.
+* **Debug Launcher (`EyeDE_debug.bat`)**: Launches with live terminal output for parameter tuning and tracking metrics.
+* **Standalone Native Executable (`build_app.py`)**: Compiles EyeDE into a self-contained `dist/EyeDE/EyeDE.exe` with bundled MediaPipe, PyQt6, and asset models.
+
 ### CLI Arguments
 
 ```bash

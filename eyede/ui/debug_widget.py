@@ -65,6 +65,9 @@ class DebugWidget(QWidget):
         self._fps: float = 30.0
 
         self.setWindowTitle("EyeDE - Monitor y Depuración")
+        app_icon = IconManager.instance().get_app_icon()
+        if not app_icon.isNull():
+            self.setWindowIcon(app_icon)
         self.setFixedSize(config.DEBUG_WINDOW_WIDTH, config.DEBUG_WINDOW_HEIGHT)
         self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)

@@ -49,6 +49,35 @@ class IconManager:
         return name.lower() in cls.instance()._renderers
 
     @classmethod
+    def get_app_pixmap(cls, width: int = 32, height: int = 32) -> QPixmap:
+        """Returns a cached QPixmap of the application icon scaled to (width, height)."""
+        inst = cls.instance()
+        cache_key = ("__app_icon__", width, height)
+        if cache_key in inst._pixmap_cache:
+            return inst._pixmap_cache[cache_key]
+
+        candidate_paths = [
+            os.path.join(inst.icons_dir, "app_icon_rounded.png"),
+            os.path.join(inst.icons_dir, "app_icon.png"),
+            os.path.join(inst.icons_dir, "eyede.ico"),
+        ]
+        for p in candidate_paths:
+            if os.path.isfile(p):
+                base_pix = QPixmap(p)
+                if not base_pix.isNull():
+                    scaled = base_pix.scaled(
+                        width,
+                        height,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                    inst._pixmap_cache[cache_key] = scaled
+                    return scaled
+
+        # Fallback to SVG pixmap
+        return cls.get_pixmap("eyede_logo", width, height)
+
+    @classmethod
     def render_icon(
         cls,
         painter: QPainter,
@@ -56,10 +85,16 @@ class IconManager:
         target_rect: QRectF,
     ) -> bool:
         """
-        Renders the SVG icon into the target QRectF using the active QPainter.
+        Renders the SVG or raster icon into the target QRectF using the active QPainter.
         Returns True if rendered, False if icon was not found.
         """
         inst = cls.instance()
+        if icon_name.lower() in ("eyede_logo", "app_icon"):
+            pix = cls.get_app_pixmap(int(target_rect.width()), int(target_rect.height()))
+            if not pix.isNull():
+                painter.drawPixmap(target_rect.toRect(), pix)
+                return True
+
         renderer = inst._renderers.get(icon_name.lower())
         if renderer is not None and renderer.isValid():
             renderer.render(painter, target_rect)
@@ -95,4 +130,32 @@ class IconManager:
         pixmap = cls.get_pixmap(icon_name, size, size)
         if pixmap is not None and not pixmap.isNull():
             return QIcon(pixmap)
+        return QIcon()
+
+    @classmethod
+    def get_app_icon(cls) -> QIcon:
+        """
+        Returns the primary application icon (from eyede.ico, app_icon_rounded.png, or app_icon.png).
+        Used across windows, taskbar, system tray, and dialogs.
+        """
+        inst = cls.instance()
+        # 1. Try eyede.ico (in assets/icons or project root)
+        candidate_paths = [
+            os.path.join(inst.icons_dir, "eyede.ico"),
+            os.path.join(os.path.dirname(inst.icons_dir), "eyede.ico"),
+            os.path.join(os.path.dirname(os.path.dirname(inst.icons_dir)), "eyede.ico"),
+            os.path.join(inst.icons_dir, "app_icon_rounded.png"),
+            os.path.join(inst.icons_dir, "app_icon.png"),
+        ]
+        for path in candidate_paths:
+            if os.path.isfile(path):
+                icon = QIcon(path)
+                if not icon.isNull():
+                    return icon
+
+        # 2. Fallback to SVG logo
+        svg_icon = cls.get_icon("eyede_logo", 128)
+        if not svg_icon.isNull():
+            return svg_icon
+
         return QIcon()

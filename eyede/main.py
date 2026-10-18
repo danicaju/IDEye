@@ -649,6 +649,9 @@ class EyeDEApplication(QObject):
 
         # Initialize QApplication
         self.qapp = QApplication.instance() or QApplication(sys.argv if hasattr(sys, 'argv') else [])
+        app_icon = IconManager.instance().get_app_icon()
+        if not app_icon.isNull():
+            self.qapp.setWindowIcon(app_icon)
 
         # Core subsystems
         self.tracker = CameraTracker(camera_index=self.camera_index, threaded=self.threaded)
@@ -849,7 +852,7 @@ class EyeDEApplication(QObject):
 
         try:
             self.tray_icon = QSystemTrayIcon(self.debug_widget)
-            logo_icon = IconManager.instance().get_icon("eyede_logo", 32)
+            logo_icon = IconManager.instance().get_app_icon()
             if not logo_icon.isNull():
                 self.tray_icon.setIcon(logo_icon)
             else:

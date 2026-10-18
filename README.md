@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-198%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-232%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -149,6 +149,8 @@ On first launch (or with `--recalibrate`), EyeDE launches the **5-Point Visual C
 
 | Key | Action | Description |
 | :--- | :--- | :--- |
+| **`Ctrl+Alt+Q` / `F12`** | **🚨 Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down EyeDE from anywhere in the OS, even when VS Code has focus |
+| **`Ctrl+Alt+R`** | **🔄 Emergency Reset** | Immediately clears 5-point calibration weights and reverts to safe neutral mapping |
 | **`[C]`** | **Center Recalibration** | Look at the screen center and press `C` to reset your neutral anchor |
 | **`[+]` / `[-]`** | **Sensitivity Adjust** | Increase or decrease gaze tracking sensitivity on the fly |
 | **`[P]` / `[Space]`** | **Pause / Reading Mode** | Dim HUD to 10% opacity so you can read code without accidental clicks |

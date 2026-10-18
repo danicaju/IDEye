@@ -115,6 +115,7 @@ class OverlayWindow(QWidget):
 
         # 4. Pre-allocated rendering objects to prevent 30/60 FPS GC pressure and memory leaks
         self._font_header_left = QFont("Segoe UI", 10, QFont.Weight.Bold)
+        self._font_header_center = QFont("Segoe UI", 9, QFont.Weight.Bold)
         self._font_header_right = QFont("Segoe UI", 9)
         self._font_label = QFont("Segoe UI", 12, QFont.Weight.Bold)
         self._font_hint = QFont("Segoe UI", 9)
@@ -123,6 +124,7 @@ class OverlayWindow(QWidget):
         self._brush_header_bg = QBrush(QColor(14, 18, 24, 230))
         self._pen_header_border = QPen(QColor(65, 75, 95, 200), 1.5)
         self._pen_header_left = QPen(QColor(255, 215, 60))
+        self._pen_header_center = QPen(QColor(248, 113, 113))
         self._pen_header_right = QPen(QColor(160, 230, 180))
 
         # Styles for blocks
@@ -469,7 +471,7 @@ class OverlayWindow(QWidget):
             breadcrumb_path += "  [STICKY 📌]"
 
         left_text = f"📁 {breadcrumb_path}"
-        max_left_w = int(header_rect.width() * 0.55)
+        max_left_w = int(header_rect.width() * 0.35)
         painter.setPen(self._pen_header_left)
         painter.setFont(self._font_header_left)
         elided_left = painter.fontMetrics().elidedText(left_text, Qt.TextElideMode.ElideMiddle, max_left_w)
@@ -482,9 +484,22 @@ class OverlayWindow(QWidget):
             elided_left,
         )
 
+        # Center: Emergency Hotkey Documentation
+        emergency_text = "🚨 Emergencia: Ctrl+Alt+Q para salir"
+        painter.setPen(self._pen_header_center)
+        painter.setFont(self._font_header_center)
+        painter.drawText(
+            int(header_rect.x()),
+            int(header_rect.y()),
+            int(header_rect.width()),
+            int(header_rect.height()),
+            Qt.AlignmentFlag.AlignCenter,
+            emergency_text,
+        )
+
         # Last executed action text (Right aligned, elided if long)
         last_action_str = f"Última: {self.last_action_desc}"
-        max_right_w = int(header_rect.width() * 0.40)
+        max_right_w = int(header_rect.width() * 0.35)
         painter.setPen(self._pen_header_right)
         painter.setFont(self._font_header_right)
         elided_right = painter.fontMetrics().elidedText(last_action_str, Qt.TextElideMode.ElideRight, max_right_w)

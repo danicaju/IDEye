@@ -133,6 +133,8 @@ class CameraTracker(QThread):
         self._latest_landmarks: Optional[Any] = None
         self._has_new_frame: bool = False
         self._synthetic_tick: float = 0.0
+        self._click_anchor_gaze: Optional[Tuple[float, float]] = None
+        self._click_anchor_raw: Optional[Tuple[float, float]] = None
 
     @property
     def _worker_thread(self):
@@ -328,10 +330,27 @@ class CameraTracker(QThread):
             if landmarks is not None:
                 annotated_frame = self.draw_debug_landmarks(annotated_frame, landmarks)
 
-            # Thread-safe signal dispatching
-            self.gaze_updated.emit(float(gx), float(gy))
             raw_target = debug_info.get("target_raw", (gx, gy)) if (detected and debug_info) else (gx, gy)
-            self.raw_gaze_updated.emit(float(raw_target[0]), float(raw_target[1]))
+
+            # Stabilization during mouth-open click hold:
+            # Anchors gaze coordinates to pre-click position so jaw drop / facial distortion
+            # cannot fling the selector off the target button during confirmation!
+            if hold_progress > 0.0:
+                if self._click_anchor_gaze is None:
+                    self._click_anchor_gaze = (float(gx), float(gy))
+                if self._click_anchor_raw is None:
+                    self._click_anchor_raw = (float(raw_target[0]), float(raw_target[1]))
+                emit_gx, emit_gy = self._click_anchor_gaze
+                emit_raw_x, emit_raw_y = self._click_anchor_raw
+            else:
+                self._click_anchor_gaze = None
+                self._click_anchor_raw = None
+                emit_gx, emit_gy = float(gx), float(gy)
+                emit_raw_x, emit_raw_y = float(raw_target[0]), float(raw_target[1])
+
+            # Thread-safe signal dispatching
+            self.gaze_updated.emit(emit_gx, emit_gy)
+            self.raw_gaze_updated.emit(emit_raw_x, emit_raw_y)
             if clicked:
                 self.gesture_triggered.emit("MOUTH_CLICK")
             self.frame_ready.emit(annotated_frame, float(current_mar))

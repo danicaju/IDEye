@@ -31,6 +31,7 @@ try:
     from eyede.core.camera_tracker import CameraTracker
     from eyede.core.gaze_estimator import GazeEstimator
     from eyede.core.gesture_detector import GestureDetector
+    from eyede.core.hotkey_manager import GlobalHotkeyManager
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.calibration_ui import CalibrationUI
@@ -40,13 +41,17 @@ except ImportError:
     from core.camera_tracker import CameraTracker
     from core.gaze_estimator import GazeEstimator
     from core.gesture_detector import GestureDetector
+    from core.hotkey_manager import GlobalHotkeyManager
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
     from ui.calibration_ui import CalibrationUI
     from actions.context_reader import ContextReader
 
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import Qt
+import threading
+
+from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
+from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QBrush
+from PyQt6.QtCore import Qt, QObject, QTimer
 
 
 class EyeDEMainApp:
@@ -141,6 +146,24 @@ class EyeDEMainApp:
         self.fps: float = 0.0
         self._frame_count: int = 0
         self._fps_start_time: float = time.time()
+
+        # Emergency Hotkey Support & Click Stabilization
+        self.hotkey_manager = GlobalHotkeyManager()
+        self.hotkey_manager.emergency_exit_requested.connect(self._on_emergency_exit)
+        self.hotkey_manager.emergency_reset_requested.connect(self._on_emergency_reset)
+        self._emergency_exit_requested: bool = False
+        self._click_anchor_gaze: Optional[Tuple[float, float]] = None
+
+    def _on_emergency_exit(self) -> None:
+        """Triggered via global emergency hotkey (Ctrl+Alt+Q / F12)."""
+        self._emergency_exit_requested = True
+
+    def _on_emergency_reset(self) -> None:
+        """Triggered via global emergency reset hotkey (Ctrl+Alt+R)."""
+        if self.gaze_estimator is not None:
+            self.gaze_estimator.reset()
+        self.status_message = "🔄 Calibración reseteada a baselines seguras"
+        self.status_message_time = time.time()
 
     def _get_block_rect(self, row: int, col: int) -> Tuple[int, int, int, int]:
         """Returns (x1, y1, x2, y2) bounding box for a given grid cell taking header into account."""
@@ -377,8 +400,8 @@ class EyeDEMainApp:
         cv2.putText(canvas, brand, (15, 24), cv2.FONT_HERSHEY_DUPLEX, 0.52, (255, 215, 0), 1, cv2.LINE_AA)
 
         # Status guide
-        guide = "[C] Calibrar  |  [+/-] Sensibilidad  |  [M] Mini-feed  |  [Espacio/P] Pausa  |  [Q/ESC] Salir"
-        cv2.putText(canvas, guide, (410, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.44, config.COLOR_TEXT_DIM, 1, cv2.LINE_AA)
+        guide = "[C] Calibrar  |  [Ctrl+Alt+Q] Emergencia  |  [M] Mini-feed  |  [P] Pausa  |  [Q/ESC] Salir"
+        cv2.putText(canvas, guide, (360, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.44, config.COLOR_TEXT_DIM, 1, cv2.LINE_AA)
 
         # Tracking status badge
         if not face_detected:
@@ -445,12 +468,17 @@ class EyeDEMainApp:
 
         print("[OK] Camara activa. Presiona [C] mirando al centro para calibrar.")
         print("[OK] Abre ligeramente la boca durante 150ms para disparar CLICK.")
-        print("[OK] Presiona [Q] o [ESC] para salir limpiamente.\n")
+        print("[OK] Presiona [Ctrl+Alt+Q] o [F12] o [Q/ESC] para salir limpiamente.\n")
 
+        self.hotkey_manager.start()
         processed_frames = 0
 
         try:
             while True:
+                if self._emergency_exit_requested:
+                    print("\n[INFO] Salida de emergencia solicitada via global hotkey (Ctrl+Alt+Q / F12).")
+                    break
+
                 now = time.time()
 
                 # Read latest frame from threaded tracker
@@ -465,7 +493,16 @@ class EyeDEMainApp:
 
                     # 2. Gesture Detection (MAR Mouth Opening Trigger)
                     click_fired, current_mar, hold_progress = self.gesture_detector.process(face_landmarks, current_time=now)
+
+                    # Stabilization during mouth-open click hold
+                    if hold_progress > 0.0:
+                        if self._click_anchor_gaze is None:
+                            self._click_anchor_gaze = (gaze_x, gaze_y)
+                        gaze_x, gaze_y = self._click_anchor_gaze
+                    else:
+                        self._click_anchor_gaze = None
                 else:
+                    self._click_anchor_gaze = None
                     # Face lost or camera frame not yet ready: maintain safe freeze
                     gaze_x, gaze_y = self.gaze_estimator.smoothed_x, self.gaze_estimator.smoothed_y
                     face_detected = False
@@ -557,12 +594,14 @@ class EyeDEMainApp:
 
         finally:
             print("\n[INFO] Liberando recursos de camara y cerrando ventanas...")
+            if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
+                self.hotkey_manager.stop()
             self.tracker.release()
             cv2.destroyAllWindows()
             print("[INFO] EyeDE finalizado limpiamente.")
 
 
-class EyeDEApplication:
+class EyeDEApplication(QObject):
     """
     Phase 2 PyQt6 Orchestrator:
     - Sets up QApplication.
@@ -590,6 +629,7 @@ class EyeDEApplication:
         force_calibrate: bool = False,
         threaded: bool = True,
     ):
+        super().__init__()
         self.camera_index = camera_index
         self.profile_path = profile_path
         self.force_calibrate = force_calibrate
@@ -609,9 +649,16 @@ class EyeDEApplication:
         self.debug_widget = DebugWidget()
         self.calibration_ui: Optional[CalibrationUI] = None
         self._is_shutting_down: bool = False
+        self.tray_icon: Optional[QSystemTrayIcon] = None
+
+        # Global Hotkey Manager for Emergency Exit & Reset
+        self.hotkey_manager = GlobalHotkeyManager()
+        self.hotkey_manager.emergency_exit_requested.connect(self.shutdown)
+        self.hotkey_manager.emergency_reset_requested.connect(self.reset_calibration)
 
         self._setup_connections()
         self._configure_geometry()
+        self._setup_tray_icon()
 
     def _setup_connections(self) -> None:
         """Connects signals between tracker, overlay, debug monitor, and lifecycle."""
@@ -632,6 +679,7 @@ class EyeDEApplication:
 
         # Controls from UI to application lifecycle
         self.debug_widget.recalibrate_requested.connect(self.launch_calibration)
+        self.debug_widget.reset_calibration_requested.connect(self.reset_calibration)
         self.debug_widget.exit_requested.connect(self.shutdown)
         self.overlay.exit_requested.connect(self.shutdown)
 
@@ -707,8 +755,80 @@ class EyeDEApplication:
 
         self.overlay.show()
 
+    def reset_calibration(self) -> None:
+        """
+        Emergency reset of calibration: restores safe neutral/uncalibrated state,
+        resets GazeEstimator weights and anchors, and invalidates any corrupt profile.
+        Thread-safe: schedules onto Qt main GUI thread if invoked from pynput background thread.
+        """
+        if threading.current_thread() is not threading.main_thread():
+            QTimer.singleShot(0, self.reset_calibration)
+            return
+
+        print("[INFO] [EMERGENCIA] Resetting calibration to safe neutral baselines...")
+        if self.tracker is not None:
+            self.tracker.gaze_estimator.reset()
+
+        if os.path.exists(self.profile_path):
+            try:
+                bak_path = self.profile_path + ".bak"
+                if os.path.exists(bak_path):
+                    os.remove(bak_path)
+                os.rename(self.profile_path, bak_path)
+                print(f"[INFO] Moved active calibration profile to '{bak_path}'.")
+            except Exception as e:
+                print(f"[AVISO] Could not backup calibration profile: {e}")
+
+        if self.overlay is not None:
+            self.overlay.last_action_desc = "🔄 Calibración reseteada"
+            self.overlay.update()
+
+    def _setup_tray_icon(self) -> None:
+        """Sets up desktop system tray icon for emergency controls and status."""
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            self.tray_icon = None
+            return
+
+        try:
+            self.tray_icon = QSystemTrayIcon(self.debug_widget)
+            pixmap = QPixmap(32, 32)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QBrush(QColor(56, 189, 248)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(2, 2, 28, 28)
+            painter.setPen(QColor(15, 23, 42))
+            painter.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+            painter.drawText(0, 0, 32, 32, Qt.AlignmentFlag.AlignCenter, "E")
+            painter.end()
+
+            self.tray_icon.setIcon(QIcon(pixmap))
+            self.tray_icon.setToolTip("EyeDE - Control Ocular Activo (Ctrl+Alt+Q para salir)")
+
+            tray_menu = QMenu()
+            action_title = tray_menu.addAction("EyeDE - Control Ocular")
+            action_title.setEnabled(False)
+            tray_menu.addSeparator()
+
+            action_recalib = tray_menu.addAction("🎯 Recalibrar (5 puntos)")
+            action_recalib.triggered.connect(self.launch_calibration)
+
+            action_reset = tray_menu.addAction("🔄 Resetear Calibración")
+            action_reset.triggered.connect(self.reset_calibration)
+
+            tray_menu.addSeparator()
+            action_exit = tray_menu.addAction("🚨 Salida de Emergencia (Ctrl+Alt+Q)")
+            action_exit.triggered.connect(self.shutdown)
+
+            self.tray_icon.setContextMenu(tray_menu)
+            self.tray_icon.show()
+        except Exception as e:
+            print(f"[EyeDE] Warning: Could not initialize system tray: {e}")
+            self.tray_icon = None
+
     def start(self) -> None:
-        """Starts tracker thread and displays UI."""
+        """Starts tracker thread, global emergency hotkeys, and displays UI."""
         # Check if calibration profile exists
         has_profile = os.path.exists(self.profile_path)
         if has_profile and not self.force_calibrate:
@@ -719,6 +839,10 @@ class EyeDEApplication:
         started = self.tracker.start()
         if not started:
             print(f"[AVISO] No se pudo abrir la camara {self.tracker.camera_index}. Continuando...")
+
+        # Start global emergency hotkey listener
+        if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
+            self.hotkey_manager.start()
 
         # Reflect any detected or preconfigured active file
         active_f = self.context_reader.get_active_file()
@@ -735,13 +859,24 @@ class EyeDEApplication:
 
     def shutdown(self) -> None:
         """
-        Gracefully terminates CameraTracker QThread and closes all windows.
+        Gracefully terminates CameraTracker QThread, global hotkey listener, and closes all windows.
         Guarantees zero zombie threads and camera release.
+        Thread-safe: schedules onto Qt main GUI thread if invoked from pynput background thread.
         """
+        if threading.current_thread() is not threading.main_thread():
+            QTimer.singleShot(0, self.shutdown)
+            return
+
         if self._is_shutting_down:
             return
         self._is_shutting_down = True
         print("\n[INFO] Gracefully shutting down EyeDE Phase 2...")
+
+        if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
+            self.hotkey_manager.stop()
+
+        if hasattr(self, "tray_icon") and self.tray_icon is not None:
+            self.tray_icon.hide()
 
         if self.tracker is not None:
             self.tracker.stop()

@@ -86,12 +86,13 @@ class CalibrationUI(QWidget):
 
     def on_raw_gaze_updated(self, rx: float, ry: float) -> None:
         """Slot for uncalibrated raw gaze coordinates from tracker."""
+        self._has_raw_signal = True
         self.latest_raw_gaze = (rx, ry)
 
     def on_gaze_updated(self, gx: float, gy: float) -> None:
         """Slot for incoming gaze coordinates from tracker."""
         # Only fallback to (gx, gy) if raw_gaze_updated hasn't set latest_raw_gaze
-        if not hasattr(self, "_has_raw_signal") or not self._has_raw_signal:
+        if not getattr(self, "_has_raw_signal", False):
             self.latest_raw_gaze = (gx, gy)
 
     def on_gesture_triggered(self, gesture_name: str) -> None:
@@ -118,13 +119,36 @@ class CalibrationUI(QWidget):
             self._finish_point_sampling()
 
     def _finish_point_sampling(self) -> None:
-        """Averages samples for the current point and advances to next."""
+        """Averages samples for the current point with outlier rejection and advances to next."""
         self.is_sampling = False
         if not self.samples_buffer:
             avg_x, avg_y = self.latest_raw_gaze
+        elif len(self.samples_buffer) < 4:
+            avg_x = float(np.median([s[0] for s in self.samples_buffer]))
+            avg_y = float(np.median([s[1] for s in self.samples_buffer]))
         else:
-            avg_x = float(np.mean([s[0] for s in self.samples_buffer]))
-            avg_y = float(np.mean([s[1] for s in self.samples_buffer]))
+            # Outlier rejection:
+            # If buffer >= 6 samples, discard first 2 samples (transient movement during mouth opening)
+            valid_samples = self.samples_buffer[2:] if len(self.samples_buffer) >= 6 else self.samples_buffer
+            xs = np.array([s[0] for s in valid_samples], dtype=np.float64)
+            ys = np.array([s[1] for s in valid_samples], dtype=np.float64)
+
+            med_x = float(np.median(xs))
+            med_y = float(np.median(ys))
+
+            # Filter samples deviating significantly from median
+            dists = np.sqrt((xs - med_x) ** 2 + (ys - med_y) ** 2)
+            med_dist = float(np.median(dists))
+            mad = float(np.median(np.abs(dists - med_dist)))
+            cutoff = med_dist + 2.5 * max(mad, 1e-4)
+
+            inliers_mask = dists <= cutoff
+            if np.sum(inliers_mask) >= 2:
+                avg_x = float(np.mean(xs[inliers_mask]))
+                avg_y = float(np.mean(ys[inliers_mask]))
+            else:
+                avg_x = med_x
+                avg_y = med_y
 
         current_pt = self.points[self.current_pt_idx]
         self.collected_data.append({
@@ -133,6 +157,7 @@ class CalibrationUI(QWidget):
             "screen": current_pt["screen"],
             "raw": (avg_x, avg_y),
         })
+
 
         self.current_pt_idx += 1
         if self.current_pt_idx < len(self.points):
@@ -180,6 +205,11 @@ class CalibrationUI(QWidget):
         else:
             super().keyPressEvent(event)
 
+    def mousePressEvent(self, event) -> None:
+        """Mouse click also triggers sampling for active calibration point."""
+        if not self.is_sampling and not self.is_completed:
+            self.start_sampling()
+
     def paintEvent(self, event) -> None:
         """Renders calibration targets, animated progress ring, and instructions."""
         painter = QPainter(self)
@@ -206,7 +236,7 @@ class CalibrationUI(QWidget):
         font_hint = QFont("Segoe UI", 10)
         painter.setFont(font_hint)
         painter.setPen(QColor(110, 120, 140))
-        painter.drawText(0, h - 50, w, 30, Qt.AlignmentFlag.AlignCenter, "Controles: Mirar + Abrir boca (o presionar ESPACIO) | ESC para cancelar")
+        painter.drawText(0, h - 50, w, 30, Qt.AlignmentFlag.AlignCenter, "Controles: Mirar + Abrir boca (o presionar ESPACIO / Clic) | ESC para cancelar")
 
         # 3. Step indicator dots at bottom
         dot_spacing = 30

@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-198%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-232%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -149,6 +149,8 @@ En el primer inicio (o con `--recalibrate`), EyeDE abrirá la **Pantalla de Cali
 
 | Tecla | Acción | Descripción |
 | :--- | :--- | :--- |
+| **`Ctrl+Alt+Q` / `F12`** | **🚨 Botón de Emergencia (Killswitch)** | **Atajo global en todo el SO**: apaga EyeDE limpiamente de inmediato, incluso cuando VS Code tiene el foco |
+| **`Ctrl+Alt+R`** | **🔄 Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
 | **`[C]`** | **Recalibrar Centro** | Mira al centro de la pantalla y pulsa `C` para fijar tu ancla neutra |
 | **`[+]` / `[-]`** | **Ajustar Sensibilidad** | Aumenta o disminuye la sensibilidad de seguimiento sobre la marcha |
 | **`[P]` / `[Espacio]`** | **Pausa / Modo Lectura** | Atenúa el HUD al 10% de opacidad para leer código sin clics involuntarios |

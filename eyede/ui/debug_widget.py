@@ -40,6 +40,7 @@ class DebugWidget(QWidget):
     """
 
     recalibrate_requested = pyqtSignal()
+    reset_calibration_requested = pyqtSignal()
     exit_requested = pyqtSignal()
     file_linked = pyqtSignal(str)
 
@@ -101,6 +102,13 @@ class DebugWidget(QWidget):
             QPushButton:pressed {
                 background-color: #0f172a;
             }
+            QPushButton#btnReset {
+                background-color: #1e3a5f;
+                border-color: #2563eb;
+            }
+            QPushButton#btnReset:hover {
+                background-color: #2563eb;
+            }
             QPushButton#btnExit {
                 background-color: #7f1d1d;
                 border-color: #991b1b;
@@ -157,20 +165,34 @@ class DebugWidget(QWidget):
 
         # 6. Action Buttons
         btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(8)
+        btn_layout.setSpacing(6)
 
         self.btn_recalibrate = QPushButton("🎯 Recalibrar", self)
         self.btn_recalibrate.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_recalibrate.clicked.connect(self.recalibrate_requested.emit)
         btn_layout.addWidget(self.btn_recalibrate)
 
-        self.btn_exit = QPushButton("❌ Salir", self)
+        self.btn_reset = QPushButton("🔄 Reset", self)
+        self.btn_reset.setObjectName("btnReset")
+        self.btn_reset.setToolTip("Resetear calibración a valores por defecto")
+        self.btn_reset.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_reset.clicked.connect(self.reset_calibration_requested.emit)
+        btn_layout.addWidget(self.btn_reset)
+
+        self.btn_exit = QPushButton("🚨 Salir", self)
         self.btn_exit.setObjectName("btnExit")
+        self.btn_exit.setToolTip("Salida inmediata de la aplicación")
         self.btn_exit.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_exit.clicked.connect(self.exit_requested.emit)
         btn_layout.addWidget(self.btn_exit)
 
         main_layout.addLayout(btn_layout)
+
+        # 7. Emergency Hotkey Documentation Label
+        self.lbl_emergency_hint = QLabel("🚨 Emergencia: Ctrl+Alt+Q para salir", self)
+        self.lbl_emergency_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_emergency_hint.setStyleSheet("font-size: 10px; font-weight: bold; color: #f87171; padding: 2px;")
+        main_layout.addWidget(self.lbl_emergency_hint)
 
     def _on_link_file_clicked(self) -> None:
         """Opens file dialog for user to select an active Python file."""

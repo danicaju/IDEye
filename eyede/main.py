@@ -1,0 +1,574 @@
+"""
+EyeDE - Main Entrypoint & Grid Orchestrator (Phase 1)
+3x3 Macro-Block Grid with Threaded Hybrid Gaze Tracking & Facial Gesture (MAR) Trigger.
+
+Architecture:
+- Background worker thread for camera capture & MediaPipe FaceMesh processing (<35ms budget).
+- Silky smooth UI loop (60+ FPS) rendering the 3x3 Macro-Block programming grid.
+- Eye blink suppression (prevents cursor jumps when blinking).
+- Distance-adaptive center calibration.
+- Full visibility for all 9 blocks (Block 9 never obscured by mini-feed).
+- Guaranteed crash-free face loss handling, pause/rest zone support, and clean resource destruction.
+"""
+
+import sys
+import os
+import time
+import argparse
+from typing import Optional, Tuple, Dict, Any, Union
+import cv2
+import numpy as np
+
+# Robust path handling for workspace root and package imports
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PARENT_DIR = os.path.dirname(_CURRENT_DIR)
+for _p in (_CURRENT_DIR, _PARENT_DIR):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+try:
+    import eyede.config as config
+    from eyede.core.camera_tracker import CameraTracker
+    from eyede.core.gaze_estimator import GazeEstimator
+    from eyede.core.gesture_detector import GestureDetector
+except ImportError:
+    import config
+    from core.camera_tracker import CameraTracker
+    from core.gaze_estimator import GazeEstimator
+    from core.gesture_detector import GestureDetector
+
+
+class EyeDEMainApp:
+    """
+    Orchestrates the Phase 1 EyeDE interface:
+    - Threaded webcam capture with 478 MediaPipe landmarks.
+    - Estimates smoothed hybrid gaze coordinates (Head + Iris with EMA and blink suppression).
+    - Detects mouth opening (MAR) with debouncing & cooldown to fire CLICK events.
+    - Renders an assistive 3x3 Macro-Block programming grid.
+    - Displays camera mini-feed with landmark overlays and a MAR meter without obscuring Block 9.
+    - Guarantees crash-free face loss handling, resting zone pause, and clean resource disposal.
+    """
+
+    def __init__(
+        self,
+        camera_index: Union[int, str] = config.CAMERA_INDEX,
+        canvas_width: int = config.FRAME_WIDTH,
+        canvas_height: int = config.FRAME_HEIGHT,
+        window_name: str = "EyeDE - Phase 1: Macro-Grid Vision Engine",
+        threaded: bool = True,
+    ):
+        self.canvas_width = canvas_width
+        self.canvas_height = canvas_height
+        self.window_name = window_name
+        self.threaded = threaded
+
+        # Core subsystems
+        self.tracker = CameraTracker(
+            camera_index=camera_index,
+            frame_width=canvas_width,
+            frame_height=canvas_height,
+            fps=config.FPS,
+            mirror=config.MIRROR_CAMERA,
+            max_num_faces=config.MAX_NUM_FACES,
+            refine_landmarks=config.REFINE_LANDMARKS,
+            min_detection_confidence=config.MIN_DETECTION_CONFIDENCE,
+            min_tracking_confidence=config.MIN_TRACKING_CONFIDENCE,
+            threaded=threaded,
+        )
+
+        self.gaze_estimator = GazeEstimator(
+            head_weight=config.HEAD_WEIGHT,
+            iris_weight=config.IRIS_WEIGHT,
+            head_sensitivity_x=config.DEFAULT_HEAD_SENSITIVITY_X,
+            head_sensitivity_y=config.DEFAULT_HEAD_SENSITIVITY_Y,
+            iris_sensitivity_x=config.DEFAULT_IRIS_SENSITIVITY_X,
+            iris_sensitivity_y=config.DEFAULT_IRIS_SENSITIVITY_Y,
+            ema_alpha=config.EMA_ALPHA,
+            nose_tip_idx=config.LANDMARK_NOSE_TIP,
+            iris_left_center_idx=config.LANDMARK_IRIS_LEFT_CENTER,
+            iris_right_center_idx=config.LANDMARK_IRIS_RIGHT_CENTER,
+            left_eye_inner_idx=config.LANDMARK_LEFT_EYE_INNER,
+            left_eye_outer_idx=config.LANDMARK_LEFT_EYE_OUTER,
+            left_eye_top_idx=config.LANDMARK_LEFT_EYE_TOP,
+            left_eye_bottom_idx=config.LANDMARK_LEFT_EYE_BOTTOM,
+            right_eye_inner_idx=config.LANDMARK_RIGHT_EYE_INNER,
+            right_eye_outer_idx=config.LANDMARK_RIGHT_EYE_OUTER,
+            right_eye_top_idx=config.LANDMARK_RIGHT_EYE_TOP,
+            right_eye_bottom_idx=config.LANDMARK_RIGHT_EYE_BOTTOM,
+        )
+
+        self.gesture_detector = GestureDetector(
+            mar_threshold=config.MAR_THRESHOLD,
+            release_threshold=config.MAR_RELEASE_THRESHOLD,
+            hold_time_sec=config.CLICK_HOLD_TIME_SEC,
+            cooldown_sec=config.CLICK_COOLDOWN_SEC,
+            top_lip_idx=config.LANDMARK_MOUTH_LIP_TOP,
+            bottom_lip_idx=config.LANDMARK_MOUTH_LIP_BOTTOM,
+            left_corner_idx=config.LANDMARK_MOUTH_CORNER_LEFT,
+            right_corner_idx=config.LANDMARK_MOUTH_CORNER_RIGHT,
+        )
+
+        # UI & Grid State
+        self.grid_rows = config.GRID_ROWS
+        self.grid_cols = config.GRID_COLS
+        self.macro_blocks = config.MACRO_BLOCKS
+        self.header_height = config.HEADER_HEIGHT
+
+        self.active_block_idx: Optional[int] = None
+        self.last_clicked_block_idx: Optional[int] = None
+        self.last_click_timestamp: float = 0.0
+
+        # Resting zone / pause state
+        self.is_paused: bool = False
+        self.show_mini_feed: bool = True
+
+        # Calibration & status message timer
+        self.status_message: str = "Presiona [C] mirando al centro para calibrar"
+        self.status_message_time: float = time.time()
+
+        # Performance monitoring
+        self.fps: float = 0.0
+        self._frame_count: int = 0
+        self._fps_start_time: float = time.time()
+
+    def _get_block_rect(self, row: int, col: int) -> Tuple[int, int, int, int]:
+        """Returns (x1, y1, x2, y2) bounding box for a given grid cell taking header into account."""
+        grid_top = self.header_height
+        avail_h = self.canvas_height - grid_top
+        cell_w = self.canvas_width // self.grid_cols
+        cell_h = avail_h // self.grid_rows
+
+        x1 = col * cell_w
+        y1 = grid_top + row * cell_h
+        x2 = self.canvas_width if col == self.grid_cols - 1 else (col + 1) * cell_w
+        y2 = self.canvas_height if row == self.grid_rows - 1 else grid_top + (row + 1) * cell_h
+        return x1, y1, x2, y2
+
+    def _get_hovered_block(self, norm_x: float, norm_y: float) -> int:
+        """Calculates which of the 9 macro-blocks contains the gaze point."""
+        col = int(np.clip(int(norm_x * self.grid_cols), 0, self.grid_cols - 1))
+        row = int(np.clip(int(norm_y * self.grid_rows), 0, self.grid_rows - 1))
+        return row * self.grid_cols + col
+
+    def _draw_grid(
+        self,
+        canvas: np.ndarray,
+        hovered_idx: int,
+        now: float,
+    ) -> None:
+        """Renders the 3x3 Macro-Block grid onto the canvas with full visibility for all blocks."""
+        is_flash_active = (now - self.last_click_timestamp) < config.CLICK_FLASH_DURATION_SEC
+
+        for row in range(self.grid_rows):
+            for col in range(self.grid_cols):
+                idx = row * self.grid_cols + col
+                x1, y1, x2, y2 = self._get_block_rect(row, col)
+
+                block_info = self.macro_blocks[idx]
+                is_hovered = (idx == hovered_idx)
+                is_clicked = is_flash_active and (idx == self.last_clicked_block_idx)
+
+                # Determine background color
+                if is_clicked:
+                    bg_color = config.COLOR_BLOCK_CLICK
+                    border_color = (255, 255, 255)
+                    text_color = config.COLOR_TEXT_CLICK
+                elif self.is_paused and idx == 4:
+                    bg_color = (40, 30, 20)
+                    border_color = config.COLOR_PAUSED_BORDER
+                    text_color = (255, 200, 80)
+                elif is_hovered:
+                    bg_color = config.COLOR_BLOCK_HOVER
+                    border_color = config.COLOR_POINTER
+                    text_color = config.COLOR_TEXT_HOVER
+                else:
+                    bg_color = config.COLOR_BLOCK_DEFAULT
+                    border_color = config.COLOR_GRID_BORDER
+                    text_color = config.COLOR_TEXT
+
+                # Fill block with inner margin
+                margin = 3
+                cv2.rectangle(canvas, (x1 + margin, y1 + margin), (x2 - margin, y2 - margin), bg_color, -1)
+                cv2.rectangle(canvas, (x1 + margin, y1 + margin), (x2 - margin, y2 - margin), border_color, 2 if not is_hovered else 3)
+
+                label = block_info["label"]
+                hint = block_info.get("hint", "")
+
+                font = cv2.FONT_HERSHEY_DUPLEX
+                font_scale = 0.82 if is_hovered else 0.72
+                thickness = 2 if is_hovered else 1
+
+                # Special layout for Block 9 ("9: SALIR") to guarantee it is NEVER obscured by the mini-feed
+                if idx == 8:
+                    # Place label and hint in the top-left area of the block
+                    text_x = x1 + 24
+                    text_y = y1 + 38
+                    cv2.putText(canvas, label, (text_x, text_y), font, font_scale, text_color, thickness, cv2.LINE_AA)
+                    if hint:
+                        hint_scale = 0.44
+                        hint_color = config.COLOR_TEXT_CLICK if is_clicked else config.COLOR_TEXT_DIM
+                        cv2.putText(canvas, hint, (text_x, text_y + 24), font, hint_scale, hint_color, 1, cv2.LINE_AA)
+                elif idx == 4 and self.is_paused:
+                    # Special label for paused resting zone
+                    pause_lbl = "5: EN REPOSO"
+                    (tw, th), _ = cv2.getTextSize(pause_lbl, font, font_scale, thickness)
+                    text_x = x1 + (x2 - x1 - tw) // 2
+                    text_y = y1 + (y2 - y1) // 2 - 5
+                    cv2.putText(canvas, pause_lbl, (text_x, text_y), font, font_scale, text_color, thickness, cv2.LINE_AA)
+                    p_hint = "Mirada fija / Clic para reanudar"
+                    (hw, hh), _ = cv2.getTextSize(p_hint, font, 0.45, 1)
+                    cv2.putText(canvas, p_hint, (x1 + (x2 - x1 - hw) // 2, text_y + 26), font, 0.45, (255, 180, 50), 1, cv2.LINE_AA)
+                else:
+                    # Standard centered label
+                    (tw, th), _ = cv2.getTextSize(label, font, font_scale, thickness)
+                    text_x = x1 + (x2 - x1 - tw) // 2
+                    text_y = y1 + (y2 - y1) // 2 - 5
+                    cv2.putText(canvas, label, (text_x, text_y), font, font_scale, text_color, thickness, cv2.LINE_AA)
+
+                    if hint:
+                        hint_scale = 0.45
+                        hint_color = config.COLOR_TEXT_CLICK if is_clicked else config.COLOR_TEXT_DIM
+                        (hw, hh), _ = cv2.getTextSize(hint, font, hint_scale, 1)
+                        hint_x = x1 + (x2 - x1 - hw) // 2
+                        hint_y = text_y + 26
+                        cv2.putText(canvas, hint, (hint_x, hint_y), font, hint_scale, hint_color, 1, cv2.LINE_AA)
+
+    def _draw_gaze_pointer(self, canvas: np.ndarray, norm_x: float, norm_y: float) -> None:
+        """Renders an anti-aliased smooth gaze cursor with a reticle."""
+        grid_top = self.header_height
+        avail_h = self.canvas_height - grid_top
+
+        px = int(np.clip(norm_x * self.canvas_width, 0, self.canvas_width - 1))
+        py = int(np.clip(grid_top + norm_y * avail_h, grid_top, self.canvas_height - 1))
+
+        if self.is_paused:
+            # Paused reticle (soft orange)
+            cv2.circle(canvas, (px, py), 14, config.COLOR_PAUSED_BORDER, 2, cv2.LINE_AA)
+            cv2.circle(canvas, (px, py), 4, (255, 200, 80), -1, cv2.LINE_AA)
+            return
+
+        # Outer ring
+        cv2.circle(canvas, (px, py), 18, config.COLOR_POINTER, 2, cv2.LINE_AA)
+        # Inner glow dot
+        cv2.circle(canvas, (px, py), 5, (255, 255, 255), -1, cv2.LINE_AA)
+        # Subtle crosshair
+        ch_len = 8
+        cv2.line(canvas, (px - ch_len, py), (px + ch_len, py), config.COLOR_POINTER_OUTLINE, 1, cv2.LINE_AA)
+        cv2.line(canvas, (px, py - ch_len), (px, py + ch_len), config.COLOR_POINTER_OUTLINE, 1, cv2.LINE_AA)
+
+    def _draw_mini_feed_and_mar(
+        self,
+        canvas: np.ndarray,
+        camera_frame: Optional[np.ndarray],
+        face_landmarks: Any,
+        current_mar: float,
+        hold_progress: float,
+        face_detected: bool,
+        is_flash_active: bool,
+        hovered_idx: int,
+    ) -> None:
+        """
+        Renders the mini-feed in the bottom-right corner with a MAR progress bar.
+        Synchronizes border glow and click flash with Block 9 so Block 9 is completely responsive.
+        """
+        if not self.show_mini_feed:
+            return
+
+        mw = config.MINI_FEED_WIDTH
+        mh = config.MINI_FEED_HEIGHT
+        margin = config.MINI_FEED_MARGIN
+
+        # Position at bottom-right corner (inside Block 9 bounds, leaving top label clear)
+        fx1 = self.canvas_width - mw - margin
+        fy1 = self.canvas_height - mh - margin
+        fx2 = self.canvas_width - margin
+        fy2 = self.canvas_height - margin
+
+        # Synchronize mini-feed border with Block 9 hover/click
+        is_block_9_clicked = is_flash_active and (self.last_clicked_block_idx == 8)
+        is_block_9_hovered = (hovered_idx == 8)
+
+        if is_block_9_clicked:
+            border_col = config.COLOR_BLOCK_CLICK
+            border_thick = 3
+        elif is_block_9_hovered:
+            border_col = config.COLOR_BLOCK_HOVER
+            border_thick = 2
+        elif hold_progress >= 0.99:
+            border_col = config.COLOR_BAR_READY
+            border_thick = 2
+        else:
+            border_col = config.COLOR_GRID_BORDER
+            border_thick = 1
+
+        # Background container card with header for MAR meter
+        header_h = 28
+        cv2.rectangle(canvas, (fx1 - 3, fy1 - header_h), (fx2 + 3, fy2 + 3), (16, 18, 22), -1)
+        cv2.rectangle(canvas, (fx1 - 3, fy1 - header_h), (fx2 + 3, fy2 + 3), border_col, border_thick)
+
+        # Title banner
+        title = "MINI-FEED"
+        cv2.putText(canvas, title, (fx1 + 4, fy1 - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.40, config.COLOR_TEXT_DIM, 1, cv2.LINE_AA)
+
+        # MAR Value label
+        mar_txt = f"MAR: {current_mar:.2f}"
+        if current_mar >= config.MAR_THRESHOLD:
+            mar_txt += f" ({int(hold_progress * 100)}%)"
+        cv2.putText(canvas, mar_txt, (fx2 - 95, fy1 - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.38, config.COLOR_BAR_READY if current_mar >= config.MAR_THRESHOLD else config.COLOR_TEXT, 1, cv2.LINE_AA)
+
+        # ======================================================================
+        # MAR Visual Gauge Bar
+        # ======================================================================
+        bar_x1 = fx1 + 72
+        bar_y1 = fy1 - 20
+        bar_w = mw - 175
+        bar_h = 7
+
+        # Background bar
+        cv2.rectangle(canvas, (bar_x1, bar_y1), (bar_x1 + bar_w, bar_y1 + bar_h), config.COLOR_BAR_BG, -1)
+
+        # MAR fill
+        norm_mar = float(np.clip(current_mar, 0.0, 1.0))
+        fill_w = int(norm_mar * bar_w)
+        fill_color = config.COLOR_BAR_READY if current_mar >= config.MAR_THRESHOLD else config.COLOR_BAR_FILL
+        if fill_w > 0:
+            cv2.rectangle(canvas, (bar_x1, bar_y1), (bar_x1 + fill_w, bar_y1 + bar_h), fill_color, -1)
+
+        # Threshold line marker
+        thresh_x = bar_x1 + int(config.MAR_THRESHOLD * bar_w)
+        cv2.line(canvas, (thresh_x, bar_y1 - 2), (thresh_x, bar_y1 + bar_h + 2), config.COLOR_THRESHOLD_LINE, 2)
+
+        # Camera feed
+        if camera_frame is not None:
+            annotated = camera_frame.copy()
+            if face_landmarks is not None:
+                self.tracker.draw_debug_landmarks(annotated, face_landmarks)
+            resized = cv2.resize(annotated, (mw, mh), interpolation=cv2.INTER_AREA)
+            canvas[fy1:fy2, fx1:fx2] = resized
+        else:
+            cv2.rectangle(canvas, (fx1, fy1), (fx2, fy2), (28, 30, 36), -1)
+            cv2.putText(canvas, "SIN CAMARA", (fx1 + mw // 4, fy1 + mh // 2), cv2.FONT_HERSHEY_SIMPLEX, 0.55, config.COLOR_TEXT_DIM, 1)
+
+        # Face loss overlay banner on feed
+        if not face_detected:
+            overlay = canvas[fy1:fy2, fx1:fx2].copy()
+            cv2.rectangle(overlay, (0, 0), (mw, mh), (0, 0, 180), -1)
+            cv2.addWeighted(overlay, 0.50, canvas[fy1:fy2, fx1:fx2], 0.50, 0, canvas[fy1:fy2, fx1:fx2])
+            cv2.putText(canvas, "ROSTRO PERDIDO", (fx1 + 35, fy1 + mh // 2), cv2.FONT_HERSHEY_DUPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+
+    def _draw_status_bar(self, canvas: np.ndarray, face_detected: bool, is_calibrated: bool) -> None:
+        """Renders top header with tracking status, shortcuts, and FPS."""
+        cv2.rectangle(canvas, (0, 0), (self.canvas_width, self.header_height), (14, 16, 19), -1)
+        cv2.line(canvas, (0, self.header_height), (self.canvas_width, self.header_height), config.COLOR_GRID_BORDER, 1)
+
+        # Brand
+        brand = "EyeDE v0.1.0 [FASE 1: Tracking Hibrido + Gestos]"
+        cv2.putText(canvas, brand, (15, 24), cv2.FONT_HERSHEY_DUPLEX, 0.52, (255, 215, 0), 1, cv2.LINE_AA)
+
+        # Status guide
+        guide = "[C] Calibrar  |  [+/-] Sensibilidad  |  [M] Mini-feed  |  [Espacio/P] Pausa  |  [Q/ESC] Salir"
+        cv2.putText(canvas, guide, (410, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.44, config.COLOR_TEXT_DIM, 1, cv2.LINE_AA)
+
+        # Tracking status badge
+        if not face_detected:
+            status_text = "⚠️ ROSTRO PERDIDO"
+            status_color = config.COLOR_WARNING
+        elif self.is_paused:
+            status_text = "⏸ EN REPOSO / PAUSA"
+            status_color = config.COLOR_PAUSED_BORDER
+        elif is_calibrated:
+            sens_pct = int(self.gaze_estimator.distance_scale * 100)
+            status_text = f"● SEGUIMIENTO [{sens_pct}% Sens]"
+            status_color = config.COLOR_BAR_READY
+        else:
+            status_text = "● ACTIVO [Pulsa C]"
+            status_color = (0, 180, 255)
+
+        cv2.putText(canvas, status_text, (self.canvas_width - 240, 24), cv2.FONT_HERSHEY_DUPLEX, 0.44, status_color, 1, cv2.LINE_AA)
+
+        # Face loss top warning banner
+        if not face_detected:
+            alert = "ALERTA: Rostro fuera de plano. Posicion congelada para evitar toques accidentales."
+            (aw, ah), _ = cv2.getTextSize(alert, cv2.FONT_HERSHEY_DUPLEX, 0.55, 1)
+            ax = (self.canvas_width - aw) // 2
+            cv2.rectangle(canvas, (ax - 12, 44), (ax + aw + 12, 74), (0, 0, 150), -1)
+            cv2.putText(canvas, alert, (ax, 65), cv2.FONT_HERSHEY_DUPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+
+    def handle_click_event(self, block_idx: int, norm_x: float, norm_y: float) -> None:
+        """Triggers the action associated with the clicked macro block."""
+        self.last_clicked_block_idx = block_idx
+        self.last_click_timestamp = time.time()
+
+        block_info = self.macro_blocks[block_idx]
+        action = block_info["action"]
+        label = block_info["label"]
+
+        print(f"\n[EyeDE ACTION] 🎯 CLICK Disparado en Bloque {block_idx + 1}: '{label}'")
+        print(f"               Accion: {action} | Coordenada: (X={norm_x:.3f}, Y={norm_y:.3f})")
+
+        if action == "PAUSE_RESUME":
+            self.is_paused = not self.is_paused
+            state_str = "PAUSADO (Zona de reposo)" if self.is_paused else "REANUDADO"
+            print(f"[EyeDE ACTION] Estado de seguimiento: {state_str}")
+        elif action == "ACTION_EXIT":
+            print("[EyeDE ACTION] Bloque SALIR activado. Cerrando aplicacion...")
+
+    def run(self, max_frames: Optional[int] = None) -> None:
+        """
+        Main application loop.
+        
+        Args:
+            max_frames: Optional frame limit (useful for non-blocking automated testing).
+        """
+        print("=" * 60)
+        print("  EyeDE - Motor de Vision, Tracking Hibrido y Gestos (Fase 1)")
+        print("=" * 60)
+        print("Inicializando subsistemas de vision y FaceMesh (478 landmarks)...")
+
+        if not self.tracker.start():
+            print(f"[ERROR] No se pudo inicializar la camara indice {self.tracker.camera_index}.")
+            return
+
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(self.window_name, self.canvas_width, self.canvas_height)
+
+        print("[OK] Camara activa. Presiona [C] mirando al centro para calibrar.")
+        print("[OK] Abre ligeramente la boca durante 150ms para disparar CLICK.")
+        print("[OK] Presiona [Q] o [ESC] para salir limpiamente.\n")
+
+        processed_frames = 0
+
+        try:
+            while True:
+                now = time.time()
+
+                # Read latest frame from threaded tracker
+                success, frame, face_landmarks = self.tracker.read_frame()
+
+                if success and face_landmarks is not None:
+                    # 1. Hybrid Gaze Estimation (Head + Iris with EMA & Blink Suppression)
+                    if not self.is_paused:
+                        gaze_x, gaze_y, face_detected, debug_info = self.gaze_estimator.estimate(face_landmarks)
+                    else:
+                        gaze_x, gaze_y, face_detected = 0.5, 0.5, True
+
+                    # 2. Gesture Detection (MAR Mouth Opening Trigger)
+                    click_fired, current_mar, hold_progress = self.gesture_detector.process(face_landmarks, current_time=now)
+                else:
+                    # Face lost or camera frame not yet ready: maintain safe freeze
+                    gaze_x, gaze_y = self.gaze_estimator.smoothed_x, self.gaze_estimator.smoothed_y
+                    face_detected = False
+                    current_mar = 0.0
+                    hold_progress = 0.0
+                    click_fired = False
+
+                # 3. Determine Hovered Macro-Block
+                hovered_block = self._get_hovered_block(gaze_x, gaze_y)
+                self.active_block_idx = hovered_block
+
+                # 4. Handle Click Trigger
+                if click_fired:
+                    self.handle_click_event(hovered_block, gaze_x, gaze_y)
+                    if self.macro_blocks[hovered_block]["action"] == "ACTION_EXIT":
+                        break
+
+                # 5. Create UI Canvas
+                canvas = np.full((self.canvas_height, self.canvas_width, 3), config.COLOR_BG, dtype=np.uint8)
+
+                # 6. Render 3x3 Grid
+                self._draw_grid(canvas, hovered_block, now)
+
+                # 7. Render Smooth Gaze Cursor
+                self._draw_gaze_pointer(canvas, gaze_x, gaze_y)
+
+                # 8. Render Mini-feed & MAR Progress Bar (without blocking Block 9)
+                is_flash_active = (now - self.last_click_timestamp) < config.CLICK_FLASH_DURATION_SEC
+                self._draw_mini_feed_and_mar(
+                    canvas, frame, face_landmarks, current_mar, hold_progress,
+                    face_detected, is_flash_active, hovered_block
+                )
+
+                # 9. Render Status Bar
+                self._draw_status_bar(canvas, face_detected, self.gaze_estimator.is_calibrated)
+
+                # Display canvas
+                cv2.imshow(self.window_name, canvas)
+
+                # FPS Calculation
+                self._frame_count += 1
+                if now - self._fps_start_time >= 1.0:
+                    self.fps = self._frame_count / (now - self._fps_start_time)
+                    self._frame_count = 0
+                    self._fps_start_time = now
+
+                processed_frames += 1
+                if max_frames is not None and processed_frames >= max_frames:
+                    print(f"[TEST] Limite de {max_frames} fotogramas alcanzado.")
+                    break
+
+                # Keyboard interaction
+                key = cv2.waitKey(1) & 0xFF
+                if key in (ord('q'), ord('Q'), 27):  # 'q' or ESC
+                    print("[INFO] Salida solicitada por usuario (tecla Q/ESC).")
+                    break
+                elif key in (ord('c'), ord('C')):
+                    # Calibrate center & distance-adaptive gain
+                    if face_landmarks is not None and self.gaze_estimator.calibrate_center(face_landmarks):
+                        scale_pct = int(self.gaze_estimator.distance_scale * 100)
+                        print(f"[INFO] 📍 Calibracion central completada. Escala de ganancia: {scale_pct}%.")
+                    else:
+                        print("[AVISO] ⚠️ No se pudo calibrar: rostro no detectado en el fotograma.")
+                elif key in (ord('+'), ord('=')):
+                    self.gaze_estimator.adjust_sensitivity(1.10)
+                    print(f"[INFO] 🔼 Sensibilidad aumentada (+10%).")
+                elif key in (ord('-'), ord('_')):
+                    self.gaze_estimator.adjust_sensitivity(0.90)
+                    print(f"[INFO] 🔽 Sensibilidad reducida (-10%).")
+                elif key in (ord('m'), ord('M')):
+                    self.show_mini_feed = not self.show_mini_feed
+                    print(f"[INFO] Mini-feed {'mostrado' if self.show_mini_feed else 'ocultado'}.")
+                elif key in (ord('p'), ord('P'), 32):  # 'p' or space
+                    self.is_paused = not self.is_paused
+                    print(f"[INFO] Modo reposo {'activado' if self.is_paused else 'desactivado'}.")
+                elif key in (ord('r'), ord('R')):
+                    self.gaze_estimator.reset()
+                    self.gesture_detector.reset()
+                    self.is_paused = False
+                    print("[INFO] 🔄 Estado y calibracion reseteados.")
+
+                # Check if user closed the window directly with the 'X' button
+                try:
+                    if cv2.getWindowProperty(self.window_name, cv2.WND_PROP_VISIBLE) < 1:
+                        print("[INFO] Ventana cerrada por el usuario.")
+                        break
+                except cv2.error:
+                    break
+
+        finally:
+            print("\n[INFO] Liberando recursos de camara y cerrando ventanas...")
+            self.tracker.release()
+            cv2.destroyAllWindows()
+            print("[INFO] EyeDE finalizado limpiamente.")
+
+
+def main():
+    """CLI Entry point."""
+    parser = argparse.ArgumentParser(description="EyeDE Phase 1 - Gaze & Gesture Engine")
+    parser.add_argument("--camera", default=config.CAMERA_INDEX, help="Camera device index or 'synthetic'")
+    parser.add_argument("--width", type=int, default=config.FRAME_WIDTH, help="Canvas width")
+    parser.add_argument("--height", type=int, default=config.FRAME_HEIGHT, help="Canvas height")
+    parser.add_argument("--frames", type=int, default=None, help="Limit number of frames (for QA testing)")
+    parser.add_argument("--no-threads", action="store_true", help="Disable background worker thread")
+    args = parser.parse_args()
+
+    app = EyeDEMainApp(
+        camera_index=args.camera,
+        canvas_width=args.width,
+        canvas_height=args.height,
+        threaded=not args.no_threads,
+    )
+    app.run(max_frames=args.frames)
+
+
+if __name__ == "__main__":
+    main()

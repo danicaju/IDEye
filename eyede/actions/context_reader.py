@@ -91,7 +91,7 @@ class ContextReader:
         ignored_dirs = {
             ".git", "__pycache__", ".pytest_cache", ".venv", "venv", "env",
             "node_modules", "dist", "build", ".idea", ".vscode", ".agents",
-            "tests", "test", "testing", "docs", "doc",
+            "tests", "test", "testing", "docs", "doc", "eyede",
         }
 
         latest_file: Optional[str] = None

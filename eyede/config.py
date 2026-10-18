@@ -68,10 +68,10 @@ HEAD_WEIGHT: float = 0.60
 IRIS_WEIGHT: float = 0.40
 
 # Gain / sensitivity multipliers
-# Vertical sensitivity is scaled higher (~2.4x) to account for human ocular ergonomics
-# where vertical head pitch and eye elevation range is ~30% of horizontal range.
+# Vertical sensitivity is calibrated balanced with horizontal sensitivity (3.0 vs 2.6)
+# to ensure completely natural, stable, and proportional head pitch without exaggerated jumps.
 DEFAULT_HEAD_SENSITIVITY_X: float = 2.6
-DEFAULT_HEAD_SENSITIVITY_Y: float = 6.8
+DEFAULT_HEAD_SENSITIVITY_Y: float = 3.0
 DEFAULT_IRIS_SENSITIVITY_X: float = 3.6
 DEFAULT_IRIS_SENSITIVITY_Y: float = 8.5
 
@@ -82,8 +82,8 @@ ONE_EURO_D_CUTOFF: float = 1.0     # Derivative cutoff (Hz)
 FIXATION_DEADZONE: float = 0.022   # Deadzone radius in normalized coords for rock-solid resting
 
 # Ergonomic non-linear reach curves
-VERTICAL_MULTIPLIER: float = 2.4       # Ergonomic independent vertical gain multiplier
-VERTICAL_EXPANSION_GAIN: float = 1.8   # Ergonomic non-linear vertical curve multiplier
+VERTICAL_MULTIPLIER: float = 2.35      # Ergonomic independent vertical gain multiplier (softened from 2.40)
+VERTICAL_EXPANSION_GAIN: float = 1.6   # Ergonomic non-linear vertical curve multiplier (softened from 1.80)
 HORIZONTAL_MULTIPLIER: float = 1.45    # Ergonomic independent horizontal gain multiplier
 HORIZONTAL_EXPANSION_GAIN: float = 1.75 # Non-linear horizontal edge expansion for border reach
 VOR_COMPENSATION_FACTOR: float = 0.40  # Vestibulo-Ocular Reflex decoupling factor for HYBRID mode
@@ -232,7 +232,7 @@ CALIBRATION_SAMPLE_DELAY_SEC: float = 0.02
 
 # Debug widget sizing & overlay right docking margin
 DEBUG_WINDOW_WIDTH: int = 340
-DEBUG_WINDOW_HEIGHT: int = 640
+DEBUG_WINDOW_HEIGHT: int = 740
 DEBUG_FEED_WIDTH: int = 300
 DEBUG_FEED_HEIGHT: int = 170
 OVERLAY_GRID_RIGHT_MARGIN: int = 364  # Clears space on screen so 3x3 grid never collides with debug widget

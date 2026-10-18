@@ -37,6 +37,7 @@ try:
         populate_ai_prediction_items,
         populate_local_symbol_items,
         populate_exit_confirm_items,
+        populate_help_items,
         get_adaptive_context_node,
         create_adaptive_menu_action,
     )
@@ -54,6 +55,7 @@ except ImportError:
         populate_ai_prediction_items,
         populate_local_symbol_items,
         populate_exit_confirm_items,
+        populate_help_items,
         get_adaptive_context_node,
         create_adaptive_menu_action,
     )
@@ -132,6 +134,16 @@ class OverlayWindow(QWidget):
                 sticky=False,
             )
 
+        if "HELP" not in self.menu_tree:
+            self.menu_tree["HELP"] = MenuNode(
+                id="HELP",
+                title="GUÍA DE GESTOS Y ATAJOS",
+                breadcrumb_label="AYUDA / GESTOS",
+                items=populate_help_items(parent_id="ROOT"),
+                parent_id="ROOT",
+                sticky=False,
+            )
+
         # 3. State tracking
         self.reading_mode: bool = False
         self.current_opacity: float = config.OVERLAY_OPACITY_ACTIVE
@@ -144,8 +156,17 @@ class OverlayWindow(QWidget):
         self.active_click_header_exit: bool = False
         self.header_exit_rect: QRectF = QRectF()
 
+        # Hands-free header help button & cheat sheet modal state
+        self.hovered_header_help: bool = False
+        self.active_click_header_help: bool = False
+        self.header_help_rect: QRectF = QRectF()
+        self.show_help_modal: bool = False
+        self.help_modal_rect: QRectF = QRectF()
+        self.help_modal_close_rect: QRectF = QRectF()
+        self.hovered_help_modal_close: bool = False
+
         # Layout constants & right dock margin (clears space for DebugWidget)
-        self.breadcrumb_height: float = 42.0
+        self.breadcrumb_height: float = 52.0
         self.margin: float = 8.0
         self.grid_right_margin: float = float(getattr(config, "OVERLAY_GRID_RIGHT_MARGIN", 364.0))
         self.resize(1920, 1080)
@@ -155,12 +176,18 @@ class OverlayWindow(QWidget):
 
         # 4. Pre-allocated rendering objects to prevent 30/60 FPS GC pressure and memory leaks
         self._font_header_pill = QFont("Segoe UI", 9, QFont.Weight.Bold)
+        self._font_header_bold_btn = QFont("Segoe UI", 11, QFont.Weight.Bold)
         self._font_header_left = QFont("Segoe UI", 10, QFont.Weight.Bold)
         self._font_header_center = QFont("Segoe UI", 9, QFont.Weight.Bold)
         self._font_header_right = QFont("Segoe UI", 9)
         self._font_label = QFont("Segoe UI", 12, QFont.Weight.Bold)
         self._font_hint = QFont("Segoe UI", 9)
         self._font_badge = QFont("Segoe UI", 8, QFont.Weight.Bold)
+        self._font_modal_title = QFont("Segoe UI", 15, QFont.Weight.Bold)
+        self._font_modal_subtitle = QFont("Segoe UI", 9)
+        self._font_modal_section = QFont("Segoe UI", 11, QFont.Weight.Bold)
+        self._font_modal_item_title = QFont("Segoe UI", 10, QFont.Weight.Bold)
+        self._font_modal_item_desc = QFont("Segoe UI", 8)
 
         # Header bar styles (Acrylic Glassmorphism)
         self._brush_header_bg = QBrush(QColor(13, 17, 23, 160))
@@ -320,17 +347,38 @@ class OverlayWindow(QWidget):
             max(1.0, cell_h - 10.0),
         )
 
+    def _update_help_modal_rect(self) -> None:
+        """Computes the interactive bounding boxes of the acrylic cheat sheet modal and its close button."""
+        w = float(self.width()) if self.width() > 0 else 1920.0
+        h = float(self.height()) if self.height() > 0 else 1080.0
+        card_w = min(880.0, max(400.0, w - 80.0))
+        card_h = min(560.0, max(380.0, h - 80.0))
+        card_x = (w - card_w) * 0.5
+        card_y = (h - card_h) * 0.5
+        self.help_modal_rect = QRectF(card_x, card_y, card_w, card_h)
+        close_btn_w = min(380.0, card_w - 40.0)
+        close_btn_h = 42.0
+        self.help_modal_close_rect = QRectF(
+            card_x + (card_w - close_btn_w) * 0.5,
+            card_y + card_h - close_btn_h - 14.0,
+            close_btn_w,
+            close_btn_h,
+        )
+
     def _update_header_exit_rect(self) -> None:
-        """Computes the interactive bounding box of the top-right exit button."""
+        """Computes the interactive bounding boxes of the top-right exit and help buttons."""
         w = float(self.width()) if self.width() > 0 else 1920.0
         margin = self.margin
         header_h = self.breadcrumb_height
-        pill_h = header_h - 14.0
-        exit_btn_w = 110.0
+        pill_h = max(24.0, header_h - 10.0)
+        exit_btn_w = 160.0
+        help_btn_w = 140.0
         effective_right_margin = self._get_effective_right_margin(w)
         header_w = max(1.0, w - 2.0 * margin - effective_right_margin)
         header_rect = QRectF(margin, margin, header_w, header_h)
-        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 7.0, exit_btn_w, pill_h)
+        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 5.0, exit_btn_w, pill_h)
+        self.header_help_rect = QRectF(self.header_exit_rect.left() - help_btn_w - 8.0, header_rect.y() + 5.0, help_btn_w, pill_h)
+        self._update_help_modal_rect()
 
     def _apply_win32_no_activate(self) -> None:
         """Applies WS_EX_NOACTIVATE and WS_EX_TRANSPARENT styles on Windows to guarantee zero focus stealing."""
@@ -507,16 +555,43 @@ class OverlayWindow(QWidget):
         py = gy * h
         px = gx * w
 
-        # Check if gaze is targeting the prominent header exit button (only in active HUD mode)
+        # If cheat sheet modal is open, hit test its close button
+        if self.show_help_modal:
+            if self.help_modal_close_rect.isValid() and self.help_modal_close_rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
+                self.hovered_help_modal_close = True
+            else:
+                self.hovered_help_modal_close = False
+            self.hovered_header_exit = False
+            self.hovered_header_help = False
+            self.hovered_block = None
+            self.update()
+            return
+
+        self.hovered_help_modal_close = False
+
+        # Check if gaze is targeting the prominent header exit button (+15px buffer)
         if not self.reading_mode and self.header_exit_rect.isValid():
-            expanded_exit_rect = self.header_exit_rect.adjusted(-12.0, -8.0, 12.0, 12.0)
+            expanded_exit_rect = self.header_exit_rect.adjusted(-15.0, -15.0, 15.0, 15.0)
             if expanded_exit_rect.contains(px, py):
                 self.hovered_header_exit = True
+                self.hovered_header_help = False
                 self.hovered_block = None
                 self.update()
                 return
 
         self.hovered_header_exit = False
+
+        # Check if gaze is targeting the header help button (+15px buffer)
+        if not self.reading_mode and hasattr(self, "header_help_rect") and self.header_help_rect.isValid():
+            expanded_help_rect = self.header_help_rect.adjusted(-15.0, -15.0, 15.0, 15.0)
+            if expanded_help_rect.contains(px, py):
+                self.hovered_header_help = True
+                self.hovered_header_exit = False
+                self.hovered_block = None
+                self.update()
+                return
+
+        self.hovered_header_help = False
 
         if py < avail_y:
             row = 0
@@ -552,6 +627,18 @@ class OverlayWindow(QWidget):
         self.active_click_header_exit = False
         self.update()
 
+    def _clear_header_help_flash(self) -> None:
+        """Clears active click visual pulse on header help button."""
+        self.active_click_header_help = False
+        self.update()
+
+    def toggle_help_modal(self) -> None:
+        """Toggles the in-app gesture and shortcut cheat sheet modal."""
+        self.show_help_modal = not getattr(self, "show_help_modal", False)
+        self._update_help_modal_rect()
+        self.last_action_desc = "Guía de Gestos" if self.show_help_modal else "Cerrar Ayuda"
+        self.update()
+
     @pyqtSlot(str)
     def on_gesture_triggered(self, gesture_name: str) -> None:
         """
@@ -561,12 +648,20 @@ class OverlayWindow(QWidget):
         - 'WINK_LEFT': Submenu 'Volver atrás' (parent menu node), or Undo 'Ctrl+Z' at ROOT.
         """
         if gesture_name == "WINK_RIGHT":
+            if self.show_help_modal:
+                self.show_help_modal = False
+                self.update()
             self.toggle_reading_mode()
             self.last_action_desc = "Modo Edición (HUD Restaurado)" if not self.reading_mode else "Modo Reposo (HUD Oculto)"
             self.block_activated.emit(4, "PAUSE_RESUME")
             return
 
         if gesture_name == "WINK_LEFT":
+            if self.show_help_modal:
+                self.show_help_modal = False
+                self.last_action_desc = "Cerrar Ayuda"
+                self.update()
+                return
             if self.reading_mode:
                 return
             if self.current_node_id != "ROOT":
@@ -599,6 +694,13 @@ class OverlayWindow(QWidget):
         if gesture_name != "MOUTH_CLICK":
             return
 
+        # Dismiss cheat sheet modal if open
+        if self.show_help_modal:
+            self.show_help_modal = False
+            self.last_action_desc = "Cerrar Ayuda"
+            self.update()
+            return
+
         # Hands-free header exit click handler
         if self.hovered_header_exit:
             self.hovered_header_exit = False
@@ -610,6 +712,16 @@ class OverlayWindow(QWidget):
                 self.menu_tree["EXIT_CONFIRM"].items = populate_exit_confirm_items(parent_id=prev_node)
             self.navigate_to("EXIT_CONFIRM")
             self.last_action_desc = "Confirmar Salida"
+            self.update()
+            return
+
+        # Hands-free header help click handler
+        if getattr(self, "hovered_header_help", False):
+            self.hovered_header_help = False
+            self.active_click_header_help = True
+            QTimer.singleShot(int(config.CLICK_FLASH_DURATION_SEC * 1000), self._clear_header_help_flash)
+            self.toggle_help_modal()
+            self.last_action_desc = "Guía de Gestos"
             self.update()
             return
 
@@ -739,9 +851,23 @@ class OverlayWindow(QWidget):
         pos = event.position() if hasattr(event, "position") else event.pos()
         px, py = float(pos.x()), float(pos.y())
 
-        # Check header exit button
-        if not self.reading_mode and self.header_exit_rect.isValid() and self.header_exit_rect.contains(px, py):
+        # Check help modal close button if open
+        if self.show_help_modal:
+            self.show_help_modal = False
+            self.update()
+            event.accept()
+            return
+
+        # Check header exit button (+15px buffer)
+        if not self.reading_mode and self.header_exit_rect.isValid() and self.header_exit_rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
             self.hovered_header_exit = True
+            self.on_gesture_triggered("MOUTH_CLICK")
+            event.accept()
+            return
+
+        # Check header help button (+15px buffer)
+        if not self.reading_mode and hasattr(self, "header_help_rect") and self.header_help_rect.isValid() and self.header_help_rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
+            self.hovered_header_help = True
             self.on_gesture_triggered("MOUTH_CLICK")
             event.accept()
             return
@@ -753,8 +879,15 @@ class OverlayWindow(QWidget):
         event.accept()
 
     def keyPressEvent(self, event) -> None:
-        """Keyboard event handler for shortcut [T] (tracking mode) and [A] (adaptive AST)."""
-        if event.key() == Qt.Key.Key_T:
+        """Keyboard event handler for shortcut [T] (tracking mode), [A] (adaptive AST), and [H]/[F1] (help)."""
+        if event.key() in (Qt.Key.Key_H, Qt.Key.Key_F1):
+            self.toggle_help_modal()
+            event.accept()
+        elif event.key() == Qt.Key.Key_Escape and self.show_help_modal:
+            self.show_help_modal = False
+            self.update()
+            event.accept()
+        elif event.key() == Qt.Key.Key_T:
             self.tracking_mode_cycle_requested.emit()
             event.accept()
         elif event.key() == Qt.Key.Key_A:
@@ -928,41 +1061,85 @@ class OverlayWindow(QWidget):
         )
 
         # Far Right: Hands-free Gaze-Selectable & Mouth-Clickable Exit Target [SALIR]
-        exit_btn_w = 110.0
-        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 7.0, exit_btn_w, pill_h)
+        exit_btn_w = 160.0
+        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 5.0, exit_btn_w, pill_h)
 
         if self.active_click_header_exit:
             exit_brush = self._brush_click
             exit_pen = self._pen_click
             exit_text_color = self._color_click_text
         elif self.hovered_header_exit:
-            exit_brush = QBrush(QColor(239, 68, 68, 220))
-            exit_pen = QPen(QColor(254, 202, 202), 2.5)
+            # Outer neon glow aura for instant visual confirmation
+            glow_exit_rect = self.header_exit_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
+            painter.setBrush(QBrush(QColor(239, 68, 68, 70)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(glow_exit_rect, 10.0, 10.0)
+
+            exit_brush = QBrush(QColor(239, 68, 68, 245))
+            exit_pen = QPen(QColor(254, 202, 202), 3.0)
             exit_text_color = QColor(255, 255, 255)
         else:
-            exit_brush = QBrush(QColor(127, 29, 29, 140))
-            exit_pen = QPen(QColor(239, 68, 68, 160), 1.5)
+            exit_brush = QBrush(QColor(127, 29, 29, 150))
+            exit_pen = QPen(QColor(239, 68, 68, 180), 1.8)
             exit_text_color = QColor(254, 202, 202)
 
         painter.setBrush(exit_brush)
         painter.setPen(exit_pen)
-        painter.drawRoundedRect(self.header_exit_rect, 6.0, 6.0)
+        painter.drawRoundedRect(self.header_exit_rect, 7.0, 7.0)
 
-        # Exit vector SVG icon + label inside header button
-        exit_icon_rect = QRectF(self.header_exit_rect.x() + 8.0, self.header_exit_rect.y() + 3.0, 22.0, 22.0)
+        # Exit vector SVG icon + bold label inside header button
+        icon_size = 22.0
+        exit_icon_rect = QRectF(self.header_exit_rect.x() + 14.0, self.header_exit_rect.y() + (pill_h - icon_size) * 0.5, icon_size, icon_size)
         IconManager.instance().render_icon(painter, "exit", exit_icon_rect)
         painter.setPen(exit_text_color)
-        painter.setFont(self._font_header_pill)
+        painter.setFont(self._font_header_bold_btn)
         painter.drawText(
-            QRectF(self.header_exit_rect.x() + 34.0, self.header_exit_rect.y(), exit_btn_w - 38.0, pill_h),
+            QRectF(self.header_exit_rect.x() + 42.0, self.header_exit_rect.y(), exit_btn_w - 48.0, pill_h),
             Qt.AlignmentFlag.AlignCenter,
             "SALIR",
+        )
+
+        # Help / Cheat Sheet Button [? AYUDA] next to [SALIR]
+        help_btn_w = 140.0
+        self.header_help_rect = QRectF(self.header_exit_rect.left() - help_btn_w - 8.0, header_rect.y() + 5.0, help_btn_w, pill_h)
+
+        if self.active_click_header_help:
+            help_brush = self._brush_click
+            help_pen = self._pen_click
+            help_text_color = self._color_click_text
+        elif self.hovered_header_help:
+            # Outer neon glow aura for instant visual confirmation
+            glow_help_rect = self.header_help_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
+            painter.setBrush(QBrush(QColor(14, 165, 233, 70)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(glow_help_rect, 10.0, 10.0)
+
+            help_brush = QBrush(QColor(14, 165, 233, 245))
+            help_pen = QPen(QColor(186, 230, 253), 3.0)
+            help_text_color = QColor(255, 255, 255)
+        else:
+            help_brush = QBrush(QColor(12, 74, 110, 150))
+            help_pen = QPen(QColor(14, 165, 233, 180), 1.8)
+            help_text_color = QColor(186, 230, 253)
+
+        painter.setBrush(help_brush)
+        painter.setPen(help_pen)
+        painter.drawRoundedRect(self.header_help_rect, 7.0, 7.0)
+
+        help_icon_rect = QRectF(self.header_help_rect.x() + 12.0, self.header_help_rect.y() + (pill_h - icon_size) * 0.5, icon_size, icon_size)
+        IconManager.instance().render_icon(painter, "help", help_icon_rect)
+        painter.setPen(help_text_color)
+        painter.setFont(self._font_header_bold_btn)
+        painter.drawText(
+            QRectF(self.header_help_rect.x() + 38.0, self.header_help_rect.y(), help_btn_w - 44.0, pill_h),
+            Qt.AlignmentFlag.AlignCenter,
+            "AYUDA",
         )
 
         # Center: Emergency Hotkey Documentation Pill
         emergency_text = "Emergencia: Ctrl+Alt+Q para salir"
         center_pill_w = 230.0
-        center_pill_rect = QRectF(header_rect.center().x() - center_pill_w * 0.5, header_rect.y() + 7.0, center_pill_w, pill_h)
+        center_pill_rect = QRectF(header_rect.center().x() - center_pill_w * 0.5, header_rect.y() + 5.0, center_pill_w, pill_h)
         painter.setBrush(QBrush(QColor(239, 68, 68, 25)))
         painter.setPen(QPen(QColor(239, 68, 68, 120), 1.0))
         painter.drawRoundedRect(center_pill_rect, 5.0, 5.0)
@@ -973,8 +1150,8 @@ class OverlayWindow(QWidget):
 
         # Right-Center: Last executed action pill
         last_action_str = f"Última: {self.last_action_desc}"
-        max_right_w = int(header_rect.width() * 0.22)
-        right_pill_rect = QRectF(self.header_exit_rect.left() - max_right_w - 8.0, header_rect.y() + 7.0, max_right_w, pill_h)
+        max_right_w = int(header_rect.width() * 0.20)
+        right_pill_rect = QRectF(self.header_help_rect.left() - max_right_w - 8.0, header_rect.y() + 5.0, max_right_w, pill_h)
         painter.setBrush(QBrush(QColor(56, 189, 248, 22)))
         painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
         painter.drawRoundedRect(right_pill_rect, 5.0, 5.0)
@@ -1149,7 +1326,13 @@ class OverlayWindow(QWidget):
                     )
 
         # =====================================================================
-        # 3. Refined High-Visibility Dual-Ring Reticle with Glow Aura
+        # 3. High-Contrast In-App Gesture & Shortcut Cheat Sheet Modal Card
+        # =====================================================================
+        if getattr(self, "show_help_modal", False):
+            self._paint_help_modal(painter, w, h)
+
+        # =====================================================================
+        # 4. Refined High-Visibility Dual-Ring Reticle with Glow Aura
         # =====================================================================
         if not self.reading_mode or self.hovered_block == 4:
             painter.setOpacity(0.95 if not self.reading_mode else 0.85)
@@ -1181,6 +1364,168 @@ class OverlayWindow(QWidget):
             painter.drawLine(QPointF(cx, cy + r + 2.0), QPointF(cx, cy + r + 7.0))
 
         painter.end()
+
+    def _paint_help_modal(self, painter: QPainter, w: float, h: float) -> None:
+        """Paints a high-contrast acrylic glassmorphic cheat sheet modal card in the center."""
+        # 1. Dim background
+        painter.setOpacity(1.0)
+        painter.fillRect(QRectF(0, 0, w, h), QColor(2, 6, 23, 225))
+
+        # 2. Centered Modal Card Geometry
+        self._update_help_modal_rect()
+        card_rect = self.help_modal_rect
+        card_w = card_rect.width()
+        card_h = card_rect.height()
+        card_x = card_rect.x()
+        card_y = card_rect.y()
+
+        # Card body with glowing border
+        card_brush = QBrush(QColor(15, 23, 42, 250))
+        card_pen = QPen(QColor(56, 189, 248, 220), 2.2)
+        painter.setBrush(card_brush)
+        painter.setPen(card_pen)
+        painter.drawRoundedRect(card_rect, 14.0, 14.0)
+
+        # 3. Header
+        icon_size = 28.0
+        icon_rect = QRectF(card_x + 24.0, card_y + 18.0, icon_size, icon_size)
+        IconManager.instance().render_icon(painter, "help", icon_rect)
+
+        painter.setFont(self._font_modal_title)
+        painter.setPen(QColor(248, 250, 252))
+        painter.drawText(
+            QRectF(card_x + 60.0, card_y + 14.0, card_w - 80.0, 32.0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            "GUÍA RÁPIDA DE GESTOS Y ATAJOS",
+        )
+
+        painter.setFont(self._font_modal_subtitle)
+        painter.setPen(QColor(148, 163, 184))
+        painter.drawText(
+            QRectF(card_x + 60.0, card_y + 44.0, card_w - 80.0, 18.0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            "Control asistivo integral manos libres mediante seguimiento ocular y gestos faciales",
+        )
+
+        # Divider line
+        painter.setPen(QPen(QColor(51, 65, 85, 180), 1.0))
+        painter.drawLine(int(card_x + 24.0), int(card_y + 68.0), int(card_x + card_w - 24.0), int(card_y + 68.0))
+
+        # 4. Two-Column Layout for Gestures and Shortcuts
+        col_gap = 18.0
+        col_w = (card_w - 48.0 - col_gap) * 0.5
+        col_y = card_y + 78.0
+        content_h = card_h - 150.0
+
+        # Column A: GESTOS FACIALES Y OCULARES
+        col_a_rect = QRectF(card_x + 24.0, col_y, col_w, content_h)
+        painter.setBrush(QBrush(QColor(30, 41, 59, 140)))
+        painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
+        painter.drawRoundedRect(col_a_rect, 10.0, 10.0)
+
+        painter.setFont(self._font_modal_section)
+        painter.setPen(QColor(56, 189, 248))
+        painter.drawText(
+            QRectF(col_a_rect.x() + 14.0, col_a_rect.y() + 8.0, col_w - 28.0, 22.0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            "👁 GESTOS FACIALES Y OCULARES",
+        )
+
+        gestures_list = [
+            ("👄 Apertura de Boca (MAR)", "Clic / Inyectar código o navegar", "Abra la boca ligeramente para activar la casilla enfocada."),
+            ("😉 Guiño Ojo Derecho", "Pausar / Despertar HUD", "Cierre el ojo derecho ~200ms para ocultar totalmente el HUD y descansar."),
+            ("😉 Guiño Ojo Izquierdo", "Volver atrás / Deshacer (Ctrl+Z)", "Cierre el ojo izquierdo ~200ms para retroceder menú o deshacer cambios."),
+        ]
+
+        item_y = col_a_rect.y() + 36.0
+        for title, action, desc in gestures_list:
+            painter.setFont(self._font_modal_item_title)
+            painter.setPen(QColor(253, 224, 71))  # amber-300
+            painter.drawText(QRectF(col_a_rect.x() + 14.0, item_y, col_w - 28.0, 18.0), Qt.AlignmentFlag.AlignLeft, title)
+
+            painter.setFont(self._font_modal_item_desc)
+            painter.setPen(QColor(52, 211, 153))  # emerald-400
+            painter.drawText(QRectF(col_a_rect.x() + 14.0, item_y + 18.0, col_w - 28.0, 16.0), Qt.AlignmentFlag.AlignLeft, f"→ {action}")
+
+            painter.setPen(QColor(148, 163, 184))  # slate-400
+            painter.drawText(QRectF(col_a_rect.x() + 14.0, item_y + 36.0, col_w - 28.0, 30.0), Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, desc)
+
+            item_y += 72.0
+
+        # Column B: ATAJOS DE TECLADO RÁPIDOS
+        col_b_rect = QRectF(col_a_rect.right() + col_gap, col_y, col_w, content_h)
+        painter.setBrush(QBrush(QColor(30, 41, 59, 140)))
+        painter.setPen(QPen(QColor(251, 191, 36, 90), 1.0))
+        painter.drawRoundedRect(col_b_rect, 10.0, 10.0)
+
+        painter.setFont(self._font_modal_section)
+        painter.setPen(QColor(251, 191, 36))
+        painter.drawText(
+            QRectF(col_b_rect.x() + 14.0, col_b_rect.y() + 8.0, col_w - 28.0, 22.0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            "⌨ ATAJOS DE TECLADO RÁPIDOS",
+        )
+
+        shortcuts_list = [
+            ("[A]", "AST Adaptativo", "Alterna menús inteligentes según el cursor."),
+            ("[T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
+            ("[M]", "Colapsar Monitor", "Alterna monitor entre ventana y barra compacta."),
+            ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
+            ("[P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
+            ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
+        ]
+
+        item_y = col_b_rect.y() + 34.0
+        for key, name, desc in shortcuts_list:
+            painter.setFont(self._font_modal_item_title)
+            painter.setPen(QColor(248, 113, 113) if "Ctrl" in key else QColor(125, 211, 252))
+            painter.drawText(QRectF(col_b_rect.x() + 14.0, item_y, 88.0, 16.0), Qt.AlignmentFlag.AlignLeft, key)
+
+            painter.setPen(QColor(241, 245, 249))
+            painter.drawText(QRectF(col_b_rect.x() + 104.0, item_y, col_w - 118.0, 16.0), Qt.AlignmentFlag.AlignLeft, name)
+
+            painter.setFont(self._font_modal_item_desc)
+            painter.setPen(QColor(148, 163, 184))
+            painter.drawText(QRectF(col_b_rect.x() + 14.0, item_y + 16.0, col_w - 28.0, 14.0), Qt.AlignmentFlag.AlignLeft, desc)
+
+            item_y += 34.0
+
+        # 5. Gaze-Selectable Close Button at Bottom
+        close_btn_w = 380.0
+        close_btn_h = 42.0
+        self.help_modal_close_rect = QRectF(
+            card_x + (card_w - close_btn_w) * 0.5,
+            card_y + card_h - close_btn_h - 14.0,
+            close_btn_w,
+            close_btn_h,
+        )
+
+        if getattr(self, "hovered_help_modal_close", False):
+            # Outer neon emerald glow aura
+            glow_close_rect = self.help_modal_close_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
+            painter.setBrush(QBrush(QColor(16, 185, 129, 70)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(glow_close_rect, 10.0, 10.0)
+
+            close_brush = QBrush(QColor(16, 185, 129, 245))
+            close_pen = QPen(QColor(209, 250, 229), 2.8)
+            close_text_color = QColor(255, 255, 255)
+        else:
+            close_brush = QBrush(QColor(6, 78, 59, 160))
+            close_pen = QPen(QColor(16, 185, 129, 180), 1.5)
+            close_text_color = QColor(167, 243, 208)
+
+        painter.setBrush(close_brush)
+        painter.setPen(close_pen)
+        painter.drawRoundedRect(self.help_modal_close_rect, 8.0, 8.0)
+
+        painter.setFont(self._font_header_bold_btn)
+        painter.setPen(close_text_color)
+        painter.drawText(
+            self.help_modal_close_rect,
+            Qt.AlignmentFlag.AlignCenter,
+            "CERRAR GUÍA (Mire aquí o abra la boca / [ESC])",
+        )
 
     def closeEvent(self, event) -> None:
         """Safely stops background code injector and AI worker threads on window close without terminate()."""

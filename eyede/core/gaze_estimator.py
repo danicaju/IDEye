@@ -107,7 +107,7 @@ class GazeEstimator:
         head_weight: float = 0.60,
         iris_weight: float = 0.40,
         head_sensitivity_x: float = 2.6,
-        head_sensitivity_y: float = 6.8,
+        head_sensitivity_y: float = 3.0,
         iris_sensitivity_x: float = 3.2,
         iris_sensitivity_y: float = 8.5,
         ema_alpha: float = 0.22,
@@ -151,9 +151,9 @@ class GazeEstimator:
 
         self.ema_alpha = max(0.01, min(1.0, float(ema_alpha)))
 
-        # Ergonomic reach curves & expansion gains
-        self.vertical_multiplier: float = float(getattr(config, "VERTICAL_MULTIPLIER", 2.4))
-        self.vertical_expansion_gain: float = float(getattr(config, "VERTICAL_EXPANSION_GAIN", 1.8))
+        # Ergonomic reach curves & expansion gains (softened for natural pitch control)
+        self.vertical_multiplier: float = float(getattr(config, "VERTICAL_MULTIPLIER", 2.35))
+        self.vertical_expansion_gain: float = float(getattr(config, "VERTICAL_EXPANSION_GAIN", 1.6))
         self.horizontal_multiplier: float = float(getattr(config, "HORIZONTAL_MULTIPLIER", 1.45))
         self.horizontal_expansion_gain: float = float(getattr(config, "HORIZONTAL_EXPANSION_GAIN", 1.75))
         self.vor_compensation_factor: float = float(getattr(config, "VOR_COMPENSATION_FACTOR", 0.40))
@@ -459,8 +459,9 @@ class GazeEstimator:
         elif self.tracking_mode == "HEAD_PRIMARY":
             # Ergonomic head pose optimization:
             # Cervical pitch has a naturally restricted anatomical range compared to yaw.
-            # Applying a 2.8x vertical head gain allows gentle, fatigue-free head tilts to effortlessly
-            # reach the top and bottom macro-grid rows (Y < 0.20 and Y > 0.80) without neck strain.
+            # Applying a balanced 1.4x vertical head pitch multiplier (softened from aggressive 2.8x)
+            # ensures gentle, fatigue-free head tilts smoothly reach top and bottom rows
+            # without exaggerated jumps or ceiling/floor clipping.
             combined_x = 0.95 * dh_x + 0.05 * di_x
             combined_y = (2.8 * dh_y) + (0.05 * di_y)
         else:  # "HYBRID"

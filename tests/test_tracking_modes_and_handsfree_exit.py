@@ -295,6 +295,7 @@ class TestVectorIconsAndIconManager(unittest.TestCase):
             "format.svg",
             "ai_spark.svg",
             "exit.svg",
+            "help.svg",
         ]
 
         for icon_file in expected_icons:
@@ -306,7 +307,7 @@ class TestVectorIconsAndIconManager(unittest.TestCase):
         """IconManager successfully renders cached QPixmaps and QIcons for all registered SVGs."""
         icon_names = [
             "eyede_logo", "flow", "function", "operators", "navigation",
-            "pause_eye", "variables", "edit", "format", "ai_spark", "exit"
+            "pause_eye", "variables", "edit", "format", "ai_spark", "exit", "help"
         ]
 
         for name in icon_names:
@@ -336,11 +337,11 @@ class TestOverlayWindowHandsFreeExit(unittest.TestCase):
         self.overlay.close()
 
     def test_header_exit_rect_and_hover_detection(self):
-        """Header exit button rect is correctly computed and detects gaze hover."""
+        """Header exit button rect is enlarged (>= 150x40px) and detects gaze hover with +15px tolerance buffer."""
         self.assertIsNotNone(self.overlay.header_exit_rect)
         rect = self.overlay.header_exit_rect
-        self.assertGreater(rect.width(), 60)
-        self.assertGreater(rect.height(), 20)
+        self.assertGreaterEqual(rect.width(), 150.0)
+        self.assertGreaterEqual(rect.height(), 40.0)
 
         # Normalized coordinates targeting center of exit rect
         w = float(self.overlay.width())
@@ -348,11 +349,23 @@ class TestOverlayWindowHandsFreeExit(unittest.TestCase):
         norm_x = rect.center().x() / w
         norm_y = rect.center().y() / h
 
-        # Update gaze on exit button
+        # 1. Direct hit on exit button
         self.overlay.on_gaze_updated(norm_x, norm_y)
         self.assertTrue(self.overlay.hovered_header_exit)
 
-        # Update gaze far away in cell 0 (e.g. 0.2, 0.2)
+        # 2. Hit within +15px tolerance buffer (e.g. 10px below button)
+        near_x = rect.center().x() / w
+        near_y = (rect.bottom() + 10.0) / h
+        self.overlay.on_gaze_updated(near_x, near_y)
+        self.assertTrue(self.overlay.hovered_header_exit, "Should detect hover within +15px buffer")
+
+        # 3. Outside tolerance buffer (e.g. 25px below button)
+        far_x = rect.center().x() / w
+        far_y = (rect.bottom() + 25.0) / h
+        self.overlay.on_gaze_updated(far_x, far_y)
+        self.assertFalse(self.overlay.hovered_header_exit, "Should NOT detect hover outside buffer")
+
+        # 4. Update gaze far away in cell 0 (e.g. 0.2, 0.2)
         self.overlay.on_gaze_updated(0.2, 0.2)
         self.assertFalse(self.overlay.hovered_header_exit)
 
@@ -426,6 +439,89 @@ class TestOverlayWindowHandsFreeExit(unittest.TestCase):
         )
         self.overlay.execute_action(confirm_action)
         self.assertEqual(len(emitted), 1)
+
+    def test_header_help_rect_and_hover_detection(self):
+        """Header help button rect is correctly computed (>= 130x40px) and detects hover with +15px buffer."""
+        self.assertIsNotNone(self.overlay.header_help_rect)
+        rect = self.overlay.header_help_rect
+        self.assertGreaterEqual(rect.width(), 130.0)
+        self.assertGreaterEqual(rect.height(), 40.0)
+
+        w = float(self.overlay.width())
+        h = float(self.overlay.height())
+        norm_x = rect.center().x() / w
+        norm_y = rect.center().y() / h
+
+        # Direct hit on help button
+        self.overlay.on_gaze_updated(norm_x, norm_y)
+        self.assertTrue(self.overlay.hovered_header_help)
+        self.assertFalse(self.overlay.hovered_header_exit)
+
+        # Hit within +15px buffer
+        near_x = rect.center().x() / w
+        near_y = (rect.bottom() + 10.0) / h
+        self.overlay.on_gaze_updated(near_x, near_y)
+        self.assertTrue(self.overlay.hovered_header_help)
+
+    def test_mouth_click_on_header_help_opens_cheat_sheet_modal(self):
+        """Mouth gesture while looking at header help opens the cheat sheet modal."""
+        rect = self.overlay.header_help_rect
+        w = float(self.overlay.width())
+        h = float(self.overlay.height())
+        self.overlay.on_gaze_updated(rect.center().x() / w, rect.center().y() / h)
+        self.assertTrue(self.overlay.hovered_header_help)
+
+        self.assertFalse(self.overlay.show_help_modal)
+        self.overlay.on_gesture_triggered("MOUTH_CLICK")
+        self.assertTrue(self.overlay.show_help_modal)
+
+    def test_help_modal_close_button_hover_and_mouth_click(self):
+        """When help modal is open, gaze highlights close button and mouth click dismisses modal."""
+        self.overlay.show_help_modal = True
+        self.overlay._update_help_modal_rect()
+        close_rect = self.overlay.help_modal_close_rect
+        self.assertTrue(close_rect.isValid())
+
+        w = float(self.overlay.width())
+        h = float(self.overlay.height())
+        self.overlay.on_gaze_updated(close_rect.center().x() / w, close_rect.center().y() / h)
+        self.assertTrue(self.overlay.hovered_help_modal_close)
+
+        # Mouth click dismisses
+        self.overlay.on_gesture_triggered("MOUTH_CLICK")
+        self.assertFalse(self.overlay.show_help_modal)
+
+    def test_help_modal_dismissal_via_wink_gestures(self):
+        """Left wink or Right wink dismisses the help modal immediately."""
+        # 1. Left wink
+        self.overlay.show_help_modal = True
+        self.overlay.on_gesture_triggered("WINK_LEFT")
+        self.assertFalse(self.overlay.show_help_modal)
+
+        # 2. Right wink
+        self.overlay.show_help_modal = True
+        self.overlay.on_gesture_triggered("WINK_RIGHT")
+        self.assertFalse(self.overlay.show_help_modal)
+
+    def test_help_modal_dismissal_via_escape_and_h_keys(self):
+        """ESC key and H/F1 keys toggle or dismiss the help modal."""
+        from PyQt6.QtGui import QKeyEvent
+        from PyQt6.QtCore import QEvent
+
+        # [H] key opens modal
+        h_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_H, Qt.KeyboardModifier.NoModifier)
+        self.overlay.keyPressEvent(h_event)
+        self.assertTrue(self.overlay.show_help_modal)
+
+        # [ESC] key closes modal
+        esc_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+        self.overlay.keyPressEvent(esc_event)
+        self.assertFalse(self.overlay.show_help_modal)
+
+        # [F1] key toggles modal open again
+        f1_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_F1, Qt.KeyboardModifier.NoModifier)
+        self.overlay.keyPressEvent(f1_event)
+        self.assertTrue(self.overlay.show_help_modal)
 
 
 class TestDebugWidgetTrackingMode(unittest.TestCase):

@@ -210,6 +210,67 @@ def populate_exit_confirm_items(parent_id: str = "ROOT") -> List[MenuAction]:
     ]
 
 
+def populate_help_items(parent_id: str = "ROOT") -> List[MenuAction]:
+    """
+    Constructs exactly 9 MenuAction items for the integrated In-App Gesture & Shortcut Guide.
+    Follows all Golden Rules (Index 4 is Pause, Index 6 is Back).
+    """
+    return [
+        MenuAction(
+            id="HELP_MOUTH",
+            label="1: BOCA (MAR)",
+            hint="Abrir boca = Clic / Inyectar código",
+            action_type="INFO",
+            icon="",
+        ),
+        MenuAction(
+            id="HELP_WINK_R",
+            label="2: GUIÑO DERECHO",
+            hint="Pausar / Ocultar HUD totalmente / Despertar",
+            action_type="INFO",
+            icon="",
+        ),
+        MenuAction(
+            id="HELP_WINK_L",
+            label="3: GUIÑO IZQUIERDO",
+            hint="Volver atrás / Deshacer (Ctrl+Z)",
+            action_type="INFO",
+            icon="",
+        ),
+        MenuAction(
+            id="HELP_SHORTCUTS_1",
+            label="4: [A] AST | [T] TRACK",
+            hint="A: AST Dinámico | T: Modo Gaze",
+            action_type="INFO",
+            icon="",
+        ),
+        create_pause_action("5"),
+        MenuAction(
+            id="HELP_SHORTCUTS_2",
+            label="6: [M] MONIT | [C] CALIB",
+            hint="M: Colapsar monitor | C: Calibrar centro",
+            action_type="INFO",
+            icon="",
+        ),
+        create_back_action(parent_id, "7"),
+        MenuAction(
+            id="HELP_SHORTCUTS_3",
+            label="8: [P] PAUSA | [Q] SALIDA",
+            hint="P: Pausa | Ctrl+Alt+Q: Emergencia",
+            action_type="INFO",
+            icon="",
+        ),
+        MenuAction(
+            id="HELP_CLOSE",
+            label="9: CERRAR GUÍA",
+            hint="Regresar a la navegación principal",
+            action_type="BACK",
+            submenu_id=parent_id,
+            icon="",
+        ),
+    ]
+
+
 def create_standard_menu_action(key_num: str = "9") -> MenuAction:
     """Returns the standardized action to switch to the full 3x3 Standard Menu Tree."""
     return MenuAction(
@@ -1215,6 +1276,18 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="¿SALIR DE EYEDE?",
         breadcrumb_label="CONFIRMAR SALIDA",
         items=populate_exit_confirm_items(parent_id="ROOT"),
+        parent_id="ROOT",
+        sticky=False,
+    )
+
+    # =========================================================================
+    # 11. IN-APP GESTURE & SHORTCUT GUIDE MENU (ACCESSIBLE VIA OVERLAY / HUD)
+    # =========================================================================
+    tree["HELP"] = MenuNode(
+        id="HELP",
+        title="GUÍA DE GESTOS Y ATAJOS",
+        breadcrumb_label="AYUDA / GESTOS",
+        items=populate_help_items(parent_id="ROOT"),
         parent_id="ROOT",
         sticky=False,
     )

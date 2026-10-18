@@ -849,7 +849,7 @@ class EyeDEApplication(QObject):
 
         if hasattr(self, "debug_widget") and self.debug_widget is not None:
             hx = getattr(config, "DEFAULT_HEAD_SENSITIVITY_X", 2.6)
-            hy = getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 6.8)
+            hy = getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 3.0)
             self.debug_widget.slider_sens_x.blockSignals(True)
             self.debug_widget.slider_sens_y.blockSignals(True)
             self.debug_widget.slider_damping.blockSignals(True)

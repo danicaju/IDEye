@@ -109,7 +109,7 @@ class TestMenuIntegrity(unittest.TestCase):
         _traverse("ROOT")
         self.assertGreater(len(visited), 10, "Tree has too few reachable nodes.")
         # All standard nodes in the tree should be reachable from ROOT (except aliases/aux nodes)
-        expected_aux_or_alias = {"AI_PREDICT", "T9_VALS"}
+        expected_aux_or_alias = {"AI_PREDICT", "T9_VALS", "HELP"}
         unreachable = set(self.tree.keys()) - visited
         self.assertEqual(unreachable - expected_aux_or_alias, set(), f"Unexpected unreachable nodes: {unreachable}")
 
@@ -169,6 +169,18 @@ class TestMenuIntegrity(unittest.TestCase):
             trail = get_breadcrumb_path(self.tree, "FLOW_IF")
             self.assertTrue(trail.startswith("RAÍZ > "))
             self.assertIn("IF / ELIF", trail)
+
+    def test_help_menu_node_integrity_and_golden_rules(self):
+        """Verifies tree['HELP'] node integrity and Golden Ergonomic Rules."""
+        self.assertIn("HELP", self.tree)
+        help_node = self.tree["HELP"]
+        self.assertEqual(len(help_node.items), 9)
+        self.assertEqual(help_node.parent_id, "ROOT")
+        self.assertEqual(help_node.items[4].action_type, "PAUSE")
+        self.assertEqual(help_node.items[6].action_type, "BACK")
+        self.assertEqual(help_node.items[6].submenu_id, "ROOT")
+        self.assertEqual(help_node.items[8].action_type, "BACK")
+        self.assertEqual(help_node.items[8].submenu_id, "ROOT")
 
 
 if __name__ == "__main__":

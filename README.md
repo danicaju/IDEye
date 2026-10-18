@@ -162,6 +162,7 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`Ctrl+Alt+Q` / `F12`** | **Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down IDEye from anywhere in the OS, even when VS Code has focus |
 | **`Ctrl+Alt+R`** | **Emergency Reset** | Immediately clears 5-point calibration weights and reverts to safe neutral mapping |
 | **`[A]`** | **Toggle Adaptive AST** | Toggle real-time context-adaptive menus (auto-adapts 9 blocks to function signatures, try blocks, loops, etc.) |
+| **`[H]`** | **Help & Gesture Guide** | Open/close the in-app gesture and shortcut cheat sheet modal |
 | **Right Wink** | **Pause / Total Hide** | Completely hides HUD from screen so 0% of IDE is obstructed; wink right again to restore |
 | **Left Wink** | **Back / Undo** | Navigates back to previous menu node; triggers Undo if at root |
 | **`[T]`** | **Cycle Tracking Mode** | Switch between **`HEAD_PRIMARY`** (Default - smooth head tracking), **`PURE_IRIS`**, and **`HYBRID`** |
@@ -202,7 +203,7 @@ IDEye/
 │ ├── menu_trees.py # 3x3 hierarchical syntax trees & sticky node definitions
 │ ├── context_reader.py # Fault-tolerant AST + Regex local symbol extractor
 │ └── ai_predictor.py # Async LLM QThread worker + syntactic heuristic fallback
-└── tests/ # 432 automated unit & integration tests
+└── tests/ # 444 automated unit & integration tests
  ├── test_phase1.py # Core computer vision & MAR state machine tests
  ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
  ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -226,11 +227,11 @@ pytest -v
 ```
 
 ```text
-============================ 432 passed in 12.42s =============================
+============================ 444 passed in 10.93s =============================
 ```
 
 > [!NOTE]
-> All 432 tests run headlessly without requiring a physical webcam, display server, or active internet connection.
+> All 444 tests run headlessly without requiring a physical webcam, display server, or active internet connection.
 
 ---
 

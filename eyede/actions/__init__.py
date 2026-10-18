@@ -15,6 +15,7 @@ from eyede.actions.menu_trees import (
     get_breadcrumb_path,
     create_pause_action,
     create_back_action,
+    populate_help_items,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "get_breadcrumb_path",
     "create_pause_action",
     "create_back_action",
+    "populate_help_items",
 ]

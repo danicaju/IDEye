@@ -162,6 +162,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+Q` / `F12`** | ** Botón de Emergencia (Killswitch)** | **Atajo global en todo el SO**: apaga IDEye limpiamente de inmediato, incluso cuando VS Code tiene el foco |
 | **`Ctrl+Alt+R`** | ** Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
 | **`[A]`** | **Alternar AST Adaptativo** | Activa/desactiva menús contextuales en vivo (adapta los 9 bloques a funciones, try/except, bucles, etc.) |
+| **`[H]`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
 | **Guiño Derecho** | **Pausar / Ocultar Totalmente** | Oculta el HUD al 100% para despejar la pantalla; otro guiño derecho lo muestra de nuevo |
 | **Guiño Izquierdo** | **Volver Atrás / Deshacer** | Regresa al menú anterior o ejecuta Deshacer (Ctrl+Z) si estás en la raíz |
 | **`[T]`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`PURE_IRIS`** (Solo Iris - 100% ojos sin girar la cabeza), **`HYBRID`** (Fusión compensada por VOR) y **`HEAD_PRIMARY`** |
@@ -202,7 +203,7 @@ IDEye/
 │ ├── menu_trees.py # Árboles de sintaxis jerárquica 3x3 y nodos pegajosos
 │ ├── context_reader.py # Extractor de símbolos AST + Regex tolerante a errores
 │ └── ai_predictor.py # Worker QThread asíncrono para IA con respaldo heurístico
-└── tests/ # Suite de 432 pruebas automatizadas de unidad e integración
+└── tests/ # Suite de 444 pruebas automatizadas de unidad e integración
  ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
  ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
  ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
@@ -226,11 +227,11 @@ pytest -v
 ```
 
 ```text
-============================ 432 passed in 12.42s =============================
+============================ 444 passed in 10.93s =============================
 ```
 
 > [!NOTE]
-> Todos los 432 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet.
+> Todos los 444 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet.
 
 ---
 

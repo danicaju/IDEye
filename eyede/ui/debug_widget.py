@@ -341,7 +341,7 @@ class DebugWidget(QWidget):
         slider_layout.addWidget(self.slider_sens_x)
 
         # Slider 2: Y Sensitivity
-        sens_y_val = getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 6.8)
+        sens_y_val = getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 3.0)
         self.lbl_sens_y = QLabel(f"Sensibilidad Y (Ergonómica): {sens_y_val:.1f}x", slider_frame)
         slider_layout.addWidget(self.lbl_sens_y)
 
@@ -364,6 +364,35 @@ class DebugWidget(QWidget):
         slider_layout.addWidget(self.slider_damping)
 
         content_layout.addWidget(slider_frame)
+
+        # Dedicated In-App Gesture & Shortcut Reference Card
+        guide_frame = QFrame(self)
+        guide_frame.setObjectName("cardFrame")
+        guide_layout = QVBoxLayout(guide_frame)
+        guide_layout.setContentsMargins(8, 8, 8, 8)
+        guide_layout.setSpacing(4)
+
+        lbl_guide_title = QLabel("📖 GUÍA DE GESTOS Y ATAJOS", guide_frame)
+        lbl_guide_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #38bdf8;")
+        guide_layout.addWidget(lbl_guide_title)
+
+        guide_content = QLabel(guide_frame)
+        guide_content.setTextFormat(Qt.TextFormat.RichText)
+        guide_content.setStyleSheet("font-size: 10px; color: #cbd5e1;")
+        guide_content.setText(
+            "<div style='line-height: 140%;'>"
+            "<div style='color: #7dd3fc; font-weight: bold; margin-bottom: 2px;'>GESTOS FACIALES Y OCULARES:</div>"
+            "<div>• <b style='color: #fcd34d;'>Apertura de Boca (MAR):</b> Clic / Inyectar código</div>"
+            "<div>• <b style='color: #6ee7b7;'>Guiño Ojo Derecho:</b> Pausar (Ocultar HUD) / Despertar</div>"
+            "<div>• <b style='color: #93c5fd;'>Guiño Ojo Izquierdo:</b> Volver atrás / Deshacer</div>"
+            "<div style='color: #7dd3fc; font-weight: bold; margin-top: 5px; margin-bottom: 2px;'>ATAJOS DE TECLADO:</div>"
+            "<div>• <b>[A]</b> AST Adaptativo &nbsp;|&nbsp; <b>[T]</b> Modo Tracking</div>"
+            "<div>• <b>[M]</b> Colapsar monitor &nbsp;|&nbsp; <b>[C]</b> Calibrar centro</div>"
+            "<div>• <b>[P]</b> Pausa Lectura &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
+            "</div>"
+        )
+        guide_layout.addWidget(guide_content)
+        content_layout.addWidget(guide_frame)
 
         # 7. Context & AI Engine Status
         ai_layout = QVBoxLayout()
@@ -502,7 +531,7 @@ class DebugWidget(QWidget):
     def _on_reset_clicked(self) -> None:
         """Resets sliders to standard defaults and emits signal."""
         hx = getattr(config, "DEFAULT_HEAD_SENSITIVITY_X", 2.6)
-        hy = getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 6.8)
+        hy = getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 3.0)
         self.slider_sens_x.setValue(int(hx * 10))
         self.slider_sens_y.setValue(int(hy * 10))
         self.slider_damping.setValue(6)

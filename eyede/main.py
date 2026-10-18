@@ -35,6 +35,7 @@ try:
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.calibration_ui import CalibrationUI
+    from eyede.ui.icon_manager import IconManager
     from eyede.actions.context_reader import ContextReader
 except ImportError:
     import config
@@ -45,6 +46,7 @@ except ImportError:
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
     from ui.calibration_ui import CalibrationUI
+    from ui.icon_manager import IconManager
     from actions.context_reader import ContextReader
 
 import threading
@@ -111,6 +113,7 @@ class EyeDEMainApp:
             right_eye_outer_idx=config.LANDMARK_RIGHT_EYE_OUTER,
             right_eye_top_idx=config.LANDMARK_RIGHT_EYE_TOP,
             right_eye_bottom_idx=config.LANDMARK_RIGHT_EYE_BOTTOM,
+            tracking_mode=getattr(config, "DEFAULT_TRACKING_MODE", "PURE_IRIS"),
         )
 
         self.gesture_detector = GestureDetector(
@@ -583,6 +586,15 @@ class EyeDEMainApp:
                     self.gesture_detector.reset()
                     self.is_paused = False
                     print("[INFO] Estado y calibracion reseteados.")
+                elif key in (ord('t'), ord('T')):
+                    modes = ["PURE_IRIS", "HYBRID", "HEAD_PRIMARY"]
+                    curr_idx = modes.index(self.gaze_estimator.tracking_mode) if self.gaze_estimator.tracking_mode in modes else 0
+                    next_mode = modes[(curr_idx + 1) % len(modes)]
+                    self.gaze_estimator.set_tracking_mode(next_mode)
+                    mode_names = {"PURE_IRIS": "👁️ Solo Iris (Recomendado)", "HYBRID": "🔄 Híbrido", "HEAD_PRIMARY": "👤 Solo Cabeza"}
+                    self.status_message = f"Modo: {mode_names.get(next_mode, next_mode)}"
+                    self.status_message_time = time.time()
+                    print(f"[INFO] Modo de seguimiento cambiado a: {next_mode}")
 
                 # Check if user closed the window directly with the 'X' button
                 try:
@@ -681,9 +693,11 @@ class EyeDEApplication(QObject):
             self.debug_widget.anti_jitter_changed.connect(
                 lambda v: self.tracker.gaze_estimator.set_anti_jitter_damping(v)
             )
+            self.debug_widget.tracking_mode_changed.connect(self._on_tracking_mode_changed)
 
         # Overlay actions
         self.overlay.block_activated.connect(self._on_block_activated)
+        self.overlay.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
 
         # Context reader & AI status connections
         self.debug_widget.file_linked.connect(self.context_reader.set_active_file)
@@ -698,6 +712,21 @@ class EyeDEApplication(QObject):
 
         # Qt application about-to-quit hook
         self.qapp.aboutToQuit.connect(self.shutdown)
+
+    def _on_tracking_mode_changed(self, mode: str) -> None:
+        """Called when user changes tracking mode in DebugWidget or shortcut."""
+        if hasattr(self.tracker, "gaze_estimator") and self.tracker.gaze_estimator is not None:
+            self.tracker.gaze_estimator.set_tracking_mode(mode)
+        mode_names = {
+            "PURE_IRIS": "👁️ Solo Iris (Recomendado)",
+            "HYBRID": "🔄 Híbrido",
+            "HEAD_PRIMARY": "👤 Solo Cabeza",
+        }
+        display_name = mode_names.get(mode, mode)
+        if self.overlay is not None:
+            self.overlay.last_action_desc = f"Modo: {display_name}"
+            self.overlay.update()
+        print(f"[INFO] Modo de seguimiento activo: {display_name} ({mode})")
 
     def _on_block_activated(self, block_idx: int, action: str) -> None:
         """Handles actions triggered from macro blocks."""
@@ -820,24 +849,32 @@ class EyeDEApplication(QObject):
 
         try:
             self.tray_icon = QSystemTrayIcon(self.debug_widget)
-            pixmap = QPixmap(32, 32)
-            pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setBrush(QBrush(QColor(56, 189, 248)))
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(2, 2, 28, 28)
-            painter.setPen(QColor(15, 23, 42))
-            painter.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
-            painter.drawText(0, 0, 32, 32, Qt.AlignmentFlag.AlignCenter, "E")
-            painter.end()
+            logo_icon = IconManager.instance().get_icon("eyede_logo", 32)
+            if not logo_icon.isNull():
+                self.tray_icon.setIcon(logo_icon)
+            else:
+                pixmap = QPixmap(32, 32)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setBrush(QBrush(QColor(56, 189, 248)))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(2, 2, 28, 28)
+                painter.setPen(QColor(15, 23, 42))
+                painter.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+                painter.drawText(0, 0, 32, 32, Qt.AlignmentFlag.AlignCenter, "E")
+                painter.end()
+                self.tray_icon.setIcon(QIcon(pixmap))
 
-            self.tray_icon.setIcon(QIcon(pixmap))
             self.tray_icon.setToolTip("EyeDE - Control Ocular Activo (Ctrl+Alt+Q para salir)")
 
             tray_menu = QMenu()
             action_title = tray_menu.addAction("EyeDE - Control Ocular")
             action_title.setEnabled(False)
+            tray_menu.addSeparator()
+
+            action_mode = tray_menu.addAction("👁️ Cambiar Modo Seguimiento [T]")
+            action_mode.triggered.connect(self.debug_widget.cycle_tracking_mode)
             tray_menu.addSeparator()
 
             action_recalib = tray_menu.addAction("🎯 Recalibrar (5 puntos)")

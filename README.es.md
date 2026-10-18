@@ -151,11 +151,13 @@ En el primer inicio (o con `--recalibrate`), EyeDE abrirá la **Pantalla de Cali
 | :--- | :--- | :--- |
 | **`Ctrl+Alt+Q` / `F12`** | **🚨 Botón de Emergencia (Killswitch)** | **Atajo global en todo el SO**: apaga EyeDE limpiamente de inmediato, incluso cuando VS Code tiene el foco |
 | **`Ctrl+Alt+R`** | **🔄 Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
+| **`[T]`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`PURE_IRIS`** (Solo Iris - 100% ojos sin girar la cabeza), **`HYBRID`** (Fusión compensada por VOR) y **`HEAD_PRIMARY`** |
 | **`[C]`** | **Recalibrar Centro** | Mira al centro de la pantalla y pulsa `C` para fijar tu ancla neutra |
 | **`[+]` / `[-]`** | **Ajustar Sensibilidad** | Aumenta o disminuye la sensibilidad de seguimiento sobre la marcha |
 | **`[P]` / `[Espacio]`** | **Pausa / Modo Lectura** | Atenúa el HUD al 10% de opacidad para leer código sin clics involuntarios |
 | **`[M]`** | **Alternar Mini-Feed** | Muestra u oculta la miniatura de la cámara y la barra de nivel MAR |
 | **`[Q]` / `[ESC]`** | **Salida Segura** | Libera la cámara y cierra de forma limpia todos los hilos secundarios |
+| **Salida Ocular** | **[❌ SALIR] Manos Libres** | Mira a la esquina superior derecha `[❌ SALIR]` y abre la boca; despliega un diálogo de confirmación 100% asistivo |
 
 ---
 
@@ -178,13 +180,16 @@ IDEye/
 │   ├── ui/
 │   │   ├── overlay_window.py    # HUD de macro-zonas 3x3 transparente en PyQt6 (No-Focus)
 │   │   ├── calibration_ui.py    # Asistente de calibración a pantalla completa de 5 puntos
-│   │   └── debug_widget.py      # Mini-feed de cámara, nivel MAR y selector de archivos .py
+│   │   ├── debug_widget.py      # Mini-feed de cámara, botones de modo de tracking y controles
+│   │   └── icon_manager.py      # Pre-renderizado, caché y soporte vectorial SVG glassmorphic
+│   ├── assets/
+│   │   └── icons/               # Suite de iconos vectoriales SVG neón de alta definición
 │   └── actions/
 │       ├── code_injector.py     # Inyección atómica no bloqueante con offsets de cursor
 │       ├── menu_trees.py        # Árboles de sintaxis jerárquica 3x3 y nodos pegajosos
 │       ├── context_reader.py    # Extractor de símbolos AST + Regex tolerante a errores
 │       └── ai_predictor.py      # Worker QThread asíncrono para IA con respaldo heurístico
-└── tests/                       # Suite de 198 pruebas automatizadas de unidad e integración
+└── tests/                       # Suite de 296 pruebas automatizadas de unidad e integración
     ├── test_phase1.py           # Tests de visión artificial y máquina de estados MAR
     ├── test_phase2.py           # Tests de QThread, banderas de ventana no-focus y calibración
     ├── test_phase3.py           # Validación de árboles sintácticos e inyección de código
@@ -192,7 +197,9 @@ IDEye/
     ├── test_vision_math.py      # Acotación matemática de mirada y auditorías de división por cero
     ├── test_menu_integrity.py   # Verificación recursiva de las 9 casillas en todo el árbol
     ├── test_code_injector.py    # Seguridad de teclas modificadoras y portapapeles
-    └── test_context_and_ai.py   # Resiliencia ante errores de sintaxis y JSON de LLMs
+    ├── test_context_and_ai.py   # Resiliencia ante errores de sintaxis y JSON de LLMs
+    ├── test_calibration_and_killswitch.py # Mapeo regularizado Tikhonov y hotkeys globales
+    └── test_tracking_modes_and_handsfree_exit.py # Solo Iris, desacoplo VOR y salida manos libres
 ```
 
 ---
@@ -206,11 +213,11 @@ pytest -v
 ```
 
 ```text
-============================= 198 passed in 9.24s =============================
+============================ 296 passed in 13.05s =============================
 ```
 
 > [!NOTE]
-> Todos los 198 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet.
+> Todos los 296 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet.
 
 ---
 

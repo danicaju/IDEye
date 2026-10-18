@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="formatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#082032" stroke="#0369a1" stroke-width="1.5"/>
+  <!-- Return / Enter arrow -->
+  <path d="M 44 20 L 44 34 L 20 34" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="26,28 18,34 26,40" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Space bar indicator lines below -->
+  <path d="M 16 46 L 16 49 L 48 49 L 48 46" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round"/>
+</svg>

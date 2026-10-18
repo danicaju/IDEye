@@ -56,9 +56,14 @@ LANDMARK_MOUTH_CORNER_LEFT: int = 78
 LANDMARK_MOUTH_CORNER_RIGHT: int = 308
 
 # ==============================================================================
-# Hybrid Gaze Estimator Weights & Sensitivities
+# Gaze Tracking Modes & Weights
 # ==============================================================================
-# Default balance: 60% head/nose vector, 40% iris vector
+TRACKING_MODE_PURE_IRIS: str = "PURE_IRIS"
+TRACKING_MODE_HYBRID: str = "HYBRID"
+TRACKING_MODE_HEAD_PRIMARY: str = "HEAD_PRIMARY"
+DEFAULT_TRACKING_MODE: str = TRACKING_MODE_PURE_IRIS
+
+# Default balance for HYBRID mode: 60% head/nose vector, 40% iris vector
 HEAD_WEIGHT: float = 0.60
 IRIS_WEIGHT: float = 0.40
 
@@ -67,7 +72,7 @@ IRIS_WEIGHT: float = 0.40
 # where vertical head pitch and eye elevation range is ~30% of horizontal range.
 DEFAULT_HEAD_SENSITIVITY_X: float = 2.6
 DEFAULT_HEAD_SENSITIVITY_Y: float = 6.8
-DEFAULT_IRIS_SENSITIVITY_X: float = 3.2
+DEFAULT_IRIS_SENSITIVITY_X: float = 3.6
 DEFAULT_IRIS_SENSITIVITY_Y: float = 8.5
 
 # Anti-Jitter Filtering (One Euro Filter + Fixation Deadzone)
@@ -75,8 +80,13 @@ ONE_EURO_MIN_CUTOFF: float = 0.55   # Low-speed cutoff (Hz) - eliminates resting
 ONE_EURO_BETA: float = 0.28        # Speed coefficient - eliminates saccadic lag
 ONE_EURO_D_CUTOFF: float = 1.0     # Derivative cutoff (Hz)
 FIXATION_DEADZONE: float = 0.022   # Deadzone radius in normalized coords for rock-solid resting
-VERTICAL_MULTIPLIER: float = 2.4    # Ergonomic independent vertical gain multiplier
-VERTICAL_EXPANSION_GAIN: float = 1.8 # Ergonomic non-linear vertical curve multiplier
+
+# Ergonomic non-linear reach curves
+VERTICAL_MULTIPLIER: float = 2.4       # Ergonomic independent vertical gain multiplier
+VERTICAL_EXPANSION_GAIN: float = 1.8   # Ergonomic non-linear vertical curve multiplier
+HORIZONTAL_MULTIPLIER: float = 1.45    # Ergonomic independent horizontal gain multiplier
+HORIZONTAL_EXPANSION_GAIN: float = 1.75 # Non-linear horizontal edge expansion for border reach
+VOR_COMPENSATION_FACTOR: float = 0.40  # Vestibulo-Ocular Reflex decoupling factor for HYBRID mode
 
 # Smoothing factor for Exponential Moving Average (EMA)
 # Higher = more responsive, lower = smoother (less jitter)
@@ -208,7 +218,7 @@ CALIBRATION_SAMPLE_DELAY_SEC: float = 0.02
 
 # Debug widget sizing
 DEBUG_WINDOW_WIDTH: int = 340
-DEBUG_WINDOW_HEIGHT: int = 580
+DEBUG_WINDOW_HEIGHT: int = 640
 DEBUG_FEED_WIDTH: int = 300
 DEBUG_FEED_HEIGHT: int = 170
 

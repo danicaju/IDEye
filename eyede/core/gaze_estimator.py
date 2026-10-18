@@ -21,6 +21,10 @@ except ImportError:
     except ImportError:
         config = None
 
+TRACKING_MODE_PURE_IRIS = getattr(config, "TRACKING_MODE_PURE_IRIS", "PURE_IRIS") if config else "PURE_IRIS"
+TRACKING_MODE_HYBRID = getattr(config, "TRACKING_MODE_HYBRID", "HYBRID") if config else "HYBRID"
+TRACKING_MODE_HEAD_PRIMARY = getattr(config, "TRACKING_MODE_HEAD_PRIMARY", "HEAD_PRIMARY") if config else "HEAD_PRIMARY"
+
 
 class OneEuroFilter:
     """
@@ -118,11 +122,18 @@ class GazeEstimator:
         right_eye_outer_idx: int = 263,
         right_eye_top_idx: int = 386,
         right_eye_bottom_idx: int = 374,
+        tracking_mode: Optional[str] = None,
     ):
         # Weights (normalized so sum == 1.0)
         total_w = max(head_weight + iris_weight, 1e-6)
         self.head_weight = head_weight / total_w
         self.iris_weight = iris_weight / total_w
+
+        # Tracking Mode (PURE_IRIS, HYBRID, HEAD_PRIMARY)
+        if tracking_mode is not None:
+            self.tracking_mode = str(tracking_mode).upper()
+        else:
+            self.tracking_mode = "HYBRID"
 
         # Base sensitivity multipliers
         self.base_head_sensitivity_x = float(head_sensitivity_x)
@@ -139,9 +150,12 @@ class GazeEstimator:
 
         self.ema_alpha = max(0.01, min(1.0, float(ema_alpha)))
 
-        # Ergonomic vertical non-linear expansion gain & independent multiplier
+        # Ergonomic reach curves & expansion gains
         self.vertical_multiplier: float = float(getattr(config, "VERTICAL_MULTIPLIER", 2.4))
         self.vertical_expansion_gain: float = float(getattr(config, "VERTICAL_EXPANSION_GAIN", 1.8))
+        self.horizontal_multiplier: float = float(getattr(config, "HORIZONTAL_MULTIPLIER", 1.45))
+        self.horizontal_expansion_gain: float = float(getattr(config, "HORIZONTAL_EXPANSION_GAIN", 1.75))
+        self.vor_compensation_factor: float = float(getattr(config, "VOR_COMPENSATION_FACTOR", 0.40))
 
         # One Euro Filter (1€ Filter) for adaptive anti-jitter & zero-lag saccades
         oe_min_cutoff = float(getattr(config, "ONE_EURO_MIN_CUTOFF", 0.55))
@@ -375,7 +389,7 @@ class GazeEstimator:
         Applies progressive expansion so gentle head pitch or looking up/down comfortably
         hits top row (Y < 0.20) and bottom row (Y > 0.80), while remaining rock-solid at center.
         """
-        if abs(delta_y) < 1e-6:
+        if not math.isfinite(delta_y) or abs(delta_y) < 1e-6:
             return 0.0
         sign = 1.0 if delta_y >= 0.0 else -1.0
         u = abs(delta_y)
@@ -386,6 +400,82 @@ class GazeEstimator:
             excess = u - cz
             expanded = cz + self.vertical_multiplier * excess * (1.0 + self.vertical_expansion_gain * excess)
         return sign * expanded
+
+    def _apply_horizontal_expansion_curve(self, delta_x: float) -> float:
+        """
+        Ergonomic non-linear horizontal expansion curve for effortless edge reach.
+        Compensates for the limited natural horizontal range of the iris relative to the canthi.
+        Dampens micro-movements near center for rock-solid reading, while progressively
+        expanding lateral glances so user effortlessly reaches lateral borders (columns 0 and 2)
+        purely by moving eyes, without twisting the head.
+        """
+        if not math.isfinite(delta_x) or abs(delta_x) < 1e-6:
+            return 0.0
+        sign = 1.0 if delta_x >= 0.0 else -1.0
+        u = abs(delta_x)
+        cz = 0.050
+        if u <= cz:
+            expanded = u
+        else:
+            excess = u - cz
+            expanded = cz + self.horizontal_multiplier * excess * (1.0 + self.horizontal_expansion_gain * excess)
+        return sign * expanded
+
+    def set_tracking_mode(self, mode: str) -> None:
+        """
+        Switches the active gaze tracking mode:
+        - 'PURE_IRIS': 100% iris tracking, 0% head influence, with non-linear horizontal edge reach.
+        - 'HYBRID': Head + Iris fusion with VOR (Vestibulo-Ocular Reflex) counter-rotation compensation.
+        - 'HEAD_PRIMARY': 95% head pose, 5% iris for users with ocular mobility restrictions.
+        """
+        mode_upper = str(mode).upper()
+        if mode_upper in ("PURE_IRIS", "HYBRID", "HEAD_PRIMARY"):
+            self.tracking_mode = mode_upper
+        else:
+            self.tracking_mode = "HYBRID"
+
+    def _compute_combined_deltas(
+        self,
+        delta_head_x: float,
+        delta_head_y: float,
+        delta_iris_x: float,
+        delta_iris_y: float,
+    ) -> Tuple[float, float]:
+        """
+        Combines head and iris offset vectors based on active tracking mode,
+        and applies non-linear ergonomic expansion curves for full-screen reach.
+        Protected against non-finite values (NaN/inf).
+        """
+        # Non-finite protection
+        dh_x = float(delta_head_x) if math.isfinite(delta_head_x) else 0.0
+        dh_y = float(delta_head_y) if math.isfinite(delta_head_y) else 0.0
+        di_x = float(delta_iris_x) if math.isfinite(delta_iris_x) else 0.0
+        di_y = float(delta_iris_y) if math.isfinite(delta_iris_y) else 0.0
+
+        if self.tracking_mode == "PURE_IRIS":
+            combined_x = di_x
+            combined_y = di_y
+        elif self.tracking_mode == "HEAD_PRIMARY":
+            combined_x = 0.95 * dh_x + 0.05 * di_x
+            combined_y = 0.95 * dh_y + 0.05 * di_y
+        else:  # "HYBRID"
+            # VOR Decoupling / Compensation:
+            # When user turns head left (dh_x < 0) and eyes counter-rotate right (di_x > 0),
+            # they have opposite signs. The eye counter-rotation stifles the user's intended
+            # head turn. We compensate for this counter-rotation by nudging the effective iris
+            # vector in the direction of the head yaw so they do not cancel out.
+            if dh_x * di_x < 0:
+                vor_correction = self.vor_compensation_factor * dh_x
+                effective_iris_x = di_x + vor_correction
+            else:
+                effective_iris_x = di_x
+
+            combined_x = (self.head_weight * dh_x) + (self.iris_weight * effective_iris_x)
+            combined_y = (self.head_weight * dh_y) + (self.iris_weight * di_y)
+
+        expanded_x = self._apply_horizontal_expansion_curve(combined_x)
+        expanded_y = self._apply_ergonomic_vertical_curve(combined_y)
+        return expanded_x, expanded_y
 
     def calibrate_center(self, face_landmarks: Any, nominal_interocular: float = 0.28) -> bool:
         """
@@ -459,6 +549,7 @@ class GazeEstimator:
                 - debug_info (dict): Raw vectors, calibration state, etc.
         """
         debug_info = {
+            "tracking_mode": self.tracking_mode,
             "is_calibrated": self.is_calibrated,
             "is_blinking": self.is_blinking,
             "distance_scale": self.distance_scale,
@@ -501,15 +592,13 @@ class GazeEstimator:
             delta_iris_x = (iris_x - self.neutral_iris_x) * self.iris_sensitivity_x
             delta_iris_y = (iris_y - self.neutral_iris_y) * self.iris_sensitivity_y
 
-            # 4. Hybrid weighted fusion
-            combined_delta_x = (self.head_weight * delta_head_x) + (self.iris_weight * delta_iris_x)
-            combined_delta_y = (self.head_weight * delta_head_y) + (self.iris_weight * delta_iris_y)
-
-            # Ergonomic vertical curve expansion
-            expanded_delta_y = self._apply_ergonomic_vertical_curve(combined_delta_y)
+            # 4. Mode-based delta computation (PURE_IRIS, HYBRID, HEAD_PRIMARY)
+            expanded_delta_x, expanded_delta_y = self._compute_combined_deltas(
+                delta_head_x, delta_head_y, delta_iris_x, delta_iris_y
+            )
 
             # 5. Screen coordinate mapping centered at (0.5, 0.5)
-            raw_target_x = 0.5 + combined_delta_x
+            raw_target_x = 0.5 + expanded_delta_x
             raw_target_y = 0.5 + expanded_delta_y
 
             if self.has_5_point_calibration:
@@ -607,10 +696,10 @@ class GazeEstimator:
             delta_head_y = (head_y - self.neutral_head_y) * self.head_sensitivity_y
             delta_iris_x = (iris_x - self.neutral_iris_x) * self.iris_sensitivity_x
             delta_iris_y = (iris_y - self.neutral_iris_y) * self.iris_sensitivity_y
-            combined_delta_x = (self.head_weight * delta_head_x) + (self.iris_weight * delta_iris_x)
-            combined_delta_y = (self.head_weight * delta_head_y) + (self.iris_weight * delta_iris_y)
-            expanded_delta_y = self._apply_ergonomic_vertical_curve(combined_delta_y)
-            return 0.5 + combined_delta_x, 0.5 + expanded_delta_y
+            expanded_delta_x, expanded_delta_y = self._compute_combined_deltas(
+                delta_head_x, delta_head_y, delta_iris_x, delta_iris_y
+            )
+            return 0.5 + expanded_delta_x, 0.5 + expanded_delta_y
         except Exception:
             return None
 
@@ -816,6 +905,7 @@ class GazeEstimator:
                     "distance_scale": self.distance_scale,
                     "head_sensitivities": [self.head_sensitivity_x, self.head_sensitivity_y],
                     "iris_sensitivities": [self.iris_sensitivity_x, self.iris_sensitivity_y],
+                    "tracking_mode": self.tracking_mode,
                     "points": self.calibration_points_data or []
                 }
             tmp_path = filepath + ".tmp"
@@ -930,6 +1020,9 @@ class GazeEstimator:
 
                 if "rmse" in profile:
                     self.calibration_rmse = float(profile["rmse"])
+
+                if "tracking_mode" in profile:
+                    self.set_tracking_mode(profile["tracking_mode"])
 
                 if "points" in profile:
                     self.calibration_points_data = profile["points"]

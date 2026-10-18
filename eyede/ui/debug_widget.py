@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtGui import QImage, QPixmap, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -32,12 +32,15 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QFrame,
     QSlider,
+    QComboBox,
 )
 
 try:
     import eyede.config as config
+    from eyede.ui.icon_manager import IconManager
 except ImportError:
     import config
+    from ui.icon_manager import IconManager
 
 
 class DebugWidget(QWidget):
@@ -52,6 +55,7 @@ class DebugWidget(QWidget):
     sensitivity_x_changed = pyqtSignal(float)
     sensitivity_y_changed = pyqtSignal(float)
     anti_jitter_changed = pyqtSignal(float)
+    tracking_mode_changed = pyqtSignal(str)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -68,6 +72,9 @@ class DebugWidget(QWidget):
 
         self._setup_ui()
 
+        # Keyboard shortcut [T] active application-wide
+        self.shortcut_t = QShortcut(QKeySequence(Qt.Key.Key_T), self, self.cycle_tracking_mode, context=Qt.ShortcutContext.ApplicationShortcut)
+
     def set_gaze_estimator(self, estimator: Any) -> None:
         """Links the GazeEstimator instance for direct real-time parameter tuning."""
         self.gaze_estimator = estimator
@@ -77,6 +84,10 @@ class DebugWidget(QWidget):
             hy = getattr(estimator, "head_sensitivity_y", config.DEFAULT_HEAD_SENSITIVITY_Y)
             self.slider_sens_x.setValue(int(hx * 10))
             self.slider_sens_y.setValue(int(hy * 10))
+
+            # Sync tracking mode
+            mode = getattr(estimator, "tracking_mode", "PURE_IRIS")
+            self._update_mode_ui(mode)
 
     def _setup_ui(self) -> None:
         """Constructs UI layout, styles, and controls."""
@@ -205,7 +216,73 @@ class DebugWidget(QWidget):
 
         main_layout.addLayout(mar_layout)
 
-        # 5. Interactive Tuning Sliders Frame
+        # 5. Tracking Mode Selector Frame (Pure Iris / Hybrid / Head Primary)
+        mode_frame = QFrame(self)
+        mode_frame.setObjectName("cardFrame")
+        mode_layout = QVBoxLayout(mode_frame)
+        mode_layout.setContentsMargins(6, 6, 6, 6)
+        mode_layout.setSpacing(4)
+
+        lbl_mode = QLabel("👁️ MODO DE SEGUIMIENTO (Tecla [T])", mode_frame)
+        lbl_mode.setStyleSheet("font-size: 10px; font-weight: bold; color: #38bdf8;")
+        mode_layout.addWidget(lbl_mode)
+
+        # Live segmented quick-toggle buttons
+        btn_mode_layout = QHBoxLayout()
+        btn_mode_layout.setSpacing(4)
+
+        self.btn_mode_iris = QPushButton("👁️ Solo Iris", mode_frame)
+        self.btn_mode_iris.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_mode_iris.setToolTip("Modo Solo Iris (Recomendado): Alcance horizontal total solo con los ojos")
+        self.btn_mode_iris.clicked.connect(lambda: self.set_tracking_mode_by_name("PURE_IRIS"))
+        btn_mode_layout.addWidget(self.btn_mode_iris)
+
+        self.btn_mode_hybrid = QPushButton("🔄 Híbrido", mode_frame)
+        self.btn_mode_hybrid.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_mode_hybrid.setToolTip("Modo Híbrido: Fusión Cabeza + Iris con compensación RVO")
+        self.btn_mode_hybrid.clicked.connect(lambda: self.set_tracking_mode_by_name("HYBRID"))
+        btn_mode_layout.addWidget(self.btn_mode_hybrid)
+
+        self.btn_mode_head = QPushButton("👤 Cabeza", mode_frame)
+        self.btn_mode_head.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_mode_head.setToolTip("Modo Solo Cabeza: Control por orientación de cabeza")
+        self.btn_mode_head.clicked.connect(lambda: self.set_tracking_mode_by_name("HEAD_PRIMARY"))
+        btn_mode_layout.addWidget(self.btn_mode_head)
+
+        mode_layout.addLayout(btn_mode_layout)
+
+        self.combo_mode = QComboBox(mode_frame)
+        self.combo_mode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.combo_mode.addItem("👁️ Solo Iris (Recomendado)", "PURE_IRIS")
+        self.combo_mode.addItem("🔄 Híbrido (Cabeza + Iris)", "HYBRID")
+        self.combo_mode.addItem("👤 Solo Cabeza (Pose)", "HEAD_PRIMARY")
+        self.combo_mode.setStyleSheet("""
+            QComboBox {
+                background-color: #1e293b;
+                border: 1px solid #38bdf8;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #f8fafc;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #0f172a;
+                color: #f8fafc;
+                selection-background-color: #0284c7;
+                selection-color: #ffffff;
+                border: 1px solid #334155;
+            }
+        """)
+        self.combo_mode.currentIndexChanged.connect(self._on_combo_mode_changed)
+        mode_layout.addWidget(self.combo_mode)
+        main_layout.addWidget(mode_frame)
+
+        # 6. Interactive Tuning Sliders Frame
         slider_frame = QFrame(self)
         slider_frame.setObjectName("cardFrame")
         slider_layout = QVBoxLayout(slider_frame)
@@ -253,7 +330,7 @@ class DebugWidget(QWidget):
 
         main_layout.addWidget(slider_frame)
 
-        # 6. Context & AI Engine Status
+        # 7. Context & AI Engine Status
         ai_layout = QVBoxLayout()
         ai_layout.setSpacing(2)
 
@@ -269,13 +346,13 @@ class DebugWidget(QWidget):
 
         main_layout.addLayout(ai_layout)
 
-        # 7. File Link Button
+        # 8. File Link Button
         self.btn_link_file = QPushButton("📂 Vincular Archivo .py", self)
         self.btn_link_file.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_link_file.clicked.connect(self._on_link_file_clicked)
         main_layout.addWidget(self.btn_link_file)
 
-        # 8. Action Buttons
+        # 9. Action Buttons
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(6)
 
@@ -300,11 +377,35 @@ class DebugWidget(QWidget):
 
         main_layout.addLayout(btn_layout)
 
-        # 9. Emergency Hotkey Documentation Label
+        # Decorate buttons and window with neon vector icons
+        icon_mgr = IconManager.instance()
+        logo_icon = icon_mgr.get_icon("eyede_logo", 32)
+        if not logo_icon.isNull():
+            self.setWindowIcon(logo_icon)
+
+        exit_icon = icon_mgr.get_icon("exit", 16)
+        if not exit_icon.isNull():
+            self.btn_exit.setIcon(exit_icon)
+
+        recalib_icon = icon_mgr.get_icon("navigation", 16)
+        if not recalib_icon.isNull():
+            self.btn_recalibrate.setIcon(recalib_icon)
+
+        reset_icon = icon_mgr.get_icon("flow", 16)
+        if not reset_icon.isNull():
+            self.btn_reset.setIcon(reset_icon)
+
+        link_icon = icon_mgr.get_icon("function", 16)
+        if not link_icon.isNull():
+            self.btn_link_file.setIcon(link_icon)
+
+        # 10. Emergency Hotkey Documentation Label
         self.lbl_emergency_hint = QLabel("🚨 Emergencia: Ctrl+Alt+Q para salir", self)
         self.lbl_emergency_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_emergency_hint.setStyleSheet("font-size: 10px; font-weight: bold; color: #f87171; padding: 2px;")
         main_layout.addWidget(self.lbl_emergency_hint)
+
+        self._update_mode_ui("PURE_IRIS")
 
     def _on_slider_sens_x_changed(self, value: int) -> None:
         val = value / 10.0
@@ -442,3 +543,85 @@ class DebugWidget(QWidget):
             self.video_label.setPixmap(scaled)
         except Exception:
             pass
+
+    @property
+    def current_tracking_mode(self) -> str:
+        """Returns the currently selected tracking mode string."""
+        return self.combo_mode.currentData() or "PURE_IRIS"
+
+    def _update_mode_ui(self, mode: str) -> None:
+        """Synchronizes combo and segmented buttons to reflect active mode."""
+        idx = self.combo_mode.findData(mode)
+        if idx >= 0 and self.combo_mode.currentIndex() != idx:
+            self.combo_mode.blockSignals(True)
+            self.combo_mode.setCurrentIndex(idx)
+            self.combo_mode.blockSignals(False)
+
+        style_active = """
+            QPushButton {
+                background-color: #0284c7;
+                border: 1px solid #38bdf8;
+                border-radius: 4px;
+                padding: 4px 6px;
+                font-size: 10px;
+                font-weight: bold;
+                color: #ffffff;
+            }
+        """
+        style_inactive = """
+            QPushButton {
+                background-color: #1e293b;
+                border: 1px solid #334155;
+                border-radius: 4px;
+                padding: 4px 6px;
+                font-size: 10px;
+                font-weight: 500;
+                color: #94a3b8;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+                color: #f8fafc;
+            }
+        """
+        if hasattr(self, "btn_mode_iris"):
+            self.btn_mode_iris.setStyleSheet(style_active if mode == "PURE_IRIS" else style_inactive)
+        if hasattr(self, "btn_mode_hybrid"):
+            self.btn_mode_hybrid.setStyleSheet(style_active if mode == "HYBRID" else style_inactive)
+        if hasattr(self, "btn_mode_head"):
+            self.btn_mode_head.setStyleSheet(style_active if mode == "HEAD_PRIMARY" else style_inactive)
+
+    def set_tracking_mode_by_name(self, mode: str) -> None:
+        """Sets the active tracking mode via button or programmatic invocation."""
+        mode_upper = str(mode).upper()
+        if mode_upper in ("PURE_IRIS", "HYBRID", "HEAD_PRIMARY"):
+            self._update_mode_ui(mode_upper)
+            self.tracking_mode_changed.emit(mode_upper)
+            if self.gaze_estimator is not None:
+                self.gaze_estimator.set_tracking_mode(mode_upper)
+
+    def _on_combo_mode_changed(self, index: int) -> None:
+        """Handles user selecting a different tracking mode in the combo box."""
+        mode = self.combo_mode.currentData()
+        if mode:
+            self._update_mode_ui(mode)
+            self.tracking_mode_changed.emit(mode)
+            if self.gaze_estimator is not None:
+                self.gaze_estimator.set_tracking_mode(mode)
+
+    def cycle_tracking_mode(self) -> None:
+        """Cycles to the next tracking mode (shortcut [T])."""
+        idx = (self.combo_mode.currentIndex() + 1) % self.combo_mode.count()
+        self.combo_mode.setCurrentIndex(idx)
+
+    def keyPressEvent(self, event) -> None:
+        """Keyboard event handler for shortcut [T] to cycle tracking modes."""
+        if event.key() == Qt.Key.Key_T:
+            self.cycle_tracking_mode()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+
+# Alias for backwards compatibility and alternative naming conventions
+DebugMonitorWidget = DebugWidget
+

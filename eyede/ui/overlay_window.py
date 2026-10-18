@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import QWidget
 
 try:
     import eyede.config as config
+    from eyede.ui.icon_manager import IconManager
     from eyede.actions.code_injector import CodeInjector
     from eyede.actions.menu_trees import (
         MenuNode,
@@ -34,11 +35,13 @@ try:
         get_breadcrumb_path,
         populate_ai_prediction_items,
         populate_local_symbol_items,
+        populate_exit_confirm_items,
     )
     from eyede.actions.context_reader import ContextReader
     from eyede.actions.ai_predictor import AIPredictorWorker
 except ImportError:
     import config
+    from ui.icon_manager import IconManager
     from actions.code_injector import CodeInjector
     from actions.menu_trees import (
         MenuNode,
@@ -47,6 +50,7 @@ except ImportError:
         get_breadcrumb_path,
         populate_ai_prediction_items,
         populate_local_symbol_items,
+        populate_exit_confirm_items,
     )
     from actions.context_reader import ContextReader
     from actions.ai_predictor import AIPredictorWorker
@@ -64,6 +68,7 @@ class OverlayWindow(QWidget):
     menu_navigated = pyqtSignal(str)  # (current_node_id)
     action_executed = pyqtSignal(str, str)  # (action_id, action_description)
     ai_status_updated = pyqtSignal(str)
+    tracking_mode_cycle_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -105,6 +110,11 @@ class OverlayWindow(QWidget):
         self.hovered_block: Optional[int] = None
         self.active_click_block: Optional[int] = None
         self.current_gaze: Tuple[float, float] = (0.5, 0.5)
+
+        # Hands-free header exit button state
+        self.hovered_header_exit: bool = False
+        self.active_click_header_exit: bool = False
+        self.header_exit_rect: QRectF = QRectF()
 
         # Layout constants
         self.breadcrumb_height: float = 42.0
@@ -229,6 +239,22 @@ class OverlayWindow(QWidget):
         self._pen_pointer_ring = QPen(QColor(*config.OVERLAY_POINTER_OUTLINE), 2.2)
         self._brush_pointer_dot = QBrush(QColor(*config.OVERLAY_POINTER_COLOR))
         self._pen_pointer_ticks = QPen(QColor(255, 255, 255, 200), 1.5)
+        self._update_header_exit_rect()
+
+    def resizeEvent(self, event) -> None:
+        """Handles window resize events to keep interactive target geometry updated."""
+        super().resizeEvent(event)
+        self._update_header_exit_rect()
+
+    def _update_header_exit_rect(self) -> None:
+        """Computes the interactive bounding box of the top-right exit button."""
+        w = float(self.width()) if self.width() > 0 else 1920.0
+        margin = 12.0
+        header_h = 42.0
+        pill_h = header_h - 14.0
+        exit_btn_w = 110.0
+        header_rect = QRectF(margin, margin, max(1.0, w - 2.0 * margin), header_h)
+        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 7.0, exit_btn_w, pill_h)
 
     def _apply_win32_no_activate(self) -> None:
         """Applies WS_EX_NOACTIVATE and WS_EX_TRANSPARENT styles on Windows to guarantee zero focus stealing."""
@@ -381,6 +407,19 @@ class OverlayWindow(QWidget):
         cell_h = avail_h / 3.0
 
         py = gy * h
+        px = gx * w
+
+        # Check if gaze is targeting the prominent header exit button (only in active HUD mode)
+        if not self.reading_mode and self.header_exit_rect.isValid():
+            expanded_exit_rect = self.header_exit_rect.adjusted(-12.0, -8.0, 12.0, 12.0)
+            if expanded_exit_rect.contains(px, py):
+                self.hovered_header_exit = True
+                self.hovered_block = None
+                self.update()
+                return
+
+        self.hovered_header_exit = False
+
         if py < avail_y:
             row = 0
         elif py >= avail_y + avail_h:
@@ -390,7 +429,6 @@ class OverlayWindow(QWidget):
 
         avail_w = max(1.0, w - 2.0 * margin)
         cell_w = avail_w / 3.0
-        px = gx * w
         if px < margin:
             col = 0
         elif px >= w - margin:
@@ -411,6 +449,10 @@ class OverlayWindow(QWidget):
 
         self.update()
 
+    def _clear_header_exit_flash(self) -> None:
+        self.active_click_header_exit = False
+        self.update()
+
     @pyqtSlot(str)
     def on_gesture_triggered(self, gesture_name: str) -> None:
         """
@@ -419,6 +461,20 @@ class OverlayWindow(QWidget):
         Guarantees that clicks are not accumulated in queue while an injection is active.
         """
         if gesture_name != "MOUTH_CLICK":
+            return
+
+        # Hands-free header exit click handler
+        if self.hovered_header_exit:
+            self.hovered_header_exit = False
+            self.active_click_header_exit = True
+            QTimer.singleShot(int(config.CLICK_FLASH_DURATION_SEC * 1000), self._clear_header_exit_flash)
+            prev_node = self.current_node_id if self.current_node_id != "EXIT_CONFIRM" else "ROOT"
+            if "EXIT_CONFIRM" in self.menu_tree:
+                self.menu_tree["EXIT_CONFIRM"].parent_id = prev_node
+                self.menu_tree["EXIT_CONFIRM"].items = populate_exit_confirm_items(parent_id=prev_node)
+            self.navigate_to("EXIT_CONFIRM")
+            self.last_action_desc = "⚠️ Confirmar Salida"
+            self.update()
             return
 
         target_block = self.hovered_block
@@ -497,14 +553,76 @@ class OverlayWindow(QWidget):
                 self.update()
             return
 
-        # 5. Exit Trigger
-        if item.action_type == "EXIT" or item.id == "ACTION_EXIT":
+        # 6. Exit Trigger
+        if item.action_type == "EXIT" or item.id in ("CONFIRM_EXIT", "ACTION_EXIT"):
             self.exit_requested.emit()
             self.block_activated.emit(target_block, item.id)
             return
 
         # Fallback default emission
         self.block_activated.emit(target_block, item.id)
+
+    def execute_action(self, item: MenuAction, target_block: int = 0) -> None:
+        """Programmatically executes a MenuAction directly on the overlay."""
+        if item.action_type == "PAUSE":
+            self.toggle_reading_mode()
+            self.last_action_desc = "👁️ Modo Reposo Activo"
+            self.block_activated.emit(target_block, "PAUSE_RESUME")
+            return
+
+        if item.action_type == "BACK":
+            target_id = item.submenu_id or (self.current_node.parent_id if self.current_node else "ROOT") or "ROOT"
+            self.navigate_to(target_id)
+            target_title = self.menu_tree[target_id].title if target_id in self.menu_tree else "RAÍZ"
+            self.last_action_desc = f"⬅ Volver a {target_title}"
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type == "SUBMENU":
+            target_id = item.submenu_id
+            if target_id and target_id in self.menu_tree:
+                self.navigate_to(target_id)
+                self.last_action_desc = f"📁 Menú: {self.menu_tree[target_id].title}"
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type in ("SNIPPET", "KEY"):
+            self.code_injector.execute_action(item)
+            self.last_action_desc = f"{item.icon} {item.label}"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type == "EXIT" or item.id in ("CONFIRM_EXIT", "ACTION_EXIT"):
+            self.exit_requested.emit()
+            self.block_activated.emit(target_block, item.id)
+            return
+
+    def mousePressEvent(self, event) -> None:
+        """Handles physical mouse clicks for testing, headless runners, and assistive caregivers."""
+        pos = event.position() if hasattr(event, "position") else event.pos()
+        px, py = float(pos.x()), float(pos.y())
+
+        # Check header exit button
+        if not self.reading_mode and self.header_exit_rect.isValid() and self.header_exit_rect.contains(px, py):
+            self.hovered_header_exit = True
+            self.on_gesture_triggered("MOUTH_CLICK")
+            event.accept()
+            return
+
+        w = float(self.width()) if self.width() > 0 else 1920.0
+        h = float(self.height()) if self.height() > 0 else 1080.0
+        self.on_gaze_updated(px / w, py / h)
+        self.on_gesture_triggered("MOUTH_CLICK")
+        event.accept()
+
+    def keyPressEvent(self, event) -> None:
+        """Keyboard event handler for shortcut [T] to cycle tracking modes."""
+        if event.key() == Qt.Key.Key_T:
+            self.tracking_mode_cycle_requested.emit()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def toggle_reading_mode(self) -> None:
         """Toggles between Active HUD mode and 10% Opacity Reading Mode."""
@@ -531,7 +649,12 @@ class OverlayWindow(QWidget):
             return "PAUSE"
         if item.action_type == "BACK":
             return "BACK"
-        if item.action_type == "EXIT" or item.id == "ACTION_EXIT":
+        if (
+            item.action_type == "EXIT"
+            or item.id in ("CONFIRM_EXIT", "ACTION_EXIT", "ACTION_EXIT_MENU")
+            or (item.submenu_id or "").upper() == "EXIT_CONFIRM"
+            or "EXIT" in self.current_node_id
+        ):
             return "EXIT"
 
         sub_id = (item.submenu_id or "").upper()
@@ -577,10 +700,14 @@ class OverlayWindow(QWidget):
         painter.setPen(self._pen_header_border)
         painter.drawRoundedRect(header_rect, 8.0, 8.0)
 
-        # Left: Mode Pill Badge + Navigation Trail
+        # Left: App Logo + Mode Pill Badge + Navigation Trail
+        logo_size = 28.0
+        logo_rect = QRectF(header_rect.x() + 8.0, header_rect.y() + (header_h - logo_size) * 0.5, logo_size, logo_size)
+        IconManager.instance().render_icon(painter, "eyede_logo", logo_rect)
+
         pill_w = 136.0
         pill_h = header_h - 14.0
-        pill_rect = QRectF(header_rect.x() + 8.0, header_rect.y() + 7.0, pill_w, pill_h)
+        pill_rect = QRectF(logo_rect.right() + 8.0, header_rect.y() + 7.0, pill_w, pill_h)
 
         if self.reading_mode:
             painter.setBrush(self._brush_pill_read)
@@ -603,8 +730,8 @@ class OverlayWindow(QWidget):
             breadcrumb_path += "  [📌 FIJO]"
 
         left_text = f"📁 {breadcrumb_path}"
-        text_start_x = header_rect.x() + pill_w + 18.0
-        max_left_w = int(header_rect.width() * 0.32)
+        text_start_x = pill_rect.right() + 12.0
+        max_left_w = int(header_rect.width() * 0.25)
         painter.setPen(self._pen_header_left)
         painter.setFont(self._font_header_left)
         elided_left = painter.fontMetrics().elidedText(left_text, Qt.TextElideMode.ElideMiddle, max_left_w)
@@ -617,9 +744,41 @@ class OverlayWindow(QWidget):
             elided_left,
         )
 
+        # Far Right: Hands-free Gaze-Selectable & Mouth-Clickable Exit Target [❌ SALIR]
+        exit_btn_w = 110.0
+        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 7.0, exit_btn_w, pill_h)
+
+        if self.active_click_header_exit:
+            exit_brush = self._brush_click
+            exit_pen = self._pen_click
+            exit_text_color = self._color_click_text
+        elif self.hovered_header_exit:
+            exit_brush = QBrush(QColor(239, 68, 68, 220))
+            exit_pen = QPen(QColor(254, 202, 202), 2.5)
+            exit_text_color = QColor(255, 255, 255)
+        else:
+            exit_brush = QBrush(QColor(127, 29, 29, 140))
+            exit_pen = QPen(QColor(239, 68, 68, 160), 1.5)
+            exit_text_color = QColor(254, 202, 202)
+
+        painter.setBrush(exit_brush)
+        painter.setPen(exit_pen)
+        painter.drawRoundedRect(self.header_exit_rect, 6.0, 6.0)
+
+        # Exit vector SVG icon + label inside header button
+        exit_icon_rect = QRectF(self.header_exit_rect.x() + 8.0, self.header_exit_rect.y() + 3.0, 22.0, 22.0)
+        IconManager.instance().render_icon(painter, "exit", exit_icon_rect)
+        painter.setPen(exit_text_color)
+        painter.setFont(self._font_header_pill)
+        painter.drawText(
+            QRectF(self.header_exit_rect.x() + 34.0, self.header_exit_rect.y(), exit_btn_w - 38.0, pill_h),
+            Qt.AlignmentFlag.AlignCenter,
+            "SALIR",
+        )
+
         # Center: Emergency Hotkey Documentation Pill
         emergency_text = "🚨 Emergencia: Ctrl+Alt+Q para salir"
-        center_pill_w = 260.0
+        center_pill_w = 230.0
         center_pill_rect = QRectF(header_rect.center().x() - center_pill_w * 0.5, header_rect.y() + 7.0, center_pill_w, pill_h)
         painter.setBrush(QBrush(QColor(239, 68, 68, 25)))
         painter.setPen(QPen(QColor(239, 68, 68, 120), 1.0))
@@ -629,10 +788,10 @@ class OverlayWindow(QWidget):
         painter.setFont(self._font_header_center)
         painter.drawText(center_pill_rect, Qt.AlignmentFlag.AlignCenter, emergency_text)
 
-        # Right: Last executed action pill
+        # Right-Center: Last executed action pill
         last_action_str = f"✨ Última: {self.last_action_desc}"
-        max_right_w = int(header_rect.width() * 0.30)
-        right_pill_rect = QRectF(header_rect.right() - max_right_w - 8.0, header_rect.y() + 7.0, max_right_w, pill_h)
+        max_right_w = int(header_rect.width() * 0.22)
+        right_pill_rect = QRectF(self.header_exit_rect.left() - max_right_w - 8.0, header_rect.y() + 7.0, max_right_w, pill_h)
         painter.setBrush(QBrush(QColor(56, 189, 248, 22)))
         painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
         painter.drawRoundedRect(right_pill_rect, 5.0, 5.0)
@@ -722,6 +881,25 @@ class OverlayWindow(QWidget):
                 painter.setPen(top_pen)
                 painter.drawLine(QPointF(rect.x() + 16.0, rect.y() + 2.0), QPointF(rect.right() - 16.0, rect.y() + 2.0))
 
+            # Render category neon vector icon in card top-right
+            icon_map = {
+                "FLOW": "flow",
+                "STRUCT": "function",
+                "OPERATORS": "operators",
+                "NAV": "navigation",
+                "PAUSE": "pause_eye",
+                "BACK": "navigation",
+                "T9": "variables",
+                "EDIT": "edit",
+                "FORMAT": "format",
+                "AI": "ai_spark",
+                "EXIT": "exit",
+            }
+            icon_name = icon_map.get(cat)
+            if icon_name and (not self.reading_mode or i == 4):
+                card_icon_rect = QRectF(rect.right() - 36.0, rect.y() + 10.0, 24.0, 24.0)
+                IconManager.instance().render_icon(painter, icon_name, card_icon_rect)
+
             # Determine labels
             label_text = f"{item.icon} {item.label}"
             hint_text = item.hint
@@ -730,13 +908,14 @@ class OverlayWindow(QWidget):
                 label_text = "👁️ 5: REANUDAR"
                 hint_text = "Modo Lectura Activo (Mire y Abra Boca)"
 
-            # Draw main label
+            # Draw main label (reserving width on the right to prevent overlap with top-right vector badge)
+            max_label_w = int(rect.width() - 54)
             painter.setPen(text_color)
             painter.setFont(self._font_label)
             painter.drawText(
                 int(rect.x() + 14),
                 int(rect.y() + 12),
-                int(rect.width() - 28),
+                max_label_w,
                 28,
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 label_text,
@@ -749,7 +928,7 @@ class OverlayWindow(QWidget):
                 painter.drawText(
                     int(rect.x() + 14),
                     int(rect.y() + 40),
-                    int(rect.width() - 28),
+                    max_label_w,
                     22,
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                     hint_text,

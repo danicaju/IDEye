@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="opGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#c084fc"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#240c38" stroke="#7e22ce" stroke-width="1.5"/>
+  <!-- Plus symbol -->
+  <path d="M 18 24 L 28 24 M 23 19 L 23 29" stroke="#c084fc" stroke-width="3" stroke-linecap="round"/>
+  <!-- Equals symbol -->
+  <path d="M 37 21 L 49 21 M 37 27 L 49 27" stroke="#c084fc" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Compare unequal / slash -->
+  <path d="M 17 44 L 27 38 L 17 32" fill="none" stroke="#e9d5ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 47 44 L 37 38 L 47 32" fill="none" stroke="#e9d5ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Logic & symbol or divider -->
+  <circle cx="32" cy="46" r="3" fill="#a855f7"/>
+</svg>

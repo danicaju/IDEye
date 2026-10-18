@@ -171,6 +171,45 @@ def populate_local_symbol_items(
     ]
 
 
+def populate_exit_confirm_items(parent_id: str = "ROOT") -> List[MenuAction]:
+    """
+    Constructs exactly 9 MenuAction items for safe, hands-free eye-controlled exit confirmation.
+    Slot 0: CONFIRMAR SALIR (Action: EXIT)
+    Slots 1, 2, 3, 5, 7, 8: CANCELAR (Action: BACK to parent_id)
+    Slot 4: Center Pause action (Golden Rule 2)
+    Slot 6: Back action (Golden Rule 3)
+    """
+    def _make_cancel(slot_num: str, item_id: str) -> MenuAction:
+        return MenuAction(
+            id=item_id,
+            label=f"{slot_num}: CANCELAR",
+            hint="Permanecer en EyeDE (Seguro)",
+            action_type="BACK",
+            submenu_id=parent_id,
+            icon="↩",
+            sticky=False,
+        )
+
+    return [
+        MenuAction(
+            id="CONFIRM_EXIT",
+            label="1: CONFIRMAR SALIR",
+            hint="Cerrar EyeDE definitivamente",
+            action_type="EXIT",
+            icon="❌",
+            sticky=False,
+        ),
+        _make_cancel("2", "CANCEL_EXIT_2"),
+        _make_cancel("3", "CANCEL_EXIT_3"),
+        _make_cancel("4", "CANCEL_EXIT_4"),
+        create_pause_action("5"),
+        _make_cancel("6", "CANCEL_EXIT_6"),
+        create_back_action(parent_id, "7"),
+        _make_cancel("8", "CANCEL_EXIT_8"),
+        _make_cancel("9", "CANCEL_EXIT_9"),
+    ]
+
+
 def build_menu_tree() -> Dict[str, MenuNode]:
     """
     Constructs and returns the full hierarchical menu tree for EyeDE Phase 3.
@@ -730,7 +769,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         MenuAction(id="EDIT_REDO", label="6: Rehacer", hint="Ctrl + Y", action_type="KEY", key_name="REDO", sticky=True, icon="⚡"),
         create_back_action("ROOT", "7"),
         MenuAction(id="EDIT_COMMENT", label="8: Comentar", hint="Ctrl + /", action_type="KEY", key_name="COMMENT", sticky=True, icon="⚡"),
-        MenuAction(id="EDIT_SAVE", label="9: Guardar", hint="Ctrl + S", action_type="KEY", key_name="SAVE", sticky=True, icon="⚡"),
+        MenuAction(id="ACTION_EXIT_MENU", label="9: SALIR 📁", hint="Cerrar EyeDE (Confirmación)", action_type="SUBMENU", submenu_id="EXIT_CONFIRM", icon="❌"),
     ]
 
     tree["EDIT"] = MenuNode(
@@ -956,6 +995,18 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             MenuAction(id="CH_SP_UZ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="⚡"),
         ],
         parent_id="T9",
+        sticky=False,
+    )
+
+    # =========================================================================
+    # 10. SAFE EXIT CONFIRMATION SUBMENU
+    # =========================================================================
+    tree["EXIT_CONFIRM"] = MenuNode(
+        id="EXIT_CONFIRM",
+        title="¿SALIR DE EYEDE?",
+        breadcrumb_label="CONFIRMAR SALIDA",
+        items=populate_exit_confirm_items(parent_id="ROOT"),
+        parent_id="ROOT",
         sticky=False,
     )
 

@@ -95,6 +95,7 @@ class CameraTracker(QThread):
                 iris_sensitivity_x=config.DEFAULT_IRIS_SENSITIVITY_X,
                 iris_sensitivity_y=config.DEFAULT_IRIS_SENSITIVITY_Y,
                 ema_alpha=config.EMA_ALPHA,
+                tracking_mode=getattr(config, "DEFAULT_TRACKING_MODE", "PURE_IRIS"),
             )
             # Auto-load calibration profile if present
             profile_path = getattr(config, "CALIBRATION_PROFILE_PATH", "calibration_profile.json")

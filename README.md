@@ -151,11 +151,13 @@ On first launch (or with `--recalibrate`), EyeDE launches the **5-Point Visual C
 | :--- | :--- | :--- |
 | **`Ctrl+Alt+Q` / `F12`** | **🚨 Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down EyeDE from anywhere in the OS, even when VS Code has focus |
 | **`Ctrl+Alt+R`** | **🔄 Emergency Reset** | Immediately clears 5-point calibration weights and reverts to safe neutral mapping |
+| **`[T]`** | **Cycle Tracking Mode** | Switch between **`PURE_IRIS`** (Solo Iris - 100% eyes, zero head required), **`HYBRID`** (VOR-compensated fusion), and **`HEAD_PRIMARY`** |
 | **`[C]`** | **Center Recalibration** | Look at the screen center and press `C` to reset your neutral anchor |
 | **`[+]` / `[-]`** | **Sensitivity Adjust** | Increase or decrease gaze tracking sensitivity on the fly |
 | **`[P]` / `[Space]`** | **Pause / Reading Mode** | Dim HUD to 10% opacity so you can read code without accidental clicks |
 | **`[M]`** | **Toggle Mini-Feed** | Show or hide the bottom camera preview and MAR meter |
 | **`[Q]` / `[ESC]`** | **Safe Exit** | Release camera handles and gracefully stop all worker threads |
+| **Eye Exit** | **[❌ SALIR] Hands-Free** | Gaze at the top-right header `[❌ SALIR]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 
 ---
 
@@ -178,13 +180,16 @@ IDEye/
 │   ├── ui/
 │   │   ├── overlay_window.py    # Transparent No-Focus PyQt6 3x3 Macro-Grid HUD
 │   │   ├── calibration_ui.py    # Fullscreen 5-point visual calibration wizard
-│   │   └── debug_widget.py      # Mini camera feed, MAR progress bar & file linker button
+│   │   ├── debug_widget.py      # Mini camera feed, live tracking mode toggles & controls
+│   │   └── icon_manager.py      # Vector SVG pre-rendering, caching & glassmorphic badges
+│   ├── assets/
+│   │   └── icons/               # High-DPI neon SVG icon suite (logo, flow, AI, exit, etc.)
 │   └── actions/
 │       ├── code_injector.py     # Non-blocking atomic clipboard snippet injection & cursor offsets
 │       ├── menu_trees.py        # 3x3 hierarchical syntax trees & sticky node definitions
 │       ├── context_reader.py    # Fault-tolerant AST + Regex local symbol extractor
 │       └── ai_predictor.py      # Async LLM QThread worker + syntactic heuristic fallback
-└── tests/                       # 198 automated unit & integration tests
+└── tests/                       # 296 automated unit & integration tests
     ├── test_phase1.py           # Core computer vision & MAR state machine tests
     ├── test_phase2.py           # PyQt6 QThread, non-focus window flags & calibration math
     ├── test_phase3.py           # Syntax tree validation & code injection tests
@@ -192,7 +197,9 @@ IDEye/
     ├── test_vision_math.py      # GazeEstimator boundary clipping & zero-division audits
     ├── test_menu_integrity.py   # Recursive 9-cell tree verification
     ├── test_code_injector.py    # Modifier key recovery & clipboard safety tests
-    └── test_context_and_ai.py   # Syntax-error tolerance & LLM JSON resilience tests
+    ├── test_context_and_ai.py   # Syntax-error tolerance & LLM JSON resilience tests
+    ├── test_calibration_and_killswitch.py # Tikhonov regularized mapping & emergency hotkeys
+    └── test_tracking_modes_and_handsfree_exit.py # Pure Iris, VOR decoupling & hands-free exit
 ```
 
 ---
@@ -206,11 +213,11 @@ pytest -v
 ```
 
 ```text
-============================= 198 passed in 9.24s =============================
+============================ 296 passed in 13.05s =============================
 ```
 
 > [!NOTE]
-> All 198 tests run headlessly without requiring a physical webcam, display server, or active internet connection.
+> All 296 tests run headlessly without requiring a physical webcam, display server, or active internet connection.
 
 ---
 

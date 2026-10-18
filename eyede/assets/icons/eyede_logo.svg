@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </linearGradient>
+    <linearGradient id="cyanPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#c084fc"/>
+    </linearGradient>
+    <linearGradient id="neonCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <radialGradient id="irisGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="1"/>
+      <stop offset="45%" stop-color="#0284c7" stop-opacity="0.9"/>
+      <stop offset="80%" stop-color="#0369a1" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#0c4a6e" stop-opacity="0.2"/>
+    </radialGradient>
+    <radialGradient id="pupilGrad" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background rounded hexagon/squircle -->
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#bgGrad)" stroke="#334155" stroke-width="2"/>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#cyanPurple)" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <!-- Left Code Bracket < -->
+  <path d="M 32 44 L 18 64 L 32 84" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Right Code Bracket > -->
+  <path d="M 96 44 L 110 64 L 96 84" fill="none" stroke="#c084fc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Cybernetic Eye Contour Outer Arc -->
+  <path d="M 34 64 C 44 46, 84 46, 94 64 C 84 82, 44 82, 34 64 Z" fill="#0f172a" fill-opacity="0.8" stroke="url(#cyanPurple)" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Outer Iris Ring with Aperture Ticks -->
+  <circle cx="64" cy="64" r="18" fill="url(#irisGlow)" stroke="#38bdf8" stroke-width="2"/>
+  <circle cx="64" cy="64" r="21" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4, 5" stroke-opacity="0.8"/>
+
+  <!-- Pupil Center -->
+  <circle cx="64" cy="64" r="9" fill="url(#pupilGrad)" stroke="#06b6d4" stroke-width="1.5"/>
+
+  <!-- Aperture crosshair guides -->
+  <line x1="64" y1="40" x2="64" y2="46" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="64" y1="82" x2="64" y2="88" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="40" y1="64" x2="46" y2="64" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="82" y1="64" x2="88" y2="64" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Eye Specular Glint Reflection -->
+  <circle cx="61" cy="60" r="3.2" fill="#ffffff" fill-opacity="0.95"/>
+  <circle cx="67" cy="67" r="1.5" fill="#ffffff" fill-opacity="0.75"/>
+
+  <!-- Center Laser Target Node -->
+  <circle cx="64" cy="64" r="2.5" fill="#38bdf8"/>
+</svg>

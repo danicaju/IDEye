@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="aiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d946ef"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#290b29" stroke="#a21caf" stroke-width="1.5"/>
+  <!-- Primary 4-pointed AI Magic Spark -->
+  <path d="M 32 12 Q 32 28 48 32 Q 32 32 32 48 Q 32 32 16 32 Q 32 32 32 12 Z" fill="url(#aiGrad)" stroke="#fdf4ff" stroke-width="1.5"/>
+  <!-- Smaller secondary satellite spark -->
+  <path d="M 46 16 Q 46 22 52 24 Q 46 24 46 30 Q 46 24 40 24 Q 46 24 46 16 Z" fill="#f472b6"/>
+  <!-- Small tertiary spark -->
+  <path d="M 18 42 Q 18 46 22 48 Q 18 48 18 52 Q 18 48 14 48 Q 18 48 18 42 Z" fill="#e879f9"/>
+</svg>

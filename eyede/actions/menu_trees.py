@@ -71,6 +71,106 @@ def create_back_action(parent_id: str = "ROOT", key_num: str = "7") -> MenuActio
     )
 
 
+def populate_ai_prediction_items(
+    predictions: Optional[List[str]] = None,
+    parent_id: str = "ROOT",
+) -> List[MenuAction]:
+    """
+    Constructs exactly 9 MenuAction items for the AI prediction menu (SNIPPETS).
+    Slots 0, 1, 2, 3, 5, 7: 6 AI suggestions
+    Slot 4: Center Pause action
+    Slot 6: Back action (to parent_id)
+    Slot 8: Regenerate / Refresh action
+    """
+    safe_preds = list(predictions or [])
+    default_fallbacks = [
+        'if __name__ == "__main__":\\n    ',
+        '[x for x in list]',
+        '{k: v for k, v in .items()}',
+        'with open("", "r") as f:',
+        'try:\\n    \\nfinally:\\n    ',
+        '{"": }',
+    ]
+    for d in default_fallbacks:
+        if len(safe_preds) >= 6:
+            break
+        safe_preds.append(d)
+
+    slot_keys = [("1", 0), ("2", 1), ("3", 2), ("4", 3), ("6", 4), ("8", 5)]
+    pred_actions: Dict[int, MenuAction] = {}
+    for slot_idx, (key_label, pred_idx) in enumerate(slot_keys):
+        pred_text = safe_preds[pred_idx]
+        display_label = pred_text.replace("\n", " ").strip()[:24]
+        pred_actions[pred_idx] = MenuAction(
+            id=f"AI_PRED_{pred_idx + 1}",
+            label=f"{key_label}: {display_label}",
+            hint="Sugerencia IA / Snippet",
+            action_type="SNIPPET",
+            snippet=pred_text,
+            icon="⚡",
+        )
+
+    return [
+        pred_actions[0],
+        pred_actions[1],
+        pred_actions[2],
+        pred_actions[3],
+        create_pause_action("5"),
+        pred_actions[4],
+        create_back_action(parent_id, "7"),
+        pred_actions[5],
+        MenuAction(
+            id="AI_REGENERATE",
+            label="9: REGENERAR IA",
+            hint="Re-ejecutar predicciones contextuales",
+            action_type="AI_REFRESH",
+            icon="🔄",
+        ),
+    ]
+
+
+def populate_local_symbol_items(
+    symbols: Optional[List[str]] = None,
+    parent_id: str = "T9",
+) -> List[MenuAction]:
+    """
+    Constructs exactly 9 MenuAction items for local symbols (T9_LOCAL_VARS).
+    Slots 0, 1, 2, 3, 5, 7, 8: up to 7 distinct user variables/functions
+    Slot 4: Center Pause action
+    Slot 6: Back action (to parent_id)
+    """
+    defaults = ["data", "result", "item", "val", "count", "res", "obj"]
+    clean_syms = [s for s in (symbols or []) if s and isinstance(s, str)]
+    for d in defaults:
+        if len(clean_syms) >= 7:
+            break
+        if d not in clean_syms:
+            clean_syms.append(d)
+
+    def _make_action(idx: int, slot_num: str, sym: str) -> MenuAction:
+        disp = sym if len(sym) <= 20 else sym[:18] + ".."
+        return MenuAction(
+            id=f"LVAR_{idx}",
+            label=f"{slot_num}: {disp}",
+            hint="Variable local",
+            action_type="SNIPPET",
+            snippet=sym,
+            icon="⚡",
+        )
+
+    return [
+        _make_action(1, "1", clean_syms[0]),
+        _make_action(2, "2", clean_syms[1]),
+        _make_action(3, "3", clean_syms[2]),
+        _make_action(4, "4", clean_syms[3]),
+        create_pause_action("5"),
+        _make_action(5, "6", clean_syms[4]),
+        create_back_action(parent_id, "7"),
+        _make_action(6, "8", clean_syms[5]),
+        _make_action(7, "9", clean_syms[6]),
+    ]
+
+
 def build_menu_tree() -> Dict[str, MenuNode]:
     """
     Constructs and returns the full hierarchical menu tree for EyeDE Phase 3.
@@ -141,11 +241,11 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         ),
         MenuAction(
             id="MENU_SNIPPETS",
-            label="9: IA / SNIPPETS RÁPIDOS",
-            hint="main, comp, open as f",
+            label="9: IA / PREDICCIÓN",
+            hint="Predicción contextual y snippets",
             action_type="SUBMENU",
             submenu_id="SNIPPETS",
-            icon="📁",
+            icon="⚡",
         ),
     ]
 
@@ -667,83 +767,20 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     )
 
     # =========================================================================
-    # 8. RAPID SNIPPETS / TEMPLATES
+    # 8. RAPID SNIPPETS / TEMPLATES & AI PREDICTIONS
     # =========================================================================
-    snippets_items = [
-        MenuAction(
-            id="SNP_MAIN",
-            label='1: if __name__ == "__main__":',
-            hint="Punto de entrada Python",
-            action_type="SNIPPET",
-            snippet='if __name__ == "__main__":\n    ',
-            icon="⚡",
-        ),
-        MenuAction(
-            id="SNP_LIST_COMP",
-            label="2: [x for x in list]",
-            hint="List comprehension",
-            action_type="SNIPPET",
-            snippet="[x for x in ]",
-            cursor_offset_left=1,
-            icon="⚡",
-        ),
-        MenuAction(
-            id="SNP_DICT_COMP",
-            label="3: {k: v for k, v...}",
-            hint="Dict comprehension",
-            action_type="SNIPPET",
-            snippet="{k: v for k, v in .items()}",
-            cursor_offset_left=9,
-            icon="⚡",
-        ),
-        MenuAction(
-            id="SNP_OPEN",
-            label="4: open() as f:",
-            hint="Gestor de contexto de archivo",
-            action_type="SNIPPET",
-            snippet='with open("", "r") as f:',
-            cursor_offset_up=0,
-            cursor_offset_left=13,
-            icon="⚡",
-        ),
-        create_pause_action("5"),
-        MenuAction(
-            id="SNP_TRY_FINALLY",
-            label="6: try / finally",
-            hint="Bloque try-finally",
-            action_type="SNIPPET",
-            snippet="try:\n    \nfinally:\n    ",
-            cursor_offset_up=2,
-            icon="⚡",
-        ),
-        create_back_action("ROOT", "7"),
-        MenuAction(
-            id="SNP_DICT_LITERAL",
-            label='8: {"": }',
-            hint="Diccionario clave-valor",
-            action_type="SNIPPET",
-            snippet='{"": }',
-            cursor_offset_left=4,
-            icon="⚡",
-        ),
-        MenuAction(
-            id="SNP_INIT",
-            label="9: def __init__(self):",
-            hint="Constructor de clase",
-            action_type="SNIPPET",
-            snippet="def __init__(self):\n    ",
-            icon="⚡",
-        ),
-    ]
+    snippets_items = populate_ai_prediction_items(None, parent_id="ROOT")
 
     tree["SNIPPETS"] = MenuNode(
         id="SNIPPETS",
-        title="IA / SNIPPETS RÁPIDOS",
-        breadcrumb_label="SNIPPETS",
+        title="IA / PREDICCIÓN",
+        breadcrumb_label="IA",
         items=snippets_items,
         parent_id="ROOT",
         sticky=False,
     )
+    # Alias for AI_PREDICT
+    tree["AI_PREDICT"] = tree["SNIPPETS"]
 
     # =========================================================================
     # 9. T9 KEYBOARD & IDENTIFIERS (2-HOP HIERARCHY)
@@ -756,8 +793,8 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         create_pause_action("5"),
         MenuAction(id="T9_GRP_UZ", label="6: u - z 📁", hint="Letras u, v, w, x, y, z", action_type="SUBMENU", submenu_id="T9_UZ", icon="📁"),
         create_back_action("ROOT", "7"),
-        MenuAction(id="T9_GRP_VARS", label="8: VARS: i, x, self 📁", hint="Variables habituales", action_type="SUBMENU", submenu_id="T9_VARS", icon="📁"),
-        MenuAction(id="T9_GRP_VALS", label="9: VALS: True, None 📁", hint="Literales True, False, None", action_type="SUBMENU", submenu_id="T9_VALS", icon="📁"),
+        MenuAction(id="T9_GRP_LOCAL_VARS", label="8: VARIABLES ARCHIVO 📁", hint="Símbolos del archivo actual", action_type="SUBMENU", submenu_id="T9_LOCAL_VARS", icon="📁"),
+        MenuAction(id="T9_GRP_VARS", label="9: VARS: i, x, self 📁", hint="Variables habituales", action_type="SUBMENU", submenu_id="T9_VARS", icon="📁"),
     ]
 
     tree["T9"] = MenuNode(
@@ -766,6 +803,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         breadcrumb_label="T9",
         items=t9_root_items,
         parent_id="ROOT",
+        sticky=False,
+    )
+
+    tree["T9_LOCAL_VARS"] = MenuNode(
+        id="T9_LOCAL_VARS",
+        title="VARIABLES DEL ARCHIVO",
+        breadcrumb_label="LOCALES",
+        items=populate_local_symbol_items(None, parent_id="T9"),
+        parent_id="T9",
         sticky=False,
     )
 

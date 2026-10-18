@@ -4,7 +4,8 @@ Central configuration for camera tracking, hybrid gaze estimation,
 gesture trigger thresholds, and UI display parameters.
 """
 
-from typing import Dict, Any, List
+import os
+from typing import Dict, Any, List, Optional
 
 # ==============================================================================
 # Camera & Video Capture Settings
@@ -185,7 +186,26 @@ CALIBRATION_SAMPLE_DELAY_SEC: float = 0.02
 
 # Debug widget sizing
 DEBUG_WINDOW_WIDTH: int = 320
-DEBUG_WINDOW_HEIGHT: int = 280
+DEBUG_WINDOW_HEIGHT: int = 360
 DEBUG_FEED_WIDTH: int = 280
 DEBUG_FEED_HEIGHT: int = 160
+
+# ==============================================================================
+# Phase 4: Live AST Context Reader & AI Code Predictor Settings
+# ==============================================================================
+# Workspace and active file context
+DEFAULT_WORKSPACE_DIR: str = os.getcwd()
+ACTIVE_FILE_PATH: Optional[str] = None
+AUTO_DETECT_RECENT_FILE: bool = True
+MAX_LOCAL_SYMBOLS: int = 12
+CONTEXT_MAX_LINES: int = 40
+PREDICTOR_MAX_CONTEXT_LINES: int = 30
+
+# LLM Provider Configuration
+LLM_PROVIDER: str = "ollama"  # "ollama", "openai", "groq", "gemini"
+LLM_ENDPOINT: str = "http://localhost:11434/api/generate"
+LLM_MODEL: str = "codellama"  # e.g. "codellama", "qwen2.5-coder", "llama3.2"
+LLM_API_KEY: str = ""
+LLM_TIMEOUT_SEC: float = 2.5  # Hard upper limit for responsiveness
+LLM_TEMPERATURE: float = 0.2
 

@@ -10,6 +10,7 @@ Features:
 - 'Salir' button to request graceful application termination.
 """
 
+import os
 from typing import Optional, Any
 import cv2
 import numpy as np
@@ -23,6 +24,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QProgressBar,
     QPushButton,
+    QFileDialog,
     QFrame,
 )
 
@@ -39,6 +41,7 @@ class DebugWidget(QWidget):
 
     recalibrate_requested = pyqtSignal()
     exit_requested = pyqtSignal()
+    file_linked = pyqtSignal(str)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -130,7 +133,29 @@ class DebugWidget(QWidget):
 
         main_layout.addLayout(mar_layout)
 
-        # 4. Action Buttons
+        # 4. Context & AI Engine Status
+        ai_layout = QVBoxLayout()
+        ai_layout.setSpacing(2)
+
+        self.lbl_active_file = QLabel("📄 Archivo: [Auto-detectar .py]", self)
+        self.lbl_active_file.setStyleSheet("font-size: 10px; color: #38bdf8;")
+        ai_layout.addWidget(self.lbl_active_file)
+
+        provider_name = getattr(config, "LLM_PROVIDER", "ollama").upper()
+        model_name = getattr(config, "LLM_MODEL", "codellama")
+        self.lbl_ai_engine = QLabel(f"⚡ Motor IA: {provider_name} ({model_name})", self)
+        self.lbl_ai_engine.setStyleSheet("font-size: 10px; color: #a7f3d0;")
+        ai_layout.addWidget(self.lbl_ai_engine)
+
+        main_layout.addLayout(ai_layout)
+
+        # 5. File Link Button
+        self.btn_link_file = QPushButton("📂 Vincular Archivo .py", self)
+        self.btn_link_file.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_link_file.clicked.connect(self._on_link_file_clicked)
+        main_layout.addWidget(self.btn_link_file)
+
+        # 6. Action Buttons
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
@@ -146,6 +171,29 @@ class DebugWidget(QWidget):
         btn_layout.addWidget(self.btn_exit)
 
         main_layout.addLayout(btn_layout)
+
+    def _on_link_file_clicked(self) -> None:
+        """Opens file dialog for user to select an active Python file."""
+        initial_dir = getattr(config, "DEFAULT_WORKSPACE_DIR", ".")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Vincular Archivo Python",
+            initial_dir,
+            "Python Files (*.py);;All Files (*)",
+        )
+        if file_path:
+            self.set_linked_file(file_path)
+            self.file_linked.emit(file_path)
+
+    def set_linked_file(self, file_path: str) -> None:
+        """Updates the active file label."""
+        if file_path:
+            name = os.path.basename(file_path)
+            self.lbl_active_file.setText(f"📄 Archivo: {name}")
+
+    def update_ai_status(self, status: str) -> None:
+        """Updates the AI engine status label."""
+        self.lbl_ai_engine.setText(f"⚡ IA: {status}")
 
     def update_mar(self, current_mar: float) -> None:
         """Updates the MAR progress bar and style based on threshold."""

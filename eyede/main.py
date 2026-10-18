@@ -34,6 +34,7 @@ try:
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.calibration_ui import CalibrationUI
+    from eyede.actions.context_reader import ContextReader
 except ImportError:
     import config
     from core.camera_tracker import CameraTracker
@@ -42,6 +43,7 @@ except ImportError:
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
     from ui.calibration_ui import CalibrationUI
+    from actions.context_reader import ContextReader
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
@@ -598,7 +600,12 @@ class EyeDEApplication:
 
         # Core subsystems
         self.tracker = CameraTracker(camera_index=self.camera_index, threaded=self.threaded)
-        self.overlay = OverlayWindow()
+        self.context_reader = ContextReader(
+            workspace_dir=getattr(config, "DEFAULT_WORKSPACE_DIR", os.getcwd()),
+            active_file=getattr(config, "ACTIVE_FILE_PATH", None),
+            auto_detect=getattr(config, "AUTO_DETECT_RECENT_FILE", True),
+        )
+        self.overlay = OverlayWindow(context_reader=self.context_reader)
         self.debug_widget = DebugWidget()
         self.calibration_ui: Optional[CalibrationUI] = None
         self._is_shutting_down: bool = False
@@ -618,6 +625,11 @@ class EyeDEApplication:
         # Overlay actions
         self.overlay.block_activated.connect(self._on_block_activated)
 
+        # Context reader & AI status connections
+        self.debug_widget.file_linked.connect(self.context_reader.set_active_file)
+        self.debug_widget.file_linked.connect(self.overlay.on_file_linked)
+        self.overlay.ai_status_updated.connect(self.debug_widget.update_ai_status)
+
         # Controls from UI to application lifecycle
         self.debug_widget.recalibrate_requested.connect(self.launch_calibration)
         self.debug_widget.exit_requested.connect(self.shutdown)
@@ -628,15 +640,26 @@ class EyeDEApplication:
 
     def _on_block_activated(self, block_idx: int, action: str) -> None:
         """Handles actions triggered from macro blocks."""
-        if hasattr(self.overlay, "current_node") and self.overlay.current_node:
-            curr_node = self.overlay.current_node
-            if 0 <= block_idx < len(curr_node.items):
-                item = curr_node.items[block_idx]
-                label = item.label
-                print(f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action} (Nodo: {self.overlay.current_node_id})")
-                return
-        label = config.MACRO_BLOCKS[block_idx]["label"] if 0 <= block_idx < len(config.MACRO_BLOCKS) else f"Block {block_idx}"
-        print(f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action}")
+        try:
+            if hasattr(self.overlay, "current_node") and self.overlay.current_node:
+                curr_node = self.overlay.current_node
+                if 0 <= block_idx < len(curr_node.items):
+                    item = curr_node.items[block_idx]
+                    label = item.label
+                    msg = f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action} (Nodo: {self.overlay.current_node_id})"
+                    try:
+                        print(msg)
+                    except UnicodeEncodeError:
+                        print(msg.encode("ascii", errors="replace").decode("ascii"))
+                    return
+            label = config.MACRO_BLOCKS[block_idx]["label"] if 0 <= block_idx < len(config.MACRO_BLOCKS) else f"Block {block_idx}"
+            msg = f"\n[EyeDE ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action}"
+            try:
+                print(msg)
+            except UnicodeEncodeError:
+                print(msg.encode("ascii", errors="replace").decode("ascii"))
+        except Exception:
+            pass
 
     def _configure_geometry(self) -> None:
         """Configures geometry of overlay across screen and docks debug monitor."""
@@ -696,6 +719,11 @@ class EyeDEApplication:
         started = self.tracker.start()
         if not started:
             print(f"[AVISO] No se pudo abrir la camara {self.tracker.camera_index}. Continuando...")
+
+        # Reflect any detected or preconfigured active file
+        active_f = self.context_reader.get_active_file()
+        if active_f:
+            self.debug_widget.set_linked_file(active_f)
 
         if not has_profile or self.force_calibrate:
             print("[INFO] No calibration profile found. Starting initial 5-point calibration...")

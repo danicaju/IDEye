@@ -32,7 +32,11 @@ try:
         MenuAction,
         build_menu_tree,
         get_breadcrumb_path,
+        populate_ai_prediction_items,
+        populate_local_symbol_items,
     )
+    from eyede.actions.context_reader import ContextReader
+    from eyede.actions.ai_predictor import AIPredictorWorker
 except ImportError:
     import config
     from actions.code_injector import CodeInjector
@@ -41,7 +45,11 @@ except ImportError:
         MenuAction,
         build_menu_tree,
         get_breadcrumb_path,
+        populate_ai_prediction_items,
+        populate_local_symbol_items,
     )
+    from actions.context_reader import ContextReader
+    from actions.ai_predictor import AIPredictorWorker
 
 
 class OverlayWindow(QWidget):
@@ -55,12 +63,14 @@ class OverlayWindow(QWidget):
     reading_mode_toggled = pyqtSignal(bool)  # True = reading mode on (10% opacity)
     menu_navigated = pyqtSignal(str)  # (current_node_id)
     action_executed = pyqtSignal(str, str)  # (action_id, action_description)
+    ai_status_updated = pyqtSignal(str)
 
     def __init__(
         self,
         parent: Optional[QWidget] = None,
         code_injector: Optional[CodeInjector] = None,
         menu_tree: Optional[Dict[str, MenuNode]] = None,
+        context_reader: Optional[ContextReader] = None,
     ):
         super().__init__(parent)
 
@@ -83,6 +93,9 @@ class OverlayWindow(QWidget):
         # 2. Code Injection & Menu Tree Subsystems
         self.code_injector = code_injector if code_injector is not None else CodeInjector(async_mode=True)
         self.menu_tree: Dict[str, MenuNode] = menu_tree if menu_tree is not None else build_menu_tree()
+        self.context_reader: ContextReader = context_reader if context_reader is not None else ContextReader()
+        self.ai_predictor_worker: Optional[AIPredictorWorker] = None
+        self.is_ai_predicting: bool = False
         self.current_node_id: str = "ROOT"
         self.last_action_desc: str = "Ninguna"
 
@@ -122,13 +135,100 @@ class OverlayWindow(QWidget):
         """Returns the currently active MenuNode."""
         return self.menu_tree.get(self.current_node_id, self.menu_tree.get("ROOT"))
 
+    def on_file_linked(self, file_path: str) -> None:
+        """Called when a user explicitly links a Python script."""
+        if self.context_reader:
+            self.context_reader.set_active_file(file_path)
+            self.last_action_desc = f"📂 Vinculado: {os.path.basename(file_path)}"
+            if self.current_node_id == "T9_LOCAL_VARS":
+                self._refresh_local_symbols()
+            self.update()
+
+    def _refresh_local_symbols(self) -> None:
+        """Refreshes local variables from active file via ContextReader."""
+        if not self.context_reader:
+            return
+        symbols = self.context_reader.extract_local_symbols(getattr(config, "MAX_LOCAL_SYMBOLS", 12))
+        new_items = populate_local_symbol_items(symbols, parent_id="T9")
+        if "T9_LOCAL_VARS" in self.menu_tree:
+            self.menu_tree["T9_LOCAL_VARS"].items = new_items
+
+    def _trigger_ai_prediction(self) -> None:
+        """
+        Triggers async AIPredictorWorker.
+        Prevents duplicate workers if one is already running (QA Requirement 3).
+        Sets overlay to loading state '⏳ Analizando...' and updates 6 blocks dynamically.
+        Extracts context non-blockingly on worker thread.
+        """
+        if self.ai_predictor_worker is not None:
+            if self.ai_predictor_worker.isRunning():
+                return
+            try:
+                self.ai_predictor_worker.predictions_ready.disconnect()
+                self.ai_predictor_worker.status_changed.disconnect()
+                self.ai_predictor_worker.finished.disconnect()
+            except Exception:
+                pass
+
+        loading_preds = [
+            "⏳ Analizando...",
+            "⏳ Analizando...",
+            "⏳ Analizando...",
+            "⏳ Analizando...",
+            "⏳ Analizando...",
+            "⏳ Analizando...",
+        ]
+        if "SNIPPETS" in self.menu_tree:
+            self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(loading_preds, parent_id="ROOT")
+        self.is_ai_predicting = True
+        self.last_action_desc = "⏳ IA Analizando..."
+        self.ai_status_updated.emit("⏳ Consultando IA...")
+        self.update()
+
+        self.ai_predictor_worker = AIPredictorWorker(
+            context_text="",
+            local_symbols=[],
+            provider=getattr(config, "LLM_PROVIDER", "ollama"),
+            endpoint=getattr(config, "LLM_ENDPOINT", "http://localhost:11434/api/generate"),
+            model=getattr(config, "LLM_MODEL", "codellama"),
+            timeout=getattr(config, "LLM_TIMEOUT_SEC", 2.5),
+            api_key=getattr(config, "LLM_API_KEY", ""),
+            temperature=getattr(config, "LLM_TEMPERATURE", 0.2),
+            context_reader=self.context_reader,
+        )
+        self.ai_predictor_worker.predictions_ready.connect(self._on_ai_predictions_ready)
+        self.ai_predictor_worker.status_changed.connect(self._on_ai_status_changed)
+        self.ai_predictor_worker.finished.connect(self._on_ai_worker_finished)
+        self.ai_predictor_worker.start()
+
+    def _on_ai_predictions_ready(self, predictions: List[str]) -> None:
+        """Called when AIPredictorWorker finishes with 6 suggestions."""
+        if "SNIPPETS" in self.menu_tree:
+            self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(predictions, parent_id="ROOT")
+        self.is_ai_predicting = False
+        self.last_action_desc = "⚡ 6 Sugerencias IA Listas"
+        self.ai_status_updated.emit("Listo (6 sugerencias)")
+        self.update()
+
+    def _on_ai_status_changed(self, status: str) -> None:
+        """Emits AI status update."""
+        self.ai_status_updated.emit(status)
+
+    def _on_ai_worker_finished(self) -> None:
+        """Worker lifecycle completion."""
+        self.is_ai_predicting = False
+
     def navigate_to(self, node_id: str) -> bool:
         """
         Navigates to a target menu node by ID.
-        Updates state and triggers repaint.
+        Updates state, refreshes dynamic nodes on demand, and triggers repaint.
         """
         if node_id in self.menu_tree:
             self.current_node_id = node_id
+            if node_id == "T9_LOCAL_VARS":
+                self._refresh_local_symbols()
+            elif node_id in ("SNIPPETS", "AI_PREDICT"):
+                self._trigger_ai_prediction()
             self.menu_navigated.emit(node_id)
             self.update()
             return True
@@ -215,8 +315,18 @@ class OverlayWindow(QWidget):
             self.block_activated.emit(target_block, item.id)
             return
 
-        # 4. Code / Key Injection (SNIPPET or KEY)
+        # 4. AI Regenerate / Refresh Action
+        if item.action_type == "AI_REFRESH" or item.id == "AI_REGENERATE":
+            self._trigger_ai_prediction()
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        # 5. Code / Key Injection (SNIPPET or KEY)
         if item.action_type in ("SNIPPET", "KEY"):
+            # Ignore placeholder while predicting
+            if item.action_type == "SNIPPET" and (not item.snippet or "Analizando..." in item.snippet):
+                return
+
             # Execute injection via non-blocking worker thread
             self.code_injector.execute_action(item)
             self.last_action_desc = f"{item.icon} {item.label}"
@@ -440,7 +550,7 @@ class OverlayWindow(QWidget):
                 )
 
             # Submenu or action pill indicator on bottom-right of block
-            if not self.reading_mode and not is_clicked:
+            if not self.reading_mode and not is_active_click:
                 badge_text = ""
                 badge_color = QColor(140, 150, 165, 160)
                 if item.action_type == "SUBMENU":
@@ -488,7 +598,16 @@ class OverlayWindow(QWidget):
         painter.end()
 
     def closeEvent(self, event) -> None:
-        """Safely stops background code injector worker thread on window close."""
+        """Safely stops background code injector and AI worker threads on window close."""
+        if hasattr(self, "ai_predictor_worker") and self.ai_predictor_worker is not None:
+            try:
+                if self.ai_predictor_worker.isRunning():
+                    self.ai_predictor_worker.quit()
+                    if not self.ai_predictor_worker.wait(1000):
+                        self.ai_predictor_worker.terminate()
+                        self.ai_predictor_worker.wait(300)
+            except Exception:
+                pass
         if hasattr(self, "code_injector") and self.code_injector is not None:
             self.code_injector.stop()
         super().closeEvent(event)

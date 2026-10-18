@@ -13,6 +13,77 @@ import threading
 import numpy as np
 
 
+try:
+    import eyede.config as config
+except ImportError:
+    try:
+        import config
+    except ImportError:
+        config = None
+
+
+class OneEuroFilter:
+    """
+    One Euro Filter (1€ Filter) with adaptive cutoff frequency:
+    - High smoothing / low cutoff at low velocity (eliminates resting tremor and webcam jitter).
+    - Low smoothing / high cutoff at high velocity (eliminates lag during saccades).
+    Reference: Casiez, Roussel, Vogel (CHI 2012) - 1€ Filter: A Simple Speed-based Low-pass Filter.
+    """
+    def __init__(
+        self,
+        t0: float = 0.0,
+        x0: float = 0.5,
+        min_cutoff: float = 0.55,
+        beta: float = 0.28,
+        d_cutoff: float = 1.0,
+    ):
+        self.min_cutoff = float(min_cutoff)
+        self.beta = float(beta)
+        self.d_cutoff = float(d_cutoff)
+        self.x_prev = float(x0)
+        self.dx_prev = 0.0
+        self.t_prev = float(t0)
+
+    @staticmethod
+    def smoothing_factor(dt: float, cutoff: float) -> float:
+        r = 2.0 * math.pi * cutoff * dt
+        return r / (r + 1.0)
+
+    def filter(self, t: float, x: float) -> float:
+        if self.t_prev <= 0.0:
+            self.t_prev = float(t)
+            self.x_prev = float(x)
+            self.dx_prev = 0.0
+            return float(x)
+
+        dt = float(t) - self.t_prev
+        # If dt is less than realistic frame interval or excessive (pause/gap), fallback to nominal 1/30s
+        if dt < 0.001 or dt > 0.5:
+            dt = 1.0 / 30.0
+        self.t_prev = float(t)
+
+        # 1. Estimate filtered derivative (velocity)
+        dx = (float(x) - self.x_prev) / dt
+        edx = self.smoothing_factor(dt, self.d_cutoff)
+        dx_hat = edx * dx + (1.0 - edx) * self.dx_prev
+
+        # 2. Compute dynamic cutoff frequency
+        cutoff = self.min_cutoff + self.beta * abs(dx_hat)
+        a = self.smoothing_factor(dt, cutoff)
+
+        # 3. Filter position
+        x_hat = a * float(x) + (1.0 - a) * self.x_prev
+
+        self.x_prev = x_hat
+        self.dx_prev = dx_hat
+        return x_hat
+
+    def reset(self, t0: float = 0.0, x0: float = 0.5) -> None:
+        self.x_prev = float(x0)
+        self.dx_prev = 0.0
+        self.t_prev = float(t0)
+
+
 class GazeEstimator:
     """
     Estimates normalized screen gaze coordinates (X, Y) in [0.0, 1.0] using a
@@ -22,7 +93,8 @@ class GazeEstimator:
     - ZeroDivisionError prevention with defensive epsilon bounds.
     - Face loss safety: maintains last valid position without crashing.
     - One-key center calibration (sets neutral anchor point).
-    - Jitter removal via Exponential Moving Average (EMA) filtering.
+    - Jitter removal via One Euro Filter (1€ Filter) and adaptive fixation deadzone.
+    - Ergonomic non-linear vertical expansion curve for full vertical screen reach.
     """
 
     def __init__(
@@ -30,9 +102,9 @@ class GazeEstimator:
         head_weight: float = 0.60,
         iris_weight: float = 0.40,
         head_sensitivity_x: float = 2.6,
-        head_sensitivity_y: float = 2.6,
-        iris_sensitivity_x: float = 3.5,
-        iris_sensitivity_y: float = 3.5,
+        head_sensitivity_y: float = 6.8,
+        iris_sensitivity_x: float = 3.2,
+        iris_sensitivity_y: float = 8.5,
         ema_alpha: float = 0.22,
         # Landmark indices
         nose_tip_idx: int = 1,
@@ -67,8 +139,28 @@ class GazeEstimator:
 
         self.ema_alpha = max(0.01, min(1.0, float(ema_alpha)))
 
-        # Blink suppression parameters
-        self.blink_threshold: float = 0.012
+        # Ergonomic vertical non-linear expansion gain & independent multiplier
+        self.vertical_multiplier: float = float(getattr(config, "VERTICAL_MULTIPLIER", 2.4))
+        self.vertical_expansion_gain: float = float(getattr(config, "VERTICAL_EXPANSION_GAIN", 1.8))
+
+        # One Euro Filter (1€ Filter) for adaptive anti-jitter & zero-lag saccades
+        oe_min_cutoff = float(getattr(config, "ONE_EURO_MIN_CUTOFF", 0.55))
+        oe_beta = float(getattr(config, "ONE_EURO_BETA", 0.28))
+        oe_d_cutoff = float(getattr(config, "ONE_EURO_D_CUTOFF", 1.0))
+        self.one_euro_x = OneEuroFilter(min_cutoff=oe_min_cutoff, beta=oe_beta, d_cutoff=oe_d_cutoff)
+        self.one_euro_y = OneEuroFilter(min_cutoff=oe_min_cutoff, beta=oe_beta, d_cutoff=oe_d_cutoff)
+        self.use_one_euro: bool = True
+
+        # Adaptive Fixation Deadzone (I-VT velocity/distance filtering with sliding leash)
+        self.fixation_deadzone: float = float(getattr(config, "FIXATION_DEADZONE", 0.022))
+        self.fixation_anchor_x: float = 0.5
+        self.fixation_anchor_y: float = 0.5
+        self.is_fixated: bool = False
+        self.stability_score: float = 1.0
+
+        # Blink suppression parameters (scale-invariant EAR + absolute height fallback)
+        self.ear_blink_threshold: float = float(getattr(config, "EAR_BLINK_THRESHOLD", 0.14))
+        self.blink_threshold: float = float(getattr(config, "MIN_EYE_HEIGHT_RATIO", 0.008))
         self.is_blinking: bool = False
         self.last_valid_iris_x: float = 0.5
         self.last_valid_iris_y: float = 0.5
@@ -99,7 +191,7 @@ class GazeEstimator:
         self.last_raw_iris_x: float = 0.5
         self.last_raw_iris_y: float = 0.5
 
-        # Smoothed EMA state
+        # Smoothed state
         self.smoothed_x: float = 0.5
         self.smoothed_y: float = 0.5
         self._has_first_sample: bool = False
@@ -127,6 +219,7 @@ class GazeEstimator:
         """
         Calculates relative normalized horizontal and vertical iris position within
         both eye contours, safe against ZeroDivisionError and eye closure blinks.
+        Enhanced with asymmetric single-eye squint/blink handling and raw noise gating.
         """
         eps = 1e-6
         try:
@@ -156,43 +249,66 @@ class GazeEstimator:
             top_x_r, top_y_r = self._safe_coord(p_top_r)
             bot_x_r, bot_y_r = self._safe_coord(p_bottom_r)
 
+            # Horizontal canthal eye widths
+            min_x_l = min(in_x_l, out_x_l)
+            max_x_l = max(in_x_l, out_x_l)
+            width_l = max(max_x_l - min_x_l, eps)
+
+            min_x_r = min(in_x_r, out_x_r)
+            max_x_r = max(in_x_r, out_x_r)
+            width_r = max(max_x_r - min_x_r, eps)
+
             # Vertical eyelid openings
             height_l = max(abs(top_y_l - bot_y_l), 0.0)
             height_r = max(abs(top_y_r - bot_y_r), 0.0)
 
-            # Blink Detection: if both eyes are closed, freeze iris to avoid erratic pointer jumps
-            if height_l < self.blink_threshold and height_r < self.blink_threshold:
+            # Scale-invariant Eye Aspect Ratio (EAR)
+            ear_l = height_l / width_l
+            ear_r = height_r / width_r
+
+            # True blink occurs when both eye aspect ratios collapse (or absolute height is tiny)
+            is_closed_l = (ear_l < self.ear_blink_threshold) or (height_l < self.blink_threshold)
+            is_closed_r = (ear_r < self.ear_blink_threshold) or (height_r < self.blink_threshold)
+
+            if is_closed_l and is_closed_r:
                 self.is_blinking = True
                 return self.last_valid_iris_x, self.last_valid_iris_y
 
             self.is_blinking = False
 
             # Left eye ratios
-            min_x_l = min(in_x_l, out_x_l)
-            max_x_l = max(in_x_l, out_x_l)
-            width_l = max(max_x_l - min_x_l, eps)
-            safe_h_l = max(height_l, eps)
-            min_y_l = min(top_y_l, bot_y_l)
-
-            ratio_x_l = (ix_l - min_x_l) / width_l
-            ratio_y_l = (iy_l - min_y_l) / safe_h_l
+            ratio_x_l = max(0.0, min(1.0, (ix_l - min_x_l) / width_l))
+            nominal_h_l = max(height_l, 0.70 * width_l, eps)
+            center_y_l = (top_y_l + bot_y_l) * 0.5
+            ratio_y_l = max(0.0, min(1.0, 0.5 + (iy_l - center_y_l) / nominal_h_l))
 
             # Right eye ratios
-            min_x_r = min(in_x_r, out_x_r)
-            max_x_r = max(in_x_r, out_x_r)
-            width_r = max(max_x_r - min_x_r, eps)
-            safe_h_r = max(height_r, eps)
-            min_y_r = min(top_y_r, bot_y_r)
+            ratio_x_r = max(0.0, min(1.0, (ix_r - min_x_r) / width_r))
+            nominal_h_r = max(height_r, 0.70 * width_r, eps)
+            center_y_r = (top_y_r + bot_y_r) * 0.5
+            ratio_y_r = max(0.0, min(1.0, 0.5 + (iy_r - center_y_r) / nominal_h_r))
 
-            ratio_x_r = (ix_r - min_x_r) / width_r
-            ratio_y_r = (iy_r - min_y_r) / safe_h_r
-
-            # Average both eyes
-            avg_x = (ratio_x_l + ratio_x_r) * 0.5
-            avg_y = (ratio_y_l + ratio_y_r) * 0.5
+            # Squint / asymmetric blink handling: if one eye is occluded, use the open one
+            if is_closed_l and not is_closed_r:
+                avg_x = ratio_x_r
+                avg_y = ratio_y_r
+            elif is_closed_r and not is_closed_l:
+                avg_x = ratio_x_l
+                avg_y = ratio_y_l
+            else:
+                avg_x = (ratio_x_l + ratio_x_r) * 0.5
+                avg_y = (ratio_y_l + ratio_y_r) * 0.5
 
             clamped_x = max(0.0, min(1.0, float(avg_x)))
             clamped_y = max(0.0, min(1.0, float(avg_y)))
+
+            # Soft quadratic noise gating for raw webcam micro-jitter (1-3 px flicker)
+            d_raw = math.hypot(clamped_x - self.last_valid_iris_x, clamped_y - self.last_valid_iris_y)
+            raw_gate = 0.035
+            if d_raw < raw_gate:
+                weight = (d_raw / raw_gate) ** 2
+                clamped_x = (1.0 - weight) * self.last_valid_iris_x + weight * clamped_x
+                clamped_y = (1.0 - weight) * self.last_valid_iris_y + weight * clamped_y
 
             self.last_valid_iris_x = clamped_x
             self.last_valid_iris_y = clamped_y
@@ -219,13 +335,13 @@ class GazeEstimator:
     ) -> None:
         """Manually sets gain / sensitivity multipliers."""
         if head_x is not None:
-            self.head_sensitivity_x = max(0.5, min(10.0, float(head_x)))
+            self.head_sensitivity_x = max(0.5, min(15.0, float(head_x)))
         if head_y is not None:
-            self.head_sensitivity_y = max(0.5, min(10.0, float(head_y)))
+            self.head_sensitivity_y = max(0.5, min(20.0, float(head_y)))
         if iris_x is not None:
-            self.iris_sensitivity_x = max(0.5, min(10.0, float(iris_x)))
+            self.iris_sensitivity_x = max(0.5, min(15.0, float(iris_x)))
         if iris_y is not None:
-            self.iris_sensitivity_y = max(0.5, min(10.0, float(iris_y)))
+            self.iris_sensitivity_y = max(0.5, min(25.0, float(iris_y)))
 
     def adjust_sensitivity(self, multiplier: float) -> None:
         """Scales all sensitivities by a relative multiplier (e.g. 1.1 for +10%)."""
@@ -236,6 +352,40 @@ class GazeEstimator:
             iris_x=self.iris_sensitivity_x * mult,
             iris_y=self.iris_sensitivity_y * mult,
         )
+
+    def set_anti_jitter_damping(self, level: float) -> None:
+        """
+        Adjusts anti-jitter damping level (1.0 to 10.0).
+        Higher level = heavier damping at resting (lower min_cutoff, larger deadzone).
+        Lower level = lighter damping, more raw response.
+        """
+        clamped = max(1.0, min(10.0, float(level)))
+        t = (clamped - 1.0) / 9.0
+        min_cutoff = 1.0 - t * 0.82    # Level 1: 1.0 Hz -> Level 10: 0.18 Hz
+        deadzone = 0.010 + t * 0.024  # Level 1: 0.010 -> Level 10: 0.034
+        self.one_euro_x.min_cutoff = min_cutoff
+        self.one_euro_y.min_cutoff = min_cutoff
+        self.fixation_deadzone = deadzone
+
+    def _apply_ergonomic_vertical_curve(self, delta_y: float) -> float:
+        """
+        Ergonomic non-linear vertical expansion curve with independent vertical multiplier
+        and smooth micro-damped centering curve around resting neutral position.
+        Compensates for the reduced human vertical ocular/cervical span (~30% of horizontal).
+        Applies progressive expansion so gentle head pitch or looking up/down comfortably
+        hits top row (Y < 0.20) and bottom row (Y > 0.80), while remaining rock-solid at center.
+        """
+        if abs(delta_y) < 1e-6:
+            return 0.0
+        sign = 1.0 if delta_y >= 0.0 else -1.0
+        u = abs(delta_y)
+        cz = 0.040
+        if u <= cz:
+            expanded = u * (u / cz) ** 2
+        else:
+            excess = u - cz
+            expanded = cz + self.vertical_multiplier * excess * (1.0 + self.vertical_expansion_gain * excess)
+        return sign * expanded
 
     def calibrate_center(self, face_landmarks: Any, nominal_interocular: float = 0.28) -> bool:
         """
@@ -279,16 +429,25 @@ class GazeEstimator:
             self.neutral_iris_y = iris_y
             self.is_calibrated = True
 
-            # Snap smoothed pointer straight to center
+            # Snap smoothed pointer straight to center and reset filters
             self.smoothed_x = 0.5
             self.smoothed_y = 0.5
+            self.fixation_anchor_x = 0.5
+            self.fixation_anchor_y = 0.5
+            now = time.perf_counter()
+            self.one_euro_x.reset(now, 0.5)
+            self.one_euro_y.reset(now, 0.5)
             self._has_first_sample = True
             return True
 
         except (IndexError, AttributeError, TypeError):
             return False
 
-    def estimate(self, face_landmarks: Any) -> Tuple[float, float, bool, Dict[str, Any]]:
+    def estimate(
+        self,
+        face_landmarks: Any,
+        timestamp: Optional[float] = None,
+    ) -> Tuple[float, float, bool, Dict[str, Any]]:
         """
         Estimates the normalized gaze coordinates (X, Y) in range [0.0, 1.0].
 
@@ -309,6 +468,8 @@ class GazeEstimator:
             "raw_iris": (self.last_raw_iris_x, self.last_raw_iris_y),
             "neutral_head": (self.neutral_head_x, self.neutral_head_y),
             "neutral_iris": (self.neutral_iris_x, self.neutral_iris_y),
+            "is_fixated": self.is_fixated,
+            "stability_score": self.stability_score,
         }
 
         # 1. Face loss check: maintain last valid coordinates gracefully (strictly clipped)
@@ -344,9 +505,12 @@ class GazeEstimator:
             combined_delta_x = (self.head_weight * delta_head_x) + (self.iris_weight * delta_iris_x)
             combined_delta_y = (self.head_weight * delta_head_y) + (self.iris_weight * delta_iris_y)
 
+            # Ergonomic vertical curve expansion
+            expanded_delta_y = self._apply_ergonomic_vertical_curve(combined_delta_y)
+
             # 5. Screen coordinate mapping centered at (0.5, 0.5)
             raw_target_x = 0.5 + combined_delta_x
-            raw_target_y = 0.5 + combined_delta_y
+            raw_target_y = 0.5 + expanded_delta_y
 
             if self.has_5_point_calibration:
                 mapped_x, mapped_y = self.apply_5_point_mapping(raw_target_x, raw_target_y)
@@ -356,19 +520,56 @@ class GazeEstimator:
                 target_x = float(np.clip(raw_target_x, 0.0, 1.0))
                 target_y = float(np.clip(raw_target_y, 0.0, 1.0))
 
-            # 6. Exponential Moving Average (EMA) filtering
+            # 6. Adaptive Fixation Deadzone (I-VT velocity/distance filtering with sliding leash)
+            dist_to_anchor = math.hypot(target_x - self.fixation_anchor_x, target_y - self.fixation_anchor_y)
+            if dist_to_anchor <= self.fixation_deadzone:
+                self.is_fixated = True
+                self.stability_score = max(0.0, min(1.0, 1.0 - (dist_to_anchor / max(self.fixation_deadzone, 1e-6))))
+                # Inside deadzone: damp micro-jitter cubically towards fixation anchor
+                damping_ratio = (dist_to_anchor / max(self.fixation_deadzone, 1e-6)) ** 3
+                filtered_target_x = self.fixation_anchor_x + (target_x - self.fixation_anchor_x) * damping_ratio
+                filtered_target_y = self.fixation_anchor_y + (target_y - self.fixation_anchor_y) * damping_ratio
+            else:
+                self.is_fixated = False
+                self.stability_score = max(0.0, 0.5 - min(0.5, dist_to_anchor))
+                # Outside deadzone: sliding leash prevents limit-cycle side-to-side oscillation
+                if dist_to_anchor > 2.5 * self.fixation_deadzone:
+                    # Saccade / large intentional movement: snap anchor to target
+                    self.fixation_anchor_x = target_x
+                    self.fixation_anchor_y = target_y
+                else:
+                    # Smooth pursuit / small departure: smoothly drag anchor along displacement vector
+                    excess = dist_to_anchor - self.fixation_deadzone
+                    slide_step = excess * 0.70
+                    dir_x = (target_x - self.fixation_anchor_x) / dist_to_anchor
+                    dir_y = (target_y - self.fixation_anchor_y) / dist_to_anchor
+                    self.fixation_anchor_x += dir_x * slide_step
+                    self.fixation_anchor_y += dir_y * slide_step
+                filtered_target_x = target_x
+                filtered_target_y = target_y
+
+            # 7. One Euro Filter (1€ Filter) & EMA convergence
+            now = timestamp if timestamp is not None else time.perf_counter()
             if not self._has_first_sample:
                 self.smoothed_x = target_x
                 self.smoothed_y = target_y
+                self.fixation_anchor_x = target_x
+                self.fixation_anchor_y = target_y
+                self.one_euro_x.reset(now, target_x)
+                self.one_euro_y.reset(now, target_y)
                 self._has_first_sample = True
             else:
-                alpha = self.ema_alpha
-                self.smoothed_x = alpha * target_x + (1.0 - alpha) * self.smoothed_x
-                self.smoothed_y = alpha * target_y + (1.0 - alpha) * self.smoothed_y
-
-            # Ensure bounds strictly within [0.0, 1.0]
-            self.smoothed_x = float(np.clip(self.smoothed_x, 0.0, 1.0))
-            self.smoothed_y = float(np.clip(self.smoothed_y, 0.0, 1.0))
+                if self.use_one_euro:
+                    filtered_x = self.one_euro_x.filter(now, filtered_target_x)
+                    filtered_y = self.one_euro_y.filter(now, filtered_target_y)
+                    self.smoothed_x = float(np.clip(filtered_x, 0.0, 1.0))
+                    self.smoothed_y = float(np.clip(filtered_y, 0.0, 1.0))
+                else:
+                    alpha = self.ema_alpha
+                    self.smoothed_x = alpha * target_x + (1.0 - alpha) * self.smoothed_x
+                    self.smoothed_y = alpha * target_y + (1.0 - alpha) * self.smoothed_y
+                    self.smoothed_x = float(np.clip(self.smoothed_x, 0.0, 1.0))
+                    self.smoothed_y = float(np.clip(self.smoothed_y, 0.0, 1.0))
 
             debug_info.update({
                 "target_raw": (raw_target_x, raw_target_y),
@@ -376,6 +577,8 @@ class GazeEstimator:
                 "raw_head": (head_x, head_y),
                 "raw_iris": (iris_x, iris_y),
                 "is_blinking": self.is_blinking,
+                "is_fixated": self.is_fixated,
+                "stability_score": self.stability_score,
                 "has_5_point_calibration": self.has_5_point_calibration,
                 "calibration_rmse": self.calibration_rmse,
             })
@@ -389,7 +592,7 @@ class GazeEstimator:
 
     def get_raw_gaze(self, face_landmarks: Any) -> Optional[Tuple[float, float]]:
         """
-        Extracts raw uncalibrated normalized gaze (X, Y) prior to 5-point mapping and EMA smoothing.
+        Extracts raw uncalibrated normalized gaze (X, Y) prior to 5-point mapping and filtering.
         Returns (raw_x, raw_y) or None if face is lost.
         """
         if face_landmarks is None:
@@ -406,7 +609,8 @@ class GazeEstimator:
             delta_iris_y = (iris_y - self.neutral_iris_y) * self.iris_sensitivity_y
             combined_delta_x = (self.head_weight * delta_head_x) + (self.iris_weight * delta_iris_x)
             combined_delta_y = (self.head_weight * delta_head_y) + (self.iris_weight * delta_iris_y)
-            return 0.5 + combined_delta_x, 0.5 + combined_delta_y
+            expanded_delta_y = self._apply_ergonomic_vertical_curve(combined_delta_y)
+            return 0.5 + combined_delta_x, 0.5 + expanded_delta_y
         except Exception:
             return None
 
@@ -754,6 +958,12 @@ class GazeEstimator:
             self.is_blinking = False
             self.smoothed_x = 0.5
             self.smoothed_y = 0.5
+            self.fixation_anchor_x = 0.5
+            self.fixation_anchor_y = 0.5
+            self.is_fixated = False
+            self.stability_score = 1.0
+            self.one_euro_x.reset(0.0, 0.5)
+            self.one_euro_y.reset(0.0, 0.5)
             self._has_first_sample = False
             self.has_5_point_calibration = False
             self.calib_weights_x = None

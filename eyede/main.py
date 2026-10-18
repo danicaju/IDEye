@@ -669,6 +669,19 @@ class EyeDEApplication(QObject):
         # Tracker signals to DebugWidget
         self.tracker.frame_ready.connect(self.debug_widget.on_frame_ready)
 
+        # Interactive debug tuning to tracker gaze estimator
+        if hasattr(self.tracker, "gaze_estimator") and self.tracker.gaze_estimator is not None:
+            self.debug_widget.set_gaze_estimator(self.tracker.gaze_estimator)
+            self.debug_widget.sensitivity_x_changed.connect(
+                lambda v: self.tracker.gaze_estimator.set_sensitivity(head_x=v, iris_x=v * 1.35)
+            )
+            self.debug_widget.sensitivity_y_changed.connect(
+                lambda v: self.tracker.gaze_estimator.set_sensitivity(head_y=v, iris_y=v * 1.30)
+            )
+            self.debug_widget.anti_jitter_changed.connect(
+                lambda v: self.tracker.gaze_estimator.set_anti_jitter_damping(v)
+            )
+
         # Overlay actions
         self.overlay.block_activated.connect(self._on_block_activated)
 
@@ -778,6 +791,22 @@ class EyeDEApplication(QObject):
                 print(f"[INFO] Moved active calibration profile to '{bak_path}'.")
             except Exception as e:
                 print(f"[AVISO] Could not backup calibration profile: {e}")
+
+        if hasattr(self, "debug_widget") and self.debug_widget is not None:
+            hx = getattr(config, "DEFAULT_HEAD_SENSITIVITY_X", 2.6)
+            hy = getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 6.8)
+            self.debug_widget.slider_sens_x.blockSignals(True)
+            self.debug_widget.slider_sens_y.blockSignals(True)
+            self.debug_widget.slider_damping.blockSignals(True)
+            self.debug_widget.slider_sens_x.setValue(int(hx * 10))
+            self.debug_widget.slider_sens_y.setValue(int(hy * 10))
+            self.debug_widget.slider_damping.setValue(6)
+            self.debug_widget.slider_sens_x.blockSignals(False)
+            self.debug_widget.slider_sens_y.blockSignals(False)
+            self.debug_widget.slider_damping.blockSignals(False)
+            self.debug_widget.lbl_sens_x.setText(f"Sensibilidad X: {hx:.1f}x")
+            self.debug_widget.lbl_sens_y.setText(f"Sensibilidad Y (Ergonómica): {hy:.1f}x")
+            self.debug_widget.lbl_damping.setText("Anti-Temblor (Filtro 1€): Nivel 6")
 
         if self.overlay is not None:
             self.overlay.last_action_desc = "🔄 Calibración reseteada"

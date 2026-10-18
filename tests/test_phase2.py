@@ -366,6 +366,59 @@ class TestDebugWidgetMemorySafety(unittest.TestCase):
         self.assertEqual(self.debug_widget.btn_recalibrate.focusPolicy(), Qt.FocusPolicy.NoFocus)
         self.assertEqual(self.debug_widget.btn_exit.focusPolicy(), Qt.FocusPolicy.NoFocus)
 
+    def test_debug_widget_sliders_tuning_and_signals(self):
+        """Verifies sensitivity and damping sliders emit signals and update gaze estimator."""
+        estimator = GazeEstimator()
+        self.debug_widget.set_gaze_estimator(estimator)
+
+        emitted_x = []
+        emitted_y = []
+        emitted_damping = []
+
+        self.debug_widget.sensitivity_x_changed.connect(lambda v: emitted_x.append(v))
+        self.debug_widget.sensitivity_y_changed.connect(lambda v: emitted_y.append(v))
+        self.debug_widget.anti_jitter_changed.connect(lambda v: emitted_damping.append(v))
+
+        # Adjust X sensitivity slider (range 10 to 80, value 45 -> 4.5x)
+        self.debug_widget.slider_sens_x.setValue(45)
+        self.assertEqual(len(emitted_x), 1)
+        self.assertAlmostEqual(emitted_x[0], 4.5, places=2)
+        self.assertAlmostEqual(estimator.head_sensitivity_x, 4.5, places=2)
+
+        # Adjust Y sensitivity slider (range 20 to 140, value 85 -> 8.5x)
+        self.debug_widget.slider_sens_y.setValue(85)
+        self.assertEqual(len(emitted_y), 1)
+        self.assertAlmostEqual(emitted_y[0], 8.5, places=2)
+        self.assertAlmostEqual(estimator.head_sensitivity_y, 8.5, places=2)
+
+        # Adjust Anti-Jitter Damping slider (range 1 to 10, value 8)
+        self.debug_widget.slider_damping.setValue(8)
+        self.assertEqual(len(emitted_damping), 1)
+        self.assertEqual(emitted_damping[0], 8.0)
+        self.assertLess(estimator.one_euro_x.min_cutoff, 0.55)
+
+    def test_debug_widget_focus_policy_on_sliders(self):
+        """Audits that tuning sliders strictly adhere to NoFocus policy."""
+        self.assertEqual(self.debug_widget.slider_sens_x.focusPolicy(), Qt.FocusPolicy.NoFocus)
+        self.assertEqual(self.debug_widget.slider_sens_y.focusPolicy(), Qt.FocusPolicy.NoFocus)
+        self.assertEqual(self.debug_widget.slider_damping.focusPolicy(), Qt.FocusPolicy.NoFocus)
+        self.assertEqual(self.debug_widget.btn_reset.focusPolicy(), Qt.FocusPolicy.NoFocus)
+
+    def test_debug_widget_reset_sliders(self):
+        """Tests that reset button restores default sensitivity and damping values."""
+        self.debug_widget.slider_sens_x.setValue(70)
+        self.debug_widget.slider_sens_y.setValue(120)
+        self.debug_widget.slider_damping.setValue(2)
+
+        emitted_reset = []
+        self.debug_widget.reset_calibration_requested.connect(lambda: emitted_reset.append(True))
+        self.debug_widget.btn_reset.click()
+
+        self.assertEqual(len(emitted_reset), 1)
+        self.assertEqual(self.debug_widget.slider_sens_x.value(), int(config.DEFAULT_HEAD_SENSITIVITY_X * 10))
+        self.assertEqual(self.debug_widget.slider_sens_y.value(), int(config.DEFAULT_HEAD_SENSITIVITY_Y * 10))
+        self.assertEqual(self.debug_widget.slider_damping.value(), 6)
+
 
 class TestCalibrationUIWorkflow(unittest.TestCase):
     """Tests 5-point calibration sequential guide and state progression."""
@@ -478,6 +531,31 @@ class TestEyeDEApplicationLifecycle(unittest.TestCase):
         app._on_block_activated(0, "INSERT_IF_ELSE")
         app._on_block_activated(4, "PAUSE_RESUME")
         app._on_block_activated(8, "ACTION_EXIT")
+        app.shutdown()
+
+    def test_app_slider_wiring_to_tracker_gaze_estimator(self):
+        """Verifies that debug widget sliders update the tracker's gaze estimator in real-time."""
+        app = EyeDEApplication(camera_index="synthetic", force_calibrate=False, threaded=False)
+        self.assertIsNotNone(app.tracker.gaze_estimator)
+
+        # Move X slider to 55 (5.5x)
+        app.debug_widget.slider_sens_x.setValue(55)
+        self.assertAlmostEqual(app.tracker.gaze_estimator.head_sensitivity_x, 5.5, places=2)
+
+        # Move Y slider to 95 (9.5x)
+        app.debug_widget.slider_sens_y.setValue(95)
+        self.assertAlmostEqual(app.tracker.gaze_estimator.head_sensitivity_y, 9.5, places=2)
+
+        # Move Damping slider to 9
+        app.debug_widget.slider_damping.setValue(9)
+        self.assertLess(app.tracker.gaze_estimator.one_euro_x.min_cutoff, 0.45)
+
+        # Test reset_calibration restores debug sliders
+        app.reset_calibration()
+        self.assertEqual(app.debug_widget.slider_sens_x.value(), int(config.DEFAULT_HEAD_SENSITIVITY_X * 10))
+        self.assertEqual(app.debug_widget.slider_sens_y.value(), int(config.DEFAULT_HEAD_SENSITIVITY_Y * 10))
+        self.assertEqual(app.debug_widget.slider_damping.value(), 6)
+
         app.shutdown()
 
 

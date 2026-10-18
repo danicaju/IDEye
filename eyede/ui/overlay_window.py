@@ -107,13 +107,14 @@ class OverlayWindow(QWidget):
         self.current_gaze: Tuple[float, float] = (0.5, 0.5)
 
         # Layout constants
-        self.breadcrumb_height: float = 38.0
+        self.breadcrumb_height: float = 42.0
         self.margin: float = 8.0
 
         # Window title for identification
         self.setWindowTitle("EyeDE - Gaze Macro Grid HUD (Phase 3)")
 
         # 4. Pre-allocated rendering objects to prevent 30/60 FPS GC pressure and memory leaks
+        self._font_header_pill = QFont("Segoe UI", 9, QFont.Weight.Bold)
         self._font_header_left = QFont("Segoe UI", 10, QFont.Weight.Bold)
         self._font_header_center = QFont("Segoe UI", 9, QFont.Weight.Bold)
         self._font_header_right = QFont("Segoe UI", 9)
@@ -121,15 +122,21 @@ class OverlayWindow(QWidget):
         self._font_hint = QFont("Segoe UI", 9)
         self._font_badge = QFont("Segoe UI", 8, QFont.Weight.Bold)
 
-        self._brush_header_bg = QBrush(QColor(14, 18, 24, 230))
-        self._pen_header_border = QPen(QColor(65, 75, 95, 200), 1.5)
-        self._pen_header_left = QPen(QColor(255, 215, 60))
+        # Header bar styles (Acrylic Glassmorphism)
+        self._brush_header_bg = QBrush(QColor(13, 17, 23, 235))
+        self._pen_header_border = QPen(QColor(48, 54, 61, 200), 1.5)
+        self._pen_header_left = QPen(QColor(240, 246, 252))
         self._pen_header_center = QPen(QColor(248, 113, 113))
-        self._pen_header_right = QPen(QColor(160, 230, 180))
+        self._pen_header_right = QPen(QColor(56, 189, 248))
+
+        # Mode indicator pills
+        self._brush_pill_edit = QBrush(QColor(16, 185, 129, 220))
+        self._brush_pill_read = QBrush(QColor(245, 158, 11, 220))
+        self._color_pill_text = QColor(10, 25, 20)
 
         # Styles for blocks
         self._brush_click = QBrush(QColor(*config.OVERLAY_COLOR_CLICK))
-        self._pen_click = QPen(QColor(*config.OVERLAY_CLICK_BORDER_COLOR), 3)
+        self._pen_click = QPen(QColor(*config.OVERLAY_CLICK_BORDER_COLOR), 3.5)
         self._color_click_text = QColor(10, 30, 15)
         self._color_click_hint = QColor(25, 55, 30)
 
@@ -138,38 +145,90 @@ class OverlayWindow(QWidget):
         self._color_hover_text = QColor(*config.OVERLAY_TEXT_HOVER_COLOR)
         self._color_hover_hint = QColor(230, 235, 245)
 
-        self._brush_reading_center = QBrush(QColor(25, 45, 75, 180))
-        self._pen_reading_center = QPen(QColor(0, 150, 255, 220), 2)
-        self._color_reading_center_text = QColor(200, 225, 255)
-        self._color_reading_center_hint = QColor(150, 180, 220)
+        self._brush_reading_center = QBrush(QColor(16, 185, 129, 180))
+        self._pen_reading_center = QPen(QColor(52, 211, 153, 230), 2.5)
+        self._color_reading_center_text = QColor(240, 253, 244)
+        self._color_reading_center_hint = QColor(167, 243, 208)
 
-        self._brush_reading_other = QBrush(QColor(15, 18, 22, 50))
-        self._pen_reading_other = QPen(QColor(40, 45, 55, 60), 1)
-        self._color_reading_other_text = QColor(120, 130, 145, 100)
-        self._color_reading_other_hint = QColor(80, 90, 105, 80)
+        self._brush_reading_other = QBrush(QColor(15, 18, 22, 40))
+        self._pen_reading_other = QPen(QColor(40, 45, 55, 50), 1)
+        self._color_reading_other_text = QColor(120, 130, 145, 80)
+        self._color_reading_other_hint = QColor(80, 90, 105, 60)
 
         self._brush_rest = QBrush(QColor(*config.OVERLAY_COLOR_REST))
         self._pen_rest = QPen(QColor(*config.OVERLAY_REST_BORDER_COLOR), config.OVERLAY_BORDER_WIDTH)
 
-        self._brush_back = QBrush(QColor(36, 28, 38, 185))
-        self._pen_back = QPen(QColor(180, 110, 190, 180), 2)
+        self._brush_back = QBrush(QColor(38, 20, 34, 215))
+        self._pen_back = QPen(QColor(236, 72, 153, 200), 2.0)
 
-        self._brush_submenu = QBrush(QColor(22, 28, 38, 185))
-        self._pen_submenu = QPen(QColor(70, 120, 180, 180), config.OVERLAY_BORDER_WIDTH)
+        self._brush_submenu = QBrush(QColor(16, 26, 40, 215))
+        self._pen_submenu = QPen(QColor(6, 182, 212, 190), config.OVERLAY_BORDER_WIDTH)
 
         self._brush_default = QBrush(QColor(*config.OVERLAY_COLOR_BG))
         self._pen_default = QPen(QColor(*config.OVERLAY_COLOR_BORDER), config.OVERLAY_BORDER_WIDTH)
         self._color_default_text = QColor(*config.OVERLAY_TEXT_COLOR)
         self._color_default_hint = QColor(*config.OVERLAY_TEXT_HINT_COLOR)
 
-        self._color_badge_submenu = QColor(100, 170, 255, 180)
-        self._color_badge_back = QColor(220, 150, 230, 180)
-        self._color_badge_sticky = QColor(255, 195, 60, 180)
-        self._color_badge_default = QColor(140, 150, 165, 160)
+        self._color_badge_submenu = QColor(6, 182, 212, 220)
+        self._color_badge_back = QColor(236, 72, 153, 220)
+        self._color_badge_sticky = QColor(255, 195, 60, 220)
+        self._color_badge_default = QColor(140, 150, 165, 180)
 
-        # Pointer reticle
-        self._pen_pointer_ring = QPen(QColor(*config.OVERLAY_POINTER_OUTLINE), 2)
+        # Pre-allocated category styles for World-Class UI
+        self._cat_brushes = {
+            "FLOW": QBrush(QColor(12, 26, 38, 215)),
+            "STRUCT": QBrush(QColor(32, 24, 12, 215)),
+            "OPERATORS": QBrush(QColor(26, 16, 36, 215)),
+            "NAV": QBrush(QColor(14, 24, 42, 215)),
+            "PAUSE": QBrush(QColor(12, 32, 24, 215)),
+            "BACK": QBrush(QColor(36, 16, 28, 215)),
+            "EDIT": QBrush(QColor(18, 20, 38, 215)),
+            "AI": QBrush(QColor(28, 16, 38, 215)),
+            "EXIT": QBrush(QColor(36, 14, 16, 215)),
+            "DEFAULT": self._brush_default,
+        }
+        self._cat_pens = {
+            "FLOW": QPen(QColor(6, 182, 212, 200), 1.8),
+            "STRUCT": QPen(QColor(245, 158, 11, 200), 1.8),
+            "OPERATORS": QPen(QColor(168, 85, 247, 200), 1.8),
+            "NAV": QPen(QColor(59, 130, 246, 200), 1.8),
+            "PAUSE": QPen(QColor(16, 185, 129, 210), 2.2),
+            "BACK": QPen(QColor(236, 72, 153, 200), 2.0),
+            "EDIT": QPen(QColor(99, 102, 241, 200), 1.8),
+            "AI": QPen(QColor(217, 70, 239, 200), 1.8),
+            "EXIT": QPen(QColor(239, 68, 68, 200), 1.8),
+            "DEFAULT": self._pen_default,
+        }
+        self._cat_top_pens = {
+            "FLOW": QPen(QColor(34, 211, 238, 220), 2.5),
+            "STRUCT": QPen(QColor(251, 191, 36, 220), 2.5),
+            "OPERATORS": QPen(QColor(192, 132, 252, 220), 2.5),
+            "NAV": QPen(QColor(96, 165, 250, 220), 2.5),
+            "PAUSE": QPen(QColor(52, 211, 153, 230), 2.5),
+            "BACK": QPen(QColor(244, 114, 182, 220), 2.5),
+            "EDIT": QPen(QColor(129, 140, 248, 220), 2.5),
+            "AI": QPen(QColor(240, 171, 252, 220), 2.5),
+            "EXIT": QPen(QColor(248, 113, 113, 220), 2.5),
+            "DEFAULT": QPen(QColor(100, 116, 139, 180), 2.0),
+        }
+        self._cat_badges = {
+            "FLOW": ("⚡ FLUJO", QColor(34, 211, 238)),
+            "STRUCT": ("⚡ ESTRUCTURA", QColor(251, 191, 36)),
+            "OPERATORS": ("⚡ OPERADOR", QColor(192, 132, 252)),
+            "NAV": ("⚡ NAVEGACIÓN", QColor(96, 165, 250)),
+            "PAUSE": ("👁️ REPOSO", QColor(52, 211, 153)),
+            "BACK": ("⬅ VOLVER", QColor(244, 114, 182)),
+            "EDIT": ("⚡ EDICIÓN", QColor(129, 140, 248)),
+            "AI": ("🤖 IA / CÓDIGO", QColor(240, 171, 252)),
+            "EXIT": ("🚨 SALIR", QColor(248, 113, 113)),
+            "DEFAULT": ("⚡ ACCIÓN", QColor(148, 163, 184)),
+        }
+
+        # High-visibility Dual-ring Gaze Pointer Reticle
+        self._brush_pointer_glow = QBrush(QColor(56, 189, 248, 45))
+        self._pen_pointer_ring = QPen(QColor(*config.OVERLAY_POINTER_OUTLINE), 2.2)
         self._brush_pointer_dot = QBrush(QColor(*config.OVERLAY_POINTER_COLOR))
+        self._pen_pointer_ticks = QPen(QColor(255, 255, 255, 200), 1.5)
 
     def _apply_win32_no_activate(self) -> None:
         """Applies WS_EX_NOACTIVATE and WS_EX_TRANSPARENT styles on Windows to guarantee zero focus stealing."""
@@ -307,13 +366,38 @@ class OverlayWindow(QWidget):
     def on_gaze_updated(self, gx: float, gy: float) -> None:
         """
         Receives normalized gaze coordinates from CameraTracker.
-        Updates hovered block and gaze cursor position across the 3x3 grid.
+        Updates hovered block and gaze cursor position across the 3x3 grid,
+        with sub-pixel geometry alignment matching visual category cards.
         """
         self.current_gaze = (gx, gy)
 
-        # Determine 3x3 block index
-        col = min(2, max(0, int(gx * 3)))
-        row = min(2, max(0, int(gy * 3)))
+        # Determine 3x3 block index with card geometry alignment
+        w = float(self.width()) if self.width() > 0 else 1920.0
+        h = float(self.height()) if self.height() > 0 else 1080.0
+        margin = 12.0
+        header_h = 42.0
+        avail_y = margin + header_h + margin
+        avail_h = max(1.0, h - avail_y - margin)
+        cell_h = avail_h / 3.0
+
+        py = gy * h
+        if py < avail_y:
+            row = 0
+        elif py >= avail_y + avail_h:
+            row = 2
+        else:
+            row = min(2, max(0, int((py - avail_y) / cell_h)))
+
+        avail_w = max(1.0, w - 2.0 * margin)
+        cell_w = avail_w / 3.0
+        px = gx * w
+        if px < margin:
+            col = 0
+        elif px >= w - margin:
+            col = 2
+        else:
+            col = min(2, max(0, int((px - margin) / cell_w)))
+
         block_idx = row * 3 + col
 
         if self.reading_mode:
@@ -441,8 +525,36 @@ class OverlayWindow(QWidget):
         self.active_click_block = None
         self.update()
 
+    def _get_category_for_item(self, item: MenuAction, block_idx: int) -> str:
+        """Determines the semantic category for a menu action block."""
+        if block_idx == 4 or item.action_type == "PAUSE":
+            return "PAUSE"
+        if item.action_type == "BACK":
+            return "BACK"
+        if item.action_type == "EXIT" or item.id == "ACTION_EXIT":
+            return "EXIT"
+
+        sub_id = (item.submenu_id or "").upper()
+        act_id = item.id.upper()
+        curr_id = self.current_node_id.upper()
+
+        if sub_id == "FLOW" or "FLOW" in curr_id or any(k in act_id for k in ("IF", "LOOP", "WHILE", "FOR", "TRY", "RETURN", "FLOW")):
+            return "FLOW"
+        if sub_id == "STRUCT" or "STRUCT" in curr_id or any(k in act_id for k in ("FUNC", "CLASS", "DEF", "STRUCT", "DATA", "LIST", "DICT", "T9")):
+            return "STRUCT"
+        if sub_id == "OPERATORS" or "OP" in curr_id or any(k in act_id for k in ("OPERATOR", "OP_", "MATH", "BOOL", "COMPARE")):
+            return "OPERATORS"
+        if sub_id == "NAV" or "NAV" in curr_id or any(k in act_id for k in ("NAV_", "UP", "DOWN", "LEFT", "RIGHT", "PAGE", "WORD")):
+            return "NAV"
+        if sub_id in ("SNIPPETS", "AI_PREDICT") or "SNIPPET" in curr_id or "AI" in act_id or "PREDICT" in act_id:
+            return "AI"
+        if sub_id in ("EDIT", "FORMAT") or "EDIT" in curr_id or "FORMAT" in curr_id or any(k in act_id for k in ("BACKSPACE", "DELETE", "ENTER", "TAB", "INDENT")):
+            return "EDIT"
+
+        return "DEFAULT"
+
     def paintEvent(self, event) -> None:
-        """Paints Breadcrumb Header Bar, 3x3 Menu Blocks, and Gaze Cursor."""
+        """Paints Glassmorphic Breadcrumb Header Bar, 3x3 Category Cards, and Dual-Ring Reticle."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -455,28 +567,49 @@ class OverlayWindow(QWidget):
         items = curr_node.items if curr_node else []
 
         # =====================================================================
-        # 1. Top Breadcrumb Bar
+        # 1. Top Breadcrumb Bar (Acrylic Glassmorphism)
         # =====================================================================
-        header_rect = QRectF(margin, margin, w - 2 * margin, header_h)
-        painter.setOpacity(0.92 if not self.reading_mode else 0.25)
+        header_rect = QRectF(margin, margin, w - 2.0 * margin, header_h)
+        painter.setOpacity(0.95 if not self.reading_mode else 0.30)
 
         # Header background pill
         painter.setBrush(self._brush_header_bg)
         painter.setPen(self._pen_header_border)
-        painter.drawRoundedRect(header_rect, 6.0, 6.0)
+        painter.drawRoundedRect(header_rect, 8.0, 8.0)
 
-        # Breadcrumb trail text (Left aligned, elided if long)
-        breadcrumb_path = get_breadcrumb_path(self.menu_tree, self.current_node_id)
+        # Left: Mode Pill Badge + Navigation Trail
+        pill_w = 136.0
+        pill_h = header_h - 14.0
+        pill_rect = QRectF(header_rect.x() + 8.0, header_rect.y() + 7.0, pill_w, pill_h)
+
+        if self.reading_mode:
+            painter.setBrush(self._brush_pill_read)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(pill_rect, 5.0, 5.0)
+            painter.setPen(self._color_pill_text)
+            painter.setFont(self._font_header_pill)
+            painter.drawText(pill_rect, Qt.AlignmentFlag.AlignCenter, "👁️ MODO LECTURA")
+        else:
+            painter.setBrush(self._brush_pill_edit)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(pill_rect, 5.0, 5.0)
+            painter.setPen(self._color_pill_text)
+            painter.setFont(self._font_header_pill)
+            painter.drawText(pill_rect, Qt.AlignmentFlag.AlignCenter, "⚡ MODO EDICIÓN")
+
+        # Breadcrumb trail text
+        breadcrumb_path = get_breadcrumb_path(self.menu_tree, self.current_node_id).replace(" > ", " › ")
         if curr_node and curr_node.sticky:
-            breadcrumb_path += "  [STICKY 📌]"
+            breadcrumb_path += "  [📌 FIJO]"
 
         left_text = f"📁 {breadcrumb_path}"
-        max_left_w = int(header_rect.width() * 0.35)
+        text_start_x = header_rect.x() + pill_w + 18.0
+        max_left_w = int(header_rect.width() * 0.32)
         painter.setPen(self._pen_header_left)
         painter.setFont(self._font_header_left)
         elided_left = painter.fontMetrics().elidedText(left_text, Qt.TextElideMode.ElideMiddle, max_left_w)
         painter.drawText(
-            int(header_rect.x() + 12),
+            int(text_start_x),
             int(header_rect.y()),
             max_left_w,
             int(header_rect.height()),
@@ -484,64 +617,65 @@ class OverlayWindow(QWidget):
             elided_left,
         )
 
-        # Center: Emergency Hotkey Documentation
+        # Center: Emergency Hotkey Documentation Pill
         emergency_text = "🚨 Emergencia: Ctrl+Alt+Q para salir"
+        center_pill_w = 260.0
+        center_pill_rect = QRectF(header_rect.center().x() - center_pill_w * 0.5, header_rect.y() + 7.0, center_pill_w, pill_h)
+        painter.setBrush(QBrush(QColor(239, 68, 68, 25)))
+        painter.setPen(QPen(QColor(239, 68, 68, 120), 1.0))
+        painter.drawRoundedRect(center_pill_rect, 5.0, 5.0)
+
         painter.setPen(self._pen_header_center)
         painter.setFont(self._font_header_center)
-        painter.drawText(
-            int(header_rect.x()),
-            int(header_rect.y()),
-            int(header_rect.width()),
-            int(header_rect.height()),
-            Qt.AlignmentFlag.AlignCenter,
-            emergency_text,
-        )
+        painter.drawText(center_pill_rect, Qt.AlignmentFlag.AlignCenter, emergency_text)
 
-        # Last executed action text (Right aligned, elided if long)
-        last_action_str = f"Última: {self.last_action_desc}"
-        max_right_w = int(header_rect.width() * 0.35)
+        # Right: Last executed action pill
+        last_action_str = f"✨ Última: {self.last_action_desc}"
+        max_right_w = int(header_rect.width() * 0.30)
+        right_pill_rect = QRectF(header_rect.right() - max_right_w - 8.0, header_rect.y() + 7.0, max_right_w, pill_h)
+        painter.setBrush(QBrush(QColor(56, 189, 248, 22)))
+        painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
+        painter.drawRoundedRect(right_pill_rect, 5.0, 5.0)
+
         painter.setPen(self._pen_header_right)
         painter.setFont(self._font_header_right)
-        elided_right = painter.fontMetrics().elidedText(last_action_str, Qt.TextElideMode.ElideRight, max_right_w)
+        elided_right = painter.fontMetrics().elidedText(last_action_str, Qt.TextElideMode.ElideRight, max_right_w - 16)
         painter.drawText(
-            int(header_rect.x() + header_rect.width() - max_right_w - 12),
-            int(header_rect.y()),
-            max_right_w,
-            int(header_rect.height()),
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+            right_pill_rect,
+            Qt.AlignmentFlag.AlignCenter,
             elided_right,
         )
 
         # =====================================================================
-        # 2. 3x3 Grid Blocks
+        # 2. 3x3 Grid Category Cards
         # =====================================================================
         avail_y = margin + header_h + margin
         avail_h = h - avail_y - margin
-        cell_w = (w - 2 * margin) / 3.0
+        cell_w = (w - 2.0 * margin) / 3.0
         cell_h = avail_h / 3.0
 
         for i in range(9):
             if i >= len(items):
                 continue
             item = items[i]
-
             col = i % 3
             row = i // 3
 
             rect = QRectF(
-                margin + col * cell_w + 4.0,
-                avail_y + row * cell_h + 4.0,
-                cell_w - 8.0,
-                cell_h - 8.0,
+                margin + col * cell_w + 5.0,
+                avail_y + row * cell_h + 5.0,
+                cell_w - 10.0,
+                cell_h - 10.0,
             )
 
             is_active_click = (self.active_click_block == i)
             is_hover = (self.hovered_block == i)
+            cat = self._get_category_for_item(item, i)
 
             # Opacity logic
             if self.reading_mode:
                 if i == 4:
-                    block_opacity = 0.85 if (is_active_click or is_hover) else 0.35
+                    block_opacity = 0.90 if (is_active_click or is_hover) else 0.40
                 else:
                     block_opacity = self.current_opacity
             else:
@@ -572,25 +706,21 @@ class OverlayWindow(QWidget):
                     text_color = self._color_reading_other_text
                     hint_color = self._color_reading_other_hint
             else:
-                if i == 4:
-                    block_brush = self._brush_rest
-                    border_pen = self._pen_rest
-                elif item.action_type == "BACK":
-                    block_brush = self._brush_back
-                    border_pen = self._pen_back
-                elif item.action_type == "SUBMENU":
-                    block_brush = self._brush_submenu
-                    border_pen = self._pen_submenu
-                else:
-                    block_brush = self._brush_default
-                    border_pen = self._pen_default
+                block_brush = self._cat_brushes.get(cat, self._brush_default)
+                border_pen = self._cat_pens.get(cat, self._pen_default)
                 text_color = self._color_default_text
                 hint_color = self._color_default_hint
 
-            # Draw block rectangle
+            # Draw card rounded rectangle
             painter.setBrush(block_brush)
             painter.setPen(border_pen)
-            painter.drawRoundedRect(rect, 10.0, 10.0)
+            painter.drawRoundedRect(rect, 12.0, 12.0)
+
+            # Draw subtle top accent hairline (acrylic category bar)
+            if not self.reading_mode or i == 4:
+                top_pen = self._cat_top_pens.get(cat, self._pen_default) if not (is_active_click or is_hover) else border_pen
+                painter.setPen(top_pen)
+                painter.drawLine(QPointF(rect.x() + 16.0, rect.y() + 2.0), QPointF(rect.right() - 16.0, rect.y() + 2.0))
 
             # Determine labels
             label_text = f"{item.icon} {item.label}"
@@ -604,10 +734,10 @@ class OverlayWindow(QWidget):
             painter.setPen(text_color)
             painter.setFont(self._font_label)
             painter.drawText(
-                int(rect.x() + 10),
-                int(rect.y() + 10),
-                int(rect.width() - 20),
-                26,
+                int(rect.x() + 14),
+                int(rect.y() + 12),
+                int(rect.width() - 28),
+                28,
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 label_text,
             )
@@ -617,18 +747,19 @@ class OverlayWindow(QWidget):
                 painter.setPen(hint_color)
                 painter.setFont(self._font_hint)
                 painter.drawText(
-                    int(rect.x() + 10),
-                    int(rect.y() + 36),
-                    int(rect.width() - 20),
-                    20,
+                    int(rect.x() + 14),
+                    int(rect.y() + 40),
+                    int(rect.width() - 28),
+                    22,
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                     hint_text,
                 )
 
             # Submenu or action pill indicator on bottom-right of block
             if not self.reading_mode and not is_active_click:
-                badge_text = ""
-                badge_color = self._color_badge_default
+                badge_info = self._cat_badges.get(cat, ("", self._color_badge_default))
+                badge_text, badge_color = badge_info
+
                 if item.action_type == "SUBMENU":
                     badge_text = "📁 SUBMENÚ"
                     badge_color = self._color_badge_submenu
@@ -643,33 +774,45 @@ class OverlayWindow(QWidget):
                     painter.setPen(badge_color)
                     painter.setFont(self._font_badge)
                     painter.drawText(
-                        int(rect.x() + 10),
-                        int(rect.y() + rect.height() - 24),
-                        int(rect.width() - 20),
+                        int(rect.x() + 14),
+                        int(rect.y() + rect.height() - 26),
+                        int(rect.width() - 28),
                         18,
                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
                         badge_text,
                     )
 
         # =====================================================================
-        # 3. Gaze Pointer Reticle
+        # 3. Refined High-Visibility Dual-Ring Reticle with Glow Aura
         # =====================================================================
         if not self.reading_mode or self.hovered_block == 4:
-            painter.setOpacity(self.current_opacity if not self.reading_mode else 0.85)
+            painter.setOpacity(self.current_opacity if not self.reading_mode else 0.90)
             gx, gy = self.current_gaze
             cx = gx * w
             cy = gy * h
-            r = config.OVERLAY_POINTER_RADIUS
+            r = float(config.OVERLAY_POINTER_RADIUS)
 
-            # Outer ring
+            # 1. Outer subtle glow aura
+            painter.setBrush(self._brush_pointer_glow)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(QPointF(cx, cy), r + 8.0, r + 8.0)
+
+            # 2. Middle precision ring
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(self._pen_pointer_ring)
-            painter.drawEllipse(QPointF(cx, cy), r + 3, r + 3)
+            painter.drawEllipse(QPointF(cx, cy), r + 2.0, r + 2.0)
 
-            # Center dot
+            # 3. Inner crisp fixation dot
             painter.setBrush(self._brush_pointer_dot)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(QPointF(cx, cy), r, r)
+            painter.drawEllipse(QPointF(cx, cy), r - 3.0, r - 3.0)
+
+            # 4. Micro crosshairs (hairline precision ticks)
+            painter.setPen(self._pen_pointer_ticks)
+            painter.drawLine(QPointF(cx - r - 7.0, cy), QPointF(cx - r - 2.0, cy))
+            painter.drawLine(QPointF(cx + r + 2.0, cy), QPointF(cx + r + 7.0, cy))
+            painter.drawLine(QPointF(cx, cy - r - 7.0), QPointF(cx, cy - r - 2.0))
+            painter.drawLine(QPointF(cx, cy + r + 2.0), QPointF(cx, cy + r + 7.0))
 
         painter.end()
 

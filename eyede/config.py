@@ -63,10 +63,20 @@ HEAD_WEIGHT: float = 0.60
 IRIS_WEIGHT: float = 0.40
 
 # Gain / sensitivity multipliers
+# Vertical sensitivity is scaled higher (~2.4x) to account for human ocular ergonomics
+# where vertical head pitch and eye elevation range is ~30% of horizontal range.
 DEFAULT_HEAD_SENSITIVITY_X: float = 2.6
-DEFAULT_HEAD_SENSITIVITY_Y: float = 2.6
-DEFAULT_IRIS_SENSITIVITY_X: float = 3.5
-DEFAULT_IRIS_SENSITIVITY_Y: float = 3.5
+DEFAULT_HEAD_SENSITIVITY_Y: float = 6.8
+DEFAULT_IRIS_SENSITIVITY_X: float = 3.2
+DEFAULT_IRIS_SENSITIVITY_Y: float = 8.5
+
+# Anti-Jitter Filtering (One Euro Filter + Fixation Deadzone)
+ONE_EURO_MIN_CUTOFF: float = 0.55   # Low-speed cutoff (Hz) - eliminates resting jitter
+ONE_EURO_BETA: float = 0.28        # Speed coefficient - eliminates saccadic lag
+ONE_EURO_D_CUTOFF: float = 1.0     # Derivative cutoff (Hz)
+FIXATION_DEADZONE: float = 0.022   # Deadzone radius in normalized coords for rock-solid resting
+VERTICAL_MULTIPLIER: float = 2.4    # Ergonomic independent vertical gain multiplier
+VERTICAL_EXPANSION_GAIN: float = 1.8 # Ergonomic non-linear vertical curve multiplier
 
 # Smoothing factor for Exponential Moving Average (EMA)
 # Higher = more responsive, lower = smoother (less jitter)
@@ -74,8 +84,8 @@ EMA_ALPHA: float = 0.22
 
 # Blink Detection (EAR & Eye Height)
 # Below this vertical opening ratio, eye is considered closed (blink suppression)
-EAR_BLINK_THRESHOLD: float = 0.18
-MIN_EYE_HEIGHT_RATIO: float = 0.012
+EAR_BLINK_THRESHOLD: float = 0.14
+MIN_EYE_HEIGHT_RATIO: float = 0.008
 
 # Nominal interocular distance (between outer canthi landmarks 33 & 263)
 # Used for distance-adaptive gain/sensitivity calibration
@@ -146,31 +156,43 @@ MINI_FEED_MARGIN: int = 16
 # Phase 2: PyQt6 Overlay, Debug & 5-Point Calibration Parameters
 # ==============================================================================
 # Overlay HUD opacities
-OVERLAY_OPACITY_ACTIVE: float = 0.85
+OVERLAY_OPACITY_ACTIVE: float = 0.88
 OVERLAY_OPACITY_READING: float = 0.10
 
 # RGBA colors for PyQt6 Overlay (0-255)
-OVERLAY_COLOR_BG = (22, 25, 32, 175)
-OVERLAY_COLOR_BORDER = (60, 68, 85, 200)
+OVERLAY_COLOR_BG = (15, 20, 28, 195)
+OVERLAY_COLOR_BORDER = (45, 55, 75, 180)
 OVERLAY_BORDER_WIDTH: int = 2
 
-OVERLAY_COLOR_HOVER = (42, 58, 88, 220)
-OVERLAY_HOVER_BORDER_COLOR = (255, 195, 45, 255)
+OVERLAY_COLOR_HOVER = (28, 44, 72, 235)
+OVERLAY_HOVER_BORDER_COLOR = (255, 200, 55, 255)
 OVERLAY_HOVER_BORDER_WIDTH: int = 3
 
-OVERLAY_COLOR_CLICK = (35, 195, 95, 240)
-OVERLAY_CLICK_BORDER_COLOR = (120, 255, 170, 255)
+OVERLAY_COLOR_CLICK = (25, 180, 85, 245)
+OVERLAY_CLICK_BORDER_COLOR = (110, 255, 160, 255)
 
-OVERLAY_COLOR_REST = (18, 20, 24, 90)
-OVERLAY_REST_BORDER_COLOR = (0, 140, 255, 180)
+OVERLAY_COLOR_REST = (12, 16, 22, 110)
+OVERLAY_REST_BORDER_COLOR = (16, 185, 129, 200)
 
-OVERLAY_POINTER_COLOR = (255, 195, 40, 220)
-OVERLAY_POINTER_OUTLINE = (255, 255, 255, 240)
-OVERLAY_POINTER_RADIUS: int = 12
+OVERLAY_POINTER_COLOR = (255, 195, 40, 230)
+OVERLAY_POINTER_OUTLINE = (255, 255, 255, 245)
+OVERLAY_POINTER_RADIUS: int = 13
+OVERLAY_POINTER_GLOW_RADIUS: int = 22
 
-OVERLAY_TEXT_COLOR = (240, 245, 250, 245)
-OVERLAY_TEXT_HINT_COLOR = (150, 160, 175, 210)
+OVERLAY_TEXT_COLOR = (245, 248, 252, 250)
+OVERLAY_TEXT_HINT_COLOR = (160, 175, 195, 220)
 OVERLAY_TEXT_HOVER_COLOR = (255, 255, 255, 255)
+
+# Category Accent Colors (RGB tuples 0-255)
+COLOR_CAT_FLOW = (6, 182, 212)        # Cyan
+COLOR_CAT_STRUCT = (245, 158, 11)     # Amber / Gold
+COLOR_CAT_OPERATORS = (168, 85, 247)  # Purple
+COLOR_CAT_NAV = (59, 130, 246)        # Blue
+COLOR_CAT_PAUSE = (16, 185, 129)      # Emerald
+COLOR_CAT_BACK = (236, 72, 153)       # Rose / Magenta
+COLOR_CAT_EDIT = (99, 102, 241)       # Indigo
+COLOR_CAT_AI = (217, 70, 239)         # Fuchsia
+COLOR_CAT_EXIT = (239, 68, 68)        # Coral / Red
 
 # 5-Point Calibration targets (normalized coordinates)
 CALIBRATION_POINTS: List[Dict[str, Any]] = [
@@ -185,10 +207,10 @@ CALIBRATION_SAMPLES_PER_POINT: int = 15
 CALIBRATION_SAMPLE_DELAY_SEC: float = 0.02
 
 # Debug widget sizing
-DEBUG_WINDOW_WIDTH: int = 320
-DEBUG_WINDOW_HEIGHT: int = 390
-DEBUG_FEED_WIDTH: int = 280
-DEBUG_FEED_HEIGHT: int = 160
+DEBUG_WINDOW_WIDTH: int = 340
+DEBUG_WINDOW_HEIGHT: int = 580
+DEBUG_FEED_WIDTH: int = 300
+DEBUG_FEED_HEIGHT: int = 170
 
 # ==============================================================================
 # Phase 4: Live AST Context Reader & AI Code Predictor Settings

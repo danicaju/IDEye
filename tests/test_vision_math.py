@@ -19,7 +19,7 @@ for p in (_ROOT_DIR, _EYEDE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from eyede.core.gaze_estimator import GazeEstimator
+from eyede.core.gaze_estimator import GazeEstimator, OneEuroFilter
 from eyede.core.gesture_detector import GestureDetector, GestureState
 from eyede.core.camera_tracker import CameraTracker
 
@@ -287,6 +287,186 @@ class TestGazeEstimatorMath(unittest.TestCase):
         # Mutate numpy source; QImage must remain unaffected
         frame[:] = 0
         self.assertFalse(qimg.isNull())
+
+    def test_one_euro_filter_rest_and_saccade(self):
+        """Verifies OneEuroFilter suppresses micro-jitter at rest and converges quickly on saccades."""
+        f = OneEuroFilter(t0=1.0, x0=0.5, min_cutoff=0.55, beta=0.28, d_cutoff=1.0)
+
+        # 1. Micro-jitter around 0.5 (rest): inputs vary between 0.495 and 0.505
+        raw_jitter = [0.50 + ((-1) ** i) * 0.005 for i in range(20)]
+        filtered = []
+        t = 1.0
+        for val in raw_jitter:
+            t += 0.033
+            filtered.append(f.filter(t, val))
+
+        # Variance of filtered output should be lower than raw jitter variance
+        self.assertLess(np.var(filtered), np.var(raw_jitter))
+
+        # 2. Saccade: sudden jump from ~0.5 to 0.85
+        saccade_t = t
+        out = 0.5
+        for _ in range(15):
+            saccade_t += 0.033
+            out = f.filter(saccade_t, 0.85)
+        # Should converge close to 0.85 within 15 frames
+        self.assertAlmostEqual(out, 0.85, delta=0.03)
+
+    def test_one_euro_filter_edge_timing_safety(self):
+        """Tests OneEuroFilter handles dt=0, negative dt, and excessive dt without exceptions."""
+        f = OneEuroFilter(t0=0.0, x0=0.5)
+
+        # First sample initialization
+        val1 = f.filter(1.0, 0.6)
+        self.assertAlmostEqual(val1, 0.6)
+
+        # Immediate repeat at same timestamp (dt == 0) -> fallback 1/30s
+        val_same_t = f.filter(1.0, 0.65)
+        self.assertTrue(math.isfinite(val_same_t))
+
+        # Negative timestamp jump backwards -> fallback 1/30s
+        val_backwards = f.filter(0.5, 0.70)
+        self.assertTrue(math.isfinite(val_backwards))
+
+        # Giant gap (pause/sleep for 10 seconds) -> fallback 1/30s
+        val_gap = f.filter(100.0, 0.75)
+        self.assertTrue(math.isfinite(val_gap))
+
+    def test_ergonomic_vertical_expansion_curve(self):
+        """Tests ergonomic vertical curve symmetry, expansion, and monotonicity."""
+        # Center is neutral
+        self.assertAlmostEqual(self.estimator._apply_ergonomic_vertical_curve(0.0), 0.0)
+
+        # Symmetry: curve(-y) == -curve(y)
+        for delta in [0.05, 0.15, 0.30]:
+            pos = self.estimator._apply_ergonomic_vertical_curve(delta)
+            neg = self.estimator._apply_ergonomic_vertical_curve(-delta)
+            self.assertAlmostEqual(pos, -neg)
+            # Expansion: absolute output must exceed input delta
+            self.assertGreater(abs(pos), delta)
+
+        # Monotonicity: strictly increasing
+        deltas = np.linspace(-0.4, 0.4, 15)
+        outputs = [self.estimator._apply_ergonomic_vertical_curve(d) for d in deltas]
+        for i in range(len(outputs) - 1):
+            self.assertLess(outputs[i], outputs[i + 1])
+
+    def test_anti_jitter_damping_levels(self):
+        """Tests anti-jitter damping level mapping, progression, and clamping."""
+        # Level 1: lowest damping (highest cutoff, smallest deadzone)
+        self.estimator.set_anti_jitter_damping(1.0)
+        cutoff_1 = self.estimator.one_euro_x.min_cutoff
+        deadzone_1 = self.estimator.fixation_deadzone
+
+        # Level 10: highest damping (lowest cutoff, largest deadzone)
+        self.estimator.set_anti_jitter_damping(10.0)
+        cutoff_10 = self.estimator.one_euro_x.min_cutoff
+        deadzone_10 = self.estimator.fixation_deadzone
+
+        self.assertGreater(cutoff_1, cutoff_10)
+        self.assertLess(deadzone_1, deadzone_10)
+
+        # Level clamping check
+        self.estimator.set_anti_jitter_damping(-5.0)
+        self.assertAlmostEqual(self.estimator.one_euro_x.min_cutoff, cutoff_1)
+        self.estimator.set_anti_jitter_damping(50.0)
+        self.assertAlmostEqual(self.estimator.one_euro_x.min_cutoff, cutoff_10)
+
+    def test_vertical_reach_top_and_bottom_rows(self):
+        """Gentle head tilt or looking up comfortably hits Y < 0.20, and looking down hits Y > 0.80."""
+        face = create_neutral_face()
+        self.estimator.calibrate_center(face)
+
+        # 1. Gentle look up: delta_head_y = -0.020, delta_iris_y = -0.025
+        face.set_pt(1, 0.50, 0.480)
+        face.set_pt(468, 0.40, 0.375)
+        face.set_pt(473, 0.60, 0.375)
+        for _ in range(25):
+            gx, gy, det, _ = self.estimator.estimate(face)
+        self.assertTrue(det)
+        self.assertLess(gy, 0.20, f"Expected top row Y < 0.20 on gentle upward gaze, got {gy}")
+
+        # 2. Gentle look down: delta_head_y = +0.020, delta_iris_y = +0.025
+        face.set_pt(1, 0.50, 0.520)
+        face.set_pt(468, 0.40, 0.425)
+        face.set_pt(473, 0.60, 0.425)
+        for _ in range(25):
+            gx, gy, det, _ = self.estimator.estimate(face)
+        self.assertTrue(det)
+        self.assertGreater(gy, 0.80, f"Expected bottom row Y > 0.80 on gentle downward gaze, got {gy}")
+
+    def test_resting_jitter_suppression_and_stability(self):
+        """Under realistic webcam sensor noise, resting pointer remains rock-solid within tight bounds."""
+        face = create_neutral_face()
+        self.estimator.calibrate_center(face)
+
+        np.random.seed(42)
+        outputs_x = []
+        outputs_y = []
+        t = 1.0
+
+        for _ in range(60):
+            t += 0.033
+            # Add sensor noise (std dev = 0.001 in image space to landmarks)
+            face.set_pt(1, 0.50 + np.random.normal(0, 0.0008), 0.50 + np.random.normal(0, 0.0008))
+            face.set_pt(468, 0.40 + np.random.normal(0, 0.0010), 0.40 + np.random.normal(0, 0.0010))
+            face.set_pt(473, 0.60 + np.random.normal(0, 0.0010), 0.40 + np.random.normal(0, 0.0010))
+
+            gx, gy, det, dbg = self.estimator.estimate(face, timestamp=t)
+            self.assertTrue(det)
+            outputs_x.append(gx)
+            outputs_y.append(gy)
+
+        span_x = max(outputs_x) - min(outputs_x)
+        span_y = max(outputs_y) - min(outputs_y)
+
+        # Filtered resting jitter must remain strictly bounded (< 0.008, i.e. < 15 px on 1080p display, >75% reduction vs raw noise)
+        self.assertLess(span_x, 0.008, f"Horizontal resting jitter {span_x} exceeded maximum tolerance")
+        self.assertLess(span_y, 0.008, f"Vertical resting jitter {span_y} exceeded maximum tolerance")
+
+    def test_scale_invariant_ear_blink_detection_and_downward_gaze(self):
+        """Downward gaze with partially lowered eyelids is NOT detected as blink, while true closure is."""
+        face = create_neutral_face()
+        self.estimator.calibrate_center(face)
+
+        # 1. Downward gaze with partially lowered eyelids (height = 0.018, width = 0.10 -> EAR = 0.18)
+        face.set_pt(159, 0.40, 0.391)
+        face.set_pt(145, 0.40, 0.409)
+        face.set_pt(386, 0.60, 0.391)
+        face.set_pt(374, 0.60, 0.409)
+        _, _, det, dbg = self.estimator.estimate(face)
+        self.assertTrue(det)
+        self.assertFalse(dbg["is_blinking"], "Downward gaze with open eyes must not trigger blink suppression")
+
+        # 2. Complete eye closure (height = 0.005, width = 0.10 -> EAR = 0.05)
+        face.set_pt(159, 0.40, 0.400)
+        face.set_pt(145, 0.40, 0.405)
+        face.set_pt(386, 0.60, 0.400)
+        face.set_pt(374, 0.60, 0.405)
+        _, _, det_blink, dbg_blink = self.estimator.estimate(face)
+        self.assertTrue(det_blink)
+        self.assertTrue(dbg_blink["is_blinking"], "Complete eyelid closure must trigger blink suppression")
+
+    def test_sliding_deadzone_leash_monotonic_response(self):
+        """Sliding leash smoothly updates anchor on intentional movement without limit-cycle bouncing."""
+        face = create_neutral_face()
+        self.estimator.calibrate_center(face)
+
+        anchor_init_x = self.estimator.fixation_anchor_x
+        anchor_init_y = self.estimator.fixation_anchor_y
+
+        # Move nose tip outside deadzone (e.g. delta +0.035)
+        face.set_pt(1, 0.535, 0.50)
+        t = 1.0
+        gx_prev = 0.5
+        for _ in range(10):
+            t += 0.033
+            gx, gy, _, dbg = self.estimator.estimate(face, timestamp=t)
+            self.assertFalse(dbg["is_fixated"])
+            self.assertGreaterEqual(gx, gx_prev - 1e-4, "Pointer must advance monotonically towards new target")
+            gx_prev = gx
+
+        self.assertGreater(self.estimator.fixation_anchor_x, anchor_init_x, "Anchor must slide smoothly towards target")
 
 
 class TestGestureDetectorMath(unittest.TestCase):

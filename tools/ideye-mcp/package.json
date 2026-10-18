@@ -1,0 +1,11 @@
+{
+  "name": "ideye-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server with specialized diagnostic, simulation, and calibration tools for IDEye eye-controlled development",
+  "type": "module",
+  "main": "index.mjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
+  }
+}

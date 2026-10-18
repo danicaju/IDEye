@@ -1,0 +1,8 @@
+node_modules/
+tools/ideye-mcp/node_modules/
+*.log
+.DS_Store
+dist/
+build/
+__pycache__/
+*.pyc

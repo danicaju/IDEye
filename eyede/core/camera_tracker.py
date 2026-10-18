@@ -125,6 +125,7 @@ class CameraTracker(QThread):
         self.is_synthetic = (str(camera_index).lower() == "synthetic")
 
         # Threading infrastructure
+        self._running: bool = False
         self._stop_requested = False
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
@@ -187,6 +188,7 @@ class CameraTracker(QThread):
         if not self._open_device():
             return False
 
+        self._running = True
         self._stop_requested = False
         self._stop_event.clear()
 
@@ -196,7 +198,8 @@ class CameraTracker(QThread):
         return True
 
     def stop(self) -> None:
-        """Signals the QThread to stop."""
+        """Signals the QThread to stop using clean boolean flags."""
+        self._running = False
         self._stop_requested = True
         self._stop_event.set()
 
@@ -301,7 +304,7 @@ class CameraTracker(QThread):
         """
         target_delay = 1.0 / max(1, self.fps)
 
-        while not self._stop_requested:
+        while self._running and not self._stop_requested:
             t_start = time.perf_counter()
 
             frame, landmarks = self._process_one_frame()
@@ -411,6 +414,25 @@ class CameraTracker(QThread):
             pass
 
         return frame
+
+    @staticmethod
+    def frame_to_qimage(frame: Optional[np.ndarray]) -> Optional[Any]:
+        """
+        Converts an OpenCV BGR frame to a PyQt6 QImage safely.
+        Enforces contiguous memory layout and deep copy (.copy()) to guarantee
+        independent memory ownership and prevent memory leaks or segfaults.
+        """
+        if frame is None or frame.size == 0:
+            return None
+        try:
+            from PyQt6.QtGui import QImage
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb = np.ascontiguousarray(rgb)
+            h, w, ch = rgb.shape
+            bytes_per_line = ch * w
+            return QImage(rgb.data, w, h, bytes_per_line, QImage.Format.Format_RGB888).copy()
+        except Exception:
+            return None
 
     def release(self) -> None:
         """

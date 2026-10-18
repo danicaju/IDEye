@@ -131,15 +131,17 @@ class ContextReader:
     def read_file_content(self, file_path: Optional[str] = None) -> str:
         """
         Reads file content on disk using utf-8 with error-ignoring.
-        Guarantees zero crashes on UnicodeDecodeError or missing file.
+        Guarantees zero crashes on UnicodeDecodeError, FileNotFoundError, PermissionError, or missing file.
         """
         target = file_path or self.get_active_file()
-        if not target or not os.path.isfile(target):
+        if not target:
             return ""
 
         try:
             with open(target, "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()
+        except (FileNotFoundError, PermissionError, OSError):
+            return ""
         except Exception:
             return ""
 
@@ -179,7 +181,10 @@ class ContextReader:
         Extracts variables, arguments, functions, and classes.
         Returns up to `max_symbols` (default 12) unique symbols, prioritized by recency.
         """
-        content = source_code if source_code is not None else self.read_file_content(file_path)
+        try:
+            content = source_code if source_code is not None else self.read_file_content(file_path)
+        except (FileNotFoundError, PermissionError, OSError):
+            return []
         if not content or not content.strip():
             return []
 

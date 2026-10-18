@@ -15,7 +15,7 @@ from typing import Optional, Any
 import cv2
 import numpy as np
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (
     QWidget,
@@ -185,16 +185,19 @@ class DebugWidget(QWidget):
             self.set_linked_file(file_path)
             self.file_linked.emit(file_path)
 
+    @pyqtSlot(str)
     def set_linked_file(self, file_path: str) -> None:
         """Updates the active file label."""
         if file_path:
             name = os.path.basename(file_path)
             self.lbl_active_file.setText(f"📄 Archivo: {name}")
 
+    @pyqtSlot(str)
     def update_ai_status(self, status: str) -> None:
         """Updates the AI engine status label."""
         self.lbl_ai_engine.setText(f"⚡ IA: {status}")
 
+    @pyqtSlot(float)
     def update_mar(self, current_mar: float) -> None:
         """Updates the MAR progress bar and style based on threshold."""
         val = max(0.0, min(1.0, current_mar))
@@ -217,6 +220,7 @@ class DebugWidget(QWidget):
                 }
             """)
 
+    @pyqtSlot(object, float)
     def on_frame_ready(self, frame_or_qimage: Any, current_mar: float) -> None:
         """
         Receives frame and MAR from CameraTracker.

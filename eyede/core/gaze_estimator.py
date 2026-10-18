@@ -311,14 +311,18 @@ class GazeEstimator:
             "neutral_iris": (self.neutral_iris_x, self.neutral_iris_y),
         }
 
-        # 1. Face loss check: maintain last valid coordinates gracefully
+        # 1. Face loss check: maintain last valid coordinates gracefully (strictly clipped)
         if face_landmarks is None:
-            return self.smoothed_x, self.smoothed_y, False, debug_info
+            cx = float(np.clip(self.smoothed_x, 0.0, 1.0))
+            cy = float(np.clip(self.smoothed_y, 0.0, 1.0))
+            return cx, cy, False, debug_info
 
         try:
             landmarks = getattr(face_landmarks, "landmark", face_landmarks)
             if not landmarks:
-                return self.smoothed_x, self.smoothed_y, False, debug_info
+                cx = float(np.clip(self.smoothed_x, 0.0, 1.0))
+                cy = float(np.clip(self.smoothed_y, 0.0, 1.0))
+                return cx, cy, False, debug_info
 
             # 2. Extract raw signals
             head_x, head_y = self._extract_head_pos(landmarks)
@@ -346,11 +350,11 @@ class GazeEstimator:
 
             if self.has_5_point_calibration:
                 mapped_x, mapped_y = self.apply_5_point_mapping(raw_target_x, raw_target_y)
-                target_x = max(0.0, min(1.0, mapped_x))
-                target_y = max(0.0, min(1.0, mapped_y))
+                target_x = float(np.clip(mapped_x, 0.0, 1.0))
+                target_y = float(np.clip(mapped_y, 0.0, 1.0))
             else:
-                target_x = max(0.0, min(1.0, raw_target_x))
-                target_y = max(0.0, min(1.0, raw_target_y))
+                target_x = float(np.clip(raw_target_x, 0.0, 1.0))
+                target_y = float(np.clip(raw_target_y, 0.0, 1.0))
 
             # 6. Exponential Moving Average (EMA) filtering
             if not self._has_first_sample:
@@ -362,9 +366,9 @@ class GazeEstimator:
                 self.smoothed_x = alpha * target_x + (1.0 - alpha) * self.smoothed_x
                 self.smoothed_y = alpha * target_y + (1.0 - alpha) * self.smoothed_y
 
-            # Ensure bounds [0.0, 1.0]
-            self.smoothed_x = max(0.0, min(1.0, float(self.smoothed_x)))
-            self.smoothed_y = max(0.0, min(1.0, float(self.smoothed_y)))
+            # Ensure bounds strictly within [0.0, 1.0]
+            self.smoothed_x = float(np.clip(self.smoothed_x, 0.0, 1.0))
+            self.smoothed_y = float(np.clip(self.smoothed_y, 0.0, 1.0))
 
             debug_info.update({
                 "target_raw": (raw_target_x, raw_target_y),
@@ -379,7 +383,9 @@ class GazeEstimator:
             return self.smoothed_x, self.smoothed_y, True, debug_info
 
         except (IndexError, AttributeError, TypeError, ValueError):
-            return self.smoothed_x, self.smoothed_y, False, debug_info
+            cx = float(np.clip(self.smoothed_x, 0.0, 1.0))
+            cy = float(np.clip(self.smoothed_y, 0.0, 1.0))
+            return cx, cy, False, debug_info
 
     def get_raw_gaze(self, face_landmarks: Any) -> Optional[Tuple[float, float]]:
         """
@@ -417,6 +423,10 @@ class GazeEstimator:
                 b0, b1, b2, b3 = self.calib_weights_y
                 mx = a0 + a1 * u + a2 * v + a3 * (u * v)
                 my = b0 + b1 * u + b2 * v + b3 * (u * v)
+                if math.isnan(mx) or math.isinf(mx):
+                    mx = u
+                if math.isnan(my) or math.isinf(my):
+                    my = v
                 return float(mx), float(my)
             except Exception:
                 return u, v
@@ -513,21 +523,73 @@ class GazeEstimator:
     def load_calibration_profile(self, filepath: str = "calibration_profile.json") -> bool:
         """
         Loads calibration profile from JSON, restoring weights and anchors.
-        Returns True on success, False if file is missing or invalid.
+        Returns True on success, False if file is missing, corrupt, empty, or degenerate.
+        Recovers safely by resetting to default baselines and logging an informative warning.
         """
         if not os.path.exists(filepath):
             return False
         try:
             with open(filepath, "r", encoding="utf-8") as f:
-                profile = json.load(f)
+                content = f.read().strip()
+
+            if not content:
+                print(f"[GazeEstimator] Warning: Calibration file '{filepath}' is empty. Restoring safe defaults.")
+                self.reset()
+                return False
+
+            profile = json.loads(content)
 
             if not isinstance(profile, dict):
+                print(f"[GazeEstimator] Warning: Calibration file '{filepath}' is not a valid JSON object. Restoring safe defaults.")
+                self.reset()
                 return False
 
             with self._lock:
                 weights_x = profile.get("weights_x")
                 weights_y = profile.get("weights_y")
-                if weights_x and weights_y and len(weights_x) == 4 and len(weights_y) == 4:
+                points = profile.get("points")
+
+                # Check for degenerate points where min == max (which causes ZeroDivisionError during interpolation/fitting)
+                if points and isinstance(points, list) and len(points) >= 2:
+                    raw_pts = [p.get("raw") for p in points if isinstance(p, dict) and "raw" in p]
+                    screen_pts = [p.get("screen") for p in points if isinstance(p, dict) and "screen" in p]
+
+                    if raw_pts:
+                        raw_xs = [r[0] for r in raw_pts if isinstance(r, (list, tuple)) and len(r) >= 2]
+                        raw_ys = [r[1] for r in raw_pts if isinstance(r, (list, tuple)) and len(r) >= 2]
+                        if raw_xs and (min(raw_xs) == max(raw_xs)):
+                            print(f"[GazeEstimator] Warning: Calibration points degenerate (raw min_x == max_x). Restoring safe defaults.")
+                            self.reset()
+                            return False
+                        if raw_ys and (min(raw_ys) == max(raw_ys)):
+                            print(f"[GazeEstimator] Warning: Calibration points degenerate (raw min_y == max_y). Restoring safe defaults.")
+                            self.reset()
+                            return False
+
+                    if screen_pts:
+                        screen_xs = [s[0] for s in screen_pts if isinstance(s, (list, tuple)) and len(s) >= 2]
+                        screen_ys = [s[1] for s in screen_pts if isinstance(s, (list, tuple)) and len(s) >= 2]
+                        if screen_xs and (min(screen_xs) == max(screen_xs)):
+                            print(f"[GazeEstimator] Warning: Calibration points degenerate (screen min_x == max_x). Restoring safe defaults.")
+                            self.reset()
+                            return False
+                        if screen_ys and (min(screen_ys) == max(screen_ys)):
+                            print(f"[GazeEstimator] Warning: Calibration points degenerate (screen min_y == max_y). Restoring safe defaults.")
+                            self.reset()
+                            return False
+
+                if weights_x is not None or weights_y is not None:
+                    if (
+                        not weights_x
+                        or not weights_y
+                        or len(weights_x) != 4
+                        or len(weights_y) != 4
+                        or any(math.isnan(float(w)) or math.isinf(float(w)) for w in weights_x + weights_y)
+                    ):
+                        print(f"[GazeEstimator] Warning: Calibration weights corrupt or invalid. Restoring safe defaults.")
+                        self.reset()
+                        return False
+
                     self.calib_weights_x = [float(w) for w in weights_x]
                     self.calib_weights_y = [float(w) for w in weights_y]
                     self.has_5_point_calibration = bool(profile.get("has_5_point_calibration", True))
@@ -551,7 +613,9 @@ class GazeEstimator:
                     self.calibration_points_data = profile["points"]
 
             return True
-        except Exception:
+        except Exception as e:
+            print(f"[GazeEstimator] Warning: Failed to load calibration profile '{filepath}': {e}. Restoring safe defaults.")
+            self.reset()
             return False
 
     def reset(self) -> None:

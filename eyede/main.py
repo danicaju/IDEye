@@ -745,12 +745,7 @@ class EyeDEApplication:
 
         if self.tracker is not None:
             self.tracker.stop()
-            if not self.tracker.wait(2000):
-                try:
-                    self.tracker.terminate()
-                    self.tracker.wait(500)
-                except Exception:
-                    pass
+            self.tracker.wait(2000)
             self.tracker.release()
 
         if self.overlay is not None:

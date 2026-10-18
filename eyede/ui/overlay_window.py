@@ -20,7 +20,7 @@ from typing import Optional, Tuple, Dict, Any, List
 import sys
 import os
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QRectF, QPointF
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QRectF, QPointF
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush
 from PyQt6.QtWidgets import QWidget
 
@@ -113,6 +113,62 @@ class OverlayWindow(QWidget):
         # Window title for identification
         self.setWindowTitle("EyeDE - Gaze Macro Grid HUD (Phase 3)")
 
+        # 4. Pre-allocated rendering objects to prevent 30/60 FPS GC pressure and memory leaks
+        self._font_header_left = QFont("Segoe UI", 10, QFont.Weight.Bold)
+        self._font_header_right = QFont("Segoe UI", 9)
+        self._font_label = QFont("Segoe UI", 12, QFont.Weight.Bold)
+        self._font_hint = QFont("Segoe UI", 9)
+        self._font_badge = QFont("Segoe UI", 8, QFont.Weight.Bold)
+
+        self._brush_header_bg = QBrush(QColor(14, 18, 24, 230))
+        self._pen_header_border = QPen(QColor(65, 75, 95, 200), 1.5)
+        self._pen_header_left = QPen(QColor(255, 215, 60))
+        self._pen_header_right = QPen(QColor(160, 230, 180))
+
+        # Styles for blocks
+        self._brush_click = QBrush(QColor(*config.OVERLAY_COLOR_CLICK))
+        self._pen_click = QPen(QColor(*config.OVERLAY_CLICK_BORDER_COLOR), 3)
+        self._color_click_text = QColor(10, 30, 15)
+        self._color_click_hint = QColor(25, 55, 30)
+
+        self._brush_hover = QBrush(QColor(*config.OVERLAY_COLOR_HOVER))
+        self._pen_hover = QPen(QColor(*config.OVERLAY_HOVER_BORDER_COLOR), config.OVERLAY_HOVER_BORDER_WIDTH)
+        self._color_hover_text = QColor(*config.OVERLAY_TEXT_HOVER_COLOR)
+        self._color_hover_hint = QColor(230, 235, 245)
+
+        self._brush_reading_center = QBrush(QColor(25, 45, 75, 180))
+        self._pen_reading_center = QPen(QColor(0, 150, 255, 220), 2)
+        self._color_reading_center_text = QColor(200, 225, 255)
+        self._color_reading_center_hint = QColor(150, 180, 220)
+
+        self._brush_reading_other = QBrush(QColor(15, 18, 22, 50))
+        self._pen_reading_other = QPen(QColor(40, 45, 55, 60), 1)
+        self._color_reading_other_text = QColor(120, 130, 145, 100)
+        self._color_reading_other_hint = QColor(80, 90, 105, 80)
+
+        self._brush_rest = QBrush(QColor(*config.OVERLAY_COLOR_REST))
+        self._pen_rest = QPen(QColor(*config.OVERLAY_REST_BORDER_COLOR), config.OVERLAY_BORDER_WIDTH)
+
+        self._brush_back = QBrush(QColor(36, 28, 38, 185))
+        self._pen_back = QPen(QColor(180, 110, 190, 180), 2)
+
+        self._brush_submenu = QBrush(QColor(22, 28, 38, 185))
+        self._pen_submenu = QPen(QColor(70, 120, 180, 180), config.OVERLAY_BORDER_WIDTH)
+
+        self._brush_default = QBrush(QColor(*config.OVERLAY_COLOR_BG))
+        self._pen_default = QPen(QColor(*config.OVERLAY_COLOR_BORDER), config.OVERLAY_BORDER_WIDTH)
+        self._color_default_text = QColor(*config.OVERLAY_TEXT_COLOR)
+        self._color_default_hint = QColor(*config.OVERLAY_TEXT_HINT_COLOR)
+
+        self._color_badge_submenu = QColor(100, 170, 255, 180)
+        self._color_badge_back = QColor(220, 150, 230, 180)
+        self._color_badge_sticky = QColor(255, 195, 60, 180)
+        self._color_badge_default = QColor(140, 150, 165, 160)
+
+        # Pointer reticle
+        self._pen_pointer_ring = QPen(QColor(*config.OVERLAY_POINTER_OUTLINE), 2)
+        self._brush_pointer_dot = QBrush(QColor(*config.OVERLAY_POINTER_COLOR))
+
     def _apply_win32_no_activate(self) -> None:
         """Applies WS_EX_NOACTIVATE and WS_EX_TRANSPARENT styles on Windows to guarantee zero focus stealing."""
         try:
@@ -135,6 +191,7 @@ class OverlayWindow(QWidget):
         """Returns the currently active MenuNode."""
         return self.menu_tree.get(self.current_node_id, self.menu_tree.get("ROOT"))
 
+    @pyqtSlot(str)
     def on_file_linked(self, file_path: str) -> None:
         """Called when a user explicitly links a Python script."""
         if self.context_reader:
@@ -166,6 +223,7 @@ class OverlayWindow(QWidget):
             try:
                 self.ai_predictor_worker.predictions_ready.disconnect()
                 self.ai_predictor_worker.status_changed.disconnect()
+                self.ai_predictor_worker.prediction_failed.disconnect()
                 self.ai_predictor_worker.finished.disconnect()
             except Exception:
                 pass
@@ -198,9 +256,11 @@ class OverlayWindow(QWidget):
         )
         self.ai_predictor_worker.predictions_ready.connect(self._on_ai_predictions_ready)
         self.ai_predictor_worker.status_changed.connect(self._on_ai_status_changed)
+        self.ai_predictor_worker.prediction_failed.connect(self._on_ai_prediction_failed)
         self.ai_predictor_worker.finished.connect(self._on_ai_worker_finished)
         self.ai_predictor_worker.start()
 
+    @pyqtSlot(list)
     def _on_ai_predictions_ready(self, predictions: List[str]) -> None:
         """Called when AIPredictorWorker finishes with 6 suggestions."""
         if "SNIPPETS" in self.menu_tree:
@@ -210,10 +270,17 @@ class OverlayWindow(QWidget):
         self.ai_status_updated.emit("Listo (6 sugerencias)")
         self.update()
 
+    @pyqtSlot(str)
     def _on_ai_status_changed(self, status: str) -> None:
         """Emits AI status update."""
         self.ai_status_updated.emit(status)
 
+    @pyqtSlot(str)
+    def _on_ai_prediction_failed(self, error_msg: str) -> None:
+        """Handles prediction failure notification."""
+        self.ai_status_updated.emit(f"⚠️ {error_msg}")
+
+    @pyqtSlot()
     def _on_ai_worker_finished(self) -> None:
         """Worker lifecycle completion."""
         self.is_ai_predicting = False
@@ -234,6 +301,7 @@ class OverlayWindow(QWidget):
             return True
         return False
 
+    @pyqtSlot(float, float)
     def on_gaze_updated(self, gx: float, gy: float) -> None:
         """
         Receives normalized gaze coordinates from CameraTracker.
@@ -257,6 +325,7 @@ class OverlayWindow(QWidget):
 
         self.update()
 
+    @pyqtSlot(str)
     def on_gesture_triggered(self, gesture_name: str) -> None:
         """
         Handles facial gesture triggers (e.g. 'MOUTH_CLICK').
@@ -390,10 +459,8 @@ class OverlayWindow(QWidget):
         painter.setOpacity(0.92 if not self.reading_mode else 0.25)
 
         # Header background pill
-        header_bg = QColor(14, 18, 24, 230)
-        header_border = QColor(65, 75, 95, 200)
-        painter.setBrush(QBrush(header_bg))
-        painter.setPen(QPen(header_border, 1.5))
+        painter.setBrush(self._brush_header_bg)
+        painter.setPen(self._pen_header_border)
         painter.drawRoundedRect(header_rect, 6.0, 6.0)
 
         # Breadcrumb trail text (Left aligned, elided if long)
@@ -403,9 +470,8 @@ class OverlayWindow(QWidget):
 
         left_text = f"📁 {breadcrumb_path}"
         max_left_w = int(header_rect.width() * 0.55)
-        painter.setPen(QColor(255, 215, 60))
-        font_header_left = QFont("Segoe UI", 10, QFont.Weight.Bold)
-        painter.setFont(font_header_left)
+        painter.setPen(self._pen_header_left)
+        painter.setFont(self._font_header_left)
         elided_left = painter.fontMetrics().elidedText(left_text, Qt.TextElideMode.ElideMiddle, max_left_w)
         painter.drawText(
             int(header_rect.x() + 12),
@@ -419,9 +485,8 @@ class OverlayWindow(QWidget):
         # Last executed action text (Right aligned, elided if long)
         last_action_str = f"Última: {self.last_action_desc}"
         max_right_w = int(header_rect.width() * 0.40)
-        painter.setPen(QColor(160, 230, 180))
-        font_header_right = QFont("Segoe UI", 9)
-        painter.setFont(font_header_right)
+        painter.setPen(self._pen_header_right)
+        painter.setFont(self._font_header_right)
         elided_right = painter.fontMetrics().elidedText(last_action_str, Qt.TextElideMode.ElideRight, max_right_w)
         painter.drawText(
             int(header_rect.x() + header_rect.width() - max_right_w - 12),
@@ -439,10 +504,6 @@ class OverlayWindow(QWidget):
         avail_h = h - avail_y - margin
         cell_w = (w - 2 * margin) / 3.0
         cell_h = avail_h / 3.0
-
-        font_label = QFont("Segoe UI", 12, QFont.Weight.Bold)
-        font_hint = QFont("Segoe UI", 9)
-        font_badge = QFont("Segoe UI", 8, QFont.Weight.Bold)
 
         for i in range(9):
             if i >= len(items):
@@ -473,46 +534,46 @@ class OverlayWindow(QWidget):
 
             painter.setOpacity(block_opacity)
 
-            # Styling determination
+            # Pre-allocated styling determination (zero allocations per frame)
             if is_active_click:
-                bg_color = QColor(*config.OVERLAY_COLOR_CLICK)
-                border_pen = QPen(QColor(*config.OVERLAY_CLICK_BORDER_COLOR), 3)
-                text_color = QColor(10, 30, 15)
-                hint_color = QColor(25, 55, 30)
+                block_brush = self._brush_click
+                border_pen = self._pen_click
+                text_color = self._color_click_text
+                hint_color = self._color_click_hint
             elif is_hover:
-                bg_color = QColor(*config.OVERLAY_COLOR_HOVER)
-                border_pen = QPen(QColor(*config.OVERLAY_HOVER_BORDER_COLOR), config.OVERLAY_HOVER_BORDER_WIDTH)
-                text_color = QColor(*config.OVERLAY_TEXT_HOVER_COLOR)
-                hint_color = QColor(230, 235, 245)
+                block_brush = self._brush_hover
+                border_pen = self._pen_hover
+                text_color = self._color_hover_text
+                hint_color = self._color_hover_hint
             elif self.reading_mode:
                 if i == 4:
-                    bg_color = QColor(25, 45, 75, 180)
-                    border_pen = QPen(QColor(0, 150, 255, 220), 2)
-                    text_color = QColor(200, 225, 255)
-                    hint_color = QColor(150, 180, 220)
+                    block_brush = self._brush_reading_center
+                    border_pen = self._pen_reading_center
+                    text_color = self._color_reading_center_text
+                    hint_color = self._color_reading_center_hint
                 else:
-                    bg_color = QColor(15, 18, 22, 50)
-                    border_pen = QPen(QColor(40, 45, 55, 60), 1)
-                    text_color = QColor(120, 130, 145, 100)
-                    hint_color = QColor(80, 90, 105, 80)
+                    block_brush = self._brush_reading_other
+                    border_pen = self._pen_reading_other
+                    text_color = self._color_reading_other_text
+                    hint_color = self._color_reading_other_hint
             else:
                 if i == 4:
-                    bg_color = QColor(*config.OVERLAY_COLOR_REST)
-                    border_pen = QPen(QColor(*config.OVERLAY_REST_BORDER_COLOR), config.OVERLAY_BORDER_WIDTH)
+                    block_brush = self._brush_rest
+                    border_pen = self._pen_rest
                 elif item.action_type == "BACK":
-                    bg_color = QColor(36, 28, 38, 185)
-                    border_pen = QPen(QColor(180, 110, 190, 180), 2)
+                    block_brush = self._brush_back
+                    border_pen = self._pen_back
                 elif item.action_type == "SUBMENU":
-                    bg_color = QColor(22, 28, 38, 185)
-                    border_pen = QPen(QColor(70, 120, 180, 180), config.OVERLAY_BORDER_WIDTH)
+                    block_brush = self._brush_submenu
+                    border_pen = self._pen_submenu
                 else:
-                    bg_color = QColor(*config.OVERLAY_COLOR_BG)
-                    border_pen = QPen(QColor(*config.OVERLAY_COLOR_BORDER), config.OVERLAY_BORDER_WIDTH)
-                text_color = QColor(*config.OVERLAY_TEXT_COLOR)
-                hint_color = QColor(*config.OVERLAY_TEXT_HINT_COLOR)
+                    block_brush = self._brush_default
+                    border_pen = self._pen_default
+                text_color = self._color_default_text
+                hint_color = self._color_default_hint
 
             # Draw block rectangle
-            painter.setBrush(QBrush(bg_color))
+            painter.setBrush(block_brush)
             painter.setPen(border_pen)
             painter.drawRoundedRect(rect, 10.0, 10.0)
 
@@ -526,7 +587,7 @@ class OverlayWindow(QWidget):
 
             # Draw main label
             painter.setPen(text_color)
-            painter.setFont(font_label)
+            painter.setFont(self._font_label)
             painter.drawText(
                 int(rect.x() + 10),
                 int(rect.y() + 10),
@@ -539,7 +600,7 @@ class OverlayWindow(QWidget):
             # Draw hint / subtitle
             if hint_text:
                 painter.setPen(hint_color)
-                painter.setFont(font_hint)
+                painter.setFont(self._font_hint)
                 painter.drawText(
                     int(rect.x() + 10),
                     int(rect.y() + 36),
@@ -552,20 +613,20 @@ class OverlayWindow(QWidget):
             # Submenu or action pill indicator on bottom-right of block
             if not self.reading_mode and not is_active_click:
                 badge_text = ""
-                badge_color = QColor(140, 150, 165, 160)
+                badge_color = self._color_badge_default
                 if item.action_type == "SUBMENU":
                     badge_text = "📁 SUBMENÚ"
-                    badge_color = QColor(100, 170, 255, 180)
+                    badge_color = self._color_badge_submenu
                 elif item.action_type == "BACK":
                     badge_text = "⬅ VOLVER"
-                    badge_color = QColor(220, 150, 230, 180)
+                    badge_color = self._color_badge_back
                 elif item.sticky:
                     badge_text = "📌 FIJO"
-                    badge_color = QColor(255, 195, 60, 180)
+                    badge_color = self._color_badge_sticky
 
                 if badge_text:
                     painter.setPen(badge_color)
-                    painter.setFont(font_badge)
+                    painter.setFont(self._font_badge)
                     painter.drawText(
                         int(rect.x() + 10),
                         int(rect.y() + rect.height() - 24),
@@ -587,25 +648,23 @@ class OverlayWindow(QWidget):
 
             # Outer ring
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.setPen(QPen(QColor(*config.OVERLAY_POINTER_OUTLINE), 2))
+            painter.setPen(self._pen_pointer_ring)
             painter.drawEllipse(QPointF(cx, cy), r + 3, r + 3)
 
             # Center dot
-            painter.setBrush(QBrush(QColor(*config.OVERLAY_POINTER_COLOR)))
+            painter.setBrush(self._brush_pointer_dot)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawEllipse(QPointF(cx, cy), r, r)
 
         painter.end()
 
     def closeEvent(self, event) -> None:
-        """Safely stops background code injector and AI worker threads on window close."""
+        """Safely stops background code injector and AI worker threads on window close without terminate()."""
         if hasattr(self, "ai_predictor_worker") and self.ai_predictor_worker is not None:
             try:
                 if self.ai_predictor_worker.isRunning():
-                    self.ai_predictor_worker.quit()
-                    if not self.ai_predictor_worker.wait(1000):
-                        self.ai_predictor_worker.terminate()
-                        self.ai_predictor_worker.wait(300)
+                    self.ai_predictor_worker.stop()
+                    self.ai_predictor_worker.wait(2000)
             except Exception:
                 pass
         if hasattr(self, "code_injector") and self.code_injector is not None:

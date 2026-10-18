@@ -281,7 +281,7 @@ class CodeInjector:
         has_old_clipboard = False
         try:
             val = self.clipboard.paste()
-            if val is not None:
+            if val is not None and isinstance(val, str):
                 old_clipboard = val
                 has_old_clipboard = True
         except Exception as e:
@@ -313,8 +313,10 @@ class CodeInjector:
             logger.error(f"Error during paste keystroke execution: {e}")
             success = False
         finally:
+            # Guarantee all modifier keys are completely released under all circumstances
+            self.release_all_modifiers()
             # 6. Restore original user clipboard (guaranteed in finally)
-            if restore_clipboard and has_old_clipboard:
+            if restore_clipboard and has_old_clipboard and isinstance(old_clipboard, str):
                 time.sleep(0.015)
                 try:
                     self.clipboard.copy(old_clipboard)
@@ -459,6 +461,8 @@ class CodeInjector:
         except Exception as e:
             logger.error(f"Error sending key '{key_name}': {e}", exc_info=True)
             return False
+        finally:
+            self.release_all_modifiers()
 
     def execute_action(self, action: Any, async_exec: Optional[bool] = None) -> bool:
         """

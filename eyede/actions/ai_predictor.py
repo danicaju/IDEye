@@ -253,27 +253,73 @@ def parse_llm_suggestions(raw_text: str) -> List[str]:
                         return items
         return None
 
-    # 1. Try parsing JSON array or dict object
-    try:
-        data = json.loads(cleaned)
-        items = _extract_from_data(data)
-        if items:
-            return items[:6]
-    except Exception:
-        pass
+    def _remove_trailing_commas(s: str) -> str:
+        return re.sub(r',\s*([\]\}])', r'\1', s)
 
-    # 2. Try regex extraction of JSON array within text: [...]
-    json_match = re.search(r'\[\s*(?:\{|"(?:\'|))[\s\S]*?(?:\}|"(?:\'|))\s*\]', cleaned)
-    if json_match:
+    # 1. Try parsing JSON array or dict object directly
+    for candidate_str in (cleaned, _remove_trailing_commas(cleaned)):
         try:
-            data = json.loads(json_match.group(0))
+            data = json.loads(candidate_str)
             items = _extract_from_data(data)
             if items:
                 return items[:6]
         except Exception:
             pass
 
-    # 3. Fallback: Parse line by line (stripping bullet numbers: '1. ', '- ', etc.)
+    # 2. Try regex extraction of JSON object {.*} within surrounding text
+    json_obj_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+    if json_obj_match:
+        for raw_obj in (json_obj_match.group(0), _remove_trailing_commas(json_obj_match.group(0))):
+            try:
+                data = json.loads(raw_obj)
+                items = _extract_from_data(data)
+                if items:
+                    return items[:6]
+            except Exception:
+                pass
+
+    # 3. Try regex extraction of JSON array [...] within surrounding text
+    json_arr_match = re.search(r'\[.*\]', cleaned, re.DOTALL)
+    if json_arr_match:
+        for raw_arr in (json_arr_match.group(0), _remove_trailing_commas(json_arr_match.group(0))):
+            try:
+                data = json.loads(raw_arr)
+                items = _extract_from_data(data)
+                if items:
+                    return items[:6]
+            except Exception:
+                pass
+
+    # 4. Balanced scanner: parse any valid JSON object or array blocks embedded in conversational text
+    for open_ch, close_ch in (('[', ']'), ('{', '}')):
+        depth = 0
+        start = -1
+        in_str = False
+        esc = False
+        for i, c in enumerate(cleaned):
+            if c == '"' and not esc:
+                in_str = not in_str
+            elif not in_str:
+                if c == open_ch:
+                    if depth == 0:
+                        start = i
+                    depth += 1
+                elif c == close_ch:
+                    depth -= 1
+                    if depth == 0 and start != -1:
+                        chunk = cleaned[start : i + 1]
+                        for c_text in (chunk, _remove_trailing_commas(chunk)):
+                            try:
+                                block_data = json.loads(c_text)
+                                block_items = _extract_from_data(block_data)
+                                if block_items and len(block_items) >= 2:
+                                    return block_items[:6]
+                            except Exception:
+                                pass
+                        start = -1
+            esc = (c == '\\' and not esc) if in_str else False
+
+    # 5. Fallback: Parse line by line (stripping bullet numbers: '1. ', '- ', etc.)
     lines = cleaned.splitlines()
     candidates = []
     has_numbered_or_bullet = any(re.match(r'^(?:\d+[\.\)]|[-*])\s*', l.strip()) for l in lines)
@@ -289,6 +335,14 @@ def parse_llm_suggestions(raw_text: str) -> List[str]:
         if unprefixed:
             candidates.append(unprefixed)
 
+    # 6. If candidate looks like an unparsed JSON array or object string, rescue quoted elements
+    if len(candidates) == 1 and (candidates[0].startswith("[") or candidates[0].startswith("{")):
+        quoted = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', candidates[0])
+        if quoted:
+            rescued = [_clean_item(q) for q in quoted if _clean_item(q)]
+            if rescued:
+                return rescued[:6]
+
     return candidates
 
 
@@ -297,6 +351,7 @@ class AIPredictorWorker(QThread):
     Asynchronous QThread worker that requests code completions from Ollama or OpenAI-compatible
     APIs and falls back instantaneously to the Heuristic Engine upon timeout or network failure.
     Guarantees emitting exactly 6 suggestions via predictions_ready.
+    Supports graceful termination via boolean flag self._running without terminate().
     """
 
     predictions_ready = pyqtSignal(list)  # List[str] of 6 items
@@ -326,9 +381,23 @@ class AIPredictorWorker(QThread):
         self.timeout: float = float(timeout if timeout is not None else getattr(config, "LLM_TIMEOUT_SEC", 2.5))
         self.api_key: str = api_key or getattr(config, "LLM_API_KEY", "")
         self.temperature: float = float(temperature if temperature is not None else getattr(config, "LLM_TEMPERATURE", 0.2))
+        self._running: bool = True
+
+    def stop(self) -> None:
+        """Gracefully halts worker thread without calling terminate()."""
+        self._running = False
+
+    def wait(self, timeout_ms: int = 2000) -> bool:
+        """Waits for worker thread to terminate cleanly."""
+        if not self.isRunning():
+            return True
+        return super().wait(timeout_ms)
 
     def run(self) -> None:
         """Executes LLM request or falls back cleanly to Heuristic Engine."""
+        if not self._running:
+            return
+
         # Read context on worker thread if not explicitly passed
         if self.context_reader is not None:
             if not self.context_text:
@@ -346,6 +415,9 @@ class AIPredictorWorker(QThread):
                 except Exception:
                     pass
 
+        if not self._running:
+            return
+
         self.status_changed.emit(f"⏳ Consultando {self.provider.upper()} ({self.model})...")
 
         suggestions: List[str] = []
@@ -361,6 +433,9 @@ class AIPredictorWorker(QThread):
             error_msg = f"JSON corrupto: {str(e)}"
         except Exception as e:
             error_msg = f"Error: {str(e)}"
+
+        if not self._running:
+            return
 
         # If LLM didn't return 6 valid suggestions, switch to Heuristic Engine
         if len(suggestions) < 6:
@@ -381,6 +456,9 @@ class AIPredictorWorker(QThread):
 
         while len(suggestions) < 6:
             suggestions.append("pass")
+
+        if not self._running:
+            return
 
         self.predictions_ready.emit(suggestions[:6])
 

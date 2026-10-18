@@ -12,7 +12,7 @@ Golden Rules of Gaze Ergonomics:
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Tuple, Set
+from typing import Optional, List, Dict, Tuple, Set, Union, Any
 
 
 @dataclass
@@ -208,6 +208,215 @@ def populate_exit_confirm_items(parent_id: str = "ROOT") -> List[MenuAction]:
         _make_cancel("8", "CANCEL_EXIT_8"),
         _make_cancel("9", "CANCEL_EXIT_9"),
     ]
+
+
+def create_standard_menu_action(key_num: str = "9") -> MenuAction:
+    """Returns the standardized action to switch to the full 3x3 Standard Menu Tree."""
+    return MenuAction(
+        id="SWITCH_MENU_STANDARD",
+        label=f"{key_num}: MENÚ ESTÁNDAR",
+        hint="Abrir menú estándar 3x3 completo",
+        action_type="SUBMENU",
+        submenu_id="MENU_STANDARD",
+        icon="navigation",
+        sticky=False,
+    )
+
+
+def create_adaptive_menu_action(key_num: str = "9") -> MenuAction:
+    """Returns the standardized action to switch back to the dynamic adaptive context menu."""
+    return MenuAction(
+        id="SWITCH_ADAPTIVE_MENU",
+        label=f"{key_num}: MENÚ ADAPTATIVO",
+        hint="Volver a los menús contextuales adaptativos",
+        action_type="SUBMENU",
+        submenu_id="ROOT",
+        icon="ai_spark",
+        sticky=False,
+    )
+
+
+def get_adaptive_context_node(
+    context_info: Union[Dict[str, Any], str],
+    standard_root: Optional[MenuNode] = None,
+    switch_slot: int = 8,
+) -> MenuNode:
+    """
+    Constructs an adaptive 3x3 MenuNode based on the detected syntactic context.
+    Cuts eye dwell cycles by dynamically surfacing contextual snippets and tokens.
+
+    Golden Rules of Gaze Ergonomics:
+    1. Exactly 9 items (indices 0 to 8).
+    2. Index 4 is ALWAYS create_pause_action("5").
+    3. One designated slot (default Index 8, or Index 6) allows one-click switching to MENU_STANDARD.
+    4. Precise cursor offsets (cursor_offset_left, cursor_offset_up).
+    5. Clean labels, zero emojis, vector icons.
+    """
+    if isinstance(context_info, str):
+        ctx_type = context_info.upper()
+        line_text = ""
+    elif isinstance(context_info, dict):
+        ctx_type = str(context_info.get("context", "GENERAL")).upper()
+        line_text = str(context_info.get("line", ""))
+    else:
+        ctx_type = "GENERAL"
+        line_text = ""
+
+    # If context is general or unknown, return the standard root node
+    if ctx_type in ("GENERAL", "UNKNOWN", ""):
+        if standard_root is not None:
+            return standard_root
+        return build_menu_tree()["ROOT"]
+
+    standard_switch_key = "9" if switch_slot == 8 else "7"
+    switch_item = create_standard_menu_action(standard_switch_key)
+
+    if ctx_type == "FUNCTION_SIGNATURE":
+        # Contextual actions: self, *args, **kwargs, -> None:, -> bool:, return, ,, ):
+        has_self = "self" in line_text
+        if has_self:
+            slot_0 = MenuAction("CTX_FN_COMMA", "1: ,", "Separador de parámetros", "SNIPPET", snippet=", ", icon="operators")
+            slot_1 = MenuAction("CTX_FN_ARGS", "2: *args", "Argumentos posicionales", "SNIPPET", snippet="*args", icon="variables")
+        else:
+            slot_0 = MenuAction("CTX_FN_SELF", "1: self", "Parámetro self", "SNIPPET", snippet="self", icon="variables")
+            slot_1 = MenuAction("CTX_FN_ARGS", "2: *args", "Argumentos posicionales", "SNIPPET", snippet="*args", icon="variables")
+
+        slot_2 = MenuAction("CTX_FN_KWARGS", "3: **kwargs", "Argumentos clave-valor", "SNIPPET", snippet="**kwargs", icon="variables")
+        slot_3 = MenuAction("CTX_FN_RET_NONE", "4: -> None:", "Anotación retorno None", "SNIPPET", snippet=" -> None:", icon="function")
+        slot_5 = MenuAction("CTX_FN_RET_BOOL", "6: -> bool:", "Anotación retorno bool", "SNIPPET", snippet=" -> bool:", icon="function")
+        slot_6 = MenuAction("CTX_FN_RETURN", "7: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow")
+        slot_7 = MenuAction("CTX_FN_CLOSE", "8: ):", "Cerrar firma y nueva línea", "SNIPPET", snippet="):\n    ", icon="function")
+
+        actions_7 = [slot_0, slot_1, slot_2, slot_3, slot_5, slot_6, slot_7]
+        title = "CONTEXTO: FUNCIÓN"
+        breadcrumb = "RAÍZ [CONTEXTO: FUNCIÓN]"
+
+    elif ctx_type == "TRY_BLOCK":
+        actions_7 = [
+            MenuAction("CTX_TRY_EXC_GEN", "1: except Exception:", "Capturar Exception", "SNIPPET", snippet="except Exception as e:\n    ", icon="flow"),
+            MenuAction("CTX_TRY_EXC_VAL", "2: except ValueError:", "Capturar ValueError", "SNIPPET", snippet="except ValueError:\n    ", icon="flow"),
+            MenuAction("CTX_TRY_EXC_KEY", "3: except KeyError:", "Capturar KeyError", "SNIPPET", snippet="except KeyError:\n    ", icon="flow"),
+            MenuAction("CTX_TRY_FINALLY", "4: finally:", "Bloque de finalización limpia", "SNIPPET", snippet="finally:\n    ", icon="flow"),
+            MenuAction("CTX_TRY_RAISE", "6: raise", "Relanzar o disparar excepción", "SNIPPET", snippet="raise ", icon="flow"),
+            MenuAction("CTX_TRY_PASS", "7: pass", "Sentencia pass no-op", "SNIPPET", snippet="pass", icon="flow"),
+            MenuAction("CTX_TRY_BLOCK", "8: try:", "Nuevo bloque try con indentación", "SNIPPET", snippet="try:\n    ", icon="flow"),
+        ]
+        title = "CONTEXTO: TRY/EXCEPT"
+        breadcrumb = "RAÍZ [CONTEXTO: TRY/EXCEPT]"
+
+    elif ctx_type == "CLASS_BODY":
+        actions_7 = [
+            MenuAction("CTX_CLS_INIT", "1: def __init__", "Constructor inicializador", "SNIPPET", snippet="def __init__(self):\n    ", icon="function"),
+            MenuAction("CTX_CLS_REPR", "2: def __repr__", "Representación en string", "SNIPPET", snippet="def __repr__(self):\n    return f\"{self.__class__.__name__}()\"\n", icon="function"),
+            MenuAction("CTX_CLS_PROP", "3: @property", "Decorador @property", "SNIPPET", snippet="@property\n", icon="function"),
+            MenuAction("CTX_CLS_METH", "4: @classmethod", "Decorador @classmethod", "SNIPPET", snippet="@classmethod\n", icon="function"),
+            MenuAction("CTX_CLS_SUPER", "6: super().__init__", "Constructor padre", "SNIPPET", snippet="super().__init__()\n    ", icon="function"),
+            MenuAction("CTX_CLS_SELF", "7: self.", "Acceso a atributo de instancia", "SNIPPET", snippet="self.", icon="variables"),
+            MenuAction("CTX_CLS_PASS", "8: pass", "Sentencia pass", "SNIPPET", snippet="pass", icon="flow"),
+        ]
+        title = "CONTEXTO: CLASE"
+        breadcrumb = "RAÍZ [CONTEXTO: CLASE]"
+
+    elif ctx_type == "IF_BLOCK":
+        actions_7 = [
+            MenuAction("CTX_IF_ELIF", "1: elif ...:", "Condicional elif con cursor", "SNIPPET", snippet="elif :", cursor_offset_left=1, icon="flow"),
+            MenuAction("CTX_IF_ELSE", "2: else:", "Rama else alternativa", "SNIPPET", snippet="else:\n    ", icon="flow"),
+            MenuAction("CTX_IF_IS_NONE", "3: is None", "Comprobación de valor nulo", "SNIPPET", snippet="is None", icon="operators"),
+            MenuAction("CTX_IF_NOT_NONE", "4: is not None", "Comprobación de no nulidad", "SNIPPET", snippet="is not None", icon="operators"),
+            MenuAction("CTX_IF_AND", "6: and", "Operador lógico Y", "SNIPPET", snippet="and ", icon="operators"),
+            MenuAction("CTX_IF_OR", "7: or", "Operador lógico O", "SNIPPET", snippet="or ", icon="operators"),
+            MenuAction("CTX_IF_NOT", "8: not", "Operador lógico NO", "SNIPPET", snippet="not ", icon="operators"),
+        ]
+        title = "CONTEXTO: IF/ELIF"
+        breadcrumb = "RAÍZ [CONTEXTO: IF/ELIF]"
+
+    elif ctx_type == "LOOP_BLOCK":
+        actions_7 = [
+            MenuAction("CTX_LOOP_BREAK", "1: break", "Interrumpir bucle", "SNIPPET", snippet="break", icon="flow"),
+            MenuAction("CTX_LOOP_CONT", "2: continue", "Saltar a siguiente iteración", "SNIPPET", snippet="continue", icon="flow"),
+            MenuAction("CTX_LOOP_ENUM", "3: enumerate()", "Iterador con índice", "SNIPPET", snippet="enumerate()", cursor_offset_left=1, icon="function"),
+            MenuAction("CTX_LOOP_RANGE", "4: range()", "Generador de rango", "SNIPPET", snippet="range()", cursor_offset_left=1, icon="function"),
+            MenuAction("CTX_LOOP_ITEMS", "6: .items()", "Pares clave-valor", "SNIPPET", snippet=".items()", icon="function"),
+            MenuAction("CTX_LOOP_ZIP", "7: zip()", "Iteración múltiple combinada", "SNIPPET", snippet="zip()", cursor_offset_left=1, icon="function"),
+            MenuAction("CTX_LOOP_IN", "8: in", "Operador de pertenencia", "SNIPPET", snippet="in ", icon="operators"),
+        ]
+        title = "CONTEXTO: BUCLE"
+        breadcrumb = "RAÍZ [CONTEXTO: BUCLE]"
+
+    elif ctx_type == "WITH_BLOCK":
+        actions_7 = [
+            MenuAction("CTX_WITH_OPEN", "1: open() as f", "Apertura de archivo con cursor", "SNIPPET", snippet='open("", "r") as f:', cursor_offset_left=14, icon="function"),
+            MenuAction("CTX_WITH_AS", "2: as", "Alias de context manager", "SNIPPET", snippet="as ", icon="operators"),
+            MenuAction("CTX_WITH_PASS", "3: pass", "Sentencia pass", "SNIPPET", snippet="pass", icon="flow"),
+            MenuAction("CTX_WITH_STMT", "4: with ...:", "Sentencia with con cursor", "SNIPPET", snippet="with :", cursor_offset_left=1, icon="flow"),
+            MenuAction("CTX_WITH_READ", "6: f.read()", "Lectura completa de archivo", "SNIPPET", snippet="f.read()", icon="function"),
+            MenuAction("CTX_WITH_WRITE", "7: f.write()", "Escritura de archivo con cursor", "SNIPPET", snippet='f.write("")', cursor_offset_left=2, icon="function"),
+            MenuAction("CTX_WITH_SELF", "8: self.", "Acceso a objeto de contexto", "SNIPPET", snippet="self.", icon="variables"),
+        ]
+        title = "CONTEXTO: WITH"
+        breadcrumb = "RAÍZ [CONTEXTO: WITH]"
+
+    else:
+        return standard_root if standard_root is not None else build_menu_tree()["ROOT"]
+
+    pause_action = create_pause_action("5")
+    if switch_slot == 8:
+        raw_items = [
+            actions_7[0],
+            actions_7[1],
+            actions_7[2],
+            actions_7[3],
+            pause_action,
+            actions_7[4],
+            actions_7[5],
+            actions_7[6],
+            switch_item,
+        ]
+    else:
+        raw_items = [
+            actions_7[0],
+            actions_7[1],
+            actions_7[2],
+            actions_7[3],
+            pause_action,
+            actions_7[4],
+            switch_item,
+            actions_7[5],
+            actions_7[6],
+        ]
+
+    # Normalize 1-based key numbering according to 3x3 slot index
+    key_numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    items: List[MenuAction] = []
+    for idx, it in enumerate(raw_items):
+        prefix = f"{key_numbers[idx]}: "
+        lbl = it.label
+        if len(lbl) >= 3 and lbl[0].isdigit() and lbl[1:3] == ": ":
+            lbl = prefix + lbl[3:]
+        elif not lbl.startswith(prefix):
+            lbl = prefix + lbl
+        items.append(MenuAction(
+            id=it.id,
+            label=lbl,
+            hint=it.hint,
+            action_type=it.action_type,
+            snippet=it.snippet,
+            key_name=it.key_name,
+            cursor_offset_left=it.cursor_offset_left,
+            cursor_offset_up=it.cursor_offset_up,
+            sticky=it.sticky,
+            submenu_id=it.submenu_id,
+            icon=it.icon,
+        ))
+
+    return MenuNode(
+        id=f"ADAPTIVE_{ctx_type}",
+        title=title,
+        breadcrumb_label=breadcrumb,
+        items=items,
+        parent_id=None,
+        sticky=False,
+    )
 
 
 def build_menu_tree() -> Dict[str, MenuNode]:

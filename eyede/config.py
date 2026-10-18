@@ -241,3 +241,6 @@ LLM_API_KEY: str = ""
 LLM_TIMEOUT_SEC: float = 2.5  # Hard upper limit for responsiveness
 LLM_TEMPERATURE: float = 0.2
 
+# Adaptive AST Menu Configuration (Option A: Dynamic AST Menus)
+ENABLE_ADAPTIVE_AST_MENUS: bool = True
+

@@ -19,6 +19,7 @@ Features:
 from typing import Optional, Tuple, Dict, Any, List
 import sys
 import os
+import time
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QRectF, QPointF
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush
@@ -36,8 +37,10 @@ try:
         populate_ai_prediction_items,
         populate_local_symbol_items,
         populate_exit_confirm_items,
+        get_adaptive_context_node,
+        create_adaptive_menu_action,
     )
-    from eyede.actions.context_reader import ContextReader
+    from eyede.actions.context_reader import ContextReader, detect_syntactic_context
     from eyede.actions.ai_predictor import AIPredictorWorker
 except ImportError:
     import config
@@ -51,8 +54,10 @@ except ImportError:
         populate_ai_prediction_items,
         populate_local_symbol_items,
         populate_exit_confirm_items,
+        get_adaptive_context_node,
+        create_adaptive_menu_action,
     )
-    from actions.context_reader import ContextReader
+    from actions.context_reader import ContextReader, detect_syntactic_context
     from actions.ai_predictor import AIPredictorWorker
 
 
@@ -69,6 +74,8 @@ class OverlayWindow(QWidget):
     action_executed = pyqtSignal(str, str)  # (action_id, action_description)
     ai_status_updated = pyqtSignal(str)
     tracking_mode_cycle_requested = pyqtSignal()
+    adaptive_ast_toggled = pyqtSignal(bool)
+    ast_context_detected = pyqtSignal(str)  # (context_name)
 
     def __init__(
         self,
@@ -107,6 +114,23 @@ class OverlayWindow(QWidget):
         self.is_ai_predicting: bool = False
         self.current_node_id: str = "ROOT"
         self.last_action_desc: str = "Ninguna"
+
+        # Adaptive AST Context Menu Subsystem (Phase Extra - Option A)
+        self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
+        self._last_detected_context_name: str = "GENERAL"
+        self._cached_adaptive_node: Optional[MenuNode] = None
+        self._last_ast_eval_time: float = 0.0
+        if "MENU_STANDARD" not in self.menu_tree and "ROOT" in self.menu_tree:
+            std_items = list(self.menu_tree["ROOT"].items)
+            std_items[8] = create_adaptive_menu_action("9")
+            self.menu_tree["MENU_STANDARD"] = MenuNode(
+                id="MENU_STANDARD",
+                title="MENÚ ESTÁNDAR",
+                breadcrumb_label="ESTÁNDAR",
+                items=std_items,
+                parent_id="ROOT",
+                sticky=False,
+            )
 
         # 3. State tracking
         self.reading_mode: bool = False
@@ -279,12 +303,32 @@ class OverlayWindow(QWidget):
 
     @property
     def current_node(self) -> MenuNode:
-        """Returns the currently active MenuNode."""
+        """Returns the currently active MenuNode, adapting dynamically when at ROOT with 250ms render caching."""
+        if self.current_node_id == "ROOT" and getattr(self, "adaptive_ast_enabled", True):
+            now = time.time()
+            if self._cached_adaptive_node is not None and (now - self._last_ast_eval_time < 0.25):
+                return self._cached_adaptive_node
+
+            std_root = self.menu_tree.get("ROOT")
+            if self.context_reader:
+                ctx_info = self.context_reader.detect_syntactic_context()
+            else:
+                ctx_info = detect_syntactic_context()
+            ctx_name = ctx_info.get("context", "GENERAL")
+            if ctx_name != self._last_detected_context_name:
+                self._last_detected_context_name = ctx_name
+                self.ast_context_detected.emit(ctx_name)
+            node = get_adaptive_context_node(ctx_info, std_root)
+            self._cached_adaptive_node = node
+            self._last_ast_eval_time = now
+            return node
         return self.menu_tree.get(self.current_node_id, self.menu_tree.get("ROOT"))
 
     @pyqtSlot(str)
     def on_file_linked(self, file_path: str) -> None:
         """Called when a user explicitly links a Python script."""
+        self._cached_adaptive_node = None
+        self._last_ast_eval_time = 0.0
         if self.context_reader:
             self.context_reader.set_active_file(file_path)
             self.last_action_desc = f"Vinculado: {os.path.basename(file_path)}"
@@ -383,6 +427,8 @@ class OverlayWindow(QWidget):
         """
         if node_id in self.menu_tree:
             self.current_node_id = node_id
+            self._cached_adaptive_node = None
+            self._last_ast_eval_time = 0.0
             if node_id == "T9_LOCAL_VARS":
                 self._refresh_local_symbols()
             elif node_id in ("SNIPPETS", "AI_PREDICT"):
@@ -621,12 +667,35 @@ class OverlayWindow(QWidget):
         event.accept()
 
     def keyPressEvent(self, event) -> None:
-        """Keyboard event handler for shortcut [T] to cycle tracking modes."""
+        """Keyboard event handler for shortcut [T] (tracking mode) and [A] (adaptive AST)."""
         if event.key() == Qt.Key.Key_T:
             self.tracking_mode_cycle_requested.emit()
             event.accept()
+        elif event.key() == Qt.Key.Key_A:
+            self.toggle_adaptive_ast()
+            event.accept()
         else:
             super().keyPressEvent(event)
+
+    def toggle_adaptive_ast(self) -> None:
+        """Toggles between dynamic adaptive AST menus and standard root menu (shortcut [A])."""
+        self.adaptive_ast_enabled = not self.adaptive_ast_enabled
+        self._cached_adaptive_node = None
+        self._last_ast_eval_time = 0.0
+        self.last_action_desc = f"AST Adaptativo: {'ON' if self.adaptive_ast_enabled else 'OFF'}"
+        self.adaptive_ast_toggled.emit(self.adaptive_ast_enabled)
+        self.update()
+
+    @pyqtSlot(bool)
+    def set_adaptive_ast_enabled(self, enabled: bool) -> None:
+        """Explicitly sets adaptive AST menus enabled status."""
+        if self.adaptive_ast_enabled != enabled:
+            self.adaptive_ast_enabled = enabled
+            self._cached_adaptive_node = None
+            self._last_ast_eval_time = 0.0
+            self.last_action_desc = f"AST Adaptativo: {'ON' if self.adaptive_ast_enabled else 'OFF'}"
+            self.adaptive_ast_toggled.emit(self.adaptive_ast_enabled)
+            self.update()
 
     def toggle_reading_mode(self) -> None:
         """Toggles between Active HUD mode and 10% Opacity Reading Mode."""
@@ -665,13 +734,13 @@ class OverlayWindow(QWidget):
         act_id = item.id.upper()
         curr_id = self.current_node_id.upper()
 
-        if sub_id == "FLOW" or "FLOW" in curr_id or any(k in act_id for k in ("IF", "LOOP", "WHILE", "FOR", "TRY", "RETURN", "FLOW")):
+        if sub_id == "FLOW" or "FLOW" in curr_id or any(k in act_id for k in ("IF", "LOOP", "WHILE", "FOR", "TRY", "RETURN", "FLOW", "CTX_TRY", "CTX_LOOP", "CTX_IF", "CTX_WITH")):
             return "FLOW"
-        if sub_id == "STRUCT" or "STRUCT" in curr_id or any(k in act_id for k in ("FUNC", "CLASS", "DEF", "STRUCT", "DATA", "LIST", "DICT", "T9")):
+        if sub_id == "STRUCT" or "STRUCT" in curr_id or any(k in act_id for k in ("FUNC", "CLASS", "DEF", "STRUCT", "DATA", "LIST", "DICT", "T9", "CTX_FN", "CTX_CLS")):
             return "STRUCT"
-        if sub_id == "OPERATORS" or "OP" in curr_id or any(k in act_id for k in ("OPERATOR", "OP_", "MATH", "BOOL", "COMPARE")):
+        if sub_id == "OPERATORS" or "OP" in curr_id or any(k in act_id for k in ("OPERATOR", "OP_", "MATH", "BOOL", "COMPARE", "COMMA")):
             return "OPERATORS"
-        if sub_id == "NAV" or "NAV" in curr_id or any(k in act_id for k in ("NAV_", "UP", "DOWN", "LEFT", "RIGHT", "PAGE", "WORD")):
+        if sub_id in ("NAV", "MENU_STANDARD") or "NAV" in curr_id or any(k in act_id for k in ("NAV_", "UP", "DOWN", "LEFT", "RIGHT", "PAGE", "WORD", "SWITCH_MENU_STANDARD", "SWITCH_ADAPTIVE_MENU")):
             return "NAV"
         if sub_id in ("SNIPPETS", "AI_PREDICT") or "SNIPPET" in curr_id or "AI" in act_id or "PREDICT" in act_id:
             return "AI"
@@ -733,9 +802,13 @@ class OverlayWindow(QWidget):
         if curr_node and curr_node.sticky:
             breadcrumb_path += "  [FIJO]"
 
-        left_text = breadcrumb_path
+        if self.current_node_id == "ROOT" and getattr(self, "adaptive_ast_enabled", True) and curr_node:
+            left_text = curr_node.breadcrumb_label
+        else:
+            left_text = breadcrumb_path
+
         text_start_x = pill_rect.right() + 12.0
-        max_left_w = int(header_rect.width() * 0.25)
+        max_left_w = int(header_rect.width() * 0.32)
         painter.setPen(self._pen_header_left)
         painter.setFont(self._font_header_left)
         elided_left = painter.fontMetrics().elidedText(left_text, Qt.TextElideMode.ElideMiddle, max_left_w)

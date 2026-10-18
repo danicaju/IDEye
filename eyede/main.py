@@ -710,6 +710,9 @@ class EyeDEApplication(QObject):
         self.debug_widget.file_linked.connect(self.context_reader.set_active_file)
         self.debug_widget.file_linked.connect(self.overlay.on_file_linked)
         self.overlay.ai_status_updated.connect(self.debug_widget.update_ai_status)
+        self.debug_widget.adaptive_ast_toggled.connect(self.overlay.set_adaptive_ast_enabled)
+        self.overlay.adaptive_ast_toggled.connect(self.debug_widget.set_adaptive_ast_enabled)
+        self.overlay.ast_context_detected.connect(self.debug_widget.update_ast_context)
 
         # Controls from UI to application lifecycle
         self.debug_widget.recalibrate_requested.connect(self.launch_calibration)

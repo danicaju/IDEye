@@ -56,6 +56,7 @@ class DebugWidget(QWidget):
     sensitivity_y_changed = pyqtSignal(float)
     anti_jitter_changed = pyqtSignal(float)
     tracking_mode_changed = pyqtSignal(str)
+    adaptive_ast_toggled = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -73,10 +74,12 @@ class DebugWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
+        self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
         self._setup_ui()
 
-        # Keyboard shortcut [T] active application-wide
+        # Keyboard shortcut [T] and [A] active application-wide
         self.shortcut_t = QShortcut(QKeySequence(Qt.Key.Key_T), self, self.cycle_tracking_mode, context=Qt.ShortcutContext.ApplicationShortcut)
+        self.shortcut_a = QShortcut(QKeySequence(Qt.Key.Key_A), self, self.toggle_adaptive_ast, context=Qt.ShortcutContext.ApplicationShortcut)
 
     def set_gaze_estimator(self, estimator: Any) -> None:
         """Links the GazeEstimator instance for direct real-time parameter tuning."""
@@ -347,13 +350,28 @@ class DebugWidget(QWidget):
         self.lbl_ai_engine.setStyleSheet("font-size: 10px; color: #a7f3d0;")
         ai_layout.addWidget(self.lbl_ai_engine)
 
+        self.lbl_ast_context = QLabel("Contexto AST: GENERAL", self)
+        self.lbl_ast_context.setStyleSheet("font-size: 10px; font-weight: bold; color: #f472b6;")
+        ai_layout.addWidget(self.lbl_ast_context)
+
         main_layout.addLayout(ai_layout)
 
-        # 8. File Link Button
-        self.btn_link_file = QPushButton("Vincular Archivo .py", self)
+        # 8. File Link & Adaptive AST Toggle Buttons
+        link_adaptive_layout = QHBoxLayout()
+        link_adaptive_layout.setSpacing(6)
+
+        self.btn_link_file = QPushButton("Vincular .py", self)
         self.btn_link_file.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_link_file.clicked.connect(self._on_link_file_clicked)
-        main_layout.addWidget(self.btn_link_file)
+        link_adaptive_layout.addWidget(self.btn_link_file)
+
+        self.btn_toggle_adaptive = QPushButton("AST Adaptativo: ON [A]", self)
+        self.btn_toggle_adaptive.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_toggle_adaptive.setToolTip("Alternar menús contextuales adaptativos según AST (Atajo: A)")
+        self.btn_toggle_adaptive.clicked.connect(self.toggle_adaptive_ast)
+        link_adaptive_layout.addWidget(self.btn_toggle_adaptive)
+
+        main_layout.addLayout(link_adaptive_layout)
 
         # 9. Action Buttons
         btn_layout = QHBoxLayout()
@@ -402,6 +420,10 @@ class DebugWidget(QWidget):
         if not link_icon.isNull():
             self.btn_link_file.setIcon(link_icon)
 
+        spark_icon = icon_mgr.get_icon("ai_spark", 16)
+        if not spark_icon.isNull():
+            self.btn_toggle_adaptive.setIcon(spark_icon)
+
         # 10. Emergency Hotkey Documentation Label
         self.lbl_emergency_hint = QLabel("Emergencia: Ctrl+Alt+Q para salir", self)
         self.lbl_emergency_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -409,6 +431,7 @@ class DebugWidget(QWidget):
         main_layout.addWidget(self.lbl_emergency_hint)
 
         self._update_mode_ui("PURE_IRIS")
+        self._update_adaptive_ui()
 
     def _on_slider_sens_x_changed(self, value: int) -> None:
         val = value / 10.0
@@ -617,12 +640,82 @@ class DebugWidget(QWidget):
         self.combo_mode.setCurrentIndex(idx)
 
     def keyPressEvent(self, event) -> None:
-        """Keyboard event handler for shortcut [T] to cycle tracking modes."""
+        """Keyboard event handler for shortcut [T] to cycle tracking modes and [A] to toggle adaptive AST."""
         if event.key() == Qt.Key.Key_T:
             self.cycle_tracking_mode()
             event.accept()
+        elif event.key() == Qt.Key.Key_A:
+            self.toggle_adaptive_ast()
+            event.accept()
         else:
             super().keyPressEvent(event)
+
+    def toggle_adaptive_ast(self) -> None:
+        """Toggles adaptive AST menus mode (shortcut [A])."""
+        self.adaptive_ast_enabled = not self.adaptive_ast_enabled
+        self._update_adaptive_ui()
+        self.adaptive_ast_toggled.emit(self.adaptive_ast_enabled)
+
+    @pyqtSlot(bool)
+    def set_adaptive_ast_enabled(self, enabled: bool) -> None:
+        """Explicitly sets adaptive AST menus enabled status."""
+        if self.adaptive_ast_enabled != enabled:
+            self.adaptive_ast_enabled = enabled
+            self._update_adaptive_ui()
+            self.adaptive_ast_toggled.emit(self.adaptive_ast_enabled)
+
+    def _update_adaptive_ui(self) -> None:
+        """Updates the button text and styling based on adaptive AST state."""
+        if not hasattr(self, "btn_toggle_adaptive"):
+            return
+        state_str = "ON" if self.adaptive_ast_enabled else "OFF"
+        self.btn_toggle_adaptive.setText(f"AST: {state_str} [A]")
+        if self.adaptive_ast_enabled:
+            self.btn_toggle_adaptive.setStyleSheet("""
+                QPushButton {
+                    background-color: #065f46;
+                    border: 1px solid #10b981;
+                    border-radius: 4px;
+                    padding: 4px 6px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    color: #ecfdf5;
+                }
+                QPushButton:hover {
+                    background-color: #047857;
+                }
+            """)
+        else:
+            self.btn_toggle_adaptive.setStyleSheet("""
+                QPushButton {
+                    background-color: #1e293b;
+                    border: 1px solid #475569;
+                    border-radius: 4px;
+                    padding: 4px 6px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    color: #94a3b8;
+                }
+                QPushButton:hover {
+                    background-color: #334155;
+                }
+            """)
+
+    @pyqtSlot(str)
+    def update_ast_context(self, context_name: str) -> None:
+        """Updates the live AST context indicator."""
+        label_map = {
+            "FUNCTION_SIGNATURE": "FUNCIÓN",
+            "TRY_BLOCK": "TRY/EXCEPT",
+            "CLASS_BODY": "CLASE",
+            "IF_BLOCK": "IF/ELIF",
+            "LOOP_BLOCK": "BUCLE",
+            "WITH_BLOCK": "WITH",
+            "GENERAL": "GENERAL",
+        }
+        disp = label_map.get(context_name, context_name)
+        if hasattr(self, "lbl_ast_context"):
+            self.lbl_ast_context.setText(f"Contexto AST: {disp}")
 
 
 # Alias for backwards compatibility and alternative naming conventions

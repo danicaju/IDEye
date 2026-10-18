@@ -159,15 +159,16 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 
 | Key | Action | Description |
 | :--- | :--- | :--- |
-| **`Ctrl+Alt+Q` / `F12`** | ** Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down IDEye from anywhere in the OS, even when VS Code has focus |
-| **`Ctrl+Alt+R`** | ** Emergency Reset** | Immediately clears 5-point calibration weights and reverts to safe neutral mapping |
-| **`[T]`** | **Cycle Tracking Mode** | Switch between **`PURE_IRIS`** (Solo Iris - 100% eyes, zero head required), **`HYBRID`** (VOR-compensated fusion), and **`HEAD_PRIMARY`** |
+| **`Ctrl+Alt+Q` / `F12`** | **Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down IDEye from anywhere in the OS, even when VS Code has focus |
+| **`Ctrl+Alt+R`** | **Emergency Reset** | Immediately clears 5-point calibration weights and reverts to safe neutral mapping |
+| **`[A]`** | **Toggle Adaptive AST** | Toggle real-time context-adaptive menus (auto-adapts 9 blocks to function signatures, try blocks, loops, etc.) |
+| **`[T]`** | **Cycle Tracking Mode** | Switch between **`HEAD_PRIMARY`** (Default - smooth head tracking), **`PURE_IRIS`**, and **`HYBRID`** |
 | **`[C]`** | **Center Recalibration** | Look at the screen center and press `C` to reset your neutral anchor |
 | **`[+]` / `[-]`** | **Sensitivity Adjust** | Increase or decrease gaze tracking sensitivity on the fly |
 | **`[P]` / `[Space]`** | **Pause / Reading Mode** | Dim HUD to 10% opacity so you can read code without accidental clicks |
 | **`[M]`** | **Toggle Mini-Feed** | Show or hide the bottom camera preview and MAR meter |
 | **`[Q]` / `[ESC]`** | **Safe Exit** | Release camera handles and gracefully stop all worker threads |
-| **Eye Exit** | **[No SALIR] Hands-Free** | Gaze at the top-right header `[No SALIR]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
+| **Eye Exit** | **[X SALIR] Hands-Free** | Gaze at the top-right header `[X SALIR]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 
 ---
 
@@ -199,7 +200,7 @@ IDEye/
 │ ├── menu_trees.py # 3x3 hierarchical syntax trees & sticky node definitions
 │ ├── context_reader.py # Fault-tolerant AST + Regex local symbol extractor
 │ └── ai_predictor.py # Async LLM QThread worker + syntactic heuristic fallback
-└── tests/ # 296 automated unit & integration tests
+└── tests/ # 386 automated unit & integration tests
  ├── test_phase1.py # Core computer vision & MAR state machine tests
  ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
  ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -223,11 +224,11 @@ pytest -v
 ```
 
 ```text
-============================ 296 passed in 13.05s =============================
+============================ 386 passed in 11.78s =============================
 ```
 
 > [!NOTE]
-> All 296 tests run headlessly without requiring a physical webcam, display server, or active internet connection.
+> All 386 tests run headlessly without requiring a physical webcam, display server, or active internet connection.
 
 ---
 

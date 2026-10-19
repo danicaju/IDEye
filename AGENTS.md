@@ -79,3 +79,4 @@ IDEye/
 * **Skills locales**: `.agents/skills/` incluye skills de pipeline ocular, UX de mirada, teclado predictivo, edición AST, entrada virtual, hardware, pruebas sintéticas, testing PyQt6 offscreen, empaquetado Windows y puente WebSocket de VS Code.
 * **Context7**: disponible para consultar documentación actualizada de librerías (PyQt6, MediaPipe, websockets, VS Code API).
 * **GitHub MCP**: configurado pero requiere autenticación OAuth; para operaciones de repositorio usa `git` mientras no esté conectado.
+* **Uso obligatorio bajo petición**: cuando el usuario pida usar una skill, MCP o plugin concreto, cárgalo o invócalo antes de responder. Si la tarea coincide claramente con una skill local o con una herramienta de `ideye-dev-tools`, úsala en lugar de resolverlo con herramientas genéricas.

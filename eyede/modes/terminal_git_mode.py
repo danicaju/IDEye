@@ -26,7 +26,7 @@ def _act(slot, aid, label, snippet=None, key_name=None, action_type="SNIPPET"):
 
 class TerminalGitMode(BaseMode):
     mode_id = "terminal"
-    display_name = "TERMINAL & GIT"
+    display_name = "Terminal"
     theme_color = "#A855F7"
 
     def get_menu_tree(self, language: Optional[str] = None) -> Dict[str, MenuNode]:
@@ -52,7 +52,7 @@ class TerminalGitMode(BaseMode):
             _act("8", "T_FIX", "fix:", "fix: "),
             _act("9", "T_CHORE", "chore:", "chore: "),
         ]
-        tree["TERM_GIT_SYNC"] = make_submenu("TERM_GIT_SYNC", "GIT COMMIT / SYNC", git_sync)
+        tree["TERM_GIT_SYNC"] = make_submenu("TERM_GIT_SYNC", "GUARDAR EN GIT", git_sync)
 
         python_test = [
             _act("1", "T_PYTEST", "pytest", "pytest -v"),
@@ -63,7 +63,7 @@ class TerminalGitMode(BaseMode):
             _act("8", "T_PYTHON", "python", "python "),
             _act("9", "T_UV", "uv run", "uv run "),
         ]
-        tree["TERM_PYTHON"] = make_submenu("TERM_PYTHON", "PYTHON / TEST", python_test)
+        tree["TERM_PYTHON"] = make_submenu("TERM_PYTHON", "PYTHON Y PRUEBAS", python_test)
 
         history = [
             _act("1", "T_HIST_UP", "Flecha arriba", None, key_name="UP"),
@@ -118,18 +118,18 @@ class TerminalGitMode(BaseMode):
             _act("8", "T_AI_TEST", "Test commit", "test: "),
             _act("9", "T_AI_CHORE", "Chore commit", "chore: "),
         ]
-        tree["TERM_AI"] = make_submenu("TERM_AI", "IA TERMINAL / COMMITS", ai)
+        tree["TERM_AI"] = make_submenu("TERM_AI", "SUGERENCIAS DE TERMINAL", ai)
 
         root_items = [
-            MenuAction("TERM_GIT_BASIC", "1: GIT BÁSICO", "Comandos Git básicos", "SUBMENU", submenu_id="TERM_GIT_BASIC", icon="flow"),
-            MenuAction("TERM_GIT_SYNC", "2: GIT COMMIT / SYNC", "Commit y sincronización", "SUBMENU", submenu_id="TERM_GIT_SYNC", icon="format"),
-            MenuAction("TERM_PYTHON", "3: PYTHON / TEST", "Python y tests", "SUBMENU", submenu_id="TERM_PYTHON", icon="function"),
-            MenuAction("TERM_HISTORY", "4: HISTORIAL CONSOLA", "Historial de consola", "SUBMENU", submenu_id="TERM_HISTORY", icon="navigation"),
+            MenuAction("TERM_GIT_BASIC", "1: Git básico", "Comandos Git básicos", "SUBMENU", submenu_id="TERM_GIT_BASIC", icon="flow"),
+            MenuAction("TERM_GIT_SYNC", "2: Guardar en Git", "Commit, pull y push", "SUBMENU", submenu_id="TERM_GIT_SYNC", icon="format"),
+            MenuAction("TERM_PYTHON", "3: Python y pruebas", "Python y tests", "SUBMENU", submenu_id="TERM_PYTHON", icon="function"),
+            MenuAction("TERM_HISTORY", "4: Historial", "Historial de consola", "SUBMENU", submenu_id="TERM_HISTORY", icon="navigation"),
             None,
-            MenuAction("TERM_PATHS", "6: RUTAS Y ARCHIVOS", "Rutas y archivos", "SUBMENU", submenu_id="TERM_PATHS", icon="variables"),
-            MenuAction("TERM_DELETE", "7: BORRAR / CANCELAR", "Borrado y cancelación", "SUBMENU", submenu_id="TERM_DELETE", icon="edit"),
-            MenuAction("TERM_EXEC", "8: EJECUTAR (ENTER)", "Ejecución", "SUBMENU", submenu_id="TERM_EXEC", icon="operators"),
-            MenuAction("TERM_AI", "9: IA TERMINAL", "IA para terminal", "SUBMENU", submenu_id="TERM_AI", icon="ai_spark"),
+            MenuAction("TERM_PATHS", "6: Rutas y archivos", "Rutas y archivos", "SUBMENU", submenu_id="TERM_PATHS", icon="variables"),
+            MenuAction("TERM_DELETE", "7: Borrar y cancelar", "Borrado y cancelación", "SUBMENU", submenu_id="TERM_DELETE", icon="edit"),
+            MenuAction("TERM_EXEC", "8: Ejecutar", "Ejecutar comando", "SUBMENU", submenu_id="TERM_EXEC", icon="operators"),
+            MenuAction("TERM_AI", "9: Sugerencias", "Comandos y commits sugeridos", "SUBMENU", submenu_id="TERM_AI", icon="ai_spark"),
         ]
         from eyede.actions.menu_trees import create_pause_action
         root_items[4] = create_pause_action("5")

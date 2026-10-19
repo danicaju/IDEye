@@ -30,7 +30,7 @@ def _act(slot: str, aid: str, label: str, snippet: str, key_name: Optional[str] 
 
 class WritingMode(BaseMode):
     mode_id = "writing"
-    display_name = "REDACCIÓN / DOCS"
+    display_name = "Redacción"
     theme_color = "#10B981"
 
     def get_menu_tree(self, language: Optional[str] = None) -> Dict[str, MenuNode]:
@@ -56,7 +56,7 @@ class WritingMode(BaseMode):
             _act("8", "W_MD_6", "Código", "```|>|\n```"),
             _act("9", "W_MD_7", "Enlace", "[|>](url)"),
         ]
-        tree["WRITING_MARKDOWN"] = make_submenu("WRITING_MARKDOWN", "MARKDOWN / DOCS", markdown)
+        tree["WRITING_MARKDOWN"] = make_submenu("WRITING_MARKDOWN", "FORMATO DE TEXTO", markdown)
 
         punctuation = [
             _act("1", "W_PUNCT_1", "Punto", ". "),
@@ -135,18 +135,18 @@ class WritingMode(BaseMode):
             _act("8", "W_AI_6", "Corregir", "corregir ortografía y gramática"),
             _act("9", "W_AI_7", "Traducir EN", "traducir al inglés"),
         ]
-        tree["WRITING_AI"] = make_submenu("WRITING_AI", "IA REDACCIÓN", ai)
+        tree["WRITING_AI"] = make_submenu("WRITING_AI", "SUGERENCIAS DE REDACCIÓN", ai)
 
         root_items = [
             MenuAction("WRITING_CONNECTORS", "1: CONECTORES", "Conectores y transiciones", "SUBMENU", submenu_id="WRITING_CONNECTORS", icon="flow"),
-            MenuAction("WRITING_MARKDOWN", "2: MARKDOWN / DOCS", "Formato Markdown y documentación", "SUBMENU", submenu_id="WRITING_MARKDOWN", icon="format"),
+            MenuAction("WRITING_MARKDOWN", "2: Formato de texto", "Títulos, listas y negritas", "SUBMENU", submenu_id="WRITING_MARKDOWN", icon="format"),
             MenuAction("WRITING_PUNCTUATION", "3: PUNTUACIÓN", "Signos de puntuación", "SUBMENU", submenu_id="WRITING_PUNCTUATION", icon="operators"),
             MenuAction("WRITING_CURSOR", "4: CURSOR / SELECCIÓN", "Movimiento y selección", "SUBMENU", submenu_id="WRITING_CURSOR", icon="navigation"),
             None,  # pause placeholder
-            MenuAction("WRITING_T9", "6: TECLADO T9", "Palabras frecuentes", "SUBMENU", submenu_id="WRITING_T9", icon="variables"),
-            MenuAction("WRITING_DELETE", "7: BORRAR / DESHACER", "Borrado y deshacer", "SUBMENU", submenu_id="WRITING_DELETE", icon="edit"),
-            MenuAction("WRITING_JUMP", "8: SALTO / PÁRRAFO", "Saltos y párrafos", "SUBMENU", submenu_id="WRITING_JUMP", icon="navigation"),
-            MenuAction("WRITING_AI", "9: IA REDACCIÓN", "Predicción de prosa", "SUBMENU", submenu_id="WRITING_AI", icon="ai_spark"),
+            MenuAction("WRITING_T9", "6: Escribir palabras", "Palabras frecuentes", "SUBMENU", submenu_id="WRITING_T9", icon="variables"),
+            MenuAction("WRITING_DELETE", "7: Borrar y deshacer", "Borrado y deshacer", "SUBMENU", submenu_id="WRITING_DELETE", icon="edit"),
+            MenuAction("WRITING_JUMP", "8: Saltos y párrafos", "Saltos y párrafos", "SUBMENU", submenu_id="WRITING_JUMP", icon="navigation"),
+            MenuAction("WRITING_AI", "9: Sugerencias", "Ideas para seguir escribiendo", "SUBMENU", submenu_id="WRITING_AI", icon="ai_spark"),
         ]
         # fix labels numbering via make_root? make_root forces pause at index4 but keeps labels as provided. Need labels correspond. Our list indices: 0 label 1 ok; 1 label2; 2 label3; 3 label4; 4 pause; 5 label6; 6 label7; 7 label8; 8 label9. Good.
         from eyede.actions.menu_trees import create_pause_action

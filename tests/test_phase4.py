@@ -662,7 +662,7 @@ class TestMenuTreesPhase4Integration(unittest.TestCase):
         self.assertEqual(bc_t9_local, "RAÍZ > T9 > LOCALES")
 
         bc_snippets = get_breadcrumb_path(self.tree, "SNIPPETS")
-        self.assertEqual(bc_snippets, "RAÍZ > IA")
+        self.assertEqual(bc_snippets, "RAÍZ > SUGERENCIAS")
 
 
 class TestOverlayWindowPhase4(unittest.TestCase):

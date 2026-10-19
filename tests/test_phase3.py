@@ -126,7 +126,7 @@ class TestMenuTree3x3Validation(unittest.TestCase):
                 "PAUSE",
                 f"Node '{node_id}' Index 4 action_type is '{item_4.action_type}', expected 'PAUSE'.",
             )
-            self.assertIn("PAUSA", item_4.label)
+            self.assertIn("PAUSA", item_4.label.upper())
 
     def test_index_6_is_always_back_in_all_submenus(self):
         """Verifies Golden Rule: Bottom-Left Cell (Index 6) is ALWAYS Back in all submenus."""

@@ -416,7 +416,7 @@ class DebugWidget(QWidget):
             "<div>• <b style='color: #6ee7b7;'>Guiño Ojo Derecho:</b> Pausar (Ocultar HUD) / Despertar</div>"
             "<div>• <b style='color: #93c5fd;'>Guiño Ojo Izquierdo:</b> Volver atrás / Deshacer</div>"
             "<div style='color: #7dd3fc; font-weight: bold; margin-top: 5px; margin-bottom: 2px;'>ATAJOS DE TECLADO:</div>"
-            "<div>• <b>[A]</b> AST Adaptativo &nbsp;|&nbsp; <b>[L]</b> Cambiar Lenguaje</div>"
+            "<div>• <b>[A]</b> Menús inteligentes &nbsp;|&nbsp; <b>[L]</b> Cambiar Lenguaje</div>"
             "<div>• <b>[T]</b> Modo Tracking &nbsp;|&nbsp; <b>[M]</b> Colapsar monitor</div>"
             "<div>• <b>[P]</b> Pausa Lectura &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
             "</div>"
@@ -482,17 +482,17 @@ class DebugWidget(QWidget):
         ai_layout = QVBoxLayout()
         ai_layout.setSpacing(2)
 
-        self.lbl_active_file = QLabel("Archivo: [Auto-detectar código]", self)
+        self.lbl_active_file = QLabel("Archivo: detección automática", self)
         self.lbl_active_file.setStyleSheet("font-size: 10px; color: #38bdf8;")
         ai_layout.addWidget(self.lbl_active_file)
 
         provider_name = getattr(config, "LLM_PROVIDER", "ollama").upper()
         model_name = getattr(config, "LLM_MODEL", "codellama")
-        self.lbl_ai_engine = QLabel(f"Motor IA: {provider_name} ({model_name})", self)
+        self.lbl_ai_engine = QLabel(f"Sugerencias: {provider_name} ({model_name})", self)
         self.lbl_ai_engine.setStyleSheet("font-size: 10px; color: #a7f3d0;")
         ai_layout.addWidget(self.lbl_ai_engine)
 
-        self.lbl_ast_context = QLabel("Contexto AST: GENERAL", self)
+        self.lbl_ast_context = QLabel("Contexto: general", self)
         self.lbl_ast_context.setStyleSheet("font-size: 10px; font-weight: bold; color: #f472b6;")
         ai_layout.addWidget(self.lbl_ast_context)
 
@@ -507,7 +507,7 @@ class DebugWidget(QWidget):
         self.btn_link_file.clicked.connect(self._on_link_file_clicked)
         link_adaptive_layout.addWidget(self.btn_link_file)
 
-        self.btn_toggle_adaptive = QPushButton("AST Adaptativo: ON [A]", self)
+        self.btn_toggle_adaptive = QPushButton("Menús inteligentes: ON [A]", self)
         self.btn_toggle_adaptive.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_toggle_adaptive.setToolTip("Alternar menús contextuales adaptativos según AST (Atajo: A)")
         self.btn_toggle_adaptive.clicked.connect(self.toggle_adaptive_ast)
@@ -920,7 +920,7 @@ class DebugWidget(QWidget):
         }
         disp = label_map.get(context_name, context_name)
         if hasattr(self, "lbl_ast_context"):
-            self.lbl_ast_context.setText(f"Contexto AST: {disp}")
+            self.lbl_ast_context.setText(f"Contexto: {disp}")
 
 
 # Alias for backwards compatibility and alternative naming conventions

@@ -29,7 +29,11 @@ from eyede.modes import (
     MODE_CLASSES,
 )
 from eyede.actions.menu_trees import validate_menu_tree
-from eyede.ui.overlay_window import OverlayWindow
+from eyede.ui.overlay_window import (
+    OverlayWindow,
+    _clean_action_label,
+    _menu_card_label,
+)
 
 
 @pytest.fixture(scope="session")
@@ -179,3 +183,23 @@ def test_mode_manager_aliases_and_properties(qapp):
     assert mm.current_mode_id == "writing"
     assert mm.get_root_menu() is not None
     assert mm.get_menu_tree() is not None
+
+
+def test_menu_card_labels_do_not_leak_icon_ids():
+    class Item:
+        def __init__(self, label, icon):
+            self.label = label
+            self.icon = icon
+
+    format_item = Item("8: Espacios y saltos", "format")
+    ai_item = Item("9: Sugerencias", "ai_spark")
+    assert _menu_card_label(format_item) == "8: Espacios y saltos"
+    assert _menu_card_label(ai_item) == "9: Sugerencias"
+    assert "format" not in _menu_card_label(format_item)
+    assert "ai_spark" not in _menu_card_label(ai_item)
+
+
+def test_action_status_label_drops_slot_number():
+    assert _clean_action_label("8: Espacios y saltos") == "Espacios y saltos"
+    assert _clean_action_label("9: Sugerencias") == "Sugerencias"
+    assert _clean_action_label("Sin prefijo") == "Sin prefijo"

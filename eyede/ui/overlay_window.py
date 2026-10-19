@@ -87,6 +87,26 @@ except ImportError:
     from modes.mode_manager import ModeManager
 
 
+def _clean_action_label(label: str) -> str:
+    """Removes the numeric slot prefix from a menu label for status messages.
+
+    Example: ``"8: Espacios y saltos"`` -> ``"Espacios y saltos"``.
+    """
+    head, sep, tail = (label or "").partition(": ")
+    if sep and head.strip().isdigit():
+        return tail
+    return label or ""
+
+
+def _menu_card_label(item) -> str:
+    """Returns the human-facing card label, never the internal icon id.
+
+    Icon identifiers such as ``format`` or ``ai_spark`` are implementation
+    details and must not leak into the HUD text.
+    """
+    return getattr(item, "label", "") or ""
+
+
 class OverlayWindow(QWidget):
     """
     Transparent HUD overlay rendering the 3x3 Macro-Block tree-based grid.
@@ -149,7 +169,7 @@ class OverlayWindow(QWidget):
         except Exception:
             pass
         self.current_context_mode_id: str = getattr(self.mode_manager, "current_mode_id", "coding")
-        self.current_context_mode_name: str = getattr(self.mode_manager, "current_mode", None).display_name if getattr(self.mode_manager, "current_mode", None) is not None else "CÓDIGO (AST)"
+        self.current_context_mode_name: str = getattr(self.mode_manager, "current_mode", None).display_name if getattr(self.mode_manager, "current_mode", None) is not None else "Código"
         self.theme_color: str = getattr(self.mode_manager, "current_mode", None).theme_color if getattr(self.mode_manager, "current_mode", None) is not None else "#00F0FF"
         self._mode_banner_text: str = ""
         self._mode_banner_until: float = 0.0
@@ -343,14 +363,14 @@ class OverlayWindow(QWidget):
             "DEFAULT": QPen(QColor(100, 116, 139, 180), 2.0),
         }
         self._cat_badges = {
-            "FLOW": ("FLUJO", QColor(34, 211, 238)),
-            "STRUCT": ("ESTRUCTURA", QColor(251, 191, 36)),
-            "OPERATORS": ("OPERADOR", QColor(192, 132, 252)),
+            "FLOW": ("LÓGICA", QColor(34, 211, 238)),
+            "STRUCT": ("FUNCIONES", QColor(251, 191, 36)),
+            "OPERATORS": ("SÍMBOLOS", QColor(192, 132, 252)),
             "NAV": ("NAVEGACIÓN", QColor(96, 165, 250)),
             "PAUSE": ("REPOSO", QColor(52, 211, 153)),
             "BACK": ("VOLVER", QColor(244, 114, 182)),
             "EDIT": ("EDICIÓN", QColor(129, 140, 248)),
-            "AI": ("IA / CÓDIGO", QColor(240, 171, 252)),
+            "AI": ("SUGERENCIAS", QColor(240, 171, 252)),
             "EXIT": ("SALIR", QColor(248, 113, 113)),
             "LANG": ("LENGUAJE", QColor(168, 85, 247)),
             "DEFAULT": ("ACCIÓN", QColor(148, 163, 184)),
@@ -539,8 +559,8 @@ class OverlayWindow(QWidget):
         if "SNIPPETS" in self.menu_tree:
             self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(loading_preds, parent_id="ROOT")
         self.is_ai_predicting = True
-        self.last_action_desc = "IA Analizando..."
-        self.ai_status_updated.emit("Consultando IA...")
+        self.last_action_desc = "Buscando sugerencias..."
+        self.ai_status_updated.emit("Buscando sugerencias...")
         self.update()
 
         self.ai_predictor_worker = AIPredictorWorker(
@@ -566,7 +586,7 @@ class OverlayWindow(QWidget):
         if "SNIPPETS" in self.menu_tree:
             self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(predictions, parent_id="ROOT")
         self.is_ai_predicting = False
-        self.last_action_desc = "6 Sugerencias IA Listas"
+        self.last_action_desc = "6 sugerencias listas"
         self.ai_status_updated.emit("Listo (6 sugerencias)")
         self.update()
 
@@ -931,7 +951,7 @@ class OverlayWindow(QWidget):
 
             # Execute injection via non-blocking worker thread
             self.code_injector.execute_action(item)
-            self.last_action_desc = f"{item.icon} {item.label}" if item.icon else item.label
+            self.last_action_desc = _clean_action_label(item.label)
             self.action_executed.emit(item.id, self.last_action_desc)
             self.block_activated.emit(target_block, item.id)
 
@@ -995,7 +1015,7 @@ class OverlayWindow(QWidget):
 
         if item.action_type in ("SNIPPET", "KEY"):
             self.code_injector.execute_action(item)
-            self.last_action_desc = f"{item.icon} {item.label}" if item.icon else item.label
+            self.last_action_desc = _clean_action_label(item.label)
             self.action_executed.emit(item.id, self.last_action_desc)
             self.block_activated.emit(target_block, item.id)
             return
@@ -1225,7 +1245,7 @@ class OverlayWindow(QWidget):
         self.adaptive_ast_enabled = not getattr(self, "adaptive_ast_enabled", True)
         self._cached_adaptive_node = None
         self._last_ast_eval_time = 0.0
-        self.last_action_desc = f"AST Adaptativo: {'ON' if self.adaptive_ast_enabled else 'OFF'}"
+        self.last_action_desc = f"Menús inteligentes: {'Activados' if self.adaptive_ast_enabled else 'Desactivados'}"
         self.adaptive_ast_toggled.emit(self.adaptive_ast_enabled)
         self.update()
 
@@ -1241,7 +1261,7 @@ class OverlayWindow(QWidget):
             self.adaptive_ast_enabled = enabled
             self._cached_adaptive_node = None
             self._last_ast_eval_time = 0.0
-            self.last_action_desc = f"AST Adaptativo: {'ON' if self.adaptive_ast_enabled else 'OFF'}"
+            self.last_action_desc = f"Menús inteligentes: {'Activados' if self.adaptive_ast_enabled else 'Desactivados'}"
             self.adaptive_ast_toggled.emit(self.adaptive_ast_enabled)
             self.update()
 
@@ -1752,8 +1772,9 @@ class OverlayWindow(QWidget):
                 card_icon_rect = QRectF(rect.right() - 36.0, rect.y() + 10.0, 24.0, 24.0)
                 IconManager.instance().render_icon(painter, icon_name, card_icon_rect)
 
-            # Determine labels
-            label_text = f"{item.icon} {item.label}" if item.icon else item.label
+            # Determine labels (the vector icon is already drawn top-right;
+            # never print internal icon identifiers such as "format" or "ai_spark").
+            label_text = _menu_card_label(item)
             hint_text = item.hint
 
             if self.reading_mode and i == 4:
@@ -1955,7 +1976,7 @@ class OverlayWindow(QWidget):
         )
 
         shortcuts_list = [
-            ("[A]", "AST Adaptativo", "Alterna menús inteligentes según el cursor."),
+            ("[A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
             ("[V]", "Cambiar Modo", "Cicla Código, Redacción, Terminal, Datos y Navegación."),
             ("[T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
             ("[M]", "Colapsar Monitor", "Alterna monitor entre ventana y barra compacta."),

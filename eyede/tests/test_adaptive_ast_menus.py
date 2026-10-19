@@ -509,7 +509,7 @@ class TestDebugWidgetAdaptiveASTIntegration(unittest.TestCase):
     def test_debug_widget_ast_label_initial(self):
         """DebugWidget includes a live AST context status label."""
         self.assertTrue(hasattr(self.widget, "lbl_ast_context"))
-        self.assertIn("Contexto AST:", self.widget.lbl_ast_context.text())
+        self.assertIn("Contexto:", self.widget.lbl_ast_context.text())
 
     def test_debug_widget_update_ast_context(self):
         """Updating AST context updates the live indicator label accurately."""

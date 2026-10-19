@@ -161,7 +161,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | :--- | :--- | :--- |
 | **`Ctrl+Alt+Q` / `F12`** | ** Botón de Emergencia (Killswitch)** | **Atajo global en todo el SO**: apaga IDEye limpiamente de inmediato, incluso cuando VS Code tiene el foco |
 | **`Ctrl+Alt+R`** | ** Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
-| **`[A]`** | **Alternar AST Adaptativo** | Activa/desactiva menús contextuales en vivo (adapta los 9 bloques a funciones, try/except, bucles, etc.) |
+| **`[A]`** | **Alternar Menús Inteligentes** | Activa/desactiva menús contextuales en vivo (adapta los 9 bloques a funciones, try/except, bucles, etc.) |
 | **`[H]`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
 | **Guiño Derecho** | **Pausar / Ocultar Totalmente** | Oculta el HUD al 100% para despejar la pantalla; otro guiño derecho lo muestra de nuevo |
 | **Guiño Izquierdo** | **Volver Atrás / Deshacer** | Regresa al menú anterior o ejecuta Deshacer (Ctrl+Z) si estás en la raíz |

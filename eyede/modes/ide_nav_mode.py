@@ -26,7 +26,7 @@ def _act(slot, aid, label, snippet=None, key_name=None, action_type="SNIPPET"):
 
 class IdeNavMode(BaseMode):
     mode_id = "navigation"
-    display_name = "LECTURA / IDE"
+    display_name = "Navegación"
     theme_color = "#E2E8F0"
 
     def get_menu_tree(self, language: Optional[str] = None) -> Dict[str, MenuNode]:
@@ -118,18 +118,18 @@ class IdeNavMode(BaseMode):
             _act("8", "N_AI_REFACTOR", "Refactorizar", "refactor code"),
             _act("9", "N_AI_OPTIMIZE", "Optimizar", "optimize performance"),
         ]
-        tree["NAV_AI"] = make_submenu("NAV_AI", "IA NAVEGACIÓN", ai)
+        tree["NAV_AI"] = make_submenu("NAV_AI", "SUGERENCIAS DE NAVEGACIÓN", ai)
 
         root_items = [
-            MenuAction("NAV_SCROLL", "1: SCROLL", "Scroll y navegación", "SUBMENU", submenu_id="NAV_SCROLL", icon="navigation"),
-            MenuAction("NAV_GOTO", "2: IR A", "Ir a definición", "SUBMENU", submenu_id="NAV_GOTO", icon="navigation"),
-            MenuAction("NAV_TABS", "3: PESTAÑAS", "Gestión de pestañas", "SUBMENU", submenu_id="NAV_TABS", icon="navigation"),
-            MenuAction("NAV_SEARCH", "4: BÚSQUEDA", "Buscar y reemplazar", "SUBMENU", submenu_id="NAV_SEARCH", icon="navigation"),
+            MenuAction("NAV_SCROLL", "1: Desplazar", "Scroll y navegación", "SUBMENU", submenu_id="NAV_SCROLL", icon="navigation"),
+            MenuAction("NAV_GOTO", "2: Ir a", "Ir a definición", "SUBMENU", submenu_id="NAV_GOTO", icon="navigation"),
+            MenuAction("NAV_TABS", "3: Pestañas", "Gestión de pestañas", "SUBMENU", submenu_id="NAV_TABS", icon="navigation"),
+            MenuAction("NAV_SEARCH", "4: Buscar", "Buscar y reemplazar", "SUBMENU", submenu_id="NAV_SEARCH", icon="navigation"),
             None,
-            MenuAction("NAV_FOLD", "6: PLEGAR", "Plegar y desplegar", "SUBMENU", submenu_id="NAV_FOLD", icon="navigation"),
-            MenuAction("NAV_TERMINAL", "7: TERMINAL", "Terminal integrada", "SUBMENU", submenu_id="NAV_TERMINAL", icon="navigation"),
-            MenuAction("NAV_EDIT", "8: EDICIÓN / IDE", "Edición y comandos", "SUBMENU", submenu_id="NAV_EDIT", icon="navigation"),
-            MenuAction("NAV_AI", "9: IA NAVEGACIÓN", "IA para navegación", "SUBMENU", submenu_id="NAV_AI", icon="ai_spark"),
+            MenuAction("NAV_FOLD", "6: Plegar", "Plegar y desplegar", "SUBMENU", submenu_id="NAV_FOLD", icon="navigation"),
+            MenuAction("NAV_TERMINAL", "7: Terminal", "Terminal integrada", "SUBMENU", submenu_id="NAV_TERMINAL", icon="navigation"),
+            MenuAction("NAV_EDIT", "8: Edición", "Edición y comandos", "SUBMENU", submenu_id="NAV_EDIT", icon="navigation"),
+            MenuAction("NAV_AI", "9: Sugerencias", "Atajos y destinos sugeridos", "SUBMENU", submenu_id="NAV_AI", icon="ai_spark"),
         ]
         from eyede.actions.menu_trees import create_pause_action
         root_items[4] = create_pause_action("5")

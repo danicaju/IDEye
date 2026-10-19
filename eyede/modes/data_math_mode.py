@@ -26,7 +26,7 @@ def _act(slot, aid, label, snippet=None, key_name=None, action_type="SNIPPET"):
 
 class DataMathMode(BaseMode):
     mode_id = "data_math"
-    display_name = "SQL & LATEX"
+    display_name = "Datos"
     theme_color = "#F59E0B"
 
     def get_menu_tree(self, language: Optional[str] = None) -> Dict[str, MenuNode]:
@@ -74,7 +74,7 @@ class DataMathMode(BaseMode):
             _act("8", "D_LTX_ALIGN", "Align", r"\begin{align}|>\end{align}"),
             _act("9", "D_LTX_SQRT", "Raíz", r"\sqrt{|>}"),
         ]
-        tree["DATA_LATEX"] = make_submenu("DATA_LATEX", "LATEX / FÓRMULAS", latex_basic)
+        tree["DATA_LATEX"] = make_submenu("DATA_LATEX", "FÓRMULAS", latex_basic)
 
         math_ops = [
             _act("1", "D_MATH_PLUS", "+", " + "),
@@ -85,7 +85,7 @@ class DataMathMode(BaseMode):
             _act("8", "D_MATH_MOD", "%", " % "),
             _act("9", "D_MATH_PAREN", "()", "( )"),
         ]
-        tree["DATA_MATH_OPS"] = make_submenu("DATA_MATH_OPS", "OPERADORES MATH", math_ops)
+        tree["DATA_MATH_OPS"] = make_submenu("DATA_MATH_OPS", "OPERADORES", math_ops)
 
         cursor = [
             _act("1", "D_CUR_LEFT", "Izquierda", None, key_name="LEFT"),
@@ -118,18 +118,18 @@ class DataMathMode(BaseMode):
             _act("8", "D_AI_GROUP", "Agregación", " GROUP BY "),
             _act("9", "D_AI_ORDER", "Ordenación", " ORDER BY  ASC"),
         ]
-        tree["DATA_AI"] = make_submenu("DATA_AI", "IA SQL & LATEX", ai)
+        tree["DATA_AI"] = make_submenu("DATA_AI", "SUGERENCIAS DE DATOS", ai)
 
         root_items = [
-            MenuAction("DATA_SQL_BASIC", "1: SQL BÁSICO", "Consultas SQL básicas", "SUBMENU", submenu_id="DATA_SQL_BASIC", icon="flow"),
-            MenuAction("DATA_SQL_ADV", "2: SQL AVANZADO", "DDL y avanzado", "SUBMENU", submenu_id="DATA_SQL_ADV", icon="struct"),
+            MenuAction("DATA_SQL_BASIC", "1: SQL básico", "Consultas SQL básicas", "SUBMENU", submenu_id="DATA_SQL_BASIC", icon="flow"),
+            MenuAction("DATA_SQL_ADV", "2: SQL avanzado", "DDL y avanzado", "SUBMENU", submenu_id="DATA_SQL_ADV", icon="struct"),
             MenuAction("DATA_JSON_YAML", "3: JSON / YAML", "Datos estructurados", "SUBMENU", submenu_id="DATA_JSON_YAML", icon="variables"),
-            MenuAction("DATA_LATEX", "4: LATEX / FÓRMULAS", "Fórmulas matemáticas", "SUBMENU", submenu_id="DATA_LATEX", icon="operators"),
+            MenuAction("DATA_LATEX", "4: Fórmulas", "Fórmulas matemáticas", "SUBMENU", submenu_id="DATA_LATEX", icon="operators"),
             None,
-            MenuAction("DATA_MATH_OPS", "6: OPERADORES MATH", "Operadores matemáticos", "SUBMENU", submenu_id="DATA_MATH_OPS", icon="operators"),
-            MenuAction("DATA_CURSOR", "7: CURSOR", "Navegación", "SUBMENU", submenu_id="DATA_CURSOR", icon="navigation"),
-            MenuAction("DATA_DELETE", "8: BORRAR", "Borrado", "SUBMENU", submenu_id="DATA_DELETE", icon="edit"),
-            MenuAction("DATA_AI", "9: IA SQL & LATEX", "Predicción de datos", "SUBMENU", submenu_id="DATA_AI", icon="ai_spark"),
+            MenuAction("DATA_MATH_OPS", "6: Operadores", "Operadores matemáticos", "SUBMENU", submenu_id="DATA_MATH_OPS", icon="operators"),
+            MenuAction("DATA_CURSOR", "7: Mover cursor", "Navegación", "SUBMENU", submenu_id="DATA_CURSOR", icon="navigation"),
+            MenuAction("DATA_DELETE", "8: Borrar", "Borrado", "SUBMENU", submenu_id="DATA_DELETE", icon="edit"),
+            MenuAction("DATA_AI", "9: Sugerencias", "Consultas y fórmulas sugeridas", "SUBMENU", submenu_id="DATA_AI", icon="ai_spark"),
         ]
         from eyede.actions.menu_trees import create_pause_action
         root_items[4] = create_pause_action("5")

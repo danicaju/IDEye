@@ -49,6 +49,8 @@ try:
         populate_exit_confirm_items,
         populate_help_items,
         populate_lang_select_items,
+        create_pause_action,
+        create_back_action,
         get_adaptive_context_node,
         create_adaptive_menu_action,
     )
@@ -79,6 +81,8 @@ except ImportError:
         populate_exit_confirm_items,
         populate_help_items,
         populate_lang_select_items,
+        create_pause_action,
+        create_back_action,
         get_adaptive_context_node,
         create_adaptive_menu_action,
     )
@@ -107,6 +111,24 @@ def _menu_card_label(item) -> str:
     return getattr(item, "label", "") or ""
 
 
+MODE_SHORT_LABELS = {
+    "coding": "CÓDIGO",
+    "writing": "REDACCIÓN",
+    "terminal": "TERMINAL",
+    "data_math": "DATOS",
+    "navigation": "NAV",
+}
+
+# (mode_id, display label, hint, icon) in the order shown in the mode hub.
+MODE_SELECTOR_ENTRIES = (
+    ("coding", "Código", "Programar con menús inteligentes", "function"),
+    ("writing", "Redacción", "Textos, Markdown y documentación", "format"),
+    ("terminal", "Terminal", "Git, consola y pruebas", "operators"),
+    ("data_math", "Datos", "SQL, JSON, YAML y fórmulas", "variables"),
+    ("navigation", "Navegación", "Moverse por el editor y VS Code", "navigation"),
+)
+
+
 class OverlayWindow(QWidget):
     """
     Transparent HUD overlay rendering the 3x3 Macro-Block tree-based grid.
@@ -133,6 +155,7 @@ class OverlayWindow(QWidget):
         menu_tree: Optional[Dict[str, MenuNode]] = None,
         context_reader: Optional[ContextReader] = None,
         mode_manager: Optional[Any] = None,
+        start_in_mode_selector: bool = False,
     ):
         super().__init__(parent)
 
@@ -185,6 +208,7 @@ class OverlayWindow(QWidget):
         self.is_ai_predicting: bool = False
         self.current_node_id: str = "ROOT"
         self.last_action_desc: str = "Ninguna"
+        self._mode_selection_in_progress: bool = False
 
         # Adaptive AST Context Menu Subsystem (Phase Extra - Option A)
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
@@ -202,25 +226,16 @@ class OverlayWindow(QWidget):
                 sticky=False,
             )
 
-        if "HELP" not in self.menu_tree:
-            self.menu_tree["HELP"] = MenuNode(
-                id="HELP",
-                title="GUÍA DE GESTOS Y ATAJOS",
-                breadcrumb_label="AYUDA / GESTOS",
-                items=populate_help_items(parent_id="ROOT"),
-                parent_id="ROOT",
-                sticky=False,
-            )
-
-        if "LANG_SELECT" not in self.menu_tree:
-            self.menu_tree["LANG_SELECT"] = MenuNode(
-                id="LANG_SELECT",
-                title="SELECCIONAR LENGUAJE",
-                breadcrumb_label="LENGUAJE",
-                items=populate_lang_select_items(parent_id="ROOT"),
-                parent_id="ROOT",
-                sticky=False,
-            )
+        self._install_auxiliary_nodes()
+        if start_in_mode_selector:
+            self.current_node_id = "MODE_SELECT"
+            self.last_action_desc = "Elige un modo"
+            self._mode_banner_text = "ELIGE UN MODO"
+            try:
+                self._mode_banner_start = time.time()
+                self._mode_banner_until = self._mode_banner_start + 3.0
+            except Exception:
+                self._mode_banner_until = 0.0
 
         # 3. State tracking
         self.reading_mode: bool = False
@@ -335,6 +350,7 @@ class OverlayWindow(QWidget):
             "EDIT": QBrush(QColor(18, 20, 38, 215)),
             "AI": QBrush(QColor(28, 16, 38, 215)),
             "EXIT": QBrush(QColor(36, 14, 16, 215)),
+            "MODE": QBrush(QColor(10, 30, 40, 220)),
             "DEFAULT": self._brush_default,
         }
         self._cat_pens = {
@@ -347,6 +363,7 @@ class OverlayWindow(QWidget):
             "EDIT": QPen(QColor(99, 102, 241, 200), 1.8),
             "AI": QPen(QColor(217, 70, 239, 200), 1.8),
             "EXIT": QPen(QColor(239, 68, 68, 200), 1.8),
+            "MODE": QPen(QColor(34, 211, 238, 200), 1.8),
             "DEFAULT": self._pen_default,
         }
         self._cat_top_pens = {
@@ -360,6 +377,7 @@ class OverlayWindow(QWidget):
             "AI": QPen(QColor(240, 171, 252, 220), 2.5),
             "EXIT": QPen(QColor(248, 113, 113, 220), 2.5),
             "LANG": QPen(QColor(168, 85, 247, 220), 2.5),
+            "MODE": QPen(QColor(34, 211, 238, 220), 2.5),
             "DEFAULT": QPen(QColor(100, 116, 139, 180), 2.0),
         }
         self._cat_badges = {
@@ -373,6 +391,7 @@ class OverlayWindow(QWidget):
             "AI": ("SUGERENCIAS", QColor(240, 171, 252)),
             "EXIT": ("SALIR", QColor(248, 113, 113)),
             "LANG": ("LENGUAJE", QColor(168, 85, 247)),
+            "MODE": ("MODO", QColor(34, 211, 238)),
             "DEFAULT": ("ACCIÓN", QColor(148, 163, 184)),
         }
 
@@ -855,10 +874,7 @@ class OverlayWindow(QWidget):
             self.hovered_header_mode = False
             self.active_click_header_mode = True
             QTimer.singleShot(int(config.CLICK_FLASH_DURATION_SEC * 1000), self._clear_header_mode_flash)
-            if self.mode_manager is not None:
-                self.mode_manager.cycle_next_mode()
-            self.last_action_desc = f"Modo: {getattr(self, 'current_context_mode_name', '')}"
-            self.update()
+            self.open_mode_selector()
             return
 
         # Hands-free header language click handler
@@ -911,7 +927,13 @@ class OverlayWindow(QWidget):
             self.block_activated.emit(target_block, item.id)
             return
 
-        # 3. Submenu Forward Navigation
+        # 3. Context Mode Selection from the mode hub
+        if item.action_type == "MODE_SWITCH":
+            self._activate_mode(item.mode_id)
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        # 4. Submenu Forward Navigation
         if item.action_type == "SUBMENU":
             target_id = item.submenu_id
             if target_id and target_id in self.menu_tree:
@@ -986,6 +1008,11 @@ class OverlayWindow(QWidget):
             self.navigate_to(target_id)
             target_title = self.menu_tree[target_id].title if target_id in self.menu_tree else "RAÍZ"
             self.last_action_desc = f"Volver a {target_title}"
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type == "MODE_SWITCH":
+            self._activate_mode(item.mode_id)
             self.block_activated.emit(target_block, item.id)
             return
 
@@ -1138,24 +1165,7 @@ class OverlayWindow(QWidget):
                     self.menu_tree = build_menu_tree(self.current_language)
             else:
                 self.menu_tree = build_menu_tree(self.current_language)
-        if "HELP" not in self.menu_tree:
-            self.menu_tree["HELP"] = MenuNode(
-                id="HELP",
-                title="GUÍA DE GESTOS Y ATAJOS",
-                breadcrumb_label="AYUDA / GESTOS",
-                items=populate_help_items(parent_id="ROOT"),
-                parent_id="ROOT",
-                sticky=False,
-            )
-        if "LANG_SELECT" not in self.menu_tree:
-            self.menu_tree["LANG_SELECT"] = MenuNode(
-                id="LANG_SELECT",
-                title="SELECCIONAR LENGUAJE",
-                breadcrumb_label="LENGUAJE",
-                items=populate_lang_select_items(parent_id="ROOT"),
-                parent_id="ROOT",
-                sticky=False,
-            )
+        self._install_auxiliary_nodes()
         self._cached_adaptive_node = None
         self._last_ast_eval_time = 0.0
         badge = get_language_badge(self.current_language)
@@ -1188,28 +1198,15 @@ class OverlayWindow(QWidget):
             except Exception:
                 self.menu_tree = {"ROOT": self.mode_manager.get_root_menu(self.current_language)}
 
-        for extra in ("HELP", "LANG_SELECT"):
-            if extra not in self.menu_tree:
-                if extra == "HELP":
-                    self.menu_tree[extra] = MenuNode(
-                        id="HELP",
-                        title="GUÍA DE GESTOS Y ATAJOS",
-                        breadcrumb_label="AYUDA / GESTOS",
-                        items=populate_help_items(parent_id="ROOT"),
-                        parent_id="ROOT",
-                        sticky=False,
-                    )
-                else:
-                    self.menu_tree[extra] = MenuNode(
-                        id="LANG_SELECT",
-                        title="SELECCIONAR LENGUAJE",
-                        breadcrumb_label="LENGUAJE",
-                        items=populate_lang_select_items(parent_id="ROOT"),
-                        parent_id="ROOT",
-                        sticky=False,
-                    )
+        self._install_auxiliary_nodes()
 
-        self.current_node_id = "ROOT"
+        # Keep the mode hub open when an automatic editor-state change arrives.
+        # When the user explicitly picked a mode, _activate_mode() sets the flag
+        # and we enter that mode's ROOT instead.
+        if self.current_node_id == "MODE_SELECT" and not self._mode_selection_in_progress:
+            self.current_node_id = "MODE_SELECT"
+        else:
+            self.current_node_id = "ROOT"
         self._cached_adaptive_node = None
         self._last_ast_eval_time = 0.0
         self.last_action_desc = f"Modo: {display_name}"
@@ -1222,9 +1219,133 @@ class OverlayWindow(QWidget):
         self.context_mode_changed.emit(mode_id, display_name, theme_color)
         self.update()
 
+    def _short_mode_label(self, mode_id: Optional[str] = None) -> str:
+        """Returns the compact human label for a context mode."""
+        mid = mode_id or getattr(self, "current_context_mode_id", "coding")
+        return MODE_SHORT_LABELS.get(mid, "MODO")
+
+    def _install_auxiliary_nodes(self) -> None:
+        """Adds/refreshes the shared HELP, LANG_SELECT and MODE_SELECT nodes."""
+        if "HELP" not in self.menu_tree:
+            self.menu_tree["HELP"] = MenuNode(
+                id="HELP",
+                title="GUÍA DE GESTOS Y ATAJOS",
+                breadcrumb_label="AYUDA / GESTOS",
+                items=populate_help_items(parent_id="ROOT"),
+                parent_id="ROOT",
+                sticky=False,
+            )
+
+        if "LANG_SELECT" not in self.menu_tree:
+            self.menu_tree["LANG_SELECT"] = MenuNode(
+                id="LANG_SELECT",
+                title="SELECCIONAR LENGUAJE",
+                breadcrumb_label="LENGUAJE",
+                items=populate_lang_select_items(parent_id="ROOT"),
+                parent_id="ROOT",
+                sticky=False,
+            )
+
+        # Rebuild the hub every time because the "current mode" marker moves.
+        self.menu_tree["MODE_SELECT"] = self._build_mode_select_node()
+
+    def _build_mode_select_node(self) -> MenuNode:
+        """Builds the 9-slot mode hub shown at startup and by [V]."""
+        items: List[MenuAction] = []
+        entry_by_id = {entry[0]: entry for entry in MODE_SELECTOR_ENTRIES}
+        order = [
+            "coding",
+            "writing",
+            "terminal",
+            "data_math",
+            None,  # slot 5: pause
+            "navigation",
+        ]
+
+        for slot, mode_id in enumerate(order, start=1):
+            if mode_id is None:
+                items.append(create_pause_action(str(slot)))
+                continue
+            _, label, hint, icon = entry_by_id[mode_id]
+            is_current = mode_id == getattr(self, "current_context_mode_id", "coding")
+            items.append(
+                MenuAction(
+                    id=f"MODE_{mode_id.upper()}",
+                    label=f"{slot}: {label}",
+                    hint=("Estás en este modo" if is_current else hint),
+                    action_type="MODE_SWITCH",
+                    icon=icon,
+                    mode_id=mode_id,
+                )
+            )
+
+        # Slot 7: back to the current mode's ROOT (cancel).
+        items.append(create_back_action("ROOT", "7"))
+        # Slot 8: help / cheat sheet.
+        items.append(
+            MenuAction(
+                id="MODE_HELP",
+                label="8: Ayuda",
+                hint="Ver gestos y atajos",
+                action_type="SUBMENU",
+                submenu_id="HELP",
+                icon="help",
+            )
+        )
+        # Slot 9: exit.
+        items.append(
+            MenuAction(
+                id="MODE_EXIT",
+                label="9: Salir",
+                hint="Cerrar IDEye",
+                action_type="EXIT",
+                icon="exit",
+            )
+        )
+
+        return MenuNode(
+            id="MODE_SELECT",
+            title="ELEGIR MODO",
+            breadcrumb_label="ELEGIR MODO",
+            items=items,
+            parent_id="ROOT",
+            sticky=False,
+        )
+
+    def open_mode_selector(self) -> None:
+        """Opens the mode hub so the user can pick a mode explicitly."""
+        if "MODE_SELECT" not in self.menu_tree:
+            self._install_auxiliary_nodes()
+        else:
+            # Refresh the current-mode marker.
+            self.menu_tree["MODE_SELECT"] = self._build_mode_select_node()
+        self.navigate_to("MODE_SELECT")
+        self.last_action_desc = "Elegir modo"
+        self._mode_banner_text = "ELIGE UN MODO"
+        try:
+            self._mode_banner_start = time.time()
+            self._mode_banner_until = self._mode_banner_start + 2.2
+        except Exception:
+            self._mode_banner_until = 0.0
+        self.update()
+
+    def _activate_mode(self, mode_id: Optional[str]) -> None:
+        """Enters a mode selected from the hub and lands on its ROOT menu."""
+        if not mode_id or self.mode_manager is None:
+            return
+        self._mode_selection_in_progress = True
+        try:
+            self.mode_manager.set_mode(mode_id, emit=True)
+        finally:
+            self._mode_selection_in_progress = False
+        if "ROOT" in self.menu_tree:
+            self.navigate_to("ROOT")
+        self.last_action_desc = f"Modo: {getattr(self, 'current_context_mode_name', '')}"
+        self.update()
+
     def cycle_context_mode(self) -> None:
-        if self.mode_manager is not None:
-            self.mode_manager.cycle_next_mode()
+        """Compatibility alias: [V] now opens the mode hub instead of cycling."""
+        self.open_mode_selector()
 
     def is_mode_shortcut_targeted(self) -> bool:
         """True when the gaze is on/near the header mode button (global V/K gate)."""
@@ -1306,6 +1427,8 @@ class OverlayWindow(QWidget):
         """Determines the semantic category for a menu action block."""
         if block_idx == 4 or item.action_type == "PAUSE":
             return "PAUSE"
+        if item.action_type == "MODE_SWITCH":
+            return "MODE"
         if item.action_type == "BACK":
             return "BACK"
         if (
@@ -1402,14 +1525,20 @@ class OverlayWindow(QWidget):
             painter.drawRoundedRect(pill_rect, 5.0, 5.0)
             painter.setPen(self._color_pill_text)
             painter.setFont(self._font_header_pill)
-            painter.drawText(pill_rect, Qt.AlignmentFlag.AlignCenter, "MODO EDICIÓN")
+            painter.drawText(
+                pill_rect,
+                Qt.AlignmentFlag.AlignCenter,
+                f"MODO: {self._short_mode_label()}",
+            )
 
         # Breadcrumb trail text
         breadcrumb_path = get_breadcrumb_path(self.menu_tree, self.current_node_id).replace(" > ", " › ")
         if curr_node and curr_node.sticky:
             breadcrumb_path += "  [FIJO]"
 
-        if self.current_node_id == "ROOT" and getattr(self, "adaptive_ast_enabled", True) and curr_node:
+        if self.current_node_id == "MODE_SELECT" and curr_node:
+            left_text = curr_node.breadcrumb_label
+        elif self.current_node_id == "ROOT" and getattr(self, "adaptive_ast_enabled", True) and curr_node:
             left_text = curr_node.breadcrumb_label
         else:
             left_text = breadcrumb_path
@@ -1555,18 +1684,10 @@ class OverlayWindow(QWidget):
 
         painter.setPen(mode_text_color)
         painter.setFont(self._font_header_bold_btn)
-        short_mode_labels = {
-            "coding": "CÓDIGO",
-            "writing": "REDACCIÓN",
-            "terminal": "TERMINAL",
-            "data_math": "DATOS",
-            "navigation": "NAV",
-        }
-        mode_label = short_mode_labels.get(getattr(self, "current_context_mode_id", "coding"), "MODO")
         painter.drawText(
             QRectF(self.header_mode_rect.x() + 30.0, self.header_mode_rect.y(), self.header_mode_rect.width() - 34.0, pill_h),
             Qt.AlignmentFlag.AlignCenter,
-            f"{mode_label} [V]",
+            "MODOS [V]",
         )
 
         # Hands-free Language Selector Button [LANG] next to [AYUDA]
@@ -1766,8 +1887,13 @@ class OverlayWindow(QWidget):
                 "FORMAT": "format",
                 "AI": "ai_spark",
                 "EXIT": "exit",
+                "MODE": "mode",
             }
-            icon_name = icon_map.get(cat)
+            icon_name = (
+                item.icon
+                if item.action_type == "MODE_SWITCH" and item.icon
+                else icon_map.get(cat)
+            )
             if icon_name and (not self.reading_mode or i == 4):
                 card_icon_rect = QRectF(rect.right() - 36.0, rect.y() + 10.0, 24.0, 24.0)
                 IconManager.instance().render_icon(painter, icon_name, card_icon_rect)
@@ -1812,7 +1938,14 @@ class OverlayWindow(QWidget):
                 badge_info = self._cat_badges.get(cat, ("", self._color_badge_default))
                 badge_text, badge_color = badge_info
 
-                if item.action_type == "SUBMENU":
+                if item.action_type == "MODE_SWITCH":
+                    badge_text = (
+                        "ACTUAL"
+                        if item.mode_id == getattr(self, "current_context_mode_id", "")
+                        else "ELEGIR"
+                    )
+                    badge_color = self._color_badge_sticky
+                elif item.action_type == "SUBMENU":
                     badge_text = "SUBMENÚ"
                     badge_color = self._color_badge_submenu
                 elif item.action_type == "BACK":

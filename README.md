@@ -162,6 +162,8 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`Ctrl+Alt+Q` / `F12`** | **Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down IDEye from anywhere in the OS, even when VS Code has focus |
 | **`Ctrl+Alt+R`** | **Emergency Reset** | Immediately clears 5-point calibration weights and reverts to safe neutral mapping |
 | **`[A]`** | **Toggle Smart Menus** | Toggle real-time context-adaptive menus (auto-adapts 9 blocks to function signatures, try blocks, loops, etc.) |
+| **`[V]`** | **Choose Mode** | Opens the mode hub to explicitly pick Coding, Writing, Terminal, Data, or Navigation. Look at the `MODOS [V]` button and press `V`, or use `Ctrl+Alt+V` anywhere |
+| **`[K]`** | **Toggle Auto Mode Switching** | Enables/disables automatic mode changes based on the editor context. Use `Ctrl+Alt+K` anywhere |
 | **`[H]`** | **Help & Gesture Guide** | Open/close the in-app gesture and shortcut cheat sheet modal |
 | **Right Wink** | **Pause / Total Hide** | Completely hides HUD from screen so 0% of IDE is obstructed; wink right again to restore |
 | **Left Wink** | **Back / Undo** | Navigates back to previous menu node; triggers Undo if at root |

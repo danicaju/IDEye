@@ -259,6 +259,11 @@ LLM_TEMPERATURE: float = 0.2
 # Adaptive AST Menu Configuration (Option A: Dynamic AST Menus)
 ENABLE_ADAPTIVE_AST_MENUS: bool = True
 
+# Phase 6 UX: start on the explicit mode hub and let the user choose a mode.
+# Automatic mode switching remains available through the [K] shortcut.
+START_IN_MODE_SELECTOR: bool = True
+CONTEXT_AUTO_SWITCH_ENABLED: bool = False
+
 # ==============================================================================
 # Phase 5: Multi-Language Syntax Trees & Native VS Code WebSocket Bridge
 # ==============================================================================

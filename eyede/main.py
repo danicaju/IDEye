@@ -685,9 +685,13 @@ class EyeDEApplication(QObject):
         self.mode_manager = ModeManager(
             initial_mode="coding",
             language=getattr(self.context_reader, "active_language", getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", "PYTHON")),
-            auto_switch_enabled=True,
+            auto_switch_enabled=getattr(config, "CONTEXT_AUTO_SWITCH_ENABLED", False),
         )
-        self.overlay = OverlayWindow(context_reader=self.context_reader, mode_manager=self.mode_manager)
+        self.overlay = OverlayWindow(
+            context_reader=self.context_reader,
+            mode_manager=self.mode_manager,
+            start_in_mode_selector=getattr(config, "START_IN_MODE_SELECTOR", True),
+        )
         self.debug_widget = DebugWidget()
         self.calibration_ui: Optional[CalibrationUI] = None
         self._is_shutting_down: bool = False

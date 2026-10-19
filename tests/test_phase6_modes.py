@@ -203,3 +203,57 @@ def test_action_status_label_drops_slot_number():
     assert _clean_action_label("8: Espacios y saltos") == "Espacios y saltos"
     assert _clean_action_label("9: Sugerencias") == "Sugerencias"
     assert _clean_action_label("Sin prefijo") == "Sin prefijo"
+
+
+def test_mode_hub_is_the_initial_screen(qapp):
+    overlay = OverlayWindow(start_in_mode_selector=True)
+    overlay.resize(1280, 720)
+
+    assert overlay.current_node_id == "MODE_SELECT"
+    node = overlay.menu_tree["MODE_SELECT"]
+    assert len(node.items) == 9
+    assert sum(1 for item in node.items if item.action_type == "MODE_SWITCH") == 5
+    assert node.items[4].action_type == "PAUSE"
+    assert node.items[6].action_type == "BACK"
+    assert node.items[6].submenu_id == "ROOT"
+    assert node.items[7].submenu_id == "HELP"
+    assert node.items[8].action_type == "EXIT"
+
+    ok, errors = validate_menu_tree(overlay.menu_tree)
+    assert ok, errors
+    overlay.close()
+
+
+def test_selecting_a_mode_enters_its_root_and_can_reopen_hub(qapp):
+    manager = ModeManager()
+    overlay = OverlayWindow(mode_manager=manager, start_in_mode_selector=True)
+    overlay.resize(1280, 720)
+
+    writing = next(
+        item for item in overlay.menu_tree["MODE_SELECT"].items if item.mode_id == "writing"
+    )
+    overlay.execute_action(writing, 1)
+
+    assert manager.current_mode_id == "writing"
+    assert overlay.current_context_mode_id == "writing"
+    assert overlay.current_node_id == "ROOT"
+
+    overlay.open_mode_selector()
+    assert overlay.current_node_id == "MODE_SELECT"
+    overlay.execute_action(overlay.menu_tree["MODE_SELECT"].items[6], 6)
+    assert overlay.current_node_id == "ROOT"
+    overlay.close()
+
+
+def test_mode_hub_stays_open_if_mode_changes_in_background(qapp):
+    manager = ModeManager()
+    overlay = OverlayWindow(mode_manager=manager, start_in_mode_selector=True)
+    overlay.resize(1280, 720)
+
+    manager.set_mode("terminal")
+    assert overlay.current_context_mode_id == "terminal"
+    assert overlay.current_node_id == "MODE_SELECT"
+
+    overlay.cycle_context_mode()
+    assert overlay.current_node_id == "MODE_SELECT"
+    overlay.close()

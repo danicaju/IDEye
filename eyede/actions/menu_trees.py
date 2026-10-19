@@ -58,6 +58,7 @@ class MenuAction:
     sticky: bool = False
     submenu_id: Optional[str] = None
     icon: str = ""
+    mode_id: Optional[str] = None
 
 
 @dataclass
@@ -309,8 +310,8 @@ def populate_help_items(parent_id: str = "ROOT") -> List[MenuAction]:
         ),
         MenuAction(
             id="HELP_SHORTCUTS_1",
-            label="4: [A] AST | [T] TRACK | [V] MODO",
-            hint="A: AST Dinámico | T: Modo Gaze | V: Ciclar Modo Contexto",
+            label="4: [A] SMART | [T] TRACK | [V] MODOS",
+            hint="A: Menús inteligentes | T: Modo Gaze | V: Elegir modo",
             action_type="INFO",
             icon="",
         ),

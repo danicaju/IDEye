@@ -6,7 +6,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from eyede.actions.menu_trees import MenuAction, MenuNode
+from eyede.actions.menu_trees import (
+    MenuAction,
+    MenuNode,
+    create_back_action,
+    create_pause_action,
+)
+from eyede.actions.text_predictor import predict_words
 
 try:
     from eyede.modes._helpers import make_root, make_submenu
@@ -33,6 +39,148 @@ class WritingMode(BaseMode):
     display_name = "Redacción"
     theme_color = "#10B981"
 
+    def __init__(self, language: str = "PYTHON") -> None:
+        super().__init__(language)
+        self._prefix: str = ""
+        self._uppercase: bool = False
+
+    # ------------------------------------------------------------------ #
+    # T9 state
+    # ------------------------------------------------------------------ #
+    def reset_prefix(self) -> None:
+        self._prefix = ""
+
+    def record_letter(self, char: str) -> str:
+        """Records a T9 letter and returns the text to insert."""
+        if not char:
+            return ""
+        self._prefix += char.lower()
+        return char.upper() if self._uppercase else char
+
+    def record_space(self) -> None:
+        self._prefix = ""
+
+    def record_backspace(self) -> None:
+        self._prefix = self._prefix[:-1]
+
+    def toggle_uppercase(self) -> bool:
+        self._uppercase = not self._uppercase
+        return self._uppercase
+
+    def apply_case_to_word(self, word: str) -> str:
+        return word.upper() if self._uppercase else word
+
+    def predictions(self) -> List[str]:
+        return predict_words(self._prefix, limit=6)
+
+    def _letter_action(self, slot: int, char: str) -> MenuAction:
+        return MenuAction(
+            id=f"W_LET_{char}",
+            label=f"{slot}: {char}",
+            hint=f"Insertar {char}",
+            action_type="WRITING_LETTER",
+            snippet=char,
+            icon="variables",
+            sticky=True,
+        )
+
+    # ------------------------------------------------------------------ #
+    # T9 menus
+    # ------------------------------------------------------------------ #
+    def _build_letter_group(
+        self,
+        node_id: str,
+        title: str,
+        breadcrumb: str,
+        letters: List[str],
+        slot8_letter: Optional[str] = None,
+    ) -> MenuNode:
+        items: List[Optional[MenuAction]] = [None] * 9
+        positions = [0, 1, 2, 3, 5]
+        for pos, char in zip(positions, letters[:5]):
+            items[pos] = self._letter_action(pos + 1, char)
+
+        items[4] = create_pause_action("5")
+        items[6] = create_back_action("WRITING_T9", "7")
+
+        if slot8_letter:
+            items[7] = self._letter_action(8, slot8_letter)
+            items[8] = MenuAction(
+                id=f"{node_id}_SPACE",
+                label="9: Espacio",
+                hint="Insertar un espacio",
+                action_type="WRITING_SPACE",
+                icon="format",
+            )
+        else:
+            items[7] = MenuAction(
+                id=f"{node_id}_WORDS",
+                label="8: Palabras",
+                hint="Predicciones para lo que llevas escrito",
+                action_type="SUBMENU",
+                submenu_id="WRITING_PREDICT",
+                icon="ai_spark",
+            )
+            items[8] = MenuAction(
+                id=f"{node_id}_SPACE",
+                label="9: Espacio",
+                hint="Insertar un espacio",
+                action_type="WRITING_SPACE",
+                icon="format",
+            )
+
+        return MenuNode(
+            id=node_id,
+            title=title,
+            breadcrumb_label=breadcrumb,
+            items=[item for item in items if item is not None],
+            parent_id="WRITING_T9",
+            sticky=True,
+        )
+
+    def build_prediction_items(self) -> List[MenuAction]:
+        """Builds the 9-slot prediction panel for the current prefix."""
+        words = self.predictions()
+        positions = [0, 1, 2, 3, 5, 7]
+        items: List[Optional[MenuAction]] = [None] * 9
+
+        for pos, word in zip(positions, words):
+            items[pos] = MenuAction(
+                id=f"W_PRED_{pos}",
+                label=f"{pos + 1}: {word}",
+                hint=f"Insertar «{word}»",
+                action_type="WRITING_WORD",
+                snippet=word,
+                icon="ai_spark",
+                sticky=True,
+            )
+
+        for pos in positions:
+            if items[pos] is None:
+                items[pos] = MenuAction(
+                    id=f"W_PRED_EMPTY_{pos}",
+                    label=f"{pos + 1}: —",
+                    hint="Sin coincidencias",
+                    action_type="NOOP",
+                    snippet="",
+                    icon="",
+                    sticky=True,
+                )
+
+        items[4] = create_pause_action("5")
+        items[6] = create_back_action("WRITING_T9", "7")
+        items[8] = MenuAction(
+            id="W_PRED_BACKSPACE",
+            label="9: Borrar",
+            hint="Borrar el último carácter",
+            action_type="WRITING_BACKSPACE",
+            icon="edit",
+        )
+        return [item for item in items if item is not None]
+
+    # ------------------------------------------------------------------ #
+    # Menu tree
+    # ------------------------------------------------------------------ #
     def get_menu_tree(self, language: Optional[str] = None) -> Dict[str, MenuNode]:
         tree: Dict[str, MenuNode] = {}
 
@@ -84,17 +232,6 @@ class WritingMode(BaseMode):
                 a.snippet = None
         tree["WRITING_CURSOR"] = make_submenu("WRITING_CURSOR", "CURSOR / SELECCIÓN", cursor)
 
-        t9 = [
-            _act("1", "W_T9_1", "el/la", "el "),
-            _act("2", "W_T9_2", "de", "de "),
-            _act("3", "W_T9_3", "que", "que "),
-            _act("4", "W_T9_4", "y", "y "),
-            _act("6", "W_T9_5", "en", "en "),
-            _act("8", "W_T9_6", "a", "a "),
-            _act("9", "W_T9_7", "es", "es "),
-        ]
-        tree["WRITING_T9"] = make_submenu("WRITING_T9", "TECLADO T9 / PALABRAS", t9)
-
         delete = [
             _act("1", "W_DEL_1", "Borrar palabra", None, key_name="DELETE_WORD"),
             _act("2", "W_DEL_2", "Borrar char", None, key_name="BACKSPACE"),
@@ -108,7 +245,6 @@ class WritingMode(BaseMode):
             if a.key_name:
                 a.action_type = "KEY"
                 a.snippet = None
-        # Ensure slot 6 (index 6) remains BACK handled by make_submenu? We put back at slot 7? make_submenu expects 7 content; back auto at index6. Our list has 7; content[4] at index5 etc, content[6] at index8. Fine. But last action "Volver" is not needed; back auto. okay.
         tree["WRITING_DELETE"] = make_submenu("WRITING_DELETE", "BORRAR / DESHACER", delete)
 
         jump = [
@@ -137,19 +273,88 @@ class WritingMode(BaseMode):
         ]
         tree["WRITING_AI"] = make_submenu("WRITING_AI", "SUGERENCIAS DE REDACCIÓN", ai)
 
+        # Full T9 keyboard: five letter groups plus predictions, accents and
+        # uppercase. Every letter action remains in its group so the user can
+        # type several letters without returning to the root on each dwell.
+        ae = self._build_letter_group("WRITING_AE", "LETRAS: A - E", "a-e", ["a", "b", "c", "d", "e"])
+        fj = self._build_letter_group("WRITING_FJ", "LETRAS: F - J", "f-j", ["f", "g", "h", "i", "j"])
+        ko = self._build_letter_group("WRITING_KO", "LETRAS: K - O", "k-o", ["k", "l", "m", "n", "o"], slot8_letter="ñ")
+        pt = self._build_letter_group("WRITING_PT", "LETRAS: P - T", "p-t", ["p", "q", "r", "s", "t"])
+        uz = self._build_letter_group("WRITING_UZ", "LETRAS: U - Z", "u-z", ["u", "v", "w", "x", "y", "z"], slot8_letter="z")
+
+        tree["WRITING_AE"] = ae
+        tree["WRITING_FJ"] = fj
+        tree["WRITING_KO"] = ko
+        tree["WRITING_PT"] = pt
+        tree["WRITING_UZ"] = uz
+
+        more = [
+            self._letter_action(1, "á"),
+            self._letter_action(2, "é"),
+            self._letter_action(3, "í"),
+            self._letter_action(4, "ó"),
+            None,  # pause
+            self._letter_action(6, "ú"),
+            create_back_action("WRITING_T9", "7"),
+            self._letter_action(8, "ü"),
+            MenuAction(
+                id="W_CASE",
+                label="9: Mayús ON/OFF",
+                hint="Alternar mayúsculas",
+                action_type="WRITING_CASE",
+                icon="format",
+            ),
+        ]
+        more[4] = create_pause_action("5")
+        tree["WRITING_MORE"] = MenuNode(
+            id="WRITING_MORE",
+            title="ACENTOS / MAYÚSCULAS",
+            breadcrumb_label="ACENTOS",
+            items=[item for item in more if item is not None],
+            parent_id="WRITING_T9",
+            sticky=True,
+        )
+
+        tree["WRITING_PREDICT"] = MenuNode(
+            id="WRITING_PREDICT",
+            title="PALABRAS SUGERIDAS",
+            breadcrumb_label="PALABRAS",
+            items=self.build_prediction_items(),
+            parent_id="WRITING_T9",
+            sticky=True,
+        )
+
+        t9_root_items = [
+            MenuAction("W_T9_AE", "1: a - e", "Letras a, b, c, d, e", "SUBMENU", submenu_id="WRITING_AE", icon="variables"),
+            MenuAction("W_T9_FJ", "2: f - j", "Letras f, g, h, i, j", "SUBMENU", submenu_id="WRITING_FJ", icon="variables"),
+            MenuAction("W_T9_KO", "3: k - o", "Letras k, l, m, n, ñ, o", "SUBMENU", submenu_id="WRITING_KO", icon="variables"),
+            MenuAction("W_T9_PT", "4: p - t", "Letras p, q, r, s, t", "SUBMENU", submenu_id="WRITING_PT", icon="variables"),
+            create_pause_action("5"),
+            MenuAction("W_T9_UZ", "6: u - z", "Letras u, v, w, x, y, z", "SUBMENU", submenu_id="WRITING_UZ", icon="variables"),
+            create_back_action("ROOT", "7"),
+            MenuAction("W_T9_WORDS", "8: Palabras", "Predicciones para lo que llevas escrito", "SUBMENU", submenu_id="WRITING_PREDICT", icon="ai_spark"),
+            MenuAction("W_T9_MORE", "9: Acentos", "Acentos, ñ, ü y mayúsculas", "SUBMENU", submenu_id="WRITING_MORE", icon="format"),
+        ]
+        tree["WRITING_T9"] = MenuNode(
+            id="WRITING_T9",
+            title="TECLADO T9 / PALABRAS",
+            breadcrumb_label="T9 / PALABRAS",
+            items=t9_root_items,
+            parent_id="ROOT",
+            sticky=True,
+        )
+
         root_items = [
             MenuAction("WRITING_CONNECTORS", "1: CONECTORES", "Conectores y transiciones", "SUBMENU", submenu_id="WRITING_CONNECTORS", icon="flow"),
             MenuAction("WRITING_MARKDOWN", "2: Formato de texto", "Títulos, listas y negritas", "SUBMENU", submenu_id="WRITING_MARKDOWN", icon="format"),
             MenuAction("WRITING_PUNCTUATION", "3: PUNTUACIÓN", "Signos de puntuación", "SUBMENU", submenu_id="WRITING_PUNCTUATION", icon="operators"),
             MenuAction("WRITING_CURSOR", "4: CURSOR / SELECCIÓN", "Movimiento y selección", "SUBMENU", submenu_id="WRITING_CURSOR", icon="navigation"),
             None,  # pause placeholder
-            MenuAction("WRITING_T9", "6: Escribir palabras", "Palabras frecuentes", "SUBMENU", submenu_id="WRITING_T9", icon="variables"),
+            MenuAction("WRITING_T9", "6: Escribir palabras", "T9 completo y predicción", "SUBMENU", submenu_id="WRITING_T9", icon="variables"),
             MenuAction("WRITING_DELETE", "7: Borrar y deshacer", "Borrado y deshacer", "SUBMENU", submenu_id="WRITING_DELETE", icon="edit"),
             MenuAction("WRITING_JUMP", "8: Saltos y párrafos", "Saltos y párrafos", "SUBMENU", submenu_id="WRITING_JUMP", icon="navigation"),
             MenuAction("WRITING_AI", "9: Sugerencias", "Ideas para seguir escribiendo", "SUBMENU", submenu_id="WRITING_AI", icon="ai_spark"),
         ]
-        # fix labels numbering via make_root? make_root forces pause at index4 but keeps labels as provided. Need labels correspond. Our list indices: 0 label 1 ok; 1 label2; 2 label3; 3 label4; 4 pause; 5 label6; 6 label7; 7 label8; 8 label9. Good.
-        from eyede.actions.menu_trees import create_pause_action
         root_items[4] = create_pause_action("5")
         root = make_root("REDACCIÓN / DOCS", root_items)
         tree["ROOT"] = root
@@ -168,14 +373,7 @@ class WritingMode(BaseMode):
     def get_heuristic_predictions(
         self, context_data: Optional[Dict[str, Any]] = None
     ) -> List[str]:
-        return [
-            "Además, ",
-            "Sin embargo, ",
-            "Por lo tanto, ",
-            "En conclusión, ",
-            "Por ejemplo, ",
-            "Es decir, ",
-        ]
+        return self.predictions()
 
 
 WritingModeAlias = WritingMode

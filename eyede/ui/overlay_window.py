@@ -898,8 +898,10 @@ class OverlayWindow(QWidget):
                 self.toggle_reading_mode()
             return
 
-        # Do not accumulate facial clicks while an injection is actively running
-        if self.code_injector.is_busy and target_block != 4:
+        # Do not accumulate facial clicks while an injection is actively running.
+        # Writing mode is the exception: T9 letters should queue naturally so
+        # the user can spell a word without waiting for each clipboard paste.
+        if self.code_injector.is_busy and target_block != 4 and self.current_context_mode_id != "writing":
             return
 
         self.trigger_click_flash(target_block)
@@ -931,6 +933,10 @@ class OverlayWindow(QWidget):
         if item.action_type == "MODE_SWITCH":
             self._activate_mode(item.mode_id)
             self.block_activated.emit(target_block, item.id)
+            return
+
+        # 3b. Writing-mode T9 letters, words, spaces and case toggle
+        if self._handle_writing_action(item, target_block):
             return
 
         # 4. Submenu Forward Navigation
@@ -995,6 +1001,95 @@ class OverlayWindow(QWidget):
         # Fallback default emission
         self.block_activated.emit(target_block, item.id)
 
+    def _writing_mode(self):
+        """Returns the WritingMode instance when available."""
+        if self.mode_manager is None:
+            return None
+        try:
+            return self.mode_manager.get_mode("writing")
+        except Exception:
+            return None
+
+    def _refresh_writing_predictions(self) -> None:
+        """Refreshes the prediction panel after a T9 letter or word change."""
+        mode = self._writing_mode()
+        node = self.menu_tree.get("WRITING_PREDICT")
+        if mode is None or node is None or not hasattr(mode, "build_prediction_items"):
+            return
+        try:
+            node.items = mode.build_prediction_items()
+        except Exception:
+            pass
+
+    def _handle_writing_action(self, item: MenuAction, target_block: int = 0) -> bool:
+        """Executes T9/writing actions and returns True when handled."""
+        action_type = getattr(item, "action_type", "")
+        if action_type not in {
+            "WRITING_LETTER",
+            "WRITING_WORD",
+            "WRITING_SPACE",
+            "WRITING_BACKSPACE",
+            "WRITING_CASE",
+        }:
+            return False
+
+        mode = self._writing_mode()
+        if mode is None:
+            return False
+
+        if action_type == "WRITING_LETTER":
+            text = mode.record_letter(item.snippet or "")
+            if text:
+                self.code_injector.insert_snippet(text)
+            self._refresh_writing_predictions()
+            self.last_action_desc = f"Letra: {text}" if text else "Letra"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return True
+
+        if action_type == "WRITING_WORD":
+            word = mode.apply_case_to_word(item.snippet or "")
+            if word:
+                self.code_injector.insert_snippet(word + " ")
+            mode.reset_prefix()
+            self._refresh_writing_predictions()
+            self.navigate_to("WRITING_T9")
+            self.last_action_desc = f"Palabra: {word}" if word else "Palabra"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return True
+
+        if action_type == "WRITING_SPACE":
+            self.code_injector.insert_snippet(" ")
+            mode.record_space()
+            self._refresh_writing_predictions()
+            self.last_action_desc = "Espacio"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return True
+
+        if action_type == "WRITING_BACKSPACE":
+            self.code_injector.send_key("BACKSPACE")
+            mode.record_backspace()
+            self._refresh_writing_predictions()
+            self.last_action_desc = "Borrar carácter"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return True
+
+        if action_type == "WRITING_CASE":
+            enabled = mode.toggle_uppercase()
+            self.last_action_desc = f"Mayúsculas: {'ON' if enabled else 'OFF'}"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return True
+
+        return False
+
     def execute_action(self, item: MenuAction, target_block: int = 0) -> None:
         """Programmatically executes a MenuAction directly on the overlay."""
         if item.action_type == "PAUSE":
@@ -1014,6 +1109,9 @@ class OverlayWindow(QWidget):
         if item.action_type == "MODE_SWITCH":
             self._activate_mode(item.mode_id)
             self.block_activated.emit(target_block, item.id)
+            return
+
+        if self._handle_writing_action(item, target_block):
             return
 
         if item.action_type == "SUBMENU":
@@ -1178,6 +1276,11 @@ class OverlayWindow(QWidget):
         self.current_context_mode_id = mode_id
         self.current_context_mode_name = display_name
         self.theme_color = theme_color
+
+        if mode_id == "writing":
+            mode = self._writing_mode()
+            if mode is not None and hasattr(mode, "reset_prefix"):
+                mode.reset_prefix()
 
         if mode_id == "coding":
             self.menu_tree = build_menu_tree(self.current_language)

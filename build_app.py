@@ -51,6 +51,7 @@ def build():
         "--hidden-import=eyede.actions.context_reader",
         "--hidden-import=eyede.actions.ai_predictor",
         "--hidden-import=eyede.actions.language_support",
+        "--hidden-import=eyede.actions.text_predictor",
         "--hidden-import=eyede.core.websocket_bridge",
         "--hidden-import=websockets",
         "--hidden-import=websockets.asyncio",

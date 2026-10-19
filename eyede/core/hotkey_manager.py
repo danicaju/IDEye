@@ -16,6 +16,20 @@ except ImportError:
     _PYNPUT_AVAILABLE = False
 
 
+# pynput hotkey syntax: single characters must NOT be wrapped in angle
+# brackets ("v", not "<v>"). Wrapping them raises ValueError inside
+# GlobalHotKeys and prevents the entire listener (including F12) from starting.
+HOTKEY_ACTIONS = {
+    "<ctrl>+<alt>+q": "_on_emergency_exit",
+    "<f12>": "_on_emergency_exit",
+    "<ctrl>+<alt>+r": "_on_emergency_reset",
+    "v": "_on_mode_cycle",
+    "k": "_on_auto_switch",
+    "<ctrl>+<alt>+v": "_on_mode_cycle_anywhere",
+    "<ctrl>+<alt>+k": "_on_auto_switch_anywhere",
+}
+
+
 class GlobalHotkeyManager(QObject):
     """
     Background global hotkey listener using pynput.
@@ -50,13 +64,8 @@ class GlobalHotkeyManager(QObject):
 
             try:
                 hotkeys = {
-                    '<ctrl>+<alt>+q': self._on_emergency_exit,
-                    '<f12>': self._on_emergency_exit,
-                    '<ctrl>+<alt>+r': self._on_emergency_reset,
-                    '<v>': self._on_mode_cycle,
-                    '<k>': self._on_auto_switch,
-                    '<ctrl>+<alt>+v': self._on_mode_cycle_anywhere,
-                    '<ctrl>+<alt>+k': self._on_auto_switch_anywhere,
+                    spec: getattr(self, method_name)
+                    for spec, method_name in HOTKEY_ACTIONS.items()
                 }
                 self._listener = pynput_keyboard.GlobalHotKeys(hotkeys)
                 self._listener.daemon = True

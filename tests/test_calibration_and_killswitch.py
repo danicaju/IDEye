@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import QApplication
 try:
     import eyede.config as config
     from eyede.core.gaze_estimator import GazeEstimator
-    from eyede.core.hotkey_manager import GlobalHotkeyManager
+    from eyede.core.hotkey_manager import GlobalHotkeyManager, HOTKEY_ACTIONS
     from eyede.ui.calibration_ui import CalibrationUI
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.overlay_window import OverlayWindow
@@ -24,7 +24,7 @@ try:
 except ImportError:
     import config
     from core.gaze_estimator import GazeEstimator
-    from core.hotkey_manager import GlobalHotkeyManager
+    from core.hotkey_manager import GlobalHotkeyManager, HOTKEY_ACTIONS
     from ui.calibration_ui import CalibrationUI
     from ui.debug_widget import DebugWidget
     from ui.overlay_window import OverlayWindow
@@ -310,15 +310,23 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
     and on-screen emergency exit documentation.
     """
 
+    def test_hotkey_specs_are_valid_pynput_syntax(self):
+        """Every configured shortcut must parse; one invalid spec abort the whole listener."""
+        from pynput import keyboard
+
+        for spec in HOTKEY_ACTIONS:
+            with self.subTest(spec=spec):
+                keyboard.HotKey.parse(spec)
+
     def test_hotkey_manager_start_and_stop_lifecycle(self):
         """Tests that GlobalHotkeyManager starts and stops without thread leaks or exceptions."""
         manager = GlobalHotkeyManager()
         started = manager.start()
-        # In headless or test environments with pynput, it should return a boolean cleanly
-        if started:
-            self.assertTrue(manager.is_running)
-            manager.stop()
-            self.assertFalse(manager.is_running)
+        # A False return means the listener never started, so F12/killswitch is dead.
+        self.assertTrue(started, "Global hotkey listener failed to start; check HOTKEY_ACTIONS")
+        self.assertTrue(manager.is_running)
+        manager.stop()
+        self.assertFalse(manager.is_running)
 
     def test_emergency_exit_signal_invokes_shutdown(self):
         """Verifies that firing the emergency exit signal cleanly triggers application shutdown."""

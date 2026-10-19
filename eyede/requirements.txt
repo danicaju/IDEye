@@ -19,3 +19,6 @@ pytest>=7.4.0
 # Desktop Packaging & Asset Processing
 Pillow>=10.0.0
 pyinstaller>=6.0.0
+
+# WebSocket Bridge (Fase 5: Native VS Code Extension)
+websockets>=12.0

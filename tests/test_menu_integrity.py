@@ -109,7 +109,7 @@ class TestMenuIntegrity(unittest.TestCase):
         _traverse("ROOT")
         self.assertGreater(len(visited), 10, "Tree has too few reachable nodes.")
         # All standard nodes in the tree should be reachable from ROOT (except aliases/aux nodes)
-        expected_aux_or_alias = {"AI_PREDICT", "T9_VALS", "HELP"}
+        expected_aux_or_alias = {"AI_PREDICT", "T9_VALS", "HELP", "LANG_SELECT"}
         unreachable = set(self.tree.keys()) - visited
         self.assertEqual(unreachable - expected_aux_or_alias, set(), f"Unexpected unreachable nodes: {unreachable}")
 

@@ -29,6 +29,16 @@ try:
     import eyede.config as config
     from eyede.ui.icon_manager import IconManager
     from eyede.actions.code_injector import CodeInjector
+    from eyede.actions.language_support import (
+        LANG_PYTHON,
+        LANG_TYPESCRIPT,
+        LANG_RUST,
+        LANG_CPP,
+        LANG_GO,
+        normalize_language,
+        get_language_display_name,
+        get_language_badge,
+    )
     from eyede.actions.menu_trees import (
         MenuNode,
         MenuAction,
@@ -38,15 +48,27 @@ try:
         populate_local_symbol_items,
         populate_exit_confirm_items,
         populate_help_items,
+        populate_lang_select_items,
         get_adaptive_context_node,
         create_adaptive_menu_action,
     )
     from eyede.actions.context_reader import ContextReader, detect_syntactic_context
     from eyede.actions.ai_predictor import AIPredictorWorker
+    from eyede.modes.mode_manager import ModeManager
 except ImportError:
     import config
     from ui.icon_manager import IconManager
     from actions.code_injector import CodeInjector
+    from actions.language_support import (
+        LANG_PYTHON,
+        LANG_TYPESCRIPT,
+        LANG_RUST,
+        LANG_CPP,
+        LANG_GO,
+        normalize_language,
+        get_language_display_name,
+        get_language_badge,
+    )
     from actions.menu_trees import (
         MenuNode,
         MenuAction,
@@ -56,11 +78,13 @@ except ImportError:
         populate_local_symbol_items,
         populate_exit_confirm_items,
         populate_help_items,
+        populate_lang_select_items,
         get_adaptive_context_node,
         create_adaptive_menu_action,
     )
     from actions.context_reader import ContextReader, detect_syntactic_context
     from actions.ai_predictor import AIPredictorWorker
+    from modes.mode_manager import ModeManager
 
 
 class OverlayWindow(QWidget):
@@ -78,6 +102,9 @@ class OverlayWindow(QWidget):
     tracking_mode_cycle_requested = pyqtSignal()
     adaptive_ast_toggled = pyqtSignal(bool)
     ast_context_detected = pyqtSignal(str)  # (context_name)
+    language_changed = pyqtSignal(str)  # (language_code)
+    context_mode_changed = pyqtSignal(str, str, str)  # (mode_id, display_name, theme_color)
+    mode_changed = context_mode_changed
 
     def __init__(
         self,
@@ -85,6 +112,7 @@ class OverlayWindow(QWidget):
         code_injector: Optional[CodeInjector] = None,
         menu_tree: Optional[Dict[str, MenuNode]] = None,
         context_reader: Optional[ContextReader] = None,
+        mode_manager: Optional[Any] = None,
     ):
         super().__init__(parent)
 
@@ -109,9 +137,30 @@ class OverlayWindow(QWidget):
             self._apply_win32_no_activate()
 
         # 2. Code Injection & Menu Tree Subsystems
+        self.current_language: str = getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", "PYTHON")
         self.code_injector = code_injector if code_injector is not None else CodeInjector(async_mode=True)
-        self.menu_tree: Dict[str, MenuNode] = menu_tree if menu_tree is not None else build_menu_tree()
+        self.menu_tree: Dict[str, MenuNode] = menu_tree if menu_tree is not None else build_menu_tree(self.current_language)
         self.context_reader: ContextReader = context_reader if context_reader is not None else ContextReader()
+        self.mode_manager = mode_manager if mode_manager is not None else ModeManager(
+            initial_mode="coding", language=self.current_language
+        )
+        try:
+            self.mode_manager.set_language(self.current_language)
+        except Exception:
+            pass
+        self.current_context_mode_id: str = getattr(self.mode_manager, "current_mode_id", "coding")
+        self.current_context_mode_name: str = getattr(self.mode_manager, "current_mode", None).display_name if getattr(self.mode_manager, "current_mode", None) is not None else "CÓDIGO (AST)"
+        self.theme_color: str = getattr(self.mode_manager, "current_mode", None).theme_color if getattr(self.mode_manager, "current_mode", None) is not None else "#00F0FF"
+        self._mode_banner_text: str = ""
+        self._mode_banner_until: float = 0.0
+        self._mode_banner_start: float = 0.0
+        self.hovered_header_mode: bool = False
+        self.active_click_header_mode: bool = False
+        self.header_mode_rect: QRectF = QRectF()
+        try:
+            self.mode_manager.mode_changed.connect(self._on_context_mode_changed)
+        except Exception:
+            pass
         self.ai_predictor_worker: Optional[AIPredictorWorker] = None
         self.is_ai_predicting: bool = False
         self.current_node_id: str = "ROOT"
@@ -121,7 +170,6 @@ class OverlayWindow(QWidget):
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
         self._last_detected_context_name: str = "GENERAL"
         self._cached_adaptive_node: Optional[MenuNode] = None
-        self._last_ast_eval_time: float = 0.0
         if "MENU_STANDARD" not in self.menu_tree and "ROOT" in self.menu_tree:
             std_items = list(self.menu_tree["ROOT"].items)
             std_items[8] = create_adaptive_menu_action("9")
@@ -140,6 +188,16 @@ class OverlayWindow(QWidget):
                 title="GUÍA DE GESTOS Y ATAJOS",
                 breadcrumb_label="AYUDA / GESTOS",
                 items=populate_help_items(parent_id="ROOT"),
+                parent_id="ROOT",
+                sticky=False,
+            )
+
+        if "LANG_SELECT" not in self.menu_tree:
+            self.menu_tree["LANG_SELECT"] = MenuNode(
+                id="LANG_SELECT",
+                title="SELECCIONAR LENGUAJE",
+                breadcrumb_label="LENGUAJE",
+                items=populate_lang_select_items(parent_id="ROOT"),
                 parent_id="ROOT",
                 sticky=False,
             )
@@ -165,6 +223,11 @@ class OverlayWindow(QWidget):
         self.help_modal_close_rect: QRectF = QRectF()
         self.hovered_help_modal_close: bool = False
 
+        # Hands-free header language button state
+        self.hovered_header_lang: bool = False
+        self.active_click_header_lang: bool = False
+        self.header_lang_rect: QRectF = QRectF()
+
         # Layout constants & right dock margin (clears space for DebugWidget)
         self.breadcrumb_height: float = 52.0
         self.margin: float = 8.0
@@ -172,7 +235,7 @@ class OverlayWindow(QWidget):
         self.resize(1920, 1080)
 
         # Window title for identification
-        self.setWindowTitle("IDEye - Gaze Macro Grid HUD (Phase 3)")
+        self.setWindowTitle("IDEye - Gaze Macro Grid HUD (Phase 5)")
 
         # 4. Pre-allocated rendering objects to prevent 30/60 FPS GC pressure and memory leaks
         self._font_header_pill = QFont("Segoe UI", 9, QFont.Weight.Bold)
@@ -276,6 +339,7 @@ class OverlayWindow(QWidget):
             "EDIT": QPen(QColor(129, 140, 248, 220), 2.5),
             "AI": QPen(QColor(240, 171, 252, 220), 2.5),
             "EXIT": QPen(QColor(248, 113, 113, 220), 2.5),
+            "LANG": QPen(QColor(168, 85, 247, 220), 2.5),
             "DEFAULT": QPen(QColor(100, 116, 139, 180), 2.0),
         }
         self._cat_badges = {
@@ -288,6 +352,7 @@ class OverlayWindow(QWidget):
             "EDIT": ("EDICIÓN", QColor(129, 140, 248)),
             "AI": ("IA / CÓDIGO", QColor(240, 171, 252)),
             "EXIT": ("SALIR", QColor(248, 113, 113)),
+            "LANG": ("LENGUAJE", QColor(168, 85, 247)),
             "DEFAULT": ("ACCIÓN", QColor(148, 163, 184)),
         }
 
@@ -366,18 +431,22 @@ class OverlayWindow(QWidget):
         )
 
     def _update_header_exit_rect(self) -> None:
-        """Computes the interactive bounding boxes of the top-right exit and help buttons."""
+        """Computes the interactive bounding boxes of the top-right exit, help, and language buttons."""
         w = float(self.width()) if self.width() > 0 else 1920.0
         margin = self.margin
         header_h = self.breadcrumb_height
         pill_h = max(24.0, header_h - 10.0)
         exit_btn_w = 160.0
         help_btn_w = 140.0
+        lang_btn_w = 124.0
+        mode_btn_w = 150.0
         effective_right_margin = self._get_effective_right_margin(w)
         header_w = max(1.0, w - 2.0 * margin - effective_right_margin)
         header_rect = QRectF(margin, margin, header_w, header_h)
         self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 5.0, exit_btn_w, pill_h)
         self.header_help_rect = QRectF(self.header_exit_rect.left() - help_btn_w - 8.0, header_rect.y() + 5.0, help_btn_w, pill_h)
+        self.header_lang_rect = QRectF(self.header_help_rect.left() - lang_btn_w - 8.0, header_rect.y() + 5.0, lang_btn_w, pill_h)
+        self.header_mode_rect = QRectF(self.header_lang_rect.left() - mode_btn_w - 8.0, header_rect.y() + 5.0, mode_btn_w, pill_h)
         self._update_help_modal_rect()
 
     def _apply_win32_no_activate(self) -> None:
@@ -400,21 +469,21 @@ class OverlayWindow(QWidget):
     @property
     def current_node(self) -> MenuNode:
         """Returns the currently active MenuNode, adapting dynamically when at ROOT with 250ms render caching."""
-        if self.current_node_id == "ROOT" and getattr(self, "adaptive_ast_enabled", True):
+        if self.current_node_id == "ROOT" and getattr(self, "adaptive_ast_enabled", True) and getattr(self, "current_context_mode_id", "coding") == "coding":
             now = time.time()
             if self._cached_adaptive_node is not None and (now - self._last_ast_eval_time < 0.25):
                 return self._cached_adaptive_node
 
             std_root = self.menu_tree.get("ROOT")
             if self.context_reader:
-                ctx_info = self.context_reader.detect_syntactic_context()
+                ctx_info = self.context_reader.detect_syntactic_context(language=self.current_language)
             else:
-                ctx_info = detect_syntactic_context()
+                ctx_info = detect_syntactic_context(language=self.current_language)
             ctx_name = ctx_info.get("context", "GENERAL")
             if ctx_name != self._last_detected_context_name:
                 self._last_detected_context_name = ctx_name
                 self.ast_context_detected.emit(ctx_name)
-            node = get_adaptive_context_node(ctx_info, std_root)
+            node = get_adaptive_context_node(ctx_info, std_root, language=self.current_language)
             self._cached_adaptive_node = node
             self._last_ast_eval_time = now
             return node
@@ -593,6 +662,33 @@ class OverlayWindow(QWidget):
 
         self.hovered_header_help = False
 
+        # Check if gaze is targeting the header mode button (+15px buffer)
+        if not self.reading_mode and hasattr(self, "header_mode_rect") and self.header_mode_rect.isValid():
+            expanded_mode_rect = self.header_mode_rect.adjusted(-15.0, -15.0, 15.0, 15.0)
+            if expanded_mode_rect.contains(px, py):
+                self.hovered_header_mode = True
+                self.hovered_header_exit = False
+                self.hovered_header_help = False
+                self.hovered_header_lang = False
+                self.hovered_block = None
+                self.update()
+                return
+
+        self.hovered_header_mode = False
+
+        # Check if gaze is targeting the header language button (+15px buffer)
+        if not self.reading_mode and hasattr(self, "header_lang_rect") and self.header_lang_rect.isValid():
+            expanded_lang_rect = self.header_lang_rect.adjusted(-15.0, -15.0, 15.0, 15.0)
+            if expanded_lang_rect.contains(px, py):
+                self.hovered_header_lang = True
+                self.hovered_header_exit = False
+                self.hovered_header_help = False
+                self.hovered_block = None
+                self.update()
+                return
+
+        self.hovered_header_lang = False
+
         if py < avail_y:
             row = 0
         elif py >= avail_y + avail_h:
@@ -630,6 +726,15 @@ class OverlayWindow(QWidget):
     def _clear_header_help_flash(self) -> None:
         """Clears active click visual pulse on header help button."""
         self.active_click_header_help = False
+        self.update()
+
+    def _clear_header_mode_flash(self) -> None:
+        self.active_click_header_mode = False
+        self.update()
+
+    def _clear_header_lang_flash(self) -> None:
+        """Clears active click visual pulse on header language button."""
+        self.active_click_header_lang = False
         self.update()
 
     def toggle_help_modal(self) -> None:
@@ -725,6 +830,27 @@ class OverlayWindow(QWidget):
             self.update()
             return
 
+        # Hands-free header mode click handler
+        if getattr(self, "hovered_header_mode", False):
+            self.hovered_header_mode = False
+            self.active_click_header_mode = True
+            QTimer.singleShot(int(config.CLICK_FLASH_DURATION_SEC * 1000), self._clear_header_mode_flash)
+            if self.mode_manager is not None:
+                self.mode_manager.cycle_next_mode()
+            self.last_action_desc = f"Modo: {getattr(self, 'current_context_mode_name', '')}"
+            self.update()
+            return
+
+        # Hands-free header language click handler
+        if getattr(self, "hovered_header_lang", False):
+            self.hovered_header_lang = False
+            self.active_click_header_lang = True
+            QTimer.singleShot(int(config.CLICK_FLASH_DURATION_SEC * 1000), self._clear_header_lang_flash)
+            self.navigate_to("LANG_SELECT")
+            self.last_action_desc = "Seleccionar Lenguaje"
+            self.update()
+            return
+
         target_block = self.hovered_block
         if target_block is None:
             return
@@ -780,7 +906,24 @@ class OverlayWindow(QWidget):
             self.block_activated.emit(target_block, item.id)
             return
 
-        # 5. Code / Key Injection (SNIPPET or KEY)
+        # 5. Language Selection Triggers
+        if item.action_type == "LANG_CHANGE":
+            target_lang = item.snippet or "PYTHON"
+            self.set_language(target_lang)
+            if self.current_node_id == "LANG_SELECT":
+                self.navigate_to("ROOT")
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type == "LANG_AUTO":
+            detected_lang = self.context_reader.detect_active_language() if self.context_reader else "PYTHON"
+            self.set_language(detected_lang)
+            if self.current_node_id == "LANG_SELECT":
+                self.navigate_to("ROOT")
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        # 6. Code / Key Injection (SNIPPET or KEY)
         if item.action_type in ("SNIPPET", "KEY"):
             # Ignore placeholder while predicting
             if item.action_type == "SNIPPET" and (not item.snippet or "Analizando..." in item.snippet):
@@ -801,7 +944,7 @@ class OverlayWindow(QWidget):
                 self.update()
             return
 
-        # 6. Exit Trigger
+        # 7. Exit Trigger
         if item.action_type == "EXIT" or item.id in ("CONFIRM_EXIT", "ACTION_EXIT"):
             self.exit_requested.emit()
             self.block_activated.emit(target_block, item.id)
@@ -831,6 +974,22 @@ class OverlayWindow(QWidget):
             if target_id and target_id in self.menu_tree:
                 self.navigate_to(target_id)
                 self.last_action_desc = f"Menú: {self.menu_tree[target_id].title}"
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type == "LANG_CHANGE":
+            target_lang = item.snippet or "PYTHON"
+            self.set_language(target_lang)
+            if self.current_node_id == "LANG_SELECT":
+                self.navigate_to("ROOT")
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type == "LANG_AUTO":
+            detected_lang = self.context_reader.detect_active_language() if self.context_reader else "PYTHON"
+            self.set_language(detected_lang)
+            if self.current_node_id == "LANG_SELECT":
+                self.navigate_to("ROOT")
             self.block_activated.emit(target_block, item.id)
             return
 
@@ -872,6 +1031,20 @@ class OverlayWindow(QWidget):
             event.accept()
             return
 
+        # Check header mode button (+15px buffer)
+        if not self.reading_mode and hasattr(self, "header_mode_rect") and self.header_mode_rect.isValid() and self.header_mode_rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
+            self.hovered_header_mode = True
+            self.on_gesture_triggered("MOUTH_CLICK")
+            event.accept()
+            return
+
+        # Check header language button (+15px buffer)
+        if not self.reading_mode and hasattr(self, "header_lang_rect") and self.header_lang_rect.isValid() and self.header_lang_rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
+            self.hovered_header_lang = True
+            self.on_gesture_triggered("MOUTH_CLICK")
+            event.accept()
+            return
+
         w = float(self.width()) if self.width() > 0 else 1920.0
         h = float(self.height()) if self.height() > 0 else 1080.0
         self.on_gaze_updated(px / w, py / h)
@@ -879,7 +1052,7 @@ class OverlayWindow(QWidget):
         event.accept()
 
     def keyPressEvent(self, event) -> None:
-        """Keyboard event handler for shortcut [T] (tracking mode), [A] (adaptive AST), and [H]/[F1] (help)."""
+        """Keyboard event handler for shortcut [T] (tracking mode), [A] (adaptive AST), [L] (language), and [H]/[F1] (help)."""
         if event.key() in (Qt.Key.Key_H, Qt.Key.Key_F1):
             self.toggle_help_modal()
             event.accept()
@@ -893,17 +1066,173 @@ class OverlayWindow(QWidget):
         elif event.key() == Qt.Key.Key_A:
             self.toggle_adaptive_ast()
             event.accept()
+        elif event.key() == Qt.Key.Key_L:
+            self.cycle_language()
+            event.accept()
+        elif event.key() == Qt.Key.Key_V:
+            self.cycle_context_mode()
+            event.accept()
+        elif event.key() == Qt.Key.Key_K:
+            self.toggle_auto_switch()
+            event.accept()
         else:
             super().keyPressEvent(event)
 
+    def cycle_language(self) -> None:
+        """Cycles through supported languages in order: Python -> TypeScript -> Rust -> C++ -> Go."""
+        langs = ["PYTHON", "TYPESCRIPT", "RUST", "CPP", "GO"]
+        try:
+            curr_idx = langs.index(self.current_language)
+            next_idx = (curr_idx + 1) % len(langs)
+        except ValueError:
+            next_idx = 0
+        self.set_language(langs[next_idx])
+
+    @pyqtSlot(str)
+    def set_language(self, lang: str) -> None:
+        """Sets the active programming language, updates menus and breadcrumbs, and notifies listeners."""
+        norm_lang = normalize_language(lang)
+        if norm_lang == self.current_language and self.menu_tree is not None:
+            return
+
+        self.current_language = norm_lang
+        if getattr(self, "current_context_mode_id", "coding") == "coding":
+            self.menu_tree = build_menu_tree(self.current_language)
+            if "MENU_STANDARD" not in self.menu_tree and "ROOT" in self.menu_tree:
+                std_items = list(self.menu_tree["ROOT"].items)
+                std_items[8] = create_adaptive_menu_action("9")
+                self.menu_tree["MENU_STANDARD"] = MenuNode(
+                    id="MENU_STANDARD",
+                    title="MENÚ ESTÁNDAR",
+                    breadcrumb_label="ESTÁNDAR",
+                    items=std_items,
+                    parent_id="ROOT",
+                    sticky=False,
+                )
+        else:
+            mm = getattr(self, "mode_manager", None)
+            if mm is not None:
+                try:
+                    self.menu_tree = mm.get_menu_tree(self.current_language)
+                except Exception:
+                    self.menu_tree = build_menu_tree(self.current_language)
+            else:
+                self.menu_tree = build_menu_tree(self.current_language)
+        if "HELP" not in self.menu_tree:
+            self.menu_tree["HELP"] = MenuNode(
+                id="HELP",
+                title="GUÍA DE GESTOS Y ATAJOS",
+                breadcrumb_label="AYUDA / GESTOS",
+                items=populate_help_items(parent_id="ROOT"),
+                parent_id="ROOT",
+                sticky=False,
+            )
+        if "LANG_SELECT" not in self.menu_tree:
+            self.menu_tree["LANG_SELECT"] = MenuNode(
+                id="LANG_SELECT",
+                title="SELECCIONAR LENGUAJE",
+                breadcrumb_label="LENGUAJE",
+                items=populate_lang_select_items(parent_id="ROOT"),
+                parent_id="ROOT",
+                sticky=False,
+            )
+        self._cached_adaptive_node = None
+        self._last_ast_eval_time = 0.0
+        badge = get_language_badge(self.current_language)
+        self.last_action_desc = f"Lenguaje: {get_language_display_name(self.current_language)} [{badge}]"
+        self.language_changed.emit(self.current_language)
+        self.update()
+
+    def _on_context_mode_changed(self, mode_id: str, display_name: str, theme_color: str) -> None:
+        """Applies a context mode change to the HUD menu tree and theme."""
+        self.current_context_mode_id = mode_id
+        self.current_context_mode_name = display_name
+        self.theme_color = theme_color
+
+        if mode_id == "coding":
+            self.menu_tree = build_menu_tree(self.current_language)
+            if "MENU_STANDARD" not in self.menu_tree and "ROOT" in self.menu_tree:
+                std_items = list(self.menu_tree["ROOT"].items)
+                std_items[8] = create_adaptive_menu_action("9")
+                self.menu_tree["MENU_STANDARD"] = MenuNode(
+                    id="MENU_STANDARD",
+                    title="MENÚ ESTÁNDAR",
+                    breadcrumb_label="ESTÁNDAR",
+                    items=std_items,
+                    parent_id="ROOT",
+                    sticky=False,
+                )
+        else:
+            try:
+                self.menu_tree = self.mode_manager.get_menu_tree(self.current_language)
+            except Exception:
+                self.menu_tree = {"ROOT": self.mode_manager.get_root_menu(self.current_language)}
+
+        for extra in ("HELP", "LANG_SELECT"):
+            if extra not in self.menu_tree:
+                if extra == "HELP":
+                    self.menu_tree[extra] = MenuNode(
+                        id="HELP",
+                        title="GUÍA DE GESTOS Y ATAJOS",
+                        breadcrumb_label="AYUDA / GESTOS",
+                        items=populate_help_items(parent_id="ROOT"),
+                        parent_id="ROOT",
+                        sticky=False,
+                    )
+                else:
+                    self.menu_tree[extra] = MenuNode(
+                        id="LANG_SELECT",
+                        title="SELECCIONAR LENGUAJE",
+                        breadcrumb_label="LENGUAJE",
+                        items=populate_lang_select_items(parent_id="ROOT"),
+                        parent_id="ROOT",
+                        sticky=False,
+                    )
+
+        self.current_node_id = "ROOT"
+        self._cached_adaptive_node = None
+        self._last_ast_eval_time = 0.0
+        self.last_action_desc = f"Modo: {display_name}"
+        self._mode_banner_text = f"MODO ACTIVO: {display_name}"
+        try:
+            self._mode_banner_start = time.time()
+            self._mode_banner_until = self._mode_banner_start + 2.2
+        except Exception:
+            self._mode_banner_until = 0.0
+        self.context_mode_changed.emit(mode_id, display_name, theme_color)
+        self.update()
+
+    def cycle_context_mode(self) -> None:
+        if self.mode_manager is not None:
+            self.mode_manager.cycle_next_mode()
+
+    def is_mode_shortcut_targeted(self) -> bool:
+        """True when the gaze is on/near the header mode button (global V/K gate)."""
+        gaze = getattr(self, "current_gaze", None)
+        rect = getattr(self, "header_mode_rect", None)
+        if not gaze or rect is None or not rect.isValid():
+            return False
+        try:
+            gx, gy = gaze
+            w = max(1.0, float(self.width()))
+            h = max(1.0, float(self.height()))
+            return rect.adjusted(-24.0, -18.0, 24.0, 18.0).contains(gx * w, gy * h)
+        except Exception:
+            return False
+
     def toggle_adaptive_ast(self) -> None:
         """Toggles between dynamic adaptive AST menus and standard root menu (shortcut [A])."""
-        self.adaptive_ast_enabled = not self.adaptive_ast_enabled
+        self.adaptive_ast_enabled = not getattr(self, "adaptive_ast_enabled", True)
         self._cached_adaptive_node = None
         self._last_ast_eval_time = 0.0
         self.last_action_desc = f"AST Adaptativo: {'ON' if self.adaptive_ast_enabled else 'OFF'}"
         self.adaptive_ast_toggled.emit(self.adaptive_ast_enabled)
         self.update()
+
+    def toggle_auto_switch(self, enabled=None) -> bool:
+        if self.mode_manager is not None:
+            return self.mode_manager.toggle_auto_switch(enabled)
+        return False
 
     @pyqtSlot(bool)
     def set_adaptive_ast_enabled(self, enabled: bool) -> None:
@@ -973,6 +1302,13 @@ class OverlayWindow(QWidget):
 
         if sub_id == "FLOW" or "FLOW" in curr_id or any(k in act_id for k in ("IF", "LOOP", "WHILE", "FOR", "TRY", "RETURN", "FLOW", "CTX_TRY", "CTX_LOOP", "CTX_IF", "CTX_WITH")):
             return "FLOW"
+        if (
+            item.action_type in ("LANG_CHANGE", "LANG_AUTO")
+            or item.id.startswith("LANG_")
+            or sub_id == "LANG_SELECT"
+            or curr_id == "LANG_SELECT"
+        ):
+            return "LANG"
         if sub_id == "STRUCT" or "STRUCT" in curr_id or any(k in act_id for k in ("FUNC", "CLASS", "DEF", "STRUCT", "DATA", "LIST", "DICT", "T9", "CTX_FN", "CTX_CLS")):
             return "STRUCT"
         if sub_id == "OPERATORS" or "OP" in curr_id or any(k in act_id for k in ("OPERATOR", "OP_", "MATH", "BOOL", "COMPARE", "COMMA")):
@@ -1136,22 +1472,113 @@ class OverlayWindow(QWidget):
             "AYUDA",
         )
 
-        # Center: Emergency Hotkey Documentation Pill
+        # Hands-free Mode Selector Button [MODO] next to [LANG]
+        mode_btn_w = 150.0
+        lang_btn_w = 124.0
+        self.header_lang_rect = QRectF(self.header_help_rect.left() - lang_btn_w - 8.0, header_rect.y() + 5.0, lang_btn_w, pill_h)
+        self.header_mode_rect = QRectF(self.header_lang_rect.left() - mode_btn_w - 8.0, header_rect.y() + 5.0, mode_btn_w, pill_h)
+
+        mode_color = QColor(self.theme_color or "#00F0FF")
+
+        if self.active_click_header_mode:
+            mode_brush = self._brush_click
+            mode_pen = self._pen_click
+            mode_text_color = self._color_click_text
+        elif self.hovered_header_mode:
+            glow_mode_rect = self.header_mode_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
+            glow = QColor(mode_color)
+            glow.setAlpha(70)
+            painter.setBrush(QBrush(glow))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(glow_mode_rect, 10.0, 10.0)
+
+            mode_brush = QBrush(mode_color)
+            mode_pen = QPen(QColor(255, 255, 255, 230), 3.0)
+            mode_text_color = QColor(255, 255, 255)
+        else:
+            base = QColor(mode_color)
+            base.setAlpha(150)
+            mode_brush = QBrush(base)
+            mode_pen = QPen(mode_color, 1.8)
+            mode_text_color = QColor(255, 255, 255)
+
+        painter.setBrush(mode_brush)
+        painter.setPen(mode_pen)
+        painter.drawRoundedRect(self.header_mode_rect, 7.0, 7.0)
+
+        icon_size = 18.0
+        mode_icon_rect = QRectF(self.header_mode_rect.x() + 8.0, self.header_mode_rect.y() + (pill_h - icon_size) * 0.5, icon_size, icon_size)
+        IconManager.instance().render_icon(painter, "mode", mode_icon_rect)
+
+        painter.setPen(mode_text_color)
+        painter.setFont(self._font_header_bold_btn)
+        short_mode_labels = {
+            "coding": "CÓDIGO",
+            "writing": "REDACCIÓN",
+            "terminal": "TERMINAL",
+            "data_math": "DATOS",
+            "navigation": "NAV",
+        }
+        mode_label = short_mode_labels.get(getattr(self, "current_context_mode_id", "coding"), "MODO")
+        painter.drawText(
+            QRectF(self.header_mode_rect.x() + 30.0, self.header_mode_rect.y(), self.header_mode_rect.width() - 34.0, pill_h),
+            Qt.AlignmentFlag.AlignCenter,
+            f"{mode_label} [V]",
+        )
+
+        # Hands-free Language Selector Button [LANG] next to [AYUDA]
+        if self.active_click_header_lang:
+            lang_brush = self._brush_click
+            lang_pen = self._pen_click
+            lang_text_color = self._color_click_text
+        elif self.hovered_header_lang:
+            glow_lang_rect = self.header_lang_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
+            painter.setBrush(QBrush(QColor(168, 85, 247, 70)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(glow_lang_rect, 10.0, 10.0)
+
+            lang_brush = QBrush(QColor(168, 85, 247, 245))
+            lang_pen = QPen(QColor(243, 232, 255), 3.0)
+            lang_text_color = QColor(255, 255, 255)
+        else:
+            lang_brush = QBrush(QColor(88, 28, 135, 150))
+            lang_pen = QPen(QColor(168, 85, 247, 180), 1.8)
+            lang_text_color = QColor(243, 232, 255)
+
+        painter.setBrush(lang_brush)
+        painter.setPen(lang_pen)
+        painter.drawRoundedRect(self.header_lang_rect, 7.0, 7.0)
+
+        lang_icon_rect = QRectF(self.header_lang_rect.x() + 10.0, self.header_lang_rect.y() + (pill_h - icon_size) * 0.5, icon_size, icon_size)
+        IconManager.instance().render_icon(painter, "language", lang_icon_rect)
+        painter.setPen(lang_text_color)
+        painter.setFont(self._font_header_bold_btn)
+        badge_text = get_language_badge(self.current_language)
+        painter.drawText(
+            QRectF(self.header_lang_rect.x() + 34.0, self.header_lang_rect.y(), lang_btn_w - 40.0, pill_h),
+            Qt.AlignmentFlag.AlignCenter,
+            badge_text,
+        )
+
+        # Center: Emergency Hotkey Documentation Pill (only when it fits without overlap)
         emergency_text = "Emergencia: Ctrl+Alt+Q para salir"
         center_pill_w = 230.0
         center_pill_rect = QRectF(header_rect.center().x() - center_pill_w * 0.5, header_rect.y() + 5.0, center_pill_w, pill_h)
-        painter.setBrush(QBrush(QColor(239, 68, 68, 25)))
-        painter.setPen(QPen(QColor(239, 68, 68, 120), 1.0))
-        painter.drawRoundedRect(center_pill_rect, 5.0, 5.0)
+        left_text_right = text_start_x + max_left_w
+        right_group_left = self.header_mode_rect.left() - 8.0
+        if center_pill_rect.left() >= left_text_right + 8.0 and center_pill_rect.right() <= right_group_left:
+            painter.setBrush(QBrush(QColor(239, 68, 68, 25)))
+            painter.setPen(QPen(QColor(239, 68, 68, 120), 1.0))
+            painter.drawRoundedRect(center_pill_rect, 5.0, 5.0)
 
-        painter.setPen(self._pen_header_center)
-        painter.setFont(self._font_header_center)
-        painter.drawText(center_pill_rect, Qt.AlignmentFlag.AlignCenter, emergency_text)
+            painter.setPen(self._pen_header_center)
+            painter.setFont(self._font_header_center)
+            painter.drawText(center_pill_rect, Qt.AlignmentFlag.AlignCenter, emergency_text)
 
         # Right-Center: Last executed action pill
         last_action_str = f"Última: {self.last_action_desc}"
-        max_right_w = int(header_rect.width() * 0.20)
-        right_pill_rect = QRectF(self.header_help_rect.left() - max_right_w - 8.0, header_rect.y() + 5.0, max_right_w, pill_h)
+        max_right_w = min(int(header_rect.width() * 0.18), 240)
+        right_pill_rect = QRectF(self.header_lang_rect.left() - max_right_w - 8.0, header_rect.y() + 5.0, max_right_w, pill_h)
         painter.setBrush(QBrush(QColor(56, 189, 248, 22)))
         painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
         painter.drawRoundedRect(right_pill_rect, 5.0, 5.0)
@@ -1164,6 +1591,45 @@ class OverlayWindow(QWidget):
             Qt.AlignmentFlag.AlignCenter,
             elided_right,
         )
+
+        # =====================================================================
+        # 1b. Transient mode-change banner (makes coding/writing switch obvious)
+        # =====================================================================
+        try:
+            now = time.time()
+            if self._mode_banner_text and now < self._mode_banner_until:
+                duration = max(0.1, self._mode_banner_until - self._mode_banner_start)
+                progress = (now - self._mode_banner_start) / duration
+                progress = max(0.0, min(1.0, progress))
+                if progress < 0.18:
+                    alpha_factor = progress / 0.18
+                elif progress > 0.78:
+                    alpha_factor = (1.0 - progress) / 0.22
+                else:
+                    alpha_factor = 1.0
+                alpha_factor = max(0.0, min(1.0, alpha_factor))
+                slide = (1.0 - min(1.0, progress / 0.18)) * 18.0 if progress < 0.18 else 0.0
+
+                banner_w = min(float(self.width()) - 2.0 * margin, 420.0)
+                banner_rect = QRectF(
+                    (float(self.width()) - banner_w) * 0.5,
+                    header_rect.bottom() + 10.0 + slide,
+                    banner_w,
+                    42.0,
+                )
+                painter.save()
+                painter.setOpacity(alpha_factor)
+                color = QColor(self.theme_color or "#00F0FF")
+                color.setAlpha(220)
+                painter.setBrush(QBrush(color))
+                painter.setPen(QPen(QColor(255, 255, 255, 200), 2.0))
+                painter.drawRoundedRect(banner_rect, 10.0, 10.0)
+                painter.setPen(QColor(255, 255, 255))
+                painter.setFont(self._font_header_bold_btn)
+                painter.drawText(banner_rect, Qt.AlignmentFlag.AlignCenter, self._mode_banner_text)
+                painter.restore()
+        except Exception:
+            pass
 
         # =====================================================================
         # 2. 3x3 Grid Category Cards
@@ -1468,6 +1934,7 @@ class OverlayWindow(QWidget):
 
         shortcuts_list = [
             ("[A]", "AST Adaptativo", "Alterna menús inteligentes según el cursor."),
+            ("[V]", "Cambiar Modo", "Cicla Código, Redacción, Terminal, Datos y Navegación."),
             ("[T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
             ("[M]", "Colapsar Monitor", "Alterna monitor entre ventana y barra compacta."),
             ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),

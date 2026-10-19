@@ -79,6 +79,7 @@ class CodeInjector:
         paste_delay: float = 0.05,
         keyboard_controller: Optional[Any] = None,
         clipboard_module: Optional[Any] = None,
+        websocket_bridge: Optional[Any] = None,
     ):
         """
         Initializes the CodeInjector.
@@ -88,9 +89,11 @@ class CodeInjector:
             paste_delay: Delay in seconds after paste to allow target window to process event.
             keyboard_controller: Optional custom/mock keyboard controller.
             clipboard_module: Optional custom/mock clipboard module.
+            websocket_bridge: Optional WebSocketBridge for native VS Code injection.
         """
         self.async_mode = async_mode
         self.paste_delay = paste_delay
+        self.websocket_bridge = websocket_bridge
 
         # OS Platform detection
         self.is_macos: bool = (sys.platform == "darwin")
@@ -464,15 +467,70 @@ class CodeInjector:
         finally:
             self.release_all_modifiers()
 
+    def set_websocket_bridge(self, bridge: Any) -> None:
+        """Sets or clears the WebSocketBridge for native VS Code dispatch."""
+        self.websocket_bridge = bridge
+
+    @property
+    def has_native_websocket(self) -> bool:
+        """Returns True if a WebSocketBridge is assigned and currently has connected clients."""
+        return self.websocket_bridge is not None and getattr(self.websocket_bridge, "is_connected", False)
+
     def execute_action(self, action: Any, async_exec: Optional[bool] = None) -> bool:
         """
         Dispatches an action based on its MenuAction attributes.
+        Prioritizes native VS Code WebSocket bridge if connected, otherwise falls
+        back safely to OS-level virtual input (pyperclip + pynput).
         """
         if not hasattr(action, "action_type"):
             return False
 
         atype = action.action_type.upper()
 
+        # Check if native VS Code WebSocket bridge is available and connected
+        ws = getattr(self, "websocket_bridge", None)
+        if ws is not None and getattr(ws, "is_connected", False):
+            if atype == "SNIPPET" and getattr(action, "snippet", None):
+                offset_left = getattr(action, "cursor_offset_left", 0)
+                offset_up = getattr(action, "cursor_offset_up", 0)
+                sent = ws.send_insert_snippet(
+                    snippet=action.snippet,
+                    cursor_offset_left=offset_left,
+                    cursor_offset_up=offset_up,
+                    tabstops=True,
+                )
+                if sent:
+                    return True
+
+            elif atype == "KEY" and getattr(action, "key_name", None):
+                kname = action.key_name.upper().strip()
+                ws_key_map = {
+                    "UNDO": "undo",
+                    "REDO": "redo",
+                    "SAVE": "workbench.action.files.save",
+                    "FORMAT": "editor.action.formatDocument",
+                    "UP": "cursorUp",
+                    "DOWN": "cursorDown",
+                    "LEFT": "cursorLeft",
+                    "RIGHT": "cursorRight",
+                    "HOME": "cursorLineStart",
+                    "END": "cursorLineEnd",
+                    "BACKSPACE": "deleteLeft",
+                    "DELETE_LINE": "editor.action.deleteLines",
+                    "COMMENT": "editor.action.commentLine",
+                    "TAB": "tab",
+                    "SHIFT_TAB": "outdent",
+                    "ENTER": "type",
+                    "SPACE": "type",
+                }
+                cmd = ws_key_map.get(kname)
+                if cmd:
+                    args = [{"text": "\n"}] if kname == "ENTER" else ([{"text": " "}] if kname == "SPACE" else None)
+                    sent = ws.send_execute_command(cmd, args)
+                    if sent:
+                        return True
+
+        # Fallback to OS-level virtual input
         if atype == "SNIPPET" and getattr(action, "snippet", None):
             return self.insert_snippet(
                 snippet=action.snippet,
@@ -484,6 +542,7 @@ class CodeInjector:
             return self.send_key(action.key_name, async_exec=async_exec)
 
         return False
+
 
     def wait_idle(self, timeout: float = 2.0) -> bool:
         """Waits until all pending queued tasks have been processed."""

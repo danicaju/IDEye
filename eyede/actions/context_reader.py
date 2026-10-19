@@ -17,26 +17,54 @@ try:
 except ImportError:
     import config
 
+try:
+    from eyede.actions.language_support import (
+        LANG_PYTHON,
+        LANG_TYPESCRIPT,
+        LANG_RUST,
+        LANG_CPP,
+        LANG_GO,
+        SUPPORTED_LANGUAGES,
+        LANGUAGE_EXTENSIONS,
+        LANGUAGE_KEYWORDS,
+        detect_language_from_path,
+        detect_language_from_id,
+        normalize_language,
+        get_language_display_name,
+        get_language_badge,
+    )
+except ImportError:
+    from actions.language_support import (
+        LANG_PYTHON,
+        LANG_TYPESCRIPT,
+        LANG_RUST,
+        LANG_CPP,
+        LANG_GO,
+        SUPPORTED_LANGUAGES,
+        LANGUAGE_EXTENSIONS,
+        LANGUAGE_KEYWORDS,
+        detect_language_from_path,
+        detect_language_from_id,
+        normalize_language,
+        get_language_display_name,
+        get_language_badge,
+    )
+
 # Python reserved keywords and internal names to filter out from user symbol lists
-PYTHON_KEYWORDS: Set[str] = {
+PYTHON_KEYWORDS: Set[str] = LANGUAGE_KEYWORDS.get(LANG_PYTHON, {
     "False", "None", "True", "and", "as", "assert", "async", "await", "break",
     "class", "continue", "def", "del", "elif", "else", "except", "finally",
     "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal",
     "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
     "self", "cls",
-    # Common builtins that are not user symbols
-    "print", "len", "range", "str", "int", "float", "list", "dict", "set",
-    "tuple", "bool", "min", "max", "sum", "abs", "round", "enumerate", "zip",
-    "open", "super", "isinstance", "issubclass", "type", "id", "map", "filter",
-    "any", "all", "dir", "hasattr", "getattr", "setattr", "repr", "iter", "next",
-}
+})
 
 
 class ContextReader:
     """
     Non-intrusive live context reader for the active code editing session.
-    Detects or links the active Python file and dynamically extracts local
-    symbols (variables, arguments, functions, classes) using a dual AST + Regex engine.
+    Detects or links the active file across Python, TypeScript/JS, Rust, C++, and Go,
+    and dynamically extracts local symbols and active syntactic contexts.
     """
 
     def __init__(
@@ -44,6 +72,7 @@ class ContextReader:
         workspace_dir: Optional[str] = None,
         active_file: Optional[str] = None,
         auto_detect: Optional[bool] = None,
+        default_language: Optional[str] = None,
     ):
         raw_ws = workspace_dir if workspace_dir is not None else getattr(config, "DEFAULT_WORKSPACE_DIR", os.getcwd())
         self.workspace_dir: str = os.path.abspath(raw_ws) if raw_ws else os.getcwd()
@@ -55,12 +84,31 @@ class ContextReader:
         self._cached_detected_file: Optional[str] = None
         self._last_detect_time: float = 0.0
 
+        raw_lang = default_language or getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", LANG_PYTHON)
+        self.active_language: str = normalize_language(raw_lang)
+
+    def set_language(self, language: str) -> None:
+        """Sets the active programming language."""
+        self.active_language = normalize_language(language)
+
+    def set_active_language(self, language: str) -> None:
+        """Sets the active programming language (alias for set_language)."""
+        self.set_language(language)
+
+    def get_active_language(self) -> str:
+        """Returns active language, prioritizing explicitly linked or detected file."""
+        target_file = self.get_active_file()
+        if target_file:
+            return detect_language_from_path(target_file)
+        return self.active_language
+
     def set_active_file(self, file_path: Optional[str]) -> None:
-        """Explicitly links or unlinks an active Python file for context reading."""
+        """Explicitly links or unlinks an active file for context reading."""
         self._cached_detected_file = None
         self._last_detect_time = 0.0
         if file_path:
             self.active_file_path = os.path.abspath(file_path)
+            self.active_language = detect_language_from_path(self.active_file_path)
         else:
             self.active_file_path = None
 
@@ -73,7 +121,8 @@ class ContextReader:
 
     def detect_active_file(self) -> Optional[str]:
         """
-        Scans workspace_dir for the most recently modified .py file.
+        Scans workspace_dir for the most recently modified code file across
+        all supported languages (Python, TypeScript, Rust, C++, Go).
         Skips hidden dirs, virtual environments, caches, and test artifacts.
         Throttles redundant recursive disk scans within 1.5 seconds.
         """
@@ -91,7 +140,8 @@ class ContextReader:
         ignored_dirs = {
             ".git", "__pycache__", ".pytest_cache", ".venv", "venv", "env",
             "node_modules", "dist", "build", ".idea", ".vscode", ".agents",
-            "tests", "test", "testing", "docs", "doc", "eyede",
+            "tests", "test", "testing", "docs", "doc", "eyede", "target",
+            "vscode-extension",
         }
 
         latest_file: Optional[str] = None
@@ -108,10 +158,12 @@ class ContextReader:
                 ]
 
                 for f in files:
-                    if f.endswith(".py"):
+                    ext = os.path.splitext(f)[1].lower()
+                    if ext in LANGUAGE_EXTENSIONS:
                         f_lower = f.lower()
-                        if f_lower.startswith("test_") or f_lower == "conftest.py":
+                        if f_lower.startswith("test_") or f_lower.endswith("_test.go") or f_lower == "conftest.py":
                             continue
+
                         full_path = os.path.join(root, f)
                         try:
                             rel_parts = [p.lower() for p in os.path.relpath(full_path, self.workspace_dir).split(os.sep)]
@@ -189,11 +241,13 @@ class ContextReader:
         max_symbols: int = 12,
         file_path: Optional[str] = None,
         source_code: Optional[str] = None,
+        language: Optional[str] = None,
     ) -> List[str]:
         """
         Dual AST + Regex extractor:
         Tolerant to SyntaxError (unclosed parens, incomplete lines).
-        Extracts variables, arguments, functions, and classes.
+        Extracts variables, arguments, functions, and classes across
+        Python, TypeScript, Rust, C++, and Go.
         Returns up to `max_symbols` (default 12) unique symbols, prioritized by recency.
         """
         try:
@@ -203,9 +257,31 @@ class ContextReader:
         if not content or not content.strip():
             return []
 
+        target_lang = normalize_language(language or (detect_language_from_path(file_path) if file_path else self.get_active_language()))
+        keywords = LANGUAGE_KEYWORDS.get(target_lang, PYTHON_KEYWORDS)
+
+        # Multi-language extraction for non-Python sources
+        if target_lang != LANG_PYTHON:
+            seen_ml: Set[str] = set()
+            unique_ml: List[str] = []
+            lines = content.splitlines()
+            for line in reversed(lines):
+                clean = re.sub(r'//.*$', '', line)
+                clean = re.sub(r'/\*.*?\*/', '', clean)
+                clean = re.sub(r'(["\'])(?:(?=(\\?))\2.)*?\1', '', clean)
+                for m in re.finditer(r'\b([a-zA-Z_]\w*)\b', clean):
+                    sym = m.group(1)
+                    if sym not in seen_ml and sym not in keywords and not sym.startswith("__") and len(sym) > 1 and not sym.isdigit():
+                        seen_ml.add(sym)
+                        unique_ml.append(sym)
+                        if len(unique_ml) >= max_symbols:
+                            return unique_ml
+            return unique_ml
+
         # Collect tuples: (line_no, col_offset, symbol_name)
         ast_items: List[Tuple[int, int, str]] = []
         regex_items: List[Tuple[int, int, str]] = []
+
 
         # 1. AST Extraction (if syntax is valid or partially valid)
         try:
@@ -357,18 +433,29 @@ class ContextReader:
         self,
         file_path: Optional[str] = None,
         source_code: Optional[str] = None,
+        language: Optional[str] = None,
     ) -> "SyntacticContext":
         """
         Detects active syntactic context (e.g. FUNCTION_SIGNATURE, TRY_BLOCK, CLASS_BODY,
-        IF_BLOCK, LOOP_BLOCK, WITH_BLOCK, GENERAL) for live adaptive AST menus.
+        IF_BLOCK, LOOP_BLOCK, WITH_BLOCK, GENERAL) for live adaptive AST menus across
+        all supported programming languages (Python, TypeScript, Rust, C++, Go).
         """
+        if language is not None:
+            target_lang = normalize_language(language)
+        elif file_path is not None:
+            target_lang = detect_language_from_path(file_path)
+        elif source_code is not None:
+            target_lang = self.active_language
+        else:
+            target_lang = self.get_active_language()
+
         if source_code is not None:
-            return detect_syntactic_context(source_code=source_code)
+            return detect_syntactic_context(source_code=source_code, language=target_lang)
         target = file_path or self.get_active_file()
         if target:
             content = self.read_file_content(target)
-            return detect_syntactic_context(file_path=target, source_code=content)
-        return detect_syntactic_context(source_code="")
+            return detect_syntactic_context(file_path=target, source_code=content, language=target_lang)
+        return detect_syntactic_context(source_code="", language=target_lang)
 
 
 # ==============================================================================
@@ -428,20 +515,24 @@ class SyntacticContext(dict):
 def detect_syntactic_context(
     file_path: Optional[str] = None,
     source_code: Optional[str] = None,
+    language: Optional[str] = None,
 ) -> SyntacticContext:
     """
     Detects the active syntactic construct from the file path or raw source code.
-    Dual AST + Regex analysis robust against SyntaxError and incomplete lines being typed.
+    Multi-language support for Python, TypeScript/JS, Rust, C++, and Go.
+    Robust against SyntaxError and incomplete lines being typed.
 
     Contexts detected:
-    - FUNCTION_SIGNATURE: writing def func( or async def foo(a, 
-    - TRY_BLOCK: inside or immediately after try:
-    - CLASS_BODY: inside class definition
-    - IF_BLOCK: inside if / elif
-    - LOOP_BLOCK: inside for / while
+    - FUNCTION_SIGNATURE: writing function header
+    - TRY_BLOCK: inside try / catch / match / error check
+    - CLASS_BODY: inside class, struct, impl, or interface
+    - IF_BLOCK: inside if / elif / else
+    - LOOP_BLOCK: inside for / while / loop
     - WITH_BLOCK: inside with
     - GENERAL: default context when no specific construct is active
     """
+    target_lang = normalize_language(language or (detect_language_from_path(file_path) if file_path else LANG_PYTHON))
+
     content = ""
     if source_code is not None:
         content = source_code
@@ -464,13 +555,19 @@ def detect_syntactic_context(
     if not lines:
         return SyntacticContext(CONTEXT_GENERAL, line="", indent=0)
 
+    comment_pattern = r'#.*$' if target_lang == LANG_PYTHON else r'//.*$'
+
     # Find the last non-empty line (ignoring trailing comments)
     last_non_empty_idx = -1
     for i in range(len(lines) - 1, -1, -1):
         stripped = lines[i].strip()
-        if stripped and not stripped.startswith("#"):
-            last_non_empty_idx = i
-            break
+        if stripped:
+            if target_lang == LANG_PYTHON and not stripped.startswith("#"):
+                last_non_empty_idx = i
+                break
+            elif target_lang != LANG_PYTHON and not stripped.startswith("//") and not stripped.startswith("/*") and not stripped.startswith("*"):
+                last_non_empty_idx = i
+                break
 
     if last_non_empty_idx == -1:
         return SyntacticContext(CONTEXT_GENERAL, line="", indent=0)
@@ -479,9 +576,139 @@ def detect_syntactic_context(
     stripped_last = last_line.strip()
     last_indent = len(last_line) - len(last_line.lstrip())
 
-    clean_last = re.sub(r'#.*$', '', last_line).strip()
+    clean_last = re.sub(comment_pattern, '', last_line).strip()
+    if target_lang != LANG_PYTHON:
+        clean_last = re.sub(r'/\*.*?\*/', '', clean_last).strip()
     clean_last_no_str = re.sub(r'(["\'])(?:(?=(\\?))\2.)*?\1', '', clean_last)
 
+    # -------------------------------------------------------------------------
+    # MULTI-LANGUAGE SYNTACTIC CHECKS FOR NON-PYTHON LANGUAGES
+    # -------------------------------------------------------------------------
+    if target_lang == LANG_TYPESCRIPT:
+        if re.search(r'^\s*(?:export\s+)?(?:async\s+)?function\b', clean_last) or \
+           re.search(r'^\s*(?:const|let|var)\s+\w+\s*=\s*(?:async\s*)?\([^)]*$', clean_last) or \
+           re.search(r'^\s*constructor\s*\(', clean_last):
+            return SyntacticContext(CONTEXT_FUNCTION_SIGNATURE, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*try\b', clean_last) or re.search(r'^\s*(?:catch|finally)\b', clean_last):
+            return SyntacticContext(CONTEXT_TRY_BLOCK, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:export\s+)?(?:abstract\s+)?(?:class|interface|type)\b', clean_last):
+            return SyntacticContext(CONTEXT_CLASS_BODY, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:if|else\s+if)\b', clean_last):
+            return SyntacticContext(CONTEXT_IF_BLOCK, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:for|while|do)\b', clean_last):
+            return SyntacticContext(CONTEXT_LOOP_BLOCK, line=stripped_last, indent=last_indent)
+
+        # Enclosing brace block scan
+        for prev_idx in range(last_non_empty_idx - 1, max(-1, last_non_empty_idx - 25), -1):
+            p_line = re.sub(comment_pattern, '', lines[prev_idx]).strip()
+            if not p_line:
+                continue
+            net_braces = sum(lines[k].count('{') - lines[k].count('}') for k in range(prev_idx, last_non_empty_idx + 1))
+            if net_braces > 0:
+                if re.search(r'^\s*try\b', p_line) or re.search(r'^\s*(?:catch|finally)\b', p_line):
+                    return SyntacticContext(CONTEXT_TRY_BLOCK, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:export\s+)?(?:abstract\s+)?(?:class|interface|type)\b', p_line):
+                    return SyntacticContext(CONTEXT_CLASS_BODY, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:if|else\s+if)\b', p_line):
+                    return SyntacticContext(CONTEXT_IF_BLOCK, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:for|while|do)\b', p_line):
+                    return SyntacticContext(CONTEXT_LOOP_BLOCK, line=p_line, indent=last_indent)
+                break
+        return SyntacticContext(CONTEXT_GENERAL, line=stripped_last, indent=last_indent)
+
+    elif target_lang == LANG_RUST:
+        if re.search(r'^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\b', clean_last):
+            return SyntacticContext(CONTEXT_FUNCTION_SIGNATURE, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*match\b', clean_last):
+            return SyntacticContext(CONTEXT_TRY_BLOCK, line=stripped_last, indent=last_indent, details={"type": "match"})
+        if re.search(r'^\s*(?:pub(?:\([^)]*\))?\s+)?(?:impl|struct|enum|trait)\b', clean_last):
+            return SyntacticContext(CONTEXT_CLASS_BODY, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:if|else\s+if)\b', clean_last):
+            return SyntacticContext(CONTEXT_IF_BLOCK, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:for|while|loop)\b', clean_last):
+            return SyntacticContext(CONTEXT_LOOP_BLOCK, line=stripped_last, indent=last_indent)
+
+        # Enclosing brace block scan
+        for prev_idx in range(last_non_empty_idx - 1, max(-1, last_non_empty_idx - 25), -1):
+            p_line = re.sub(comment_pattern, '', lines[prev_idx]).strip()
+            if not p_line:
+                continue
+            net_braces = sum(lines[k].count('{') - lines[k].count('}') for k in range(prev_idx, last_non_empty_idx + 1))
+            if net_braces > 0:
+                if re.search(r'^\s*match\b', p_line):
+                    return SyntacticContext(CONTEXT_TRY_BLOCK, line=p_line, indent=last_indent, details={"type": "match"})
+                if re.search(r'^\s*(?:pub(?:\([^)]*\))?\s+)?(?:impl|struct|enum|trait)\b', p_line):
+                    return SyntacticContext(CONTEXT_CLASS_BODY, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:if|else\s+if)\b', p_line):
+                    return SyntacticContext(CONTEXT_IF_BLOCK, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:for|while|loop)\b', p_line):
+                    return SyntacticContext(CONTEXT_LOOP_BLOCK, line=p_line, indent=last_indent)
+                break
+        return SyntacticContext(CONTEXT_GENERAL, line=stripped_last, indent=last_indent)
+
+    elif target_lang == LANG_CPP:
+        if re.search(r'^\s*(?:(?:void|int|bool|auto|double|float|size_t|char|std::string)\s+)?\w+(?:::w+)?\s*\([^)]*$', clean_last):
+            return SyntacticContext(CONTEXT_FUNCTION_SIGNATURE, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*try\b', clean_last) or re.search(r'^\s*catch\b', clean_last):
+            return SyntacticContext(CONTEXT_TRY_BLOCK, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:class|struct|namespace)\b', clean_last):
+            return SyntacticContext(CONTEXT_CLASS_BODY, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:if|else\s+if)\b', clean_last):
+            return SyntacticContext(CONTEXT_IF_BLOCK, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:for|while|do)\b', clean_last):
+            return SyntacticContext(CONTEXT_LOOP_BLOCK, line=stripped_last, indent=last_indent)
+
+        # Enclosing brace block scan
+        for prev_idx in range(last_non_empty_idx - 1, max(-1, last_non_empty_idx - 25), -1):
+            p_line = re.sub(comment_pattern, '', lines[prev_idx]).strip()
+            if not p_line:
+                continue
+            net_braces = sum(lines[k].count('{') - lines[k].count('}') for k in range(prev_idx, last_non_empty_idx + 1))
+            if net_braces > 0:
+                if re.search(r'^\s*try\b', p_line) or re.search(r'^\s*catch\b', p_line):
+                    return SyntacticContext(CONTEXT_TRY_BLOCK, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:class|struct|namespace)\b', p_line):
+                    return SyntacticContext(CONTEXT_CLASS_BODY, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:if|else\s+if)\b', p_line):
+                    return SyntacticContext(CONTEXT_IF_BLOCK, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:for|while|do)\b', p_line):
+                    return SyntacticContext(CONTEXT_LOOP_BLOCK, line=p_line, indent=last_indent)
+                break
+        return SyntacticContext(CONTEXT_GENERAL, line=stripped_last, indent=last_indent)
+
+    elif target_lang == LANG_GO:
+        if re.search(r'^\s*func\b', clean_last):
+            return SyntacticContext(CONTEXT_FUNCTION_SIGNATURE, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*if\s+err\s*!=\s*nil\b', clean_last):
+            return SyntacticContext(CONTEXT_TRY_BLOCK, line=stripped_last, indent=last_indent, details={"type": "err_check"})
+        if re.search(r'^\s*type\s+\w+\s+(?:struct|interface)\b', clean_last):
+            return SyntacticContext(CONTEXT_CLASS_BODY, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*(?:if|else\s+if)\b', clean_last):
+            return SyntacticContext(CONTEXT_IF_BLOCK, line=stripped_last, indent=last_indent)
+        if re.search(r'^\s*for\b', clean_last):
+            return SyntacticContext(CONTEXT_LOOP_BLOCK, line=stripped_last, indent=last_indent)
+
+        # Enclosing brace block scan
+        for prev_idx in range(last_non_empty_idx - 1, max(-1, last_non_empty_idx - 25), -1):
+            p_line = re.sub(comment_pattern, '', lines[prev_idx]).strip()
+            if not p_line:
+                continue
+            net_braces = sum(lines[k].count('{') - lines[k].count('}') for k in range(prev_idx, last_non_empty_idx + 1))
+            if net_braces > 0:
+                if re.search(r'^\s*if\s+err\s*!=\s*nil\b', p_line):
+                    return SyntacticContext(CONTEXT_TRY_BLOCK, line=p_line, indent=last_indent, details={"type": "err_check"})
+                if re.search(r'^\s*type\s+\w+\s+(?:struct|interface)\b', p_line):
+                    return SyntacticContext(CONTEXT_CLASS_BODY, line=p_line, indent=last_indent)
+                if re.search(r'^\s*(?:if|else\s+if)\b', p_line):
+                    return SyntacticContext(CONTEXT_IF_BLOCK, line=p_line, indent=last_indent)
+                if re.search(r'^\s*for\b', p_line):
+                    return SyntacticContext(CONTEXT_LOOP_BLOCK, line=p_line, indent=last_indent)
+                break
+        return SyntacticContext(CONTEXT_GENERAL, line=stripped_last, indent=last_indent)
+
+    # -------------------------------------------------------------------------
+    # PYTHON SYNTACTIC CHECKS
+    # -------------------------------------------------------------------------
     # 1. Direct active line checks (user is actively typing a construct starter)
     # Exclude standard entrypoint idioms (if __name__ == "__main__":)
     if re.search(r'^\s*if\s*\(?\s*__name__\s*==\s*["\']__main__["\']', last_line):

@@ -259,3 +259,53 @@ LLM_TEMPERATURE: float = 0.2
 # Adaptive AST Menu Configuration (Option A: Dynamic AST Menus)
 ENABLE_ADAPTIVE_AST_MENUS: bool = True
 
+# ==============================================================================
+# Phase 5: Multi-Language Syntax Trees & Native VS Code WebSocket Bridge
+# ==============================================================================
+DEFAULT_PROGRAMMING_LANGUAGE: str = "PYTHON"
+SUPPORTED_LANGUAGES: List[str] = ["PYTHON", "TYPESCRIPT", "RUST", "CPP", "GO"]
+
+LANGUAGE_DISPLAY_NAMES: Dict[str, str] = {
+    "PYTHON": "Python",
+    "TYPESCRIPT": "TypeScript / JS",
+    "RUST": "Rust",
+    "CPP": "C / C++",
+    "GO": "Go",
+}
+
+LANGUAGE_EXTENSIONS: Dict[str, str] = {
+    ".py": "PYTHON",
+    ".ts": "TYPESCRIPT",
+    ".tsx": "TYPESCRIPT",
+    ".js": "TYPESCRIPT",
+    ".jsx": "TYPESCRIPT",
+    ".mjs": "TYPESCRIPT",
+    ".cjs": "TYPESCRIPT",
+    ".rs": "RUST",
+    ".cpp": "CPP",
+    ".cc": "CPP",
+    ".cxx": "CPP",
+    ".hpp": "CPP",
+    ".h": "CPP",
+    ".c": "CPP",
+    ".go": "GO",
+}
+
+LANGUAGE_ID_MAP: Dict[str, str] = {
+    "python": "PYTHON",
+    "typescript": "TYPESCRIPT",
+    "javascript": "TYPESCRIPT",
+    "typescriptreact": "TYPESCRIPT",
+    "javascriptreact": "TYPESCRIPT",
+    "rust": "RUST",
+    "cpp": "CPP",
+    "c": "CPP",
+    "cuda-cpp": "CPP",
+    "go": "GO",
+}
+
+# Native VS Code WebSocket Bridge
+WEBSOCKET_HOST: str = "127.0.0.1"
+WEBSOCKET_PORT: int = 54321
+ENABLE_WEBSOCKET_BRIDGE: bool = True
+WEBSOCKET_RECONNECT_INTERVAL_SEC: float = 2.0

@@ -32,22 +32,28 @@ try:
     from eyede.core.gaze_estimator import GazeEstimator
     from eyede.core.gesture_detector import GestureDetector
     from eyede.core.hotkey_manager import GlobalHotkeyManager
+    from eyede.core.websocket_bridge import WebSocketBridge
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.calibration_ui import CalibrationUI
     from eyede.ui.icon_manager import IconManager
     from eyede.actions.context_reader import ContextReader
+    from eyede.actions.language_support import normalize_language, get_language_display_name
+    from eyede.modes.mode_manager import ModeManager
 except ImportError:
     import config
     from core.camera_tracker import CameraTracker
     from core.gaze_estimator import GazeEstimator
     from core.gesture_detector import GestureDetector
     from core.hotkey_manager import GlobalHotkeyManager
+    from core.websocket_bridge import WebSocketBridge
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
     from ui.calibration_ui import CalibrationUI
     from ui.icon_manager import IconManager
     from actions.context_reader import ContextReader
+    from actions.language_support import normalize_language, get_language_display_name
+    from modes.mode_manager import ModeManager
 
 import threading
 
@@ -676,20 +682,69 @@ class EyeDEApplication(QObject):
             active_file=getattr(config, "ACTIVE_FILE_PATH", None),
             auto_detect=getattr(config, "AUTO_DETECT_RECENT_FILE", True),
         )
-        self.overlay = OverlayWindow(context_reader=self.context_reader)
+        self.mode_manager = ModeManager(
+            initial_mode="coding",
+            language=getattr(self.context_reader, "active_language", getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", "PYTHON")),
+            auto_switch_enabled=True,
+        )
+        self.overlay = OverlayWindow(context_reader=self.context_reader, mode_manager=self.mode_manager)
         self.debug_widget = DebugWidget()
         self.calibration_ui: Optional[CalibrationUI] = None
         self._is_shutting_down: bool = False
         self.tray_icon: Optional[QSystemTrayIcon] = None
+        self._last_mode_shortcut_ts: float = 0.0
+        self._last_auto_switch_ts: float = 0.0
+
+        # WebSocket Bridge for native VS Code integration (Phase 5)
+        self.ws_bridge: Optional[WebSocketBridge] = None
+        if getattr(config, "ENABLE_WEBSOCKET_BRIDGE", True):
+            self.ws_bridge = WebSocketBridge(
+                host=getattr(config, "WEBSOCKET_HOST", "127.0.0.1"),
+                port=getattr(config, "WEBSOCKET_PORT", 54321),
+            )
+            if hasattr(self.overlay, "code_injector") and self.overlay.code_injector is not None:
+                self.overlay.code_injector.set_websocket_bridge(self.ws_bridge)
 
         # Global Hotkey Manager for Emergency Exit & Reset
         self.hotkey_manager = GlobalHotkeyManager()
         self.hotkey_manager.emergency_exit_requested.connect(self.shutdown)
         self.hotkey_manager.emergency_reset_requested.connect(self.reset_calibration)
+        self.hotkey_manager.mode_cycle_requested.connect(self._on_mode_shortcut)
+        self.hotkey_manager.auto_switch_requested.connect(self._on_auto_switch_shortcut)
+        self.hotkey_manager.mode_cycle_anywhere_requested.connect(self._on_mode_shortcut_anywhere)
+        self.hotkey_manager.auto_switch_anywhere_requested.connect(self._on_auto_switch_shortcut_anywhere)
 
         self._setup_connections()
         self._configure_geometry()
         self._setup_tray_icon()
+
+    def _on_mode_shortcut(self) -> None:
+        """V while gazing at the header mode button cycles the context mode."""
+        if self.overlay.is_mode_shortcut_targeted():
+            self._on_mode_shortcut_anywhere()
+
+    def _on_mode_shortcut_anywhere(self) -> None:
+        """Ctrl+Alt+V (or a validated plain V) cycles the context mode."""
+        now = time.time()
+        if now - self._last_mode_shortcut_ts < 0.25:
+            return
+        self._last_mode_shortcut_ts = now
+        self.overlay.cycle_context_mode()
+
+    def _on_auto_switch_shortcut(self) -> None:
+        """K while gazing at the header mode button toggles automatic mode switching."""
+        if self.overlay.is_mode_shortcut_targeted():
+            self._on_auto_switch_shortcut_anywhere()
+
+    def _on_auto_switch_shortcut_anywhere(self) -> None:
+        """Ctrl+Alt+K (or a validated plain K) toggles automatic mode switching."""
+        now = time.time()
+        if now - self._last_auto_switch_ts < 0.25:
+            return
+        self._last_auto_switch_ts = now
+        enabled = self.overlay.toggle_auto_switch()
+        self.overlay.last_action_desc = f"Auto-switch: {'ON' if enabled else 'OFF'}"
+        self.overlay.update()
 
     def _setup_connections(self) -> None:
         """Connects signals between tracker, overlay, debug monitor, and lifecycle."""
@@ -699,6 +754,24 @@ class EyeDEApplication(QObject):
 
         # Tracker signals to DebugWidget
         self.tracker.frame_ready.connect(self.debug_widget.on_frame_ready)
+
+        # WebSocket Bridge connections (Phase 5)
+        if self.ws_bridge is not None:
+            self.ws_bridge.client_connected.connect(
+                lambda client_id: self.debug_widget.set_vscode_connected(True)
+            )
+            self.ws_bridge.client_disconnected.connect(
+                lambda client_id: self.debug_widget.set_vscode_connected(self.ws_bridge.is_connected)
+            )
+            self.ws_bridge.editor_state_received.connect(self._on_vscode_editor_state_received)
+
+        # Multi-language synchronization between overlay, debug monitor, and context reader
+        self.debug_widget.language_changed.connect(self.overlay.set_language)
+        self.debug_widget.language_changed.connect(self.context_reader.set_active_language)
+        self.debug_widget.language_changed.connect(self.mode_manager.set_language)
+        self.overlay.language_changed.connect(self.debug_widget.set_language)
+        self.overlay.language_changed.connect(self.context_reader.set_active_language)
+        self.overlay.language_changed.connect(self.mode_manager.set_language)
 
         # Interactive debug tuning to tracker gaze estimator
         if hasattr(self.tracker, "gaze_estimator") and self.tracker.gaze_estimator is not None:
@@ -734,6 +807,31 @@ class EyeDEApplication(QObject):
 
         # Qt application about-to-quit hook
         self.qapp.aboutToQuit.connect(self.shutdown)
+
+    def _on_vscode_editor_state_received(self, state: Dict[str, Any]) -> None:
+        """
+        Handles real-time editor state stream from native VS Code extension over WebSocket.
+        Synchronizes active file path, programming language, and AST context across IDEye.
+        """
+        file_path = state.get("filePath") or state.get("file_path")
+        language_id = state.get("languageId") or state.get("language_id")
+
+        if file_path:
+            self.context_reader.set_active_file(file_path)
+            self.debug_widget.set_linked_file(file_path)
+            self.overlay.on_file_linked(file_path)
+
+        if language_id:
+            normalized_lang = normalize_language(language_id)
+            self.context_reader.set_active_language(normalized_lang)
+            self.overlay.set_language(normalized_lang)
+            self.debug_widget.set_language(normalized_lang)
+            if hasattr(self, "mode_manager") and self.mode_manager is not None:
+                self.mode_manager.set_language(normalized_lang)
+
+        # Auto-switch context mode from the full editor state (file path, context, language)
+        if hasattr(self, "mode_manager") and self.mode_manager is not None:
+            self.mode_manager.handle_editor_state(state)
 
     def _on_tracking_mode_changed(self, mode: str) -> None:
         """Called when user changes tracking mode in DebugWidget or shortcut."""
@@ -936,6 +1034,10 @@ class EyeDEApplication(QObject):
         if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
             self.hotkey_manager.start()
 
+        # Start WebSocket Bridge (Phase 5)
+        if self.ws_bridge is not None:
+            self.ws_bridge.start()
+
         # Reflect any detected or preconfigured active file
         active_f = self.context_reader.get_active_file()
         if active_f:
@@ -968,6 +1070,9 @@ class EyeDEApplication(QObject):
             return
         self._is_shutting_down = True
         print("\n[INFO] Gracefully shutting down IDEye Phase 2...")
+
+        if self.ws_bridge is not None:
+            self.ws_bridge.stop()
 
         if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
             self.hotkey_manager.stop()

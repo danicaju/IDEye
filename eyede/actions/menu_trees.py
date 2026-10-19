@@ -14,6 +14,35 @@ Golden Rules of Gaze Ergonomics:
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Tuple, Set, Union, Any
 
+try:
+    from eyede.actions.language_support import (
+        LANG_PYTHON,
+        LANG_TYPESCRIPT,
+        LANG_RUST,
+        LANG_CPP,
+        LANG_GO,
+        SUPPORTED_LANGUAGES,
+        LANGUAGE_DISPLAY_NAMES,
+        LANGUAGE_BADGES,
+        normalize_language,
+        get_language_display_name,
+        get_language_badge,
+    )
+except ImportError:
+    from actions.language_support import (
+        LANG_PYTHON,
+        LANG_TYPESCRIPT,
+        LANG_RUST,
+        LANG_CPP,
+        LANG_GO,
+        SUPPORTED_LANGUAGES,
+        LANGUAGE_DISPLAY_NAMES,
+        LANGUAGE_BADGES,
+        normalize_language,
+        get_language_display_name,
+        get_language_badge,
+    )
+
 
 @dataclass
 class MenuAction:
@@ -74,6 +103,7 @@ def create_back_action(parent_id: str = "ROOT", key_num: str = "7") -> MenuActio
 def populate_ai_prediction_items(
     predictions: Optional[List[str]] = None,
     parent_id: str = "ROOT",
+    language: str = "PYTHON",
 ) -> List[MenuAction]:
     """
     Constructs exactly 9 MenuAction items for the AI prediction menu (SNIPPETS).
@@ -83,14 +113,54 @@ def populate_ai_prediction_items(
     Slot 8: Regenerate / Refresh action
     """
     safe_preds = list(predictions or [])
-    default_fallbacks = [
-        'if __name__ == "__main__":\\n    ',
-        '[x for x in list]',
-        '{k: v for k, v in .items()}',
-        'with open("", "r") as f:',
-        'try:\\n    \\nfinally:\\n    ',
-        '{"": }',
-    ]
+    lang = normalize_language(language)
+
+    if lang == LANG_TYPESCRIPT:
+        default_fallbacks = [
+            'const [state, setState] = useState();',
+            'async function fetchData() {\n    \n}',
+            'new Promise((resolve, reject) => {\n    \n})',
+            'JSON.stringify(data, null, 2)',
+            'try {\n    \n} catch (error) {\n    console.error(error);\n}',
+            'export default function Component() {\n    return null;\n}',
+        ]
+    elif lang == LANG_RUST:
+        default_fallbacks = [
+            'fn main() -> Result<(), Box<dyn std::error::Error>> {\n    Ok(())\n}',
+            '#[derive(Debug, Clone, PartialEq)]',
+            'match result {\n    Ok(val) => val,\n    Err(e) => return Err(e),\n}',
+            'vec![]',
+            'println!("{:#?}", data);',
+            'impl Default for MyStruct {\n    fn default() -> Self {\n        Self {}\n    }\n}',
+        ]
+    elif lang == LANG_CPP:
+        default_fallbacks = [
+            'int main(int argc, char* argv[]) {\n    return 0;\n}',
+            'std::vector<int> items;',
+            'std::make_unique<MyClass>();',
+            'std::cout << "Debug: " << val << std::endl;',
+            'for (const auto& item : items) {\n    \n}',
+            '#pragma once\n',
+        ]
+    elif lang == LANG_GO:
+        default_fallbacks = [
+            'func main() {\n    \n}',
+            'if err != nil {\n    return err\n}',
+            'go func() {\n    \n}()',
+            'make([]string, 0)',
+            'fmt.Printf("%+v\\n", data)',
+            'defer func() {\n    if r := recover(); r != nil {\n    }\n}()',
+        ]
+    else:
+        default_fallbacks = [
+            'if __name__ == "__main__":\n    ',
+            '[x for x in list]',
+            '{k: v for k, v in .items()}',
+            'with open("", "r") as f:',
+            'try:\n    \nfinally:\n    ',
+            '{"": }',
+        ]
+
     for d in default_fallbacks:
         if len(safe_preds) >= 6:
             break
@@ -239,16 +309,16 @@ def populate_help_items(parent_id: str = "ROOT") -> List[MenuAction]:
         ),
         MenuAction(
             id="HELP_SHORTCUTS_1",
-            label="4: [A] AST | [T] TRACK",
-            hint="A: AST Dinámico | T: Modo Gaze",
+            label="4: [A] AST | [T] TRACK | [V] MODO",
+            hint="A: AST Dinámico | T: Modo Gaze | V: Ciclar Modo Contexto",
             action_type="INFO",
             icon="",
         ),
         create_pause_action("5"),
         MenuAction(
             id="HELP_SHORTCUTS_2",
-            label="6: [M] MONIT | [C] CALIB",
-            hint="M: Colapsar monitor | C: Calibrar centro",
+            label="6: [M] MONIT | [C] CALIB | [K] AUTO",
+            hint="M: Colapsar monitor | C: Calibrar centro | K: Auto-switch modos",
             action_type="INFO",
             icon="",
         ),
@@ -268,6 +338,24 @@ def populate_help_items(parent_id: str = "ROOT") -> List[MenuAction]:
             submenu_id=parent_id,
             icon="",
         ),
+    ]
+
+
+def populate_lang_select_items(parent_id: str = "ROOT") -> List[MenuAction]:
+    """
+    Constructs exactly 9 MenuAction items for the multi-language selection grid.
+    Follows all Golden Rules of Gaze Ergonomics (Slot 4 is Pause, Slot 6 is Back).
+    """
+    return [
+        MenuAction("LANG_SET_PYTHON", "1: PYTHON", "Sintaxis Python", "LANG_CHANGE", snippet="PYTHON", icon="language"),
+        MenuAction("LANG_SET_TYPESCRIPT", "2: TYPESCRIPT / JS", "Sintaxis TypeScript / JavaScript", "LANG_CHANGE", snippet="TYPESCRIPT", icon="language"),
+        MenuAction("LANG_SET_RUST", "3: RUST", "Sintaxis Rust", "LANG_CHANGE", snippet="RUST", icon="language"),
+        MenuAction("LANG_SET_CPP", "4: C / C++", "Sintaxis C y C++", "LANG_CHANGE", snippet="CPP", icon="language"),
+        create_pause_action("5"),
+        MenuAction("LANG_SET_GO", "6: GO", "Sintaxis Golang", "LANG_CHANGE", snippet="GO", icon="language"),
+        create_back_action(parent_id, "7"),
+        MenuAction("LANG_SET_AUTO", "8: AUTO-DETECTAR", "Detectar según archivo o VS Code", "LANG_AUTO", icon="ai_spark"),
+        MenuAction("LANG_CLOSE", "9: CERRAR", "Volver al menú principal", "BACK", submenu_id=parent_id, icon="navigation"),
     ]
 
 
@@ -301,6 +389,7 @@ def get_adaptive_context_node(
     context_info: Union[Dict[str, Any], str],
     standard_root: Optional[MenuNode] = None,
     switch_slot: int = 8,
+    language: str = "PYTHON",
 ) -> MenuNode:
     """
     Constructs an adaptive 3x3 MenuNode based on the detected syntactic context.
@@ -313,6 +402,8 @@ def get_adaptive_context_node(
     4. Precise cursor offsets (cursor_offset_left, cursor_offset_up).
     5. Clean labels, zero emojis, vector icons.
     """
+    lang = normalize_language(language)
+
     if isinstance(context_info, str):
         ctx_type = context_info.upper()
         line_text = ""
@@ -327,98 +418,338 @@ def get_adaptive_context_node(
     if ctx_type in ("GENERAL", "UNKNOWN", ""):
         if standard_root is not None:
             return standard_root
-        return build_menu_tree()["ROOT"]
+        return build_menu_tree(lang)["ROOT"]
 
     standard_switch_key = "9" if switch_slot == 8 else "7"
     switch_item = create_standard_menu_action(standard_switch_key)
 
-    if ctx_type == "FUNCTION_SIGNATURE":
-        # Contextual actions: self, *args, **kwargs, -> None:, -> bool:, return, ,, ):
-        has_self = "self" in line_text
-        if has_self:
-            slot_0 = MenuAction("CTX_FN_COMMA", "1: ,", "Separador de parámetros", "SNIPPET", snippet=", ", icon="operators")
-            slot_1 = MenuAction("CTX_FN_ARGS", "2: *args", "Argumentos posicionales", "SNIPPET", snippet="*args", icon="variables")
+    title = f"CONTEXTO: {ctx_type}"
+    breadcrumb = f"RAÍZ [{get_language_badge(lang)}: {ctx_type}]"
+
+    # Multi-language contextual actions dispatch
+    if lang == LANG_TYPESCRIPT:
+        if ctx_type == "FUNCTION_SIGNATURE":
+            actions_7 = [
+                MenuAction("CTX_TS_COMMA", "1: ,", "Separador", "SNIPPET", snippet=", ", icon="operators"),
+                MenuAction("CTX_TS_STR", "2: : string", "Tipo string", "SNIPPET", snippet=": string", icon="variables"),
+                MenuAction("CTX_TS_NUM", "3: : number", "Tipo number", "SNIPPET", snippet=": number", icon="variables"),
+                MenuAction("CTX_TS_VOID", "4: : void => {", "Retorno void", "SNIPPET", snippet=": void => {\n    \n}", cursor_offset_up=1, icon="function"),
+                MenuAction("CTX_TS_PROMISE", "6: : Promise<void>", "Retorno Promise", "SNIPPET", snippet=": Promise<void> => {\n    \n}", cursor_offset_up=1, icon="function"),
+                MenuAction("CTX_TS_RETURN", "7: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow"),
+                MenuAction("CTX_TS_CLOSE", "8: ) {", "Cerrar y abrir cuerpo", "SNIPPET", snippet=") {\n    \n}", cursor_offset_up=1, icon="function"),
+            ]
+            title = "CONTEXTO: FUNCIÓN (TS)"
+        elif ctx_type == "TRY_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_TS_CATCH", "1: catch (err) {", "Capturar error", "SNIPPET", snippet="catch (error) {\n    console.error(error);\n}", icon="flow"),
+                MenuAction("CTX_TS_FINALLY", "2: finally {", "Bloque finally", "SNIPPET", snippet="finally {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_TS_THROW_ERR", "3: throw new Error", "Lanzar error nuevo", "SNIPPET", snippet='throw new Error("");', cursor_offset_left=3, icon="flow"),
+                MenuAction("CTX_TS_THROW", "4: throw error", "Relanzar error", "SNIPPET", snippet="throw error;", icon="flow"),
+                MenuAction("CTX_TS_LOG_ERR", "6: console.error", "Imprimir error", "SNIPPET", snippet="console.error(error);", icon="function"),
+                MenuAction("CTX_TS_RET_NULL", "7: return null", "Retorno null", "SNIPPET", snippet="return null;", icon="flow"),
+                MenuAction("CTX_TS_TRY", "8: try {", "Bloque try", "SNIPPET", snippet="try {\n    \n}", cursor_offset_up=1, icon="flow"),
+            ]
+            title = "CONTEXTO: TRY/CATCH (TS)"
+        elif ctx_type == "CLASS_BODY":
+            actions_7 = [
+                MenuAction("CTX_TS_CTOR", "1: constructor()", "Constructor", "SNIPPET", snippet="constructor() {\n    super();\n}", icon="function"),
+                MenuAction("CTX_TS_PUB_METH", "2: public method()", "Método público", "SNIPPET", snippet="public method(): void {\n    \n}", cursor_offset_up=1, icon="function"),
+                MenuAction("CTX_TS_PRIV_PROP", "3: private prop", "Propiedad privada", "SNIPPET", snippet="private : string;", cursor_offset_left=9, icon="variables"),
+                MenuAction("CTX_TS_ASYNC_METH", "4: async method()", "Método async", "SNIPPET", snippet="async method(): Promise<void> {\n    \n}", cursor_offset_up=1, icon="function"),
+                MenuAction("CTX_TS_SUPER", "6: super()", "Constructor base", "SNIPPET", snippet="super();\n", icon="function"),
+                MenuAction("CTX_TS_THIS", "7: this.", "Referencia this", "SNIPPET", snippet="this.", icon="variables"),
+                MenuAction("CTX_TS_RETURN", "8: return", "Sentencia return", "SNIPPET", snippet="return ;", cursor_offset_left=1, icon="flow"),
+            ]
+            title = "CONTEXTO: CLASE (TS)"
+        elif ctx_type == "IF_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_TS_ELSE_IF", "1: else if () {", "Condicional else if", "SNIPPET", snippet="else if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_TS_ELSE", "2: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_TS_EQ_NULL", "3: === null", "Igualdad null", "SNIPPET", snippet=" === null", icon="operators"),
+                MenuAction("CTX_TS_NEQ_NULL", "4: !== null", "Desigualdad null", "SNIPPET", snippet=" !== null", icon="operators"),
+                MenuAction("CTX_TS_AND", "6: &&", "Lógico Y", "SNIPPET", snippet=" && ", icon="operators"),
+                MenuAction("CTX_TS_OR", "7: ||", "Lógico O", "SNIPPET", snippet=" || ", icon="operators"),
+                MenuAction("CTX_TS_NOT", "8: !", "Negación lógica", "SNIPPET", snippet="!", icon="operators"),
+            ]
+            title = "CONTEXTO: IF/ELSE (TS)"
+        elif ctx_type == "LOOP_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_TS_BREAK", "1: break;", "Interrumpir bucle", "SNIPPET", snippet="break;", icon="flow"),
+                MenuAction("CTX_TS_CONT", "2: continue;", "Siguiente iteración", "SNIPPET", snippet="continue;", icon="flow"),
+                MenuAction("CTX_TS_FOR_OF", "3: for (const x of )", "Iterador colección", "SNIPPET", snippet="for (const item of ) {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_TS_FOR_I", "4: for (let i = 0...)", "Bucle numérico", "SNIPPET", snippet="for (let i = 0; i < ; i++) {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="flow"),
+                MenuAction("CTX_TS_MAP", "6: .map()", "Transformar array", "SNIPPET", snippet=".map((x) => x)", cursor_offset_left=1, icon="function"),
+                MenuAction("CTX_TS_FILTER", "7: .filter()", "Filtrar array", "SNIPPET", snippet=".filter((x) => )", cursor_offset_left=1, icon="function"),
+                MenuAction("CTX_TS_FOREACH", "8: .forEach()", "Recorrer array", "SNIPPET", snippet=".forEach((x) => {\n    \n})", cursor_offset_up=1, icon="function"),
+            ]
+            title = "CONTEXTO: BUCLE (TS)"
         else:
-            slot_0 = MenuAction("CTX_FN_SELF", "1: self", "Parámetro self", "SNIPPET", snippet="self", icon="variables")
-            slot_1 = MenuAction("CTX_FN_ARGS", "2: *args", "Argumentos posicionales", "SNIPPET", snippet="*args", icon="variables")
+            return standard_root if standard_root is not None else build_menu_tree(lang)["ROOT"]
 
-        slot_2 = MenuAction("CTX_FN_KWARGS", "3: **kwargs", "Argumentos clave-valor", "SNIPPET", snippet="**kwargs", icon="variables")
-        slot_3 = MenuAction("CTX_FN_RET_NONE", "4: -> None:", "Anotación retorno None", "SNIPPET", snippet=" -> None:", icon="function")
-        slot_5 = MenuAction("CTX_FN_RET_BOOL", "6: -> bool:", "Anotación retorno bool", "SNIPPET", snippet=" -> bool:", icon="function")
-        slot_6 = MenuAction("CTX_FN_RETURN", "7: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow")
-        slot_7 = MenuAction("CTX_FN_CLOSE", "8: ):", "Cerrar firma y nueva línea", "SNIPPET", snippet="):\n    ", icon="function")
+    elif lang == LANG_RUST:
+        if ctx_type == "FUNCTION_SIGNATURE":
+            actions_7 = [
+                MenuAction("CTX_RS_SELF", "1: &self", "Referencia self", "SNIPPET", snippet="&self", icon="variables"),
+                MenuAction("CTX_RS_MUT_SELF", "2: &mut self", "Referencia mutable self", "SNIPPET", snippet="&mut self", icon="variables"),
+                MenuAction("CTX_RS_RET_RES", "3: -> Result<()>", "Retorno Result", "SNIPPET", snippet=" -> Result<(), Box<dyn std::error::Error>>", icon="function"),
+                MenuAction("CTX_RS_RET_BOOL", "4: -> bool", "Retorno bool", "SNIPPET", snippet=" -> bool", icon="function"),
+                MenuAction("CTX_RS_OK", "6: Ok(())", "Resultado exitoso", "SNIPPET", snippet="Ok(())", icon="flow"),
+                MenuAction("CTX_RS_RETURN", "7: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow"),
+                MenuAction("CTX_RS_CLOSE", "8: ) {", "Cerrar y abrir cuerpo", "SNIPPET", snippet=") {\n    \n}", cursor_offset_up=1, icon="function"),
+            ]
+            title = "CONTEXTO: FUNCIÓN (RS)"
+        elif ctx_type == "TRY_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_RS_QMARK", "1: ?", "Operador propagate ?", "SNIPPET", snippet="?", icon="operators"),
+                MenuAction("CTX_RS_MATCH", "2: match res {", "Coincidencia de patrones", "SNIPPET", snippet="match res {\n    Ok(val) => val,\n    Err(e) => return Err(e),\n}", icon="flow"),
+                MenuAction("CTX_RS_OK_VAL", "3: Ok(val)", "Constructor Ok", "SNIPPET", snippet="Ok()", cursor_offset_left=1, icon="flow"),
+                MenuAction("CTX_RS_ERR_VAL", "4: Err(e)", "Constructor Err", "SNIPPET", snippet="Err()", cursor_offset_left=1, icon="flow"),
+                MenuAction("CTX_RS_PANIC", "6: panic!()", "Pánico crítico", "SNIPPET", snippet='panic!("");', cursor_offset_left=3, icon="flow"),
+                MenuAction("CTX_RS_IF_LET", "7: if let Err(e)", "Comprobar error", "SNIPPET", snippet="if let Err(e) =  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_RS_RET_ERR", "8: return Err(e)", "Retorno error", "SNIPPET", snippet="return Err(e);", icon="flow"),
+            ]
+            title = "CONTEXTO: MATCH / RESULT (RS)"
+        elif ctx_type == "CLASS_BODY":
+            actions_7 = [
+                MenuAction("CTX_RS_FN_NEW", "1: pub fn new()", "Constructor new", "SNIPPET", snippet="pub fn new() -> Self {\n    Self {}\n}", icon="function"),
+                MenuAction("CTX_RS_PUB_FN", "2: pub fn", "Método público", "SNIPPET", snippet="pub fn (&self) {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="function"),
+                MenuAction("CTX_RS_SELF_DOT", "3: self.", "Acceso a campo", "SNIPPET", snippet="self.", icon="variables"),
+                MenuAction("CTX_RS_SELF_SCOPE", "4: Self::", "Llamada estática", "SNIPPET", snippet="Self::", icon="variables"),
+                MenuAction("CTX_RS_DERIVE", "6: #[derive(..)]", "Derivar rasgos", "SNIPPET", snippet="#[derive(Debug, Clone)]\n", icon="function"),
+                MenuAction("CTX_RS_PUB_FIELD", "7: pub field:", "Campo público", "SNIPPET", snippet="pub : String,", cursor_offset_left=9, icon="variables"),
+                MenuAction("CTX_RS_LET_MUT", "8: let mut", "Variable mutable", "SNIPPET", snippet="let mut ", icon="variables"),
+            ]
+            title = "CONTEXTO: STRUCT / IMPL (RS)"
+        elif ctx_type == "IF_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_RS_ELSE_IF", "1: else if {", "Condicional else if", "SNIPPET", snippet="else if  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_RS_ELSE", "2: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_RS_IF_SOME", "3: if let Some(x)", "Extracción Some", "SNIPPET", snippet="if let Some(x) =  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_RS_IF_OK", "4: if let Ok(x)", "Extracción Ok", "SNIPPET", snippet="if let Ok(x) =  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_RS_AND", "6: &&", "Lógico Y", "SNIPPET", snippet=" && ", icon="operators"),
+                MenuAction("CTX_RS_OR", "7: ||", "Lógico O", "SNIPPET", snippet=" || ", icon="operators"),
+                MenuAction("CTX_RS_NOT", "8: !", "Negación lógica", "SNIPPET", snippet="!", icon="operators"),
+            ]
+            title = "CONTEXTO: IF/MATCH (RS)"
+        elif ctx_type == "LOOP_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_RS_BREAK", "1: break;", "Interrumpir bucle", "SNIPPET", snippet="break;", icon="flow"),
+                MenuAction("CTX_RS_CONT", "2: continue;", "Siguiente iteración", "SNIPPET", snippet="continue;", icon="flow"),
+                MenuAction("CTX_RS_ITER", "3: .iter()", "Iterador inmutable", "SNIPPET", snippet=".iter()", icon="function"),
+                MenuAction("CTX_RS_FOR_IN", "4: for x in 0..", "Bucle de rango", "SNIPPET", snippet="for i in 0.. {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_RS_ENUM", "6: .enumerate()", "Iterador con índice", "SNIPPET", snippet=".enumerate()", icon="function"),
+                MenuAction("CTX_RS_LOOP", "7: loop {", "Bucle continuo", "SNIPPET", snippet="loop {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_RS_INTO_ITER", "8: .into_iter()", "Iterador con consumo", "SNIPPET", snippet=".into_iter()", icon="function"),
+            ]
+            title = "CONTEXTO: BUCLE (RS)"
+        else:
+            return standard_root if standard_root is not None else build_menu_tree(lang)["ROOT"]
 
-        actions_7 = [slot_0, slot_1, slot_2, slot_3, slot_5, slot_6, slot_7]
-        title = "CONTEXTO: FUNCIÓN"
-        breadcrumb = "RAÍZ [CONTEXTO: FUNCIÓN]"
+    elif lang == LANG_CPP:
+        if ctx_type == "FUNCTION_SIGNATURE":
+            actions_7 = [
+                MenuAction("CTX_CPP_CONST_REF", "1: const auto&", "Referencia constante", "SNIPPET", snippet="const auto& ", icon="variables"),
+                MenuAction("CTX_CPP_VOID", "2: void", "Tipo void", "SNIPPET", snippet="void ", icon="variables"),
+                MenuAction("CTX_CPP_INT", "3: int", "Tipo int", "SNIPPET", snippet="int ", icon="variables"),
+                MenuAction("CTX_CPP_BOOL", "4: bool", "Tipo bool", "SNIPPET", snippet="bool ", icon="variables"),
+                MenuAction("CTX_CPP_OVERRIDE", "6: override", "Sobrescritura virtual", "SNIPPET", snippet=" override", icon="function"),
+                MenuAction("CTX_CPP_RETURN", "7: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow"),
+                MenuAction("CTX_CPP_CLOSE", "8: ) {", "Cerrar y abrir cuerpo", "SNIPPET", snippet=") {\n    \n}", cursor_offset_up=1, icon="function"),
+            ]
+            title = "CONTEXTO: FUNCIÓN (C++)"
+        elif ctx_type == "TRY_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_CPP_CATCH_EXC", "1: catch (const std::exception&)", "Capturar excepción estándar", "SNIPPET", snippet="catch (const std::exception& e) {\n    std::cerr << e.what() << std::endl;\n}", icon="flow"),
+                MenuAction("CTX_CPP_CATCH_ALL", "2: catch (...)", "Capturar cualquier excepción", "SNIPPET", snippet="catch (...) {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_CPP_THROW_EXC", "3: throw runtime_error", "Lanzar std::runtime_error", "SNIPPET", snippet='throw std::runtime_error("");', cursor_offset_left=3, icon="flow"),
+                MenuAction("CTX_CPP_THROW", "4: throw;", "Relanzar excepción activa", "SNIPPET", snippet="throw;", icon="flow"),
+                MenuAction("CTX_CPP_RET_NULLPTR", "6: return nullptr;", "Retorno puntero nulo", "SNIPPET", snippet="return nullptr;", icon="flow"),
+                MenuAction("CTX_CPP_TRY", "7: try {", "Nuevo bloque try", "SNIPPET", snippet="try {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_CPP_BREAK", "8: break;", "Sentencia break", "SNIPPET", snippet="break;", icon="flow"),
+            ]
+            title = "CONTEXTO: TRY/CATCH (C++)"
+        elif ctx_type == "CLASS_BODY":
+            actions_7 = [
+                MenuAction("CTX_CPP_PUBLIC", "1: public:", "Sección pública", "SNIPPET", snippet="public:\n    ", icon="function"),
+                MenuAction("CTX_CPP_PRIVATE", "2: private:", "Sección privada", "SNIPPET", snippet="private:\n    ", icon="function"),
+                MenuAction("CTX_CPP_THIS", "3: this->", "Puntero this", "SNIPPET", snippet="this->", icon="variables"),
+                MenuAction("CTX_CPP_VIRTUAL", "4: virtual", "Método virtual", "SNIPPET", snippet="virtual ", icon="function"),
+                MenuAction("CTX_CPP_UNIQUE", "6: make_unique", "Puntero único moderno", "SNIPPET", snippet="std::make_unique<>()", cursor_offset_left=2, icon="function"),
+                MenuAction("CTX_CPP_SHARED", "7: make_shared", "Puntero compartido moderno", "SNIPPET", snippet="std::make_shared<>()", cursor_offset_left=2, icon="function"),
+                MenuAction("CTX_CPP_RETURN", "8: return;", "Retorno de función", "SNIPPET", snippet="return;", icon="flow"),
+            ]
+            title = "CONTEXTO: CLASE (C++)"
+        elif ctx_type == "IF_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_CPP_ELSE_IF", "1: else if () {", "Condicional else if", "SNIPPET", snippet="else if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_CPP_ELSE", "2: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_CPP_EQ_NULL", "3: == nullptr", "Comparar con nullptr", "SNIPPET", snippet=" == nullptr", icon="operators"),
+                MenuAction("CTX_CPP_NEQ_NULL", "4: != nullptr", "Comparar no nullptr", "SNIPPET", snippet=" != nullptr", icon="operators"),
+                MenuAction("CTX_CPP_AND", "6: &&", "Lógico Y", "SNIPPET", snippet=" && ", icon="operators"),
+                MenuAction("CTX_CPP_OR", "7: ||", "Lógico O", "SNIPPET", snippet=" || ", icon="operators"),
+                MenuAction("CTX_CPP_NOT", "8: !", "Negación lógica", "SNIPPET", snippet="!", icon="operators"),
+            ]
+            title = "CONTEXTO: IF/ELSE (C++)"
+        elif ctx_type == "LOOP_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_CPP_BREAK", "1: break;", "Interrumpir bucle", "SNIPPET", snippet="break;", icon="flow"),
+                MenuAction("CTX_CPP_CONT", "2: continue;", "Siguiente iteración", "SNIPPET", snippet="continue;", icon="flow"),
+                MenuAction("CTX_CPP_FOR_AUTO", "3: for (auto& x : )", "Range-based for", "SNIPPET", snippet="for (const auto& item : ) {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_CPP_FOR_I", "4: for (size_t i...)", "Bucle indexado", "SNIPPET", snippet="for (size_t i = 0; i < ; ++i) {\n    \n}", cursor_offset_up=1, cursor_offset_left=12, icon="flow"),
+                MenuAction("CTX_CPP_SIZE", "6: .size()", "Tamaño de contenedor", "SNIPPET", snippet=".size()", icon="function"),
+                MenuAction("CTX_CPP_BEGIN", "7: .begin()", "Iterador inicial", "SNIPPET", snippet=".begin()", icon="function"),
+                MenuAction("CTX_CPP_END", "8: .end()", "Iterador final", "SNIPPET", snippet=".end()", icon="function"),
+            ]
+            title = "CONTEXTO: BUCLE (C++)"
+        else:
+            return standard_root if standard_root is not None else build_menu_tree(lang)["ROOT"]
 
-    elif ctx_type == "TRY_BLOCK":
-        actions_7 = [
-            MenuAction("CTX_TRY_EXC_GEN", "1: except Exception:", "Capturar Exception", "SNIPPET", snippet="except Exception as e:\n    ", icon="flow"),
-            MenuAction("CTX_TRY_EXC_VAL", "2: except ValueError:", "Capturar ValueError", "SNIPPET", snippet="except ValueError:\n    ", icon="flow"),
-            MenuAction("CTX_TRY_EXC_KEY", "3: except KeyError:", "Capturar KeyError", "SNIPPET", snippet="except KeyError:\n    ", icon="flow"),
-            MenuAction("CTX_TRY_FINALLY", "4: finally:", "Bloque de finalización limpia", "SNIPPET", snippet="finally:\n    ", icon="flow"),
-            MenuAction("CTX_TRY_RAISE", "6: raise", "Relanzar o disparar excepción", "SNIPPET", snippet="raise ", icon="flow"),
-            MenuAction("CTX_TRY_PASS", "7: pass", "Sentencia pass no-op", "SNIPPET", snippet="pass", icon="flow"),
-            MenuAction("CTX_TRY_BLOCK", "8: try:", "Nuevo bloque try con indentación", "SNIPPET", snippet="try:\n    ", icon="flow"),
-        ]
-        title = "CONTEXTO: TRY/EXCEPT"
-        breadcrumb = "RAÍZ [CONTEXTO: TRY/EXCEPT]"
+    elif lang == LANG_GO:
+        if ctx_type == "FUNCTION_SIGNATURE":
+            actions_7 = [
+                MenuAction("CTX_GO_ERR", "1: err error", "Parámetro de error", "SNIPPET", snippet="err error", icon="variables"),
+                MenuAction("CTX_GO_CTX", "2: ctx context.Context", "Parámetro de contexto", "SNIPPET", snippet="ctx context.Context", icon="variables"),
+                MenuAction("CTX_GO_RET_ERR", "3: error", "Tipo retorno error", "SNIPPET", snippet=" error", icon="function"),
+                MenuAction("CTX_GO_RET_PAIR", "4: (string, error)", "Retorno valor y error", "SNIPPET", snippet=" (string, error)", icon="function"),
+                MenuAction("CTX_GO_RET_NIL", "6: return nil", "Retorno nil", "SNIPPET", snippet="return nil", icon="flow"),
+                MenuAction("CTX_GO_RETURN", "7: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow"),
+                MenuAction("CTX_GO_CLOSE", "8: ) {", "Cerrar y abrir cuerpo", "SNIPPET", snippet=") {\n    \n}", cursor_offset_up=1, icon="function"),
+            ]
+            title = "CONTEXTO: FUNCIÓN (GO)"
+        elif ctx_type == "TRY_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_GO_IF_ERR", "1: if err != nil", "Comprobación canónica err", "SNIPPET", snippet="if err != nil {\n    return err\n}", icon="flow"),
+                MenuAction("CTX_GO_RET_ERR2", "2: return err", "Retorno de error", "SNIPPET", snippet="return err", icon="flow"),
+                MenuAction("CTX_GO_RET_NIL_ERR", "3: return nil, err", "Retorno nulo con error", "SNIPPET", snippet="return nil, err", icon="flow"),
+                MenuAction("CTX_GO_WRAP_ERR", "4: fmt.Errorf(%w)", "Envolver error", "SNIPPET", snippet='fmt.Errorf(": %w", err)', cursor_offset_left=9, icon="function"),
+                MenuAction("CTX_GO_PANIC", "6: panic(err)", "Pánico", "SNIPPET", snippet="panic(err)", icon="flow"),
+                MenuAction("CTX_GO_DEFER", "7: defer", "Sentencia defer", "SNIPPET", snippet="defer ", icon="flow"),
+                MenuAction("CTX_GO_RECOVER", "8: recover()", "Recuperación de pánico", "SNIPPET", snippet="if r := recover(); r != nil {\n    \n}", cursor_offset_up=1, icon="flow"),
+            ]
+            title = "CONTEXTO: MANEJO ERRORES (GO)"
+        elif ctx_type == "CLASS_BODY":
+            actions_7 = [
+                MenuAction("CTX_GO_METH", "1: func (s *T) M()", "Método receptor", "SNIPPET", snippet="func (s *) () {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="function"),
+                MenuAction("CTX_GO_STRUCT_DEF", "2: type S struct", "Declaración de estructura", "SNIPPET", snippet="type  struct {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="function"),
+                MenuAction("CTX_GO_SELF_DOT", "3: s.", "Acceso a campo de receptor", "SNIPPET", snippet="s.", icon="variables"),
+                MenuAction("CTX_GO_INST", "4: &Type{}", "Instanciación con puntero", "SNIPPET", snippet="&{}", cursor_offset_left=2, icon="variables"),
+                MenuAction("CTX_GO_VAR", "6: var", "Declaración de variable", "SNIPPET", snippet="var ", icon="variables"),
+                MenuAction("CTX_GO_RET_S", "7: return s", "Retorno de receptor", "SNIPPET", snippet="return s", icon="flow"),
+                MenuAction("CTX_GO_IFACE", "8: type I interface", "Declaración de interfaz", "SNIPPET", snippet="type  interface {\n    \n}", cursor_offset_up=1, cursor_offset_left=14, icon="function"),
+            ]
+            title = "CONTEXTO: STRUCT / MÉTODO (GO)"
+        elif ctx_type == "IF_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_GO_ELSE_IF", "1: else if {", "Condicional else if", "SNIPPET", snippet="else if  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_GO_ELSE", "2: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_GO_EQ_NIL", "3: == nil", "Comprobación nil", "SNIPPET", snippet=" == nil", icon="operators"),
+                MenuAction("CTX_GO_NEQ_NIL", "4: != nil", "Comprobación no nil", "SNIPPET", snippet=" != nil", icon="operators"),
+                MenuAction("CTX_GO_AND", "6: &&", "Lógico Y", "SNIPPET", snippet=" && ", icon="operators"),
+                MenuAction("CTX_GO_OR", "7: ||", "Lógico O", "SNIPPET", snippet=" || ", icon="operators"),
+                MenuAction("CTX_GO_NOT", "8: !", "Negación lógica", "SNIPPET", snippet="!", icon="operators"),
+            ]
+            title = "CONTEXTO: IF/ELSE (GO)"
+        elif ctx_type == "LOOP_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_GO_BREAK", "1: break", "Interrumpir bucle", "SNIPPET", snippet="break", icon="flow"),
+                MenuAction("CTX_GO_CONT", "2: continue", "Siguiente iteración", "SNIPPET", snippet="continue", icon="flow"),
+                MenuAction("CTX_GO_RANGE", "3: for _, x := range", "Iterador de colección", "SNIPPET", snippet="for _, item := range  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+                MenuAction("CTX_GO_FOR_I", "4: for i := 0; ...", "Bucle numérico", "SNIPPET", snippet="for i := 0; i < ; i++ {\n    \n}", cursor_offset_up=1, cursor_offset_left=10, icon="flow"),
+                MenuAction("CTX_GO_FOR_INF", "6: for {", "Bucle infinito", "SNIPPET", snippet="for {\n    \n}", cursor_offset_up=1, icon="flow"),
+                MenuAction("CTX_GO_SELECT", "7: select {", "Multiplexión de canales", "SNIPPET", snippet="select {\ncase :\n    \n}", cursor_offset_up=2, cursor_offset_left=5, icon="flow"),
+                MenuAction("CTX_GO_LEN", "8: len()", "Longitud de slice/map", "SNIPPET", snippet="len()", cursor_offset_left=1, icon="function"),
+            ]
+            title = "CONTEXTO: BUCLE (GO)"
+        else:
+            return standard_root if standard_root is not None else build_menu_tree(lang)["ROOT"]
 
-    elif ctx_type == "CLASS_BODY":
-        actions_7 = [
-            MenuAction("CTX_CLS_INIT", "1: def __init__", "Constructor inicializador", "SNIPPET", snippet="def __init__(self):\n    ", icon="function"),
-            MenuAction("CTX_CLS_REPR", "2: def __repr__", "Representación en string", "SNIPPET", snippet="def __repr__(self):\n    return f\"{self.__class__.__name__}()\"\n", icon="function"),
-            MenuAction("CTX_CLS_PROP", "3: @property", "Decorador @property", "SNIPPET", snippet="@property\n", icon="function"),
-            MenuAction("CTX_CLS_METH", "4: @classmethod", "Decorador @classmethod", "SNIPPET", snippet="@classmethod\n", icon="function"),
-            MenuAction("CTX_CLS_SUPER", "6: super().__init__", "Constructor padre", "SNIPPET", snippet="super().__init__()\n    ", icon="function"),
-            MenuAction("CTX_CLS_SELF", "7: self.", "Acceso a atributo de instancia", "SNIPPET", snippet="self.", icon="variables"),
-            MenuAction("CTX_CLS_PASS", "8: pass", "Sentencia pass", "SNIPPET", snippet="pass", icon="flow"),
-        ]
-        title = "CONTEXTO: CLASE"
-        breadcrumb = "RAÍZ [CONTEXTO: CLASE]"
+    else:  # PYTHON default
+        if ctx_type == "FUNCTION_SIGNATURE":
+            has_self = "self" in line_text
+            if has_self:
+                slot_0 = MenuAction("CTX_FN_COMMA", "1: ,", "Separador de parámetros", "SNIPPET", snippet=", ", icon="operators")
+                slot_1 = MenuAction("CTX_FN_ARGS", "2: *args", "Argumentos posicionales", "SNIPPET", snippet="*args", icon="variables")
+            else:
+                slot_0 = MenuAction("CTX_FN_SELF", "1: self", "Parámetro self", "SNIPPET", snippet="self", icon="variables")
+                slot_1 = MenuAction("CTX_FN_ARGS", "2: *args", "Argumentos posicionales", "SNIPPET", snippet="*args", icon="variables")
 
-    elif ctx_type == "IF_BLOCK":
-        actions_7 = [
-            MenuAction("CTX_IF_ELIF", "1: elif ...:", "Condicional elif con cursor", "SNIPPET", snippet="elif :", cursor_offset_left=1, icon="flow"),
-            MenuAction("CTX_IF_ELSE", "2: else:", "Rama else alternativa", "SNIPPET", snippet="else:\n    ", icon="flow"),
-            MenuAction("CTX_IF_IS_NONE", "3: is None", "Comprobación de valor nulo", "SNIPPET", snippet="is None", icon="operators"),
-            MenuAction("CTX_IF_NOT_NONE", "4: is not None", "Comprobación de no nulidad", "SNIPPET", snippet="is not None", icon="operators"),
-            MenuAction("CTX_IF_AND", "6: and", "Operador lógico Y", "SNIPPET", snippet="and ", icon="operators"),
-            MenuAction("CTX_IF_OR", "7: or", "Operador lógico O", "SNIPPET", snippet="or ", icon="operators"),
-            MenuAction("CTX_IF_NOT", "8: not", "Operador lógico NO", "SNIPPET", snippet="not ", icon="operators"),
-        ]
-        title = "CONTEXTO: IF/ELIF"
-        breadcrumb = "RAÍZ [CONTEXTO: IF/ELIF]"
+            slot_2 = MenuAction("CTX_FN_KWARGS", "3: **kwargs", "Argumentos clave-valor", "SNIPPET", snippet="**kwargs", icon="variables")
+            slot_3 = MenuAction("CTX_FN_RET_NONE", "4: -> None:", "Anotación retorno None", "SNIPPET", snippet=" -> None:", icon="function")
+            slot_5 = MenuAction("CTX_FN_RET_BOOL", "6: -> bool:", "Anotación retorno bool", "SNIPPET", snippet=" -> bool:", icon="function")
+            slot_6 = MenuAction("CTX_FN_RETURN", "7: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow")
+            slot_7 = MenuAction("CTX_FN_CLOSE", "8: ):", "Cerrar firma y nueva línea", "SNIPPET", snippet="):\n    ", icon="function")
 
-    elif ctx_type == "LOOP_BLOCK":
-        actions_7 = [
-            MenuAction("CTX_LOOP_BREAK", "1: break", "Interrumpir bucle", "SNIPPET", snippet="break", icon="flow"),
-            MenuAction("CTX_LOOP_CONT", "2: continue", "Saltar a siguiente iteración", "SNIPPET", snippet="continue", icon="flow"),
-            MenuAction("CTX_LOOP_ENUM", "3: enumerate()", "Iterador con índice", "SNIPPET", snippet="enumerate()", cursor_offset_left=1, icon="function"),
-            MenuAction("CTX_LOOP_RANGE", "4: range()", "Generador de rango", "SNIPPET", snippet="range()", cursor_offset_left=1, icon="function"),
-            MenuAction("CTX_LOOP_ITEMS", "6: .items()", "Pares clave-valor", "SNIPPET", snippet=".items()", icon="function"),
-            MenuAction("CTX_LOOP_ZIP", "7: zip()", "Iteración múltiple combinada", "SNIPPET", snippet="zip()", cursor_offset_left=1, icon="function"),
-            MenuAction("CTX_LOOP_IN", "8: in", "Operador de pertenencia", "SNIPPET", snippet="in ", icon="operators"),
-        ]
-        title = "CONTEXTO: BUCLE"
-        breadcrumb = "RAÍZ [CONTEXTO: BUCLE]"
+            actions_7 = [slot_0, slot_1, slot_2, slot_3, slot_5, slot_6, slot_7]
+            title = "CONTEXTO: FUNCIÓN"
+            breadcrumb = "RAÍZ [CONTEXTO: FUNCIÓN]"
 
-    elif ctx_type == "WITH_BLOCK":
-        actions_7 = [
-            MenuAction("CTX_WITH_OPEN", "1: open() as f", "Apertura de archivo con cursor", "SNIPPET", snippet='open("", "r") as f:', cursor_offset_left=14, icon="function"),
-            MenuAction("CTX_WITH_AS", "2: as", "Alias de context manager", "SNIPPET", snippet="as ", icon="operators"),
-            MenuAction("CTX_WITH_PASS", "3: pass", "Sentencia pass", "SNIPPET", snippet="pass", icon="flow"),
-            MenuAction("CTX_WITH_STMT", "4: with ...:", "Sentencia with con cursor", "SNIPPET", snippet="with :", cursor_offset_left=1, icon="flow"),
-            MenuAction("CTX_WITH_READ", "6: f.read()", "Lectura completa de archivo", "SNIPPET", snippet="f.read()", icon="function"),
-            MenuAction("CTX_WITH_WRITE", "7: f.write()", "Escritura de archivo con cursor", "SNIPPET", snippet='f.write("")', cursor_offset_left=2, icon="function"),
-            MenuAction("CTX_WITH_SELF", "8: self.", "Acceso a objeto de contexto", "SNIPPET", snippet="self.", icon="variables"),
-        ]
-        title = "CONTEXTO: WITH"
-        breadcrumb = "RAÍZ [CONTEXTO: WITH]"
+        elif ctx_type == "TRY_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_TRY_EXC_GEN", "1: except Exception:", "Capturar Exception", "SNIPPET", snippet="except Exception as e:\n    ", icon="flow"),
+                MenuAction("CTX_TRY_EXC_VAL", "2: except ValueError:", "Capturar ValueError", "SNIPPET", snippet="except ValueError:\n    ", icon="flow"),
+                MenuAction("CTX_TRY_EXC_KEY", "3: except KeyError:", "Capturar KeyError", "SNIPPET", snippet="except KeyError:\n    ", icon="flow"),
+                MenuAction("CTX_TRY_FINALLY", "4: finally:", "Bloque de finalización limpia", "SNIPPET", snippet="finally:\n    ", icon="flow"),
+                MenuAction("CTX_TRY_RAISE", "6: raise", "Relanzar o disparar excepción", "SNIPPET", snippet="raise ", icon="flow"),
+                MenuAction("CTX_TRY_PASS", "7: pass", "Sentencia pass no-op", "SNIPPET", snippet="pass", icon="flow"),
+                MenuAction("CTX_TRY_BLOCK", "8: try:", "Nuevo bloque try con indentación", "SNIPPET", snippet="try:\n    ", icon="flow"),
+            ]
+            title = "CONTEXTO: TRY/EXCEPT"
+            breadcrumb = "RAÍZ [CONTEXTO: TRY/EXCEPT]"
 
-    else:
-        return standard_root if standard_root is not None else build_menu_tree()["ROOT"]
+        elif ctx_type == "CLASS_BODY":
+            actions_7 = [
+                MenuAction("CTX_CLS_INIT", "1: def __init__", "Constructor inicializador", "SNIPPET", snippet="def __init__(self):\n    ", icon="function"),
+                MenuAction("CTX_CLS_REPR", "2: def __repr__", "Representación en string", "SNIPPET", snippet="def __repr__(self):\n    return f\"{self.__class__.__name__}()\"\n", icon="function"),
+                MenuAction("CTX_CLS_PROP", "3: @property", "Decorador @property", "SNIPPET", snippet="@property\n", icon="function"),
+                MenuAction("CTX_CLS_METH", "4: @classmethod", "Decorador @classmethod", "SNIPPET", snippet="@classmethod\n", icon="function"),
+                MenuAction("CTX_CLS_SUPER", "6: super().__init__", "Constructor padre", "SNIPPET", snippet="super().__init__()\n    ", icon="function"),
+                MenuAction("CTX_CLS_SELF", "7: self.", "Acceso a atributo de instancia", "SNIPPET", snippet="self.", icon="variables"),
+                MenuAction("CTX_CLS_PASS", "8: pass", "Sentencia pass", "SNIPPET", snippet="pass", icon="flow"),
+            ]
+            title = "CONTEXTO: CLASE"
+            breadcrumb = "RAÍZ [CONTEXTO: CLASE]"
+
+        elif ctx_type == "IF_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_IF_ELIF", "1: elif ...:", "Condicional elif con cursor", "SNIPPET", snippet="elif :", cursor_offset_left=1, icon="flow"),
+                MenuAction("CTX_IF_ELSE", "2: else:", "Rama else alternativa", "SNIPPET", snippet="else:\n    ", icon="flow"),
+                MenuAction("CTX_IF_IS_NONE", "3: is None", "Comprobación de valor nulo", "SNIPPET", snippet="is None", icon="operators"),
+                MenuAction("CTX_IF_NOT_NONE", "4: is not None", "Comprobación de no nulidad", "SNIPPET", snippet="is not None", icon="operators"),
+                MenuAction("CTX_IF_AND", "6: and", "Operador lógico Y", "SNIPPET", snippet="and ", icon="operators"),
+                MenuAction("CTX_IF_OR", "7: or", "Operador lógico O", "SNIPPET", snippet="or ", icon="operators"),
+                MenuAction("CTX_IF_NOT", "8: not", "Operador lógico NO", "SNIPPET", snippet="not ", icon="operators"),
+            ]
+            title = "CONTEXTO: IF/ELIF"
+            breadcrumb = "RAÍZ [CONTEXTO: IF/ELIF]"
+
+        elif ctx_type == "LOOP_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_LOOP_BREAK", "1: break", "Interrumpir bucle", "SNIPPET", snippet="break", icon="flow"),
+                MenuAction("CTX_LOOP_CONT", "2: continue", "Saltar a siguiente iteración", "SNIPPET", snippet="continue", icon="flow"),
+                MenuAction("CTX_LOOP_ENUM", "3: enumerate()", "Iterador con índice", "SNIPPET", snippet="enumerate()", cursor_offset_left=1, icon="function"),
+                MenuAction("CTX_LOOP_RANGE", "4: range()", "Generador de rango", "SNIPPET", snippet="range()", cursor_offset_left=1, icon="function"),
+                MenuAction("CTX_LOOP_ITEMS", "6: .items()", "Pares clave-valor", "SNIPPET", snippet=".items()", icon="function"),
+                MenuAction("CTX_LOOP_ZIP", "7: zip()", "Iteración múltiple combinada", "SNIPPET", snippet="zip()", cursor_offset_left=1, icon="function"),
+                MenuAction("CTX_LOOP_IN", "8: in", "Operador de pertenencia", "SNIPPET", snippet="in ", icon="operators"),
+            ]
+            title = "CONTEXTO: BUCLE"
+            breadcrumb = "RAÍZ [CONTEXTO: BUCLE]"
+
+        elif ctx_type == "WITH_BLOCK":
+            actions_7 = [
+                MenuAction("CTX_WITH_OPEN", "1: open() as f", "Apertura de archivo con cursor", "SNIPPET", snippet='open("", "r") as f:', cursor_offset_left=14, icon="function"),
+                MenuAction("CTX_WITH_AS", "2: as", "Alias de context manager", "SNIPPET", snippet="as ", icon="operators"),
+                MenuAction("CTX_WITH_PASS", "3: pass", "Sentencia pass", "SNIPPET", snippet="pass", icon="flow"),
+                MenuAction("CTX_WITH_STMT", "4: with ...:", "Sentencia with con cursor", "SNIPPET", snippet="with :", cursor_offset_left=1, icon="flow"),
+                MenuAction("CTX_WITH_READ", "6: f.read()", "Lectura completa de archivo", "SNIPPET", snippet="f.read()", icon="function"),
+                MenuAction("CTX_WITH_WRITE", "7: f.write()", "Escritura de archivo con cursor", "SNIPPET", snippet='f.write("")', cursor_offset_left=2, icon="function"),
+                MenuAction("CTX_WITH_SELF", "8: self.", "Acceso a objeto de contexto", "SNIPPET", snippet="self.", icon="variables"),
+            ]
+            title = "CONTEXTO: WITH"
+            breadcrumb = "RAÍZ [CONTEXTO: WITH]"
+
+        else:
+            return standard_root if standard_root is not None else build_menu_tree(lang)["ROOT"]
 
     pause_action = create_pause_action("5")
     if switch_slot == 8:
@@ -480,12 +811,457 @@ def get_adaptive_context_node(
     )
 
 
-def build_menu_tree() -> Dict[str, MenuNode]:
+def _build_flow_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the FLOW submenu for the specified language."""
+    if lang == LANG_TYPESCRIPT:
+        return [
+            MenuAction("FLOW_IF", "1: if () {", "Condicional if", "SNIPPET", snippet="if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_ELIF", "2: else if () {", "Condicional else if", "SNIPPET", snippet="else if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_ELSE", "3: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
+            MenuAction("FLOW_FOR_RANGE", "4: for (let i = 0...)", "Bucle indexado", "SNIPPET", snippet="for (let i = 0; i < ; i++) {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="flow"),
+            create_pause_action("5"),
+            MenuAction("FLOW_FOR_LIST", "6: for (const x of )", "Iterador de colección", "SNIPPET", snippet="for (const item of ) {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            create_back_action("ROOT", "7"),
+            MenuAction("FLOW_WHILE", "8: while () {", "Bucle while", "SNIPPET", snippet="while () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_TRY_RET_SUB", "9: TRY / CATCH / RET", "try-catch, return, throw", "SUBMENU", submenu_id="FLOW_TRY_RET", icon="flow"),
+        ]
+    elif lang == LANG_RUST:
+        return [
+            MenuAction("FLOW_IF", "1: if {", "Condicional if", "SNIPPET", snippet="if  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_ELIF", "2: else if {", "Condicional else if", "SNIPPET", snippet="else if  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_ELSE", "3: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
+            MenuAction("FLOW_FOR_RANGE", "4: for i in 0.. {", "Bucle de rango", "SNIPPET", snippet="for i in 0.. {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            create_pause_action("5"),
+            MenuAction("FLOW_FOR_LIST", "6: for x in .iter() {", "Iterador de colección", "SNIPPET", snippet="for x in .iter() {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="flow"),
+            create_back_action("ROOT", "7"),
+            MenuAction("FLOW_WHILE", "8: while {", "Bucle while", "SNIPPET", snippet="while  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_TRY_RET_SUB", "9: MATCH / RESULT / RET", "match, Result, return", "SUBMENU", submenu_id="FLOW_TRY_RET", icon="flow"),
+        ]
+    elif lang == LANG_CPP:
+        return [
+            MenuAction("FLOW_IF", "1: if () {", "Condicional if", "SNIPPET", snippet="if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_ELIF", "2: else if () {", "Condicional else if", "SNIPPET", snippet="else if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_ELSE", "3: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
+            MenuAction("FLOW_FOR_RANGE", "4: for (int i = 0...)", "Bucle numérico", "SNIPPET", snippet="for (int i = 0; i < ; ++i) {\n    \n}", cursor_offset_up=1, cursor_offset_left=12, icon="flow"),
+            create_pause_action("5"),
+            MenuAction("FLOW_FOR_LIST", "6: for (auto& x : )", "Range-based for", "SNIPPET", snippet="for (const auto& item : ) {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            create_back_action("ROOT", "7"),
+            MenuAction("FLOW_WHILE", "8: while () {", "Bucle while", "SNIPPET", snippet="while () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_TRY_RET_SUB", "9: TRY / CATCH / RET", "try-catch, return, throw", "SUBMENU", submenu_id="FLOW_TRY_RET", icon="flow"),
+        ]
+    elif lang == LANG_GO:
+        return [
+            MenuAction("FLOW_IF", "1: if {", "Condicional if", "SNIPPET", snippet="if  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_ELIF", "2: else if {", "Condicional else if", "SNIPPET", snippet="else if  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_ELSE", "3: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
+            MenuAction("FLOW_FOR_RANGE", "4: for i := 0; ...", "Bucle indexado", "SNIPPET", snippet="for i := 0; i < ; i++ {\n    \n}", cursor_offset_up=1, cursor_offset_left=10, icon="flow"),
+            create_pause_action("5"),
+            MenuAction("FLOW_FOR_LIST", "6: for _, x := range", "Iterador range", "SNIPPET", snippet="for _, item := range  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            create_back_action("ROOT", "7"),
+            MenuAction("FLOW_WHILE", "8: for {", "Bucle infinito", "SNIPPET", snippet="for {\n    \n}", cursor_offset_up=1, icon="flow"),
+            MenuAction("FLOW_TRY_RET_SUB", "9: ERR / RET / DEFER", "err != nil, return, defer", "SUBMENU", submenu_id="FLOW_TRY_RET", icon="flow"),
+        ]
+    else:  # PYTHON
+        return [
+            MenuAction(id="FLOW_IF", label="1: if ...:", hint="Condicional if", action_type="SNIPPET", snippet="if :", cursor_offset_left=1, icon="flow"),
+            MenuAction(id="FLOW_ELIF", label="2: elif ...:", hint="Condicional elif", action_type="SNIPPET", snippet="elif :", cursor_offset_left=1, icon="flow"),
+            MenuAction(id="FLOW_ELSE", label="3: else:", hint="Rama else con salto", action_type="SNIPPET", snippet="else:\n    ", icon="flow"),
+            MenuAction(id="FLOW_FOR_RANGE", label="4: for i in range():", hint="Bucle indexado", action_type="SNIPPET", snippet="for i in range():", cursor_offset_left=2, icon="flow"),
+            create_pause_action("5"),
+            MenuAction(id="FLOW_FOR_LIST", label="6: for x in lista:", hint="Iterador de colección", action_type="SNIPPET", snippet="for x in :", cursor_offset_left=1, icon="flow"),
+            create_back_action("ROOT", "7"),
+            MenuAction(id="FLOW_WHILE", label="8: while ...:", hint="Bucle while", action_type="SNIPPET", snippet="while :", cursor_offset_left=1, icon="flow"),
+            MenuAction(id="FLOW_TRY_RET_SUB", label="9: TRY / EXCEPT / RET", hint="try-except, return, raise", action_type="SUBMENU", submenu_id="FLOW_TRY_RET", icon="flow"),
+        ]
+
+
+def _build_flow_try_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the FLOW_TRY_RET submenu for the specified language."""
+    if lang == LANG_TYPESCRIPT:
+        return [
+            MenuAction("TRY_CATCH", "1: try / catch", "Bloque try-catch", "SNIPPET", snippet="try {\n    \n} catch (error) {\n    console.error(error);\n}", cursor_offset_up=3, icon="flow"),
+            MenuAction("RET_VAL", "2: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow"),
+            MenuAction("RET_NULL", "3: return null;", "Retorno null", "SNIPPET", snippet="return null;", icon="flow"),
+            MenuAction("RET_TRUE", "4: return true;", "Retorno booleano true", "SNIPPET", snippet="return true;", icon="flow"),
+            create_pause_action("5"),
+            MenuAction("RET_FALSE", "6: return false;", "Retorno booleano false", "SNIPPET", snippet="return false;", icon="flow"),
+            create_back_action("FLOW", "7"),
+            MenuAction("THROW_ERR", "8: throw Error", "Lanzar error nuevo", "SNIPPET", snippet='throw new Error("");', cursor_offset_left=3, icon="flow"),
+            MenuAction("RET_UNDEF", "9: return undefined;", "Retorno undefined", "SNIPPET", snippet="return undefined;", icon="flow"),
+        ]
+    elif lang == LANG_RUST:
+        return [
+            MenuAction("TRY_MATCH", "1: match res {", "Bloque match de Result", "SNIPPET", snippet="match res {\n    Ok(val) => val,\n    Err(e) => return Err(e),\n}", icon="flow"),
+            MenuAction("RET_VAL", "2: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow"),
+            MenuAction("RET_OK", "3: Ok(())", "Resultado Ok unit", "SNIPPET", snippet="Ok(())", icon="flow"),
+            MenuAction("RET_TRUE", "4: return true;", "Retorno bool true", "SNIPPET", snippet="return true;", icon="flow"),
+            create_pause_action("5"),
+            MenuAction("RET_FALSE", "6: return false;", "Retorno bool false", "SNIPPET", snippet="return false;", icon="flow"),
+            create_back_action("FLOW", "7"),
+            MenuAction("RAISE_PANIC", "8: panic!()", "Pánico crítico", "SNIPPET", snippet='panic!("");', cursor_offset_left=3, icon="flow"),
+            MenuAction("PROPAGATE_Q", "9: ?", "Operador propagate ?", "SNIPPET", snippet="?", icon="operators"),
+        ]
+    elif lang == LANG_CPP:
+        return [
+            MenuAction("TRY_CATCH", "1: try / catch", "Bloque try-catch", "SNIPPET", snippet="try {\n    \n} catch (const std::exception& e) {\n    std::cerr << e.what() << std::endl;\n}", cursor_offset_up=3, icon="flow"),
+            MenuAction("RET_VAL", "2: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow"),
+            MenuAction("RET_NULLPTR", "3: return nullptr;", "Retorno puntero nulo", "SNIPPET", snippet="return nullptr;", icon="flow"),
+            MenuAction("RET_TRUE", "4: return true;", "Retorno bool true", "SNIPPET", snippet="return true;", icon="flow"),
+            create_pause_action("5"),
+            MenuAction("RET_FALSE", "6: return false;", "Retorno bool false", "SNIPPET", snippet="return false;", icon="flow"),
+            create_back_action("FLOW", "7"),
+            MenuAction("THROW_ERR", "8: throw runtime_error", "Lanzar std::runtime_error", "SNIPPET", snippet='throw std::runtime_error("");', cursor_offset_left=3, icon="flow"),
+            MenuAction("BREAK_STMT", "9: break;", "Sentencia break", "SNIPPET", snippet="break;", icon="flow"),
+        ]
+    elif lang == LANG_GO:
+        return [
+            MenuAction("IF_ERR", "1: if err != nil", "Comprobar error", "SNIPPET", snippet="if err != nil {\n    return err\n}", icon="flow"),
+            MenuAction("RET_VAL", "2: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow"),
+            MenuAction("RET_NIL", "3: return nil", "Retorno nil", "SNIPPET", snippet="return nil", icon="flow"),
+            MenuAction("RET_TRUE", "4: return true", "Retorno bool true", "SNIPPET", snippet="return true", icon="flow"),
+            create_pause_action("5"),
+            MenuAction("RET_FALSE", "6: return false", "Retorno bool false", "SNIPPET", snippet="return false", icon="flow"),
+            create_back_action("FLOW", "7"),
+            MenuAction("RAISE_PANIC", "8: panic()", "Llamada panic", "SNIPPET", snippet='panic("")', cursor_offset_left=2, icon="flow"),
+            MenuAction("DEFER_STMT", "9: defer", "Sentencia defer", "SNIPPET", snippet="defer ", icon="flow"),
+        ]
+    else:  # PYTHON
+        return [
+            MenuAction(id="TRY_EXCEPT", label="1: try / except", hint="Bloque try-except", action_type="SNIPPET", snippet="try:\n    \nexcept Exception as e:\n    ", cursor_offset_up=2, icon="flow"),
+            MenuAction(id="RET_VAL", label="2: return", hint="Retorno con espacio", action_type="SNIPPET", snippet="return ", icon="flow"),
+            MenuAction(id="RET_NONE", label="3: return None", hint="Retorno nulo", action_type="SNIPPET", snippet="return None", icon="flow"),
+            MenuAction(id="RET_TRUE", label="4: return True", hint="Retorno booleano True", action_type="SNIPPET", snippet="return True", icon="flow"),
+            create_pause_action("5"),
+            MenuAction(id="RET_FALSE", label="6: return False", hint="Retorno booleano False", action_type="SNIPPET", snippet="return False", icon="flow"),
+            create_back_action("FLOW", "7"),
+            MenuAction(id="RAISE_EXC", label="8: raise Exception", hint="Lanzar excepción", action_type="SNIPPET", snippet='raise Exception("")', cursor_offset_left=2, icon="flow"),
+            MenuAction(id="PASS_STMT", label="9: pass", hint="Sentencia pass", action_type="SNIPPET", snippet="pass", icon="flow"),
+        ]
+
+
+def _build_struct_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the STRUCT submenu for the specified language."""
+    if lang == LANG_TYPESCRIPT:
+        return [
+            MenuAction("STRUCT_DEF", "1: function () {", "Declaración de función", "SNIPPET", snippet="function () {\n    \n}", cursor_offset_up=1, cursor_offset_left=5, icon="function"),
+            MenuAction("STRUCT_CLASS", "2: class Name {", "Definición de clase", "SNIPPET", snippet="class  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="function"),
+            MenuAction("STRUCT_IMPORT_SUB", "3: IMPORTAR", "import, export", "SUBMENU", submenu_id="STRUCT_IMPORT", icon="function"),
+            MenuAction("STRUCT_ARROW", "4: const fn = () =>", "Función flecha", "SNIPPET", snippet="const  = () => {\n    \n};", cursor_offset_up=1, cursor_offset_left=12, icon="function"),
+            create_pause_action("5"),
+            MenuAction("STRUCT_PRINT", "6: console.log()", "Imprimir por consola", "SNIPPET", snippet="console.log();", cursor_offset_left=2, icon="function"),
+            create_back_action("ROOT", "7"),
+            MenuAction("STRUCT_LEN", "8: .length", "Propiedad de longitud", "SNIPPET", snippet=".length", icon="function"),
+            MenuAction("STRUCT_IFACE", "9: interface Name {", "Definición de interfaz", "SNIPPET", snippet="interface  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="function"),
+        ]
+    elif lang == LANG_RUST:
+        return [
+            MenuAction("STRUCT_DEF", "1: fn name() -> {", "Definición de función", "SNIPPET", snippet="fn () {\n    \n}", cursor_offset_up=1, cursor_offset_left=5, icon="function"),
+            MenuAction("STRUCT_CLASS", "2: struct Name {", "Definición de struct", "SNIPPET", snippet="struct  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="function"),
+            MenuAction("STRUCT_IMPORT_SUB", "3: IMPORTAR", "use, pub use, mod", "SUBMENU", submenu_id="STRUCT_IMPORT", icon="function"),
+            MenuAction("STRUCT_IMPL", "4: impl Name {", "Bloque de implementación", "SNIPPET", snippet="impl  {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="function"),
+            create_pause_action("5"),
+            MenuAction("STRUCT_PRINT", "6: println!()", "Macro de impresión", "SNIPPET", snippet='println!("{}", );', cursor_offset_left=3, icon="function"),
+            create_back_action("ROOT", "7"),
+            MenuAction("STRUCT_LEN", "8: .len()", "Longitud de colección", "SNIPPET", snippet=".len()", icon="function"),
+            MenuAction("STRUCT_PUB_FN", "9: pub fn", "Función pública", "SNIPPET", snippet="pub fn () {\n    \n}", cursor_offset_up=1, cursor_offset_left=5, icon="function"),
+        ]
+    elif lang == LANG_CPP:
+        return [
+            MenuAction("STRUCT_DEF", "1: void func() {", "Definición de función", "SNIPPET", snippet="void () {\n    \n}", cursor_offset_up=1, cursor_offset_left=5, icon="function"),
+            MenuAction("STRUCT_CLASS", "2: class Name {", "Definición de clase", "SNIPPET", snippet="class  {\npublic:\n    \n};", cursor_offset_up=1, cursor_offset_left=12, icon="function"),
+            MenuAction("STRUCT_IMPORT_SUB", "3: IMPORTAR", "#include, using", "SUBMENU", submenu_id="STRUCT_IMPORT", icon="function"),
+            MenuAction("STRUCT_STRUCT", "4: struct Name {", "Definición de estructura", "SNIPPET", snippet="struct  {\n    \n};", cursor_offset_up=1, cursor_offset_left=5, icon="function"),
+            create_pause_action("5"),
+            MenuAction("STRUCT_PRINT", "6: std::cout <<", "Impresión en stream", "SNIPPET", snippet="std::cout <<  << std::endl;", cursor_offset_left=14, icon="function"),
+            create_back_action("ROOT", "7"),
+            MenuAction("STRUCT_LEN", "8: .size()", "Tamaño de contenedor", "SNIPPET", snippet=".size()", icon="function"),
+            MenuAction("STRUCT_TEMPLATE", "9: template<typename T>", "Plantilla genérica", "SNIPPET", snippet="template<typename T>\n", icon="function"),
+        ]
+    elif lang == LANG_GO:
+        return [
+            MenuAction("STRUCT_DEF", "1: func name() {", "Definición de función", "SNIPPET", snippet="func () {\n    \n}", cursor_offset_up=1, cursor_offset_left=5, icon="function"),
+            MenuAction("STRUCT_CLASS", "2: type S struct {", "Definición de struct", "SNIPPET", snippet="type  struct {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="function"),
+            MenuAction("STRUCT_IMPORT_SUB", "3: IMPORTAR", "import packages", "SUBMENU", submenu_id="STRUCT_IMPORT", icon="function"),
+            MenuAction("STRUCT_METHOD", "4: func (s *T) m()", "Método con receptor", "SNIPPET", snippet="func (s *) () {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="function"),
+            create_pause_action("5"),
+            MenuAction("STRUCT_PRINT", "6: fmt.Println()", "Impresión en consola", "SNIPPET", snippet="fmt.Println()", cursor_offset_left=1, icon="function"),
+            create_back_action("ROOT", "7"),
+            MenuAction("STRUCT_LEN", "8: len()", "Función built-in len", "SNIPPET", snippet="len()", cursor_offset_left=1, icon="function"),
+            MenuAction("STRUCT_IFACE", "9: type I interface", "Definición de interfaz", "SNIPPET", snippet="type  interface {\n    \n}", cursor_offset_up=1, cursor_offset_left=14, icon="function"),
+        ]
+    else:  # PYTHON
+        return [
+            MenuAction(id="STRUCT_DEF", label="1: def func():", hint="Definición de función", action_type="SNIPPET", snippet="def ():", cursor_offset_left=3, icon="function"),
+            MenuAction(id="STRUCT_CLASS", label="2: class Nombre:", hint="Definición de clase", action_type="SNIPPET", snippet="class :", cursor_offset_left=1, icon="function"),
+            MenuAction(id="STRUCT_IMPORT_SUB", label="3: IMPORTAR", hint="import, from ... import", action_type="SUBMENU", submenu_id="STRUCT_IMPORT", icon="function"),
+            MenuAction(id="STRUCT_LAMBDA", label="4: lambda", hint="Función anónima", action_type="SNIPPET", snippet="lambda : ", cursor_offset_left=2, icon="function"),
+            create_pause_action("5"),
+            MenuAction(id="STRUCT_PRINT", label="6: print()", hint="Impresión por consola", action_type="SNIPPET", snippet="print()", cursor_offset_left=1, icon="function"),
+            create_back_action("ROOT", "7"),
+            MenuAction(id="STRUCT_LEN", label="8: len()", hint="Longitud de contenedor", action_type="SNIPPET", snippet="len()", cursor_offset_left=1, icon="function"),
+            MenuAction(id="STRUCT_SUPER", label="9: super().__init__()", hint="Constructor clase padre", action_type="SNIPPET", snippet="super().__init__()", icon="function"),
+        ]
+
+
+def _build_struct_import_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the STRUCT_IMPORT submenu for the specified language."""
+    if lang == LANG_TYPESCRIPT:
+        return [
+            MenuAction("IMP_NAMED", "1: import { } from", "Import nombrado", "SNIPPET", snippet='import {  } from "";', cursor_offset_left=11, icon="function"),
+            MenuAction("IMP_ALL_AS", "2: import * as", "Import de namespace", "SNIPPET", snippet='import * as  from "";', cursor_offset_left=10, icon="function"),
+            MenuAction("IMP_DEF", "3: import default", "Import por defecto", "SNIPPET", snippet='import  from "";', cursor_offset_left=10, icon="function"),
+            MenuAction("EXP_CONST", "4: export const", "Exportación de constante", "SNIPPET", snippet="export const ", icon="function"),
+            create_pause_action("5"),
+            MenuAction("EXP_DEF", "6: export default", "Exportación por defecto", "SNIPPET", snippet="export default ", icon="function"),
+            create_back_action("STRUCT", "7"),
+            MenuAction("IMP_TYPE", "8: import type { }", "Import solo de tipos", "SNIPPET", snippet='import type {  } from "";', cursor_offset_left=11, icon="function"),
+            MenuAction("EXP_NAMED", "9: export { }", "Exportación nombrada", "SNIPPET", snippet="export {  };", cursor_offset_left=3, icon="function"),
+        ]
+    elif lang == LANG_RUST:
+        return [
+            MenuAction("IMP_USE_STD", "1: use std::", "Import estándar", "SNIPPET", snippet="use std::;", cursor_offset_left=1, icon="function"),
+            MenuAction("IMP_USE_CRATE", "2: use crate::", "Import local de crate", "SNIPPET", snippet="use crate::;", cursor_offset_left=1, icon="function"),
+            MenuAction("IMP_PUB_USE", "3: pub use", "Re-exportación pública", "SNIPPET", snippet="pub use ;", cursor_offset_left=1, icon="function"),
+            MenuAction("IMP_MOD", "4: mod name;", "Declaración de módulo", "SNIPPET", snippet="mod ;", cursor_offset_left=1, icon="function"),
+            create_pause_action("5"),
+            MenuAction("IMP_COLLECTIONS", "6: use collections::", "Estructuras de datos", "SNIPPET", snippet="use std::collections::;", cursor_offset_left=1, icon="function"),
+            create_back_action("STRUCT", "7"),
+            MenuAction("IMP_SYNC", "8: use sync::{Arc, Mutex}", "Primitivas de concurrencia", "SNIPPET", snippet="use std::sync::{Arc, Mutex};\n", icon="function"),
+            MenuAction("IMP_EXTERN", "9: extern crate", "Crate externa", "SNIPPET", snippet="extern crate ;", cursor_offset_left=1, icon="function"),
+        ]
+    elif lang == LANG_CPP:
+        return [
+            MenuAction("INC_IOSTREAM", "1: #include <iostream>", "Stream de E/S estándar", "SNIPPET", snippet="#include <iostream>\n", icon="function"),
+            MenuAction("INC_VECTOR", "2: #include <vector>", "Contenedor vector", "SNIPPET", snippet="#include <vector>\n", icon="function"),
+            MenuAction("INC_STRING", "3: #include <string>", "Clase std::string", "SNIPPET", snippet="#include <string>\n", icon="function"),
+            MenuAction("INC_MEMORY", "4: #include <memory>", "Punteros inteligentes", "SNIPPET", snippet="#include <memory>\n", icon="function"),
+            create_pause_action("5"),
+            MenuAction("INC_USING_STD", "6: using namespace std;", "Namespace estándar", "SNIPPET", snippet="using namespace std;\n", icon="function"),
+            create_back_action("STRUCT", "7"),
+            MenuAction("INC_LOCAL", '8: #include ""', "Header local", "SNIPPET", snippet='#include ""\n', cursor_offset_left=2, icon="function"),
+            MenuAction("INC_PRAGMA", "9: #pragma once", "Guarda de inclusión única", "SNIPPET", snippet="#pragma once\n", icon="function"),
+        ]
+    elif lang == LANG_GO:
+        return [
+            MenuAction("IMP_FMT", '1: import "fmt"', "Paquete de formateo", "SNIPPET", snippet='import "fmt"\n', icon="function"),
+            MenuAction("IMP_OS", '2: import "os"', "Paquete de sistema operativo", "SNIPPET", snippet='import "os"\n', icon="function"),
+            MenuAction("IMP_SYNC", '3: import "sync"', "Paquete de sincronización", "SNIPPET", snippet='import "sync"\n', icon="function"),
+            MenuAction("IMP_TIME", '4: import "time"', "Paquete de tiempo y reloj", "SNIPPET", snippet='import "time"\n', icon="function"),
+            create_pause_action("5"),
+            MenuAction("IMP_HTTP", '6: import "net/http"', "Cliente y servidor HTTP", "SNIPPET", snippet='import "net/http"\n', icon="function"),
+            create_back_action("STRUCT", "7"),
+            MenuAction("IMP_JSON", '8: import "encoding/json"', "Serialización JSON", "SNIPPET", snippet='import "encoding/json"\n', icon="function"),
+            MenuAction("IMP_MULTI", "9: import ( ... )", "Bloque múltiple de imports", "SNIPPET", snippet='import (\n    ""\n)', cursor_offset_up=1, cursor_offset_left=2, icon="function"),
+        ]
+    else:  # PYTHON
+        return [
+            MenuAction(id="IMP_DIRECT", label="1: import", hint="Sentencia import", action_type="SNIPPET", snippet="import ", icon="function"),
+            MenuAction(id="IMP_FROM", label="2: from ... import", hint="Importación selectiva", action_type="SNIPPET", snippet="from  import ", cursor_offset_left=8, icon="function"),
+            MenuAction(id="IMP_SYS_OS", label="3: import sys, os", hint="Imports del sistema", action_type="SNIPPET", snippet="import sys, os\n", icon="function"),
+            MenuAction(id="IMP_NUMPY", label="4: import numpy as np", hint="Import numpy", action_type="SNIPPET", snippet="import numpy as np\n", icon="function"),
+            create_pause_action("5"),
+            MenuAction(id="IMP_AS", label="6:  as", hint="Alias de módulo", action_type="SNIPPET", snippet=" as ", icon="function"),
+            create_back_action("STRUCT", "7"),
+            MenuAction(id="IMP_TYPING", label="8: from typing import", hint="Tipado estático", action_type="SNIPPET", snippet="from typing import ", icon="function"),
+            MenuAction(id="IMP_ALL", label="9: __all__ = []", hint="Exports públicos", action_type="SNIPPET", snippet="__all__ = []", cursor_offset_left=1, icon="function"),
+        ]
+
+
+def _build_op_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the OPERATORS submenu for the specified language."""
+    if lang == LANG_GO:
+        slot_0 = MenuAction("OP_ASSIGN_SHORT", "1: :=", "Asignación corta", "SNIPPET", snippet=" := ", icon="operators")
+    else:
+        slot_0 = MenuAction("OP_ASSIGN", "1: =", "Asignación", "SNIPPET", snippet=" = ", icon="operators")
+
+    if lang == LANG_TYPESCRIPT:
+        slot_1 = MenuAction("OP_EQ_STRICT", "2: ===", "Igualdad estricta", "SNIPPET", snippet=" === ", icon="operators")
+        slot_2 = MenuAction("OP_NEQ_STRICT", "3: !==", "Desigualdad estricta", "SNIPPET", snippet=" !== ", icon="operators")
+        slot_5 = MenuAction("OP_LOGICAL_SUB", "6: && / ||", "Operadores lógicos", "SUBMENU", submenu_id="OP_LOGICAL", icon="operators")
+    else:
+        slot_1 = MenuAction("OP_EQ", "2: ==", "Comparación igualdad", "SNIPPET", snippet=" == ", icon="operators")
+        slot_2 = MenuAction("OP_NEQ", "3: !=", "Comparación desigualdad", "SNIPPET", snippet=" != ", icon="operators")
+        if lang == LANG_PYTHON:
+            slot_5 = MenuAction("OP_LOGICAL_SUB", "6: and / or", "Operadores lógicos", "SUBMENU", submenu_id="OP_LOGICAL", icon="operators")
+        else:
+            slot_5 = MenuAction("OP_LOGICAL_SUB", "6: && / ||", "Operadores lógicos", "SUBMENU", submenu_id="OP_LOGICAL", icon="operators")
+
+    slot_3 = MenuAction("OP_PLUSEQ", "4: +=", "Suma acumulativa", "SNIPPET", snippet=" += ", icon="operators")
+    pause_slot = create_pause_action("5")
+    back_slot = create_back_action("ROOT", "7")
+    slot_7 = MenuAction("OP_DELIMITERS_SUB", '8: () [] {} / ""', "Delimitadores y cadenas", "SUBMENU", submenu_id="OP_DELIMITERS", icon="operators")
+    slot_8 = MenuAction("OP_PUNCT_SUB", "9: : / , / . / ;", "Puntuación y acceso", "SUBMENU", submenu_id="OP_PUNCT", icon="operators")
+
+    return [slot_0, slot_1, slot_2, slot_3, pause_slot, slot_5, back_slot, slot_7, slot_8]
+
+
+def _build_op_logical_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the OP_LOGICAL submenu for the specified language."""
+    pause_slot = create_pause_action("5")
+    back_slot = create_back_action("OPERATORS", "7")
+
+    if lang == LANG_PYTHON:
+        return [
+            MenuAction("OP_AND", "1: and", "Lógico AND", "SNIPPET", snippet=" and ", icon="operators"),
+            MenuAction("OP_OR", "2: or", "Lógico OR", "SNIPPET", snippet=" or ", icon="operators"),
+            MenuAction("OP_NOT", "3: not", "Lógico NOT", "SNIPPET", snippet="not ", icon="operators"),
+            MenuAction("OP_IN", "4: in", "Pertenencia in", "SNIPPET", snippet=" in ", icon="operators"),
+            pause_slot,
+            MenuAction("OP_IS", "6: is", "Identidad is", "SNIPPET", snippet=" is ", icon="operators"),
+            back_slot,
+            MenuAction("OP_IS_NOT", "8: is not", "Identidad no es", "SNIPPET", snippet=" is not ", icon="operators"),
+            MenuAction("OP_NOT_IN", "9: not in", "No pertenencia", "SNIPPET", snippet=" not in ", icon="operators"),
+        ]
+    elif lang == LANG_TYPESCRIPT:
+        return [
+            MenuAction("OP_AND", "1: &&", "Lógico Y", "SNIPPET", snippet=" && ", icon="operators"),
+            MenuAction("OP_OR", "2: ||", "Lógico O", "SNIPPET", snippet=" || ", icon="operators"),
+            MenuAction("OP_NOT", "3: !", "Negación lógica", "SNIPPET", snippet="!", icon="operators"),
+            MenuAction("OP_TYPEOF", "4: typeof", "Comprobación de tipo", "SNIPPET", snippet="typeof ", icon="operators"),
+            pause_slot,
+            MenuAction("OP_INSTANCEOF", "6: instanceof", "Instancia de clase", "SNIPPET", snippet=" instanceof ", icon="operators"),
+            back_slot,
+            MenuAction("OP_NULLISH", "8: ??", "Coalescencia nula", "SNIPPET", snippet=" ?? ", icon="operators"),
+            MenuAction("OP_TERNARY", "9: ? :", "Operador ternario", "SNIPPET", snippet=" ?  : ", cursor_offset_left=3, icon="operators"),
+        ]
+    else:  # RUST, CPP, GO
+        return [
+            MenuAction("OP_AND", "1: &&", "Lógico Y", "SNIPPET", snippet=" && ", icon="operators"),
+            MenuAction("OP_OR", "2: ||", "Lógico O", "SNIPPET", snippet=" || ", icon="operators"),
+            MenuAction("OP_NOT", "3: !", "Negación lógica", "SNIPPET", snippet="!", icon="operators"),
+            MenuAction("OP_LT", "4: <", "Menor que", "SNIPPET", snippet=" < ", icon="operators"),
+            pause_slot,
+            MenuAction("OP_GT", "6: >", "Mayor que", "SNIPPET", snippet=" > ", icon="operators"),
+            back_slot,
+            MenuAction("OP_LTE", "8: <=", "Menor o igual", "SNIPPET", snippet=" <= ", icon="operators"),
+            MenuAction("OP_GTE", "9: >=", "Mayor o igual", "SNIPPET", snippet=" >= ", icon="operators"),
+        ]
+
+
+def _build_op_delim_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the OP_DELIMITERS submenu for the specified language."""
+    pause_slot = create_pause_action("5")
+    back_slot = create_back_action("OPERATORS", "7")
+
+    p0 = MenuAction("DELIM_PAREN", "1: ()", "Paréntesis con cursor centrado", "SNIPPET", snippet="()", cursor_offset_left=1, icon="operators")
+    p1 = MenuAction("DELIM_BRACKET", "2: []", "Corchetes con cursor centrado", "SNIPPET", snippet="[]", cursor_offset_left=1, icon="operators")
+    p2 = MenuAction("DELIM_BRACE", "3: {}", "Llaves con cursor centrado", "SNIPPET", snippet="{}", cursor_offset_left=1, icon="operators")
+    p3 = MenuAction("DELIM_DQUOTE", '4: ""', "Comillas dobles centradas", "SNIPPET", snippet='""', cursor_offset_left=1, icon="operators")
+    p5 = MenuAction("DELIM_SQUOTE", "6: ''", "Comillas simples centradas", "SNIPPET", snippet="''", cursor_offset_left=1, icon="operators")
+
+    if lang == LANG_PYTHON:
+        p7 = MenuAction("DELIM_FSTR", '8: f""', "F-string con cursor centrado", "SNIPPET", snippet='f""', cursor_offset_left=1, icon="operators")
+        p8 = MenuAction("DELIM_DOCSTR", '9: """..."""', "Docstring triple centrado", "SNIPPET", snippet='""""""', cursor_offset_left=3, icon="operators")
+    elif lang == LANG_TYPESCRIPT:
+        p7 = MenuAction("DELIM_BQUOTE", "8: ``", "Template literal centrado", "SNIPPET", snippet="``", cursor_offset_left=1, icon="operators")
+        p8 = MenuAction("DELIM_INTERP", "9: ${}", "Interpolación de template", "SNIPPET", snippet="${}", cursor_offset_left=1, icon="operators")
+    elif lang == LANG_RUST:
+        p7 = MenuAction("DELIM_REF", "8: &", "Préstamo / referencia", "SNIPPET", snippet="&", icon="operators")
+        p8 = MenuAction("DELIM_RAWSTR", '9: r#""#', "String cruda", "SNIPPET", snippet='r#""#', cursor_offset_left=2, icon="operators")
+    elif lang == LANG_CPP:
+        p7 = MenuAction("DELIM_DEREF", "8: *", "Puntero / desreferencia", "SNIPPET", snippet="*", icon="operators")
+        p8 = MenuAction("DELIM_ARROW", "9: ->", "Acceso a miembro por puntero", "SNIPPET", snippet="->", icon="operators")
+    elif lang == LANG_GO:
+        p7 = MenuAction("DELIM_RAWSTR", "8: ``", "String multilínea cruda", "SNIPPET", snippet="``", cursor_offset_left=1, icon="operators")
+        p8 = MenuAction("DELIM_CHAN", "9: <-", "Envío / recepción de canal", "SNIPPET", snippet="<-", icon="operators")
+    else:
+        p7 = MenuAction("DELIM_FSTR", '8: f""', "F-string", "SNIPPET", snippet='f""', cursor_offset_left=1, icon="operators")
+        p8 = MenuAction("DELIM_DOCSTR", '9: """..."""', "Docstring", "SNIPPET", snippet='""""""', cursor_offset_left=3, icon="operators")
+
+    return [p0, p1, p2, p3, pause_slot, p5, back_slot, p7, p8]
+
+
+def _build_op_punct_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the OP_PUNCT submenu for the specified language."""
+    pause_slot = create_pause_action("5")
+    back_slot = create_back_action("OPERATORS", "7")
+
+    p0 = MenuAction("PUNCT_COLON", "1: :", "Dos puntos con espacio", "SNIPPET", snippet=": ", icon="operators")
+    p1 = MenuAction("PUNCT_COMMA", "2: ,", "Coma con espacio", "SNIPPET", snippet=", ", icon="operators")
+    p2 = MenuAction("PUNCT_DOT", "3: .", "Punto de acceso", "SNIPPET", snippet=".", icon="operators")
+    p3 = MenuAction("PUNCT_ARROW", "4: ->", "Retorno o puntero flecha", "SNIPPET", snippet=" -> ", icon="operators")
+    p5 = MenuAction("PUNCT_UNDERSCORE", "6: _", "Guion bajo / variable muda", "SNIPPET", snippet="_", icon="operators")
+    p7 = MenuAction("PUNCT_SEMICOLON", "8: ;", "Punto y coma", "SNIPPET", snippet=";", icon="operators")
+
+    if lang in (LANG_RUST, LANG_CPP):
+        p8 = MenuAction("PUNCT_SCOPE", "9: ::", "Resolución de ámbito", "SNIPPET", snippet="::", icon="operators")
+    elif lang == LANG_GO:
+        p8 = MenuAction("PUNCT_CHAN_ARROW", "9: <-", "Operador de canal", "SNIPPET", snippet=" <- ", icon="operators")
+    else:
+        p8 = MenuAction("PUNCT_SCOPE", "9: ::", "Resolución de ámbito", "SNIPPET", snippet="::", icon="operators")
+
+    return [p0, p1, p2, p3, pause_slot, p5, back_slot, p7, p8]
+
+
+def _build_t9_vars_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the T9_VARS submenu for the specified language."""
+    pause_slot = create_pause_action("5")
+    back_slot = create_back_action("T9", "7")
+
+    p0 = MenuAction("VAR_I", "1: i", "Variable contador i", "SNIPPET", snippet="i", icon="variables")
+    p1 = MenuAction("VAR_J", "2: j", "Variable contador j", "SNIPPET", snippet="j", icon="variables")
+    p2 = MenuAction("VAR_X", "3: x", "Variable x", "SNIPPET", snippet="x", icon="variables")
+
+    if lang in (LANG_TYPESCRIPT, LANG_CPP):
+        p3 = MenuAction("VAR_THIS", "4: this", "Referencia de instancia", "SNIPPET", snippet="this", icon="variables")
+    elif lang == LANG_GO:
+        p3 = MenuAction("VAR_ERR", "4: err", "Variable canónica error", "SNIPPET", snippet="err", icon="variables")
+    else:
+        p3 = MenuAction("VAR_SELF", "4: self", "Referencia de instancia", "SNIPPET", snippet="self", icon="variables")
+
+    p5 = MenuAction("VAR_DATA", "6: data", "Identificador data", "SNIPPET", snippet="data", icon="variables")
+    p7 = MenuAction("VAR_RESULT", "8: result", "Identificador result", "SNIPPET", snippet="result", icon="variables")
+    p8 = MenuAction("VAR_ITEM", "9: item", "Identificador item", "SNIPPET", snippet="item", icon="variables")
+
+    return [p0, p1, p2, p3, pause_slot, p5, back_slot, p7, p8]
+
+
+def _build_t9_vals_items(lang: str) -> List[MenuAction]:
+    """Builds the 9 items for the T9_VALS submenu for the specified language."""
+    pause_slot = create_pause_action("5")
+    back_slot = create_back_action("T9", "7")
+
+    if lang == LANG_PYTHON:
+        p0 = MenuAction("VAL_TRUE", "1: True", "Booleano True", "SNIPPET", snippet="True", icon="variables")
+        p1 = MenuAction("VAL_FALSE", "2: False", "Booleano False", "SNIPPET", snippet="False", icon="variables")
+        p2 = MenuAction("VAL_NONE", "3: None", "Valor None", "SNIPPET", snippet="None", icon="variables")
+    else:
+        p0 = MenuAction("VAL_TRUE", "1: true", "Booleano true", "SNIPPET", snippet="true", icon="variables")
+        p1 = MenuAction("VAL_FALSE", "2: false", "Booleano false", "SNIPPET", snippet="false", icon="variables")
+        if lang == LANG_TYPESCRIPT:
+            p2 = MenuAction("VAL_NULL", "3: null", "Valor null", "SNIPPET", snippet="null", icon="variables")
+        elif lang == LANG_CPP:
+            p2 = MenuAction("VAL_NULLPTR", "3: nullptr", "Puntero nulo", "SNIPPET", snippet="nullptr", icon="variables")
+        elif lang == LANG_GO:
+            p2 = MenuAction("VAL_NIL", "3: nil", "Valor nil", "SNIPPET", snippet="nil", icon="variables")
+        else:
+            p2 = MenuAction("VAL_NONE", "3: None", "Valor None", "SNIPPET", snippet="None", icon="variables")
+
+    p3 = MenuAction("VAL_ZERO", "4: 0", "Entero cero", "SNIPPET", snippet="0", icon="variables")
+    p5 = MenuAction("VAL_ONE", "6: 1", "Entero uno", "SNIPPET", snippet="1", icon="variables")
+
+    if lang == LANG_RUST:
+        p7 = MenuAction("VAL_VEC", "8: vec![]", "Vector vacío", "SNIPPET", snippet="vec![]", cursor_offset_left=1, icon="variables")
+        p8 = MenuAction("VAL_SOME", "9: Some()", "Constructor Some", "SNIPPET", snippet="Some()", cursor_offset_left=1, icon="variables")
+    elif lang == LANG_GO:
+        p7 = MenuAction("VAL_SLICE", "8: []T{}", "Slice vacío", "SNIPPET", snippet="[]string{}", cursor_offset_left=1, icon="variables")
+        p8 = MenuAction("VAL_MAP", "9: map[k]v{}", "Mapa vacío", "SNIPPET", snippet="map[string]any{}", cursor_offset_left=1, icon="variables")
+    else:
+        p7 = MenuAction("VAL_EMPTY_LIST", "8: []", "Lista vacía", "SNIPPET", snippet="[]", cursor_offset_left=1, icon="variables")
+        p8 = MenuAction("VAL_EMPTY_DICT", "9: {}", "Diccionario o bloque vacío", "SNIPPET", snippet="{}", cursor_offset_left=1, icon="variables")
+
+    return [p0, p1, p2, p3, pause_slot, p5, back_slot, p7, p8]
+
+
+def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
     """
-    Constructs and returns the full hierarchical menu tree for IDEye Phase 3.
+    Constructs and returns the full hierarchical menu tree for IDEye Phase 5.
+    Dynamically tailors syntax constructs, operators, snippets, and identifiers
+    to the active programming language (Python, TypeScript, Rust, C++, Go).
     Guarantees every node has exactly 9 items, Index 4 is Pause, and Index 6 in submenus is Back.
     """
     tree: Dict[str, MenuNode] = {}
+    lang = normalize_language(language)
 
     # =========================================================================
     # 1. ROOT MENU (Nivel 1)
@@ -494,18 +1270,18 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         MenuAction(
             id="INSERT_IF_ELSE",
             label="1: FLUJO / LÓGICA",
-            hint="if, elif, else, for, while, try",
+            hint="if, else, bucles, control",
             action_type="SUBMENU",
             submenu_id="FLOW",
-            icon="",
+            icon="flow",
         ),
         MenuAction(
             id="INSERT_LOOP",
             label="2: ESTRUCTURAS / FUNC",
-            hint="def, class, import, lambda",
+            hint="funciones, tipos, clases, imports",
             action_type="SUBMENU",
             submenu_id="STRUCT",
-            icon="",
+            icon="function",
         ),
         MenuAction(
             id="INSERT_OPERATORS",
@@ -513,48 +1289,48 @@ def build_menu_tree() -> Dict[str, MenuNode]:
             hint="=, ==, !=, +, and, (), []",
             action_type="SUBMENU",
             submenu_id="OPERATORS",
-            icon="",
+            icon="operators",
         ),
         MenuAction(
             id="INSERT_VARS",
             label="4: NAVEGACIÓN CURSOR",
-            hint="    Home End (Sticky)",
+            hint="flechas, Home, End (Sticky)",
             action_type="SUBMENU",
             submenu_id="NAV",
-            icon="",
+            icon="navigation",
         ),
         create_pause_action("5"),
         MenuAction(
             id="ACTION_T9",
             label="6: TECLADO T9 / IDENT",
-            hint="Letras, vars (i, data, self)",
+            hint="letras, variables locales, valores",
             action_type="SUBMENU",
             submenu_id="T9",
-            icon="",
+            icon="variables",
         ),
         MenuAction(
             id="ACTION_BACKSPACE",
             label="7: EDICIÓN / BORRADO",
-            hint="Borrar, Undo, Redo (Sticky)",
+            hint="borrar, Undo, Redo (Sticky)",
             action_type="SUBMENU",
             submenu_id="EDIT",
-            icon="",
+            icon="edit",
         ),
         MenuAction(
             id="ACTION_ENTER_TAB",
             label="8: ESPACIO / FORMATO",
-            hint="Enter, Tab, Espacio (Sticky)",
+            hint="Enter, Tab, espacios (Sticky)",
             action_type="SUBMENU",
             submenu_id="FORMAT",
-            icon="",
+            icon="format",
         ),
         MenuAction(
             id="MENU_SNIPPETS",
             label="9: IA / PREDICCIÓN",
-            hint="Predicción contextual y snippets",
+            hint="predicción contextual y plantillas",
             action_type="SUBMENU",
             submenu_id="SNIPPETS",
-            icon="",
+            icon="ai_spark",
         ),
     ]
 
@@ -570,149 +1346,20 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # =========================================================================
     # 2. FLOW / LOGIC SUBMENUS
     # =========================================================================
-    flow_items = [
-        MenuAction(
-            id="FLOW_IF",
-            label="1: if ...:",
-            hint="Condicional if",
-            action_type="SNIPPET",
-            snippet="if :",
-            cursor_offset_left=1,
-            icon="",
-        ),
-        MenuAction(
-            id="FLOW_ELIF",
-            label="2: elif ...:",
-            hint="Condicional elif",
-            action_type="SNIPPET",
-            snippet="elif :",
-            cursor_offset_left=1,
-            icon="",
-        ),
-        MenuAction(
-            id="FLOW_ELSE",
-            label="3: else:",
-            hint="Rama else con salto",
-            action_type="SNIPPET",
-            snippet="else:\n    ",
-            icon="",
-        ),
-        MenuAction(
-            id="FLOW_FOR_RANGE",
-            label="4: for i in range():",
-            hint="Bucle indexado",
-            action_type="SNIPPET",
-            snippet="for i in range():",
-            cursor_offset_left=2,
-            icon="",
-        ),
-        create_pause_action("5"),
-        MenuAction(
-            id="FLOW_FOR_LIST",
-            label="6: for x in lista:",
-            hint="Iterador de colección",
-            action_type="SNIPPET",
-            snippet="for x in :",
-            cursor_offset_left=1,
-            icon="",
-        ),
-        create_back_action("ROOT", "7"),
-        MenuAction(
-            id="FLOW_WHILE",
-            label="8: while ...:",
-            hint="Bucle while",
-            action_type="SNIPPET",
-            snippet="while :",
-            cursor_offset_left=1,
-            icon="",
-        ),
-        MenuAction(
-            id="FLOW_TRY_RET_SUB",
-            label="9: TRY / EXCEPT / RET",
-            hint="try-except, return, raise",
-            action_type="SUBMENU",
-            submenu_id="FLOW_TRY_RET",
-            icon="",
-        ),
-    ]
-
     tree["FLOW"] = MenuNode(
         id="FLOW",
         title="FLUJO / LÓGICA",
         breadcrumb_label="FLUJO",
-        items=flow_items,
+        items=_build_flow_items(lang),
         parent_id="ROOT",
         sticky=False,
     )
-
-    flow_try_items = [
-        MenuAction(
-            id="TRY_EXCEPT",
-            label="1: try / except",
-            hint="Bloque try-except",
-            action_type="SNIPPET",
-            snippet="try:\n    \nexcept Exception as e:\n    ",
-            cursor_offset_up=2,
-            icon="",
-        ),
-        MenuAction(
-            id="RET_VAL",
-            label="2: return",
-            hint="Retorno con espacio",
-            action_type="SNIPPET",
-            snippet="return ",
-            icon="",
-        ),
-        MenuAction(
-            id="RET_NONE",
-            label="3: return None",
-            hint="Retorno nulo",
-            action_type="SNIPPET",
-            snippet="return None",
-            icon="",
-        ),
-        MenuAction(
-            id="RET_TRUE",
-            label="4: return True",
-            hint="Retorno booleano True",
-            action_type="SNIPPET",
-            snippet="return True",
-            icon="",
-        ),
-        create_pause_action("5"),
-        MenuAction(
-            id="RET_FALSE",
-            label="6: return False",
-            hint="Retorno booleano False",
-            action_type="SNIPPET",
-            snippet="return False",
-            icon="",
-        ),
-        create_back_action("FLOW", "7"),
-        MenuAction(
-            id="RAISE_EXC",
-            label="8: raise Exception",
-            hint="Lanzar excepción",
-            action_type="SNIPPET",
-            snippet='raise Exception("")',
-            cursor_offset_left=2,
-            icon="",
-        ),
-        MenuAction(
-            id="PASS_STMT",
-            label="9: pass",
-            hint="Sentencia pass",
-            action_type="SNIPPET",
-            snippet="pass",
-            icon="",
-        ),
-    ]
 
     tree["FLOW_TRY_RET"] = MenuNode(
         id="FLOW_TRY_RET",
         title="TRY / RETURN",
         breadcrumb_label="TRY/RET",
-        items=flow_try_items,
+        items=_build_flow_try_items(lang),
         parent_id="FLOW",
         sticky=False,
     )
@@ -720,149 +1367,20 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # =========================================================================
     # 3. STRUCTURES / FUNCTIONS SUBMENUS
     # =========================================================================
-    struct_items = [
-        MenuAction(
-            id="STRUCT_DEF",
-            label="1: def func():",
-            hint="Definición de función",
-            action_type="SNIPPET",
-            snippet="def ():",
-            cursor_offset_left=3,
-            icon="",
-        ),
-        MenuAction(
-            id="STRUCT_CLASS",
-            label="2: class Nombre:",
-            hint="Definición de clase",
-            action_type="SNIPPET",
-            snippet="class :",
-            cursor_offset_left=1,
-            icon="",
-        ),
-        MenuAction(
-            id="STRUCT_IMPORT_SUB",
-            label="3: IMPORTAR",
-            hint="import, from ... import",
-            action_type="SUBMENU",
-            submenu_id="STRUCT_IMPORT",
-            icon="",
-        ),
-        MenuAction(
-            id="STRUCT_LAMBDA",
-            label="4: lambda",
-            hint="Función anónima",
-            action_type="SNIPPET",
-            snippet="lambda : ",
-            cursor_offset_left=2,
-            icon="",
-        ),
-        create_pause_action("5"),
-        MenuAction(
-            id="STRUCT_PRINT",
-            label="6: print()",
-            hint="Impresión por consola",
-            action_type="SNIPPET",
-            snippet="print()",
-            cursor_offset_left=1,
-            icon="",
-        ),
-        create_back_action("ROOT", "7"),
-        MenuAction(
-            id="STRUCT_LEN",
-            label="8: len()",
-            hint="Longitud de contenedor",
-            action_type="SNIPPET",
-            snippet="len()",
-            cursor_offset_left=1,
-            icon="",
-        ),
-        MenuAction(
-            id="STRUCT_SUPER",
-            label="9: super().__init__()",
-            hint="Constructor clase padre",
-            action_type="SNIPPET",
-            snippet="super().__init__()",
-            icon="",
-        ),
-    ]
-
     tree["STRUCT"] = MenuNode(
         id="STRUCT",
         title="ESTRUCTURAS / FUNC",
         breadcrumb_label="ESTRUCTURAS",
-        items=struct_items,
+        items=_build_struct_items(lang),
         parent_id="ROOT",
         sticky=False,
     )
-
-    struct_import_items = [
-        MenuAction(
-            id="IMP_DIRECT",
-            label="1: import",
-            hint="Sentencia import",
-            action_type="SNIPPET",
-            snippet="import ",
-            icon="",
-        ),
-        MenuAction(
-            id="IMP_FROM",
-            label="2: from ... import",
-            hint="Importación selectiva",
-            action_type="SNIPPET",
-            snippet="from  import ",
-            cursor_offset_left=8,
-            icon="",
-        ),
-        MenuAction(
-            id="IMP_SYS_OS",
-            label="3: import sys, os",
-            hint="Imports del sistema",
-            action_type="SNIPPET",
-            snippet="import sys, os\n",
-            icon="",
-        ),
-        MenuAction(
-            id="IMP_NUMPY",
-            label="4: import numpy as np",
-            hint="Import numpy",
-            action_type="SNIPPET",
-            snippet="import numpy as np\n",
-            icon="",
-        ),
-        create_pause_action("5"),
-        MenuAction(
-            id="IMP_AS",
-            label="6:  as",
-            hint="Alias de módulo",
-            action_type="SNIPPET",
-            snippet=" as ",
-            icon="",
-        ),
-        create_back_action("STRUCT", "7"),
-        MenuAction(
-            id="IMP_TYPING",
-            label="8: from typing import",
-            hint="Tipado estático",
-            action_type="SNIPPET",
-            snippet="from typing import ",
-            icon="",
-        ),
-        MenuAction(
-            id="IMP_ALL",
-            label="9: __all__ = []",
-            hint="Exports públicos",
-            action_type="SNIPPET",
-            snippet="__all__ = []",
-            cursor_offset_left=1,
-            icon="",
-        ),
-    ]
 
     tree["STRUCT_IMPORT"] = MenuNode(
         id="STRUCT_IMPORT",
         title="IMPORTACIONES",
         breadcrumb_label="IMPORT",
-        items=struct_import_items,
+        items=_build_struct_import_items(lang),
         parent_id="STRUCT",
         sticky=False,
     )
@@ -870,135 +1388,38 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # =========================================================================
     # 4. OPERATORS / SYMBOLS SUBMENUS
     # =========================================================================
-    op_items = [
-        MenuAction(
-            id="OP_ASSIGN",
-            label="1: =",
-            hint="Asignación",
-            action_type="SNIPPET",
-            snippet=" = ",
-            icon="",
-        ),
-        MenuAction(
-            id="OP_EQ",
-            label="2: ==",
-            hint="Comparación igualdad",
-            action_type="SNIPPET",
-            snippet=" == ",
-            icon="",
-        ),
-        MenuAction(
-            id="OP_NEQ",
-            label="3: !=",
-            hint="Comparación desigualdad",
-            action_type="SNIPPET",
-            snippet=" != ",
-            icon="",
-        ),
-        MenuAction(
-            id="OP_PLUSEQ",
-            label="4: +=",
-            hint="Suma acumulativa",
-            action_type="SNIPPET",
-            snippet=" += ",
-            icon="",
-        ),
-        create_pause_action("5"),
-        MenuAction(
-            id="OP_LOGICAL_SUB",
-            label="6: and / or",
-            hint="Operadores lógicos",
-            action_type="SUBMENU",
-            submenu_id="OP_LOGICAL",
-            icon="",
-        ),
-        create_back_action("ROOT", "7"),
-        MenuAction(
-            id="OP_DELIMITERS_SUB",
-            label='8: () [] {} / "" \'\' ',
-            hint="Delimitadores, llaves y comillas",
-            action_type="SUBMENU",
-            submenu_id="OP_DELIMITERS",
-            icon="",
-        ),
-        MenuAction(
-            id="OP_PUNCT_SUB",
-            label="9: : / , / .",
-            hint="Dos puntos, coma, punto",
-            action_type="SUBMENU",
-            submenu_id="OP_PUNCT",
-            icon="",
-        ),
-    ]
-
     tree["OPERATORS"] = MenuNode(
         id="OPERATORS",
         title="OPERADORES / SÍMBOLOS",
         breadcrumb_label="OPERADORES",
-        items=op_items,
+        items=_build_op_items(lang),
         parent_id="ROOT",
         sticky=False,
     )
-
-    op_logical_items = [
-        MenuAction(id="OP_AND", label="1: and", hint="Lógico AND", action_type="SNIPPET", snippet=" and ", icon=""),
-        MenuAction(id="OP_OR", label="2: or", hint="Lógico OR", action_type="SNIPPET", snippet=" or ", icon=""),
-        MenuAction(id="OP_NOT", label="3: not", hint="Lógico NOT", action_type="SNIPPET", snippet="not ", icon=""),
-        MenuAction(id="OP_IN", label="4: in", hint="Pertenencia in", action_type="SNIPPET", snippet=" in ", icon=""),
-        create_pause_action("5"),
-        MenuAction(id="OP_IS", label="6: is", hint="Identidad is", action_type="SNIPPET", snippet=" is ", icon=""),
-        create_back_action("OPERATORS", "7"),
-        MenuAction(id="OP_IS_NOT", label="8: is not", hint="Identidad no es", action_type="SNIPPET", snippet=" is not ", icon=""),
-        MenuAction(id="OP_NOT_IN", label="9: not in", hint="No pertenencia", action_type="SNIPPET", snippet=" not in ", icon=""),
-    ]
 
     tree["OP_LOGICAL"] = MenuNode(
         id="OP_LOGICAL",
         title="LÓGICOS & COMPARADORES",
         breadcrumb_label="LÓGICOS",
-        items=op_logical_items,
+        items=_build_op_logical_items(lang),
         parent_id="OPERATORS",
         sticky=False,
     )
-
-    op_delim_items = [
-        MenuAction(id="DELIM_PAREN", label="1: ()", hint="Paréntesis con cursor centrado", action_type="SNIPPET", snippet="()", cursor_offset_left=1, icon=""),
-        MenuAction(id="DELIM_BRACKET", label="2: []", hint="Corchetes con cursor centrado", action_type="SNIPPET", snippet="[]", cursor_offset_left=1, icon=""),
-        MenuAction(id="DELIM_BRACE", label="3: {}", hint="Llaves con cursor centrado", action_type="SNIPPET", snippet="{}", cursor_offset_left=1, icon=""),
-        MenuAction(id="DELIM_DQUOTE", label='4: ""', hint="Comillas dobles centradas", action_type="SNIPPET", snippet='""', cursor_offset_left=1, icon=""),
-        create_pause_action("5"),
-        MenuAction(id="DELIM_SQUOTE", label="6: ''", hint="Comillas simples centradas", action_type="SNIPPET", snippet="''", cursor_offset_left=1, icon=""),
-        create_back_action("OPERATORS", "7"),
-        MenuAction(id="DELIM_FSTR", label='8: f""', hint="F-string con cursor centrado", action_type="SNIPPET", snippet='f""', cursor_offset_left=1, icon=""),
-        MenuAction(id="DELIM_DOCSTR", label='9: """..."""', hint="Docstring triple centrado", action_type="SNIPPET", snippet='""""""', cursor_offset_left=3, icon=""),
-    ]
 
     tree["OP_DELIMITERS"] = MenuNode(
         id="OP_DELIMITERS",
         title="DELIMITADORES & PARES",
         breadcrumb_label="DELIMITADORES",
-        items=op_delim_items,
+        items=_build_op_delim_items(lang),
         parent_id="OPERATORS",
         sticky=False,
     )
-
-    op_punct_items = [
-        MenuAction(id="PUNCT_COLON", label="1: :", hint="Dos puntos con espacio", action_type="SNIPPET", snippet=": ", icon=""),
-        MenuAction(id="PUNCT_COMMA", label="2: ,", hint="Coma con espacio", action_type="SNIPPET", snippet=", ", icon=""),
-        MenuAction(id="PUNCT_DOT", label="3: .", hint="Punto de acceso", action_type="SNIPPET", snippet=".", icon=""),
-        MenuAction(id="PUNCT_ARROW", label="4: ->", hint="Retorno de tipo flecha", action_type="SNIPPET", snippet=" -> ", icon=""),
-        create_pause_action("5"),
-        MenuAction(id="PUNCT_UNDERSCORE", label="6: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
-        create_back_action("OPERATORS", "7"),
-        MenuAction(id="PUNCT_SEMICOLON", label="8: ;", hint="Punto y coma", action_type="SNIPPET", snippet="; ", icon=""),
-        MenuAction(id="PUNCT_SCOPE", label="9: ::", hint="Resolución de ámbito", action_type="SNIPPET", snippet="::", icon=""),
-    ]
 
     tree["OP_PUNCT"] = MenuNode(
         id="OP_PUNCT",
         title="PUNTUACIÓN & SÍMBOLOS",
         breadcrumb_label="PUNTUACIÓN",
-        items=op_punct_items,
+        items=_build_op_punct_items(lang),
         parent_id="OPERATORS",
         sticky=False,
     )
@@ -1007,15 +1428,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # 5. CURSOR NAVIGATION (STICKY SUBMENU)
     # =========================================================================
     nav_items = [
-        MenuAction(id="NAV_UP", label="1:  Arriba", hint="Flecha Arriba", action_type="KEY", key_name="UP", sticky=True, icon=""),
-        MenuAction(id="NAV_DOWN", label="2:  Abajo", hint="Flecha Abajo", action_type="KEY", key_name="DOWN", sticky=True, icon=""),
-        MenuAction(id="NAV_LEFT", label="3:  Izquierda", hint="Flecha Izquierda", action_type="KEY", key_name="LEFT", sticky=True, icon=""),
-        MenuAction(id="NAV_RIGHT", label="4:  Derecha", hint="Flecha Derecha", action_type="KEY", key_name="RIGHT", sticky=True, icon=""),
+        MenuAction(id="NAV_UP", label="1: Arriba", hint="Flecha Arriba", action_type="KEY", key_name="UP", sticky=True, icon="navigation"),
+        MenuAction(id="NAV_DOWN", label="2: Abajo", hint="Flecha Abajo", action_type="KEY", key_name="DOWN", sticky=True, icon="navigation"),
+        MenuAction(id="NAV_LEFT", label="3: Izquierda", hint="Flecha Izquierda", action_type="KEY", key_name="LEFT", sticky=True, icon="navigation"),
+        MenuAction(id="NAV_RIGHT", label="4: Derecha", hint="Flecha Derecha", action_type="KEY", key_name="RIGHT", sticky=True, icon="navigation"),
         create_pause_action("5"),
-        MenuAction(id="NAV_HOME", label="6: Inicio Línea", hint="Tecla Home / Inicio", action_type="KEY", key_name="HOME", sticky=True, icon=""),
+        MenuAction(id="NAV_HOME", label="6: Inicio Línea", hint="Tecla Home / Inicio", action_type="KEY", key_name="HOME", sticky=True, icon="navigation"),
         create_back_action("ROOT", "7"),
-        MenuAction(id="NAV_END", label="8: Fin Línea", hint="Tecla End / Fin", action_type="KEY", key_name="END", sticky=True, icon=""),
-        MenuAction(id="NAV_WORD", label="9: Saltar Palabra", hint="Ctrl + Derecha", action_type="KEY", key_name="WORD_RIGHT", sticky=True, icon=""),
+        MenuAction(id="NAV_END", label="8: Fin Línea", hint="Tecla End / Fin", action_type="KEY", key_name="END", sticky=True, icon="navigation"),
+        MenuAction(id="NAV_WORD", label="9: Saltar Palabra", hint="Ctrl + Derecha", action_type="KEY", key_name="WORD_RIGHT", sticky=True, icon="navigation"),
     ]
 
     tree["NAV"] = MenuNode(
@@ -1031,15 +1452,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # 6. EDITING / DELETION (STICKY SUBMENU)
     # =========================================================================
     edit_items = [
-        MenuAction(id="EDIT_BACKSPACE", label="1: Borrar Carácter", hint="Backspace", action_type="KEY", key_name="BACKSPACE", sticky=True, icon=""),
-        MenuAction(id="EDIT_DEL_WORD", label="2: Borrar Palabra", hint="Ctrl + Backspace", action_type="KEY", key_name="CTRL_BACKSPACE", sticky=True, icon=""),
-        MenuAction(id="EDIT_DEL_LINE", label="3: Borrar Línea", hint="Ctrl+Shift+K", action_type="KEY", key_name="DELETE_LINE", sticky=True, icon=""),
-        MenuAction(id="EDIT_UNDO", label="4: Deshacer", hint="Ctrl + Z", action_type="KEY", key_name="UNDO", sticky=True, icon=""),
+        MenuAction(id="EDIT_BACKSPACE", label="1: Borrar Carácter", hint="Backspace", action_type="KEY", key_name="BACKSPACE", sticky=True, icon="edit"),
+        MenuAction(id="EDIT_DEL_WORD", label="2: Borrar Palabra", hint="Ctrl + Backspace", action_type="KEY", key_name="CTRL_BACKSPACE", sticky=True, icon="edit"),
+        MenuAction(id="EDIT_DEL_LINE", label="3: Borrar Línea", hint="Ctrl+Shift+K", action_type="KEY", key_name="DELETE_LINE", sticky=True, icon="edit"),
+        MenuAction(id="EDIT_UNDO", label="4: Deshacer", hint="Ctrl + Z", action_type="KEY", key_name="UNDO", sticky=True, icon="edit"),
         create_pause_action("5"),
-        MenuAction(id="EDIT_REDO", label="6: Rehacer", hint="Ctrl + Y", action_type="KEY", key_name="REDO", sticky=True, icon=""),
+        MenuAction(id="EDIT_REDO", label="6: Rehacer", hint="Ctrl + Y", action_type="KEY", key_name="REDO", sticky=True, icon="edit"),
         create_back_action("ROOT", "7"),
-        MenuAction(id="EDIT_COMMENT", label="8: Comentar", hint="Ctrl + /", action_type="KEY", key_name="COMMENT", sticky=True, icon=""),
-        MenuAction(id="ACTION_EXIT_MENU", label="9: SALIR", hint="Cerrar IDEye (Confirmación)", action_type="SUBMENU", submenu_id="EXIT_CONFIRM", icon=""),
+        MenuAction(id="EDIT_COMMENT", label="8: Comentar", hint="Ctrl + /", action_type="KEY", key_name="COMMENT", sticky=True, icon="edit"),
+        MenuAction(id="ACTION_EXIT_MENU", label="9: SALIR", hint="Cerrar IDEye (Confirmación)", action_type="SUBMENU", submenu_id="EXIT_CONFIRM", icon="exit"),
     ]
 
     tree["EDIT"] = MenuNode(
@@ -1055,15 +1476,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # 7. SPACE / FORMATTING (STICKY SUBMENU)
     # =========================================================================
     format_items = [
-        MenuAction(id="FMT_ENTER", label="1: ENTER", hint="Salto de línea", action_type="KEY", key_name="ENTER", sticky=True, icon=""),
-        MenuAction(id="FMT_TAB", label="2: TAB", hint="Tabulador / Indentar", action_type="KEY", key_name="TAB", sticky=True, icon=""),
-        MenuAction(id="FMT_UNINDENT", label="3: SHIFT + TAB", hint="Des-indentar", action_type="KEY", key_name="SHIFT_TAB", sticky=True, icon=""),
-        MenuAction(id="FMT_SPACE", label="4: ESPACIO", hint="Barra espaciadora", action_type="KEY", key_name="SPACE", sticky=True, icon=""),
+        MenuAction(id="FMT_ENTER", label="1: ENTER", hint="Salto de línea", action_type="KEY", key_name="ENTER", sticky=True, icon="format"),
+        MenuAction(id="FMT_TAB", label="2: TAB", hint="Tabulador / Indentar", action_type="KEY", key_name="TAB", sticky=True, icon="format"),
+        MenuAction(id="FMT_UNINDENT", label="3: SHIFT + TAB", hint="Des-indentar", action_type="KEY", key_name="SHIFT_TAB", sticky=True, icon="format"),
+        MenuAction(id="FMT_SPACE", label="4: ESPACIO", hint="Barra espaciadora", action_type="KEY", key_name="SPACE", sticky=True, icon="format"),
         create_pause_action("5"),
-        MenuAction(id="FMT_2ENTER", label="6: 2x ENTER", hint="Doble salto de línea", action_type="KEY", key_name="ENTER_TWICE", sticky=True, icon=""),
+        MenuAction(id="FMT_2ENTER", label="6: 2x ENTER", hint="Doble salto de línea", action_type="KEY", key_name="ENTER_TWICE", sticky=True, icon="format"),
         create_back_action("ROOT", "7"),
-        MenuAction(id="FMT_4SPACES", label="8: 4x ESPACIOS", hint="Indentación manual", action_type="SNIPPET", snippet="    ", sticky=True, icon=""),
-        MenuAction(id="FMT_COLON_ENTER", label="9: : + ENTER", hint="Dos puntos y salto indentado", action_type="SNIPPET", snippet=":\n    ", sticky=True, icon=""),
+        MenuAction(id="FMT_4SPACES", label="8: 4x ESPACIOS", hint="Indentación manual", action_type="SNIPPET", snippet="    ", sticky=True, icon="format"),
+        MenuAction(id="FMT_COLON_ENTER", label="9: : + ENTER", hint="Dos puntos y salto indentado", action_type="SNIPPET", snippet=":\n    ", sticky=True, icon="format"),
     ]
 
     tree["FORMAT"] = MenuNode(
@@ -1078,7 +1499,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # =========================================================================
     # 8. RAPID SNIPPETS / TEMPLATES & AI PREDICTIONS
     # =========================================================================
-    snippets_items = populate_ai_prediction_items(None, parent_id="ROOT")
+    snippets_items = populate_ai_prediction_items(None, parent_id="ROOT", language=lang)
 
     tree["SNIPPETS"] = MenuNode(
         id="SNIPPETS",
@@ -1095,15 +1516,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # 9. T9 KEYBOARD & IDENTIFIERS (2-HOP HIERARCHY)
     # =========================================================================
     t9_root_items = [
-        MenuAction(id="T9_GRP_AE", label="1: a - e", hint="Letras a, b, c, d, e", action_type="SUBMENU", submenu_id="T9_AE", icon=""),
-        MenuAction(id="T9_GRP_FJ", label="2: f - j", hint="Letras f, g, h, i, j", action_type="SUBMENU", submenu_id="T9_FJ", icon=""),
-        MenuAction(id="T9_GRP_KO", label="3: k - o", hint="Letras k, l, m, n, o", action_type="SUBMENU", submenu_id="T9_KO", icon=""),
-        MenuAction(id="T9_GRP_PT", label="4: p - t", hint="Letras p, q, r, s, t", action_type="SUBMENU", submenu_id="T9_PT", icon=""),
+        MenuAction(id="T9_GRP_AE", label="1: a - e", hint="Letras a, b, c, d, e", action_type="SUBMENU", submenu_id="T9_AE", icon="variables"),
+        MenuAction(id="T9_GRP_FJ", label="2: f - j", hint="Letras f, g, h, i, j", action_type="SUBMENU", submenu_id="T9_FJ", icon="variables"),
+        MenuAction(id="T9_GRP_KO", label="3: k - o", hint="Letras k, l, m, n, o", action_type="SUBMENU", submenu_id="T9_KO", icon="variables"),
+        MenuAction(id="T9_GRP_PT", label="4: p - t", hint="Letras p, q, r, s, t", action_type="SUBMENU", submenu_id="T9_PT", icon="variables"),
         create_pause_action("5"),
-        MenuAction(id="T9_GRP_UZ", label="6: u - z", hint="Letras u, v, w, x, y, z", action_type="SUBMENU", submenu_id="T9_UZ", icon=""),
+        MenuAction(id="T9_GRP_UZ", label="6: u - z", hint="Letras u, v, w, x, y, z", action_type="SUBMENU", submenu_id="T9_UZ", icon="variables"),
         create_back_action("ROOT", "7"),
-        MenuAction(id="T9_GRP_LOCAL_VARS", label="8: VARIABLES ARCHIVO", hint="Símbolos del archivo actual", action_type="SUBMENU", submenu_id="T9_LOCAL_VARS", icon=""),
-        MenuAction(id="T9_GRP_VARS", label="9: VARS: i, x, self", hint="Variables habituales", action_type="SUBMENU", submenu_id="T9_VARS", icon=""),
+        MenuAction(id="T9_GRP_LOCAL_VARS", label="8: VARIABLES ARCHIVO", hint="Símbolos del archivo actual", action_type="SUBMENU", submenu_id="T9_LOCAL_VARS", icon="variables"),
+        MenuAction(id="T9_GRP_VARS", label="9: VARS: i, x, self", hint="Variables habituales", action_type="SUBMENU", submenu_id="T9_VARS", icon="variables"),
     ]
 
     tree["T9"] = MenuNode(
@@ -1124,46 +1545,20 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         sticky=False,
     )
 
-    # T9 Frequent Variables (i, j, x, data, result, self)
-    t9_vars_items = [
-        MenuAction(id="VAR_I", label="1: i", hint="Variable contador i", action_type="SNIPPET", snippet="i", icon=""),
-        MenuAction(id="VAR_J", label="2: j", hint="Variable contador j", action_type="SNIPPET", snippet="j", icon=""),
-        MenuAction(id="VAR_X", label="3: x", hint="Variable x", action_type="SNIPPET", snippet="x", icon=""),
-        MenuAction(id="VAR_SELF", label="4: self", hint="Referencia de instancia", action_type="SNIPPET", snippet="self", icon=""),
-        create_pause_action("5"),
-        MenuAction(id="VAR_DATA", label="6: data", hint="Identificador data", action_type="SNIPPET", snippet="data", icon=""),
-        create_back_action("T9", "7"),
-        MenuAction(id="VAR_RESULT", label="8: result", hint="Identificador result", action_type="SNIPPET", snippet="result", icon=""),
-        MenuAction(id="VAR_ITEM", label="9: item", hint="Identificador item", action_type="SNIPPET", snippet="item", icon=""),
-    ]
-
     tree["T9_VARS"] = MenuNode(
         id="T9_VARS",
         title="VARIABLES FRECUENTES",
         breadcrumb_label="VARS",
-        items=t9_vars_items,
+        items=_build_t9_vars_items(lang),
         parent_id="T9",
         sticky=False,
     )
-
-    # T9 Frequent Values (True, False, None, 0, 1, [], {})
-    t9_vals_items = [
-        MenuAction(id="VAL_TRUE", label="1: True", hint="Booleano True", action_type="SNIPPET", snippet="True", icon=""),
-        MenuAction(id="VAL_FALSE", label="2: False", hint="Booleano False", action_type="SNIPPET", snippet="False", icon=""),
-        MenuAction(id="VAL_NONE", label="3: None", hint="Valor None", action_type="SNIPPET", snippet="None", icon=""),
-        MenuAction(id="VAL_ZERO", label="4: 0", hint="Entero cero", action_type="SNIPPET", snippet="0", icon=""),
-        create_pause_action("5"),
-        MenuAction(id="VAL_ONE", label="6: 1", hint="Entero uno", action_type="SNIPPET", snippet="1", icon=""),
-        create_back_action("T9", "7"),
-        MenuAction(id="VAL_EMPTY_LIST", label="8: []", hint="Lista vacía", action_type="SNIPPET", snippet="[]", cursor_offset_left=1, icon=""),
-        MenuAction(id="VAL_EMPTY_DICT", label="9: {}", hint="Diccionario vacío", action_type="SNIPPET", snippet="{}", cursor_offset_left=1, icon=""),
-    ]
 
     tree["T9_VALS"] = MenuNode(
         id="T9_VALS",
         title="VALORES Y CONSTANTES",
         breadcrumb_label="VALORES",
-        items=t9_vals_items,
+        items=_build_t9_vals_items(lang),
         parent_id="T9",
         sticky=False,
     )
@@ -1174,15 +1569,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: A - E",
         breadcrumb_label="a-e",
         items=[
-            MenuAction(id="CH_A", label="1: a", action_type="SNIPPET", snippet="a", icon=""),
-            MenuAction(id="CH_B", label="2: b", action_type="SNIPPET", snippet="b", icon=""),
-            MenuAction(id="CH_C", label="3: c", action_type="SNIPPET", snippet="c", icon=""),
-            MenuAction(id="CH_D", label="4: d", action_type="SNIPPET", snippet="d", icon=""),
+            MenuAction(id="CH_A", label="1: a", action_type="SNIPPET", snippet="a", icon="variables"),
+            MenuAction(id="CH_B", label="2: b", action_type="SNIPPET", snippet="b", icon="variables"),
+            MenuAction(id="CH_C", label="3: c", action_type="SNIPPET", snippet="c", icon="variables"),
+            MenuAction(id="CH_D", label="4: d", action_type="SNIPPET", snippet="d", icon="variables"),
             create_pause_action("5"),
-            MenuAction(id="CH_E", label="6: e", action_type="SNIPPET", snippet="e", icon=""),
+            MenuAction(id="CH_E", label="6: e", action_type="SNIPPET", snippet="e", icon="variables"),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_AE", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
-            MenuAction(id="CH_SP_AE", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
+            MenuAction(id="CH_UND_AE", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="variables"),
+            MenuAction(id="CH_SP_AE", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
         ],
         parent_id="T9",
         sticky=False,
@@ -1194,15 +1589,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: F - J",
         breadcrumb_label="f-j",
         items=[
-            MenuAction(id="CH_F", label="1: f", action_type="SNIPPET", snippet="f", icon=""),
-            MenuAction(id="CH_G", label="2: g", action_type="SNIPPET", snippet="g", icon=""),
-            MenuAction(id="CH_H", label="3: h", action_type="SNIPPET", snippet="h", icon=""),
-            MenuAction(id="CH_I", label="4: i", action_type="SNIPPET", snippet="i", icon=""),
+            MenuAction(id="CH_F", label="1: f", action_type="SNIPPET", snippet="f", icon="variables"),
+            MenuAction(id="CH_G", label="2: g", action_type="SNIPPET", snippet="g", icon="variables"),
+            MenuAction(id="CH_H", label="3: h", action_type="SNIPPET", snippet="h", icon="variables"),
+            MenuAction(id="CH_I", label="4: i", action_type="SNIPPET", snippet="i", icon="variables"),
             create_pause_action("5"),
-            MenuAction(id="CH_J", label="6: j", action_type="SNIPPET", snippet="j", icon=""),
+            MenuAction(id="CH_J", label="6: j", action_type="SNIPPET", snippet="j", icon="variables"),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_FJ", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
-            MenuAction(id="CH_SP_FJ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
+            MenuAction(id="CH_UND_FJ", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="variables"),
+            MenuAction(id="CH_SP_FJ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
         ],
         parent_id="T9",
         sticky=False,
@@ -1214,15 +1609,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: K - O",
         breadcrumb_label="k-o",
         items=[
-            MenuAction(id="CH_K", label="1: k", action_type="SNIPPET", snippet="k", icon=""),
-            MenuAction(id="CH_L", label="2: l", action_type="SNIPPET", snippet="l", icon=""),
-            MenuAction(id="CH_M", label="3: m", action_type="SNIPPET", snippet="m", icon=""),
-            MenuAction(id="CH_N", label="4: n", action_type="SNIPPET", snippet="n", icon=""),
+            MenuAction(id="CH_K", label="1: k", action_type="SNIPPET", snippet="k", icon="variables"),
+            MenuAction(id="CH_L", label="2: l", action_type="SNIPPET", snippet="l", icon="variables"),
+            MenuAction(id="CH_M", label="3: m", action_type="SNIPPET", snippet="m", icon="variables"),
+            MenuAction(id="CH_N", label="4: n", action_type="SNIPPET", snippet="n", icon="variables"),
             create_pause_action("5"),
-            MenuAction(id="CH_O", label="6: o", action_type="SNIPPET", snippet="o", icon=""),
+            MenuAction(id="CH_O", label="6: o", action_type="SNIPPET", snippet="o", icon="variables"),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_KO", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
-            MenuAction(id="CH_SP_KO", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
+            MenuAction(id="CH_UND_KO", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="variables"),
+            MenuAction(id="CH_SP_KO", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
         ],
         parent_id="T9",
         sticky=False,
@@ -1234,15 +1629,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: P - T",
         breadcrumb_label="p-t",
         items=[
-            MenuAction(id="CH_P", label="1: p", action_type="SNIPPET", snippet="p", icon=""),
-            MenuAction(id="CH_Q", label="2: q", action_type="SNIPPET", snippet="q", icon=""),
-            MenuAction(id="CH_R", label="3: r", action_type="SNIPPET", snippet="r", icon=""),
-            MenuAction(id="CH_S", label="4: s", action_type="SNIPPET", snippet="s", icon=""),
+            MenuAction(id="CH_P", label="1: p", action_type="SNIPPET", snippet="p", icon="variables"),
+            MenuAction(id="CH_Q", label="2: q", action_type="SNIPPET", snippet="q", icon="variables"),
+            MenuAction(id="CH_R", label="3: r", action_type="SNIPPET", snippet="r", icon="variables"),
+            MenuAction(id="CH_S", label="4: s", action_type="SNIPPET", snippet="s", icon="variables"),
             create_pause_action("5"),
-            MenuAction(id="CH_T", label="6: t", action_type="SNIPPET", snippet="t", icon=""),
+            MenuAction(id="CH_T", label="6: t", action_type="SNIPPET", snippet="t", icon="variables"),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_PT", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon=""),
-            MenuAction(id="CH_SP_PT", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
+            MenuAction(id="CH_UND_PT", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="variables"),
+            MenuAction(id="CH_SP_PT", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
         ],
         parent_id="T9",
         sticky=False,
@@ -1254,15 +1649,15 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="LETRAS: U - Z",
         breadcrumb_label="u-z",
         items=[
-            MenuAction(id="CH_U", label="1: u", action_type="SNIPPET", snippet="u", icon=""),
-            MenuAction(id="CH_V", label="2: v", action_type="SNIPPET", snippet="v", icon=""),
-            MenuAction(id="CH_W", label="3: w", action_type="SNIPPET", snippet="w", icon=""),
-            MenuAction(id="CH_X", label="4: x", action_type="SNIPPET", snippet="x", icon=""),
+            MenuAction(id="CH_U", label="1: u", action_type="SNIPPET", snippet="u", icon="variables"),
+            MenuAction(id="CH_V", label="2: v", action_type="SNIPPET", snippet="v", icon="variables"),
+            MenuAction(id="CH_W", label="3: w", action_type="SNIPPET", snippet="w", icon="variables"),
+            MenuAction(id="CH_X", label="4: x", action_type="SNIPPET", snippet="x", icon="variables"),
             create_pause_action("5"),
-            MenuAction(id="CH_Y", label="6: y", action_type="SNIPPET", snippet="y", icon=""),
+            MenuAction(id="CH_Y", label="6: y", action_type="SNIPPET", snippet="y", icon="variables"),
             create_back_action("T9", "7"),
-            MenuAction(id="CH_Z", label="8: z", action_type="SNIPPET", snippet="z", icon=""),
-            MenuAction(id="CH_SP_UZ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon=""),
+            MenuAction(id="CH_Z", label="8: z", action_type="SNIPPET", snippet="z", icon="variables"),
+            MenuAction(id="CH_SP_UZ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
         ],
         parent_id="T9",
         sticky=False,
@@ -1273,7 +1668,7 @@ def build_menu_tree() -> Dict[str, MenuNode]:
     # =========================================================================
     tree["EXIT_CONFIRM"] = MenuNode(
         id="EXIT_CONFIRM",
-        title="¿SALIR DE EYEDE?",
+        title="¿SALIR DE IDEYE?",
         breadcrumb_label="CONFIRMAR SALIDA",
         items=populate_exit_confirm_items(parent_id="ROOT"),
         parent_id="ROOT",
@@ -1288,6 +1683,18 @@ def build_menu_tree() -> Dict[str, MenuNode]:
         title="GUÍA DE GESTOS Y ATAJOS",
         breadcrumb_label="AYUDA / GESTOS",
         items=populate_help_items(parent_id="ROOT"),
+        parent_id="ROOT",
+        sticky=False,
+    )
+
+    # =========================================================================
+    # 12. MULTI-LANGUAGE SELECTION MENU (ACCESSIBLE VIA OVERLAY / HEADER)
+    # =========================================================================
+    tree["LANG_SELECT"] = MenuNode(
+        id="LANG_SELECT",
+        title="SELECCIONAR LENGUAJE",
+        breadcrumb_label="LENGUAJE",
+        items=populate_lang_select_items(parent_id="ROOT"),
         parent_id="ROOT",
         sticky=False,
     )
@@ -1330,8 +1737,8 @@ def validate_menu_tree(tree: Dict[str, MenuNode]) -> Tuple[bool, List[str]]:
                     f"Node '{node_id}' index 4 action_type is '{item_4.action_type}' (expected 'PAUSE')."
                 )
 
-        # Check Index 6 is ALWAYS Back for all submenus
-        if node_id != "ROOT" and len(node.items) > 6:
+        # Check Index 6 is ALWAYS Back for all submenus (excluding MENU_STANDARD which is an alternate root)
+        if node_id not in ("ROOT", "MENU_STANDARD") and len(node.items) > 6:
             item_6 = node.items[6]
             if item_6.action_type != "BACK":
                 errors.append(

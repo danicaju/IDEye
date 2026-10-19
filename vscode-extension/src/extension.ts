@@ -1,0 +1,326 @@
+import * as vscode from 'vscode';
+
+let wsClient: WebSocket | null = null;
+let statusBarItem: vscode.StatusBarItem;
+let reconnectTimer: NodeJS.Timeout | null = null;
+let syncThrottleTimer: NodeJS.Timeout | null = null;
+let isDeactivated = false;
+
+export function activate(context: vscode.ExtensionContext) {
+    console.log('[IDEye-Bridge] Extensión activada.');
+
+    // 1. Create Status Bar Item
+    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarItem.command = 'ideye.status';
+    updateStatusBar(false, 'Iniciando...');
+    statusBarItem.show();
+    context.subscriptions.push(statusBarItem);
+
+    // 2. Register Commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ideye.connect', () => {
+            connectWebSocket();
+        }),
+        vscode.commands.registerCommand('ideye.disconnect', () => {
+            disconnectWebSocket();
+            vscode.window.showInformationMessage('IDEye: Desconectado del motor de mirada.');
+        }),
+        vscode.commands.registerCommand('ideye.reconnect', () => {
+            disconnectWebSocket();
+            connectWebSocket();
+        }),
+        vscode.commands.registerCommand('ideye.status', () => {
+            const isConnected = wsClient && wsClient.readyState === WebSocket.OPEN;
+            const config = vscode.workspace.getConfiguration('ideye');
+            const host = config.get<string>('websocketHost', '127.0.0.1');
+            const port = config.get<number>('websocketPort', 54321);
+
+            if (isConnected) {
+                vscode.window.showInformationMessage(
+                    `IDEye: Conectado al motor Look-To-Code en ws://${host}:${port}`,
+                    'Desconectar',
+                    'Reconectar'
+                ).then(selection => {
+                    if (selection === 'Desconectar') disconnectWebSocket();
+                    if (selection === 'Reconectar') vscode.commands.executeCommand('ideye.reconnect');
+                });
+            } else {
+                vscode.window.showWarningMessage(
+                    `IDEye: Desconectado del motor en ws://${host}:${port}`,
+                    'Conectar ahora'
+                ).then(selection => {
+                    if (selection === 'Conectar ahora') connectWebSocket();
+                });
+            }
+        })
+    );
+
+    // 3. Register Editor Event Listeners
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(() => {
+            triggerEditorStateSync(50);
+        }),
+        vscode.window.onDidChangeTextEditorSelection(() => {
+            triggerEditorStateSync(80);
+        }),
+        vscode.workspace.onDidChangeTextDocument((e) => {
+            const activeEditor = vscode.window.activeTextEditor;
+            if (activeEditor && e.document === activeEditor.document) {
+                triggerEditorStateSync(120);
+            }
+        })
+    );
+
+    // 4. Initial Connection
+    const autoConnect = vscode.workspace.getConfiguration('ideye').get<boolean>('autoConnect', true);
+    if (autoConnect) {
+        connectWebSocket();
+    }
+}
+
+export function deactivate() {
+    isDeactivated = true;
+    disconnectWebSocket();
+}
+
+function updateStatusBar(connected: boolean, details?: string) {
+    if (!statusBarItem) return;
+    if (connected) {
+        statusBarItem.text = '$(eye) IDEye: Conectado';
+        statusBarItem.tooltip = `IDEye Look-To-Code activo ${details ? `(${details})` : ''}`;
+        statusBarItem.backgroundColor = undefined;
+    } else {
+        statusBarItem.text = '$(eye-closed) IDEye: Desconectado';
+        statusBarItem.tooltip = details || 'Haz clic para conectar con el motor IDEye';
+        statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+    }
+}
+
+function connectWebSocket() {
+    if (isDeactivated) return;
+    if (wsClient && (wsClient.readyState === WebSocket.OPEN || wsClient.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+
+    const config = vscode.workspace.getConfiguration('ideye');
+    const host = config.get<string>('websocketHost', '127.0.0.1');
+    const port = config.get<number>('websocketPort', 54321);
+    const url = `ws://${host}:${port}`;
+
+    updateStatusBar(false, 'Conectando...');
+
+    try {
+        wsClient = new WebSocket(url);
+
+        wsClient.onopen = () => {
+            console.log(`[IDEye-Bridge] Conectado exitosamente a ${url}`);
+            updateStatusBar(true);
+            sendEditorState();
+        };
+
+        wsClient.onmessage = (event) => {
+            handleInboundMessage(event.data);
+        };
+
+        wsClient.onclose = () => {
+            console.log('[IDEye-Bridge] Conexión cerrada.');
+            updateStatusBar(false, 'Conexión cerrada');
+            scheduleReconnect();
+        };
+
+        wsClient.onerror = () => {
+            updateStatusBar(false, 'Error de conexión');
+        };
+    } catch (err) {
+        console.warn(`[IDEye-Bridge] No se pudo crear WebSocket: ${err}`);
+        updateStatusBar(false, 'Error al inicializar');
+        scheduleReconnect();
+    }
+}
+
+function disconnectWebSocket() {
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+    if (wsClient) {
+        try {
+            wsClient.close();
+        } catch (e) {
+            // ignore
+        }
+        wsClient = null;
+    }
+    updateStatusBar(false, 'Desconectado manualmente');
+}
+
+function scheduleReconnect() {
+    if (isDeactivated) return;
+    if (reconnectTimer) return;
+
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        if (!isDeactivated) {
+            connectWebSocket();
+        }
+    }, 2500);
+}
+
+function triggerEditorStateSync(delayMs: number = 80) {
+    if (syncThrottleTimer) {
+        clearTimeout(syncThrottleTimer);
+    }
+    syncThrottleTimer = setTimeout(() => {
+        syncThrottleTimer = null;
+        sendEditorState();
+    }, delayMs);
+}
+
+function sendEditorState() {
+    if (!wsClient || wsClient.readyState !== WebSocket.OPEN) return;
+
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        const payload = {
+            type: 'EDITOR_STATE',
+            hasActiveEditor: false,
+            filePath: null,
+            languageId: null,
+            cursor: null,
+            lineText: '',
+            surroundingLines: [],
+            workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || null
+        };
+        sendMessage(payload);
+        return;
+    }
+
+    const doc = editor.document;
+    const pos = editor.selection.active;
+    const currentLine = doc.lineAt(pos.line).text;
+    const selectedText = doc.getText(editor.selection);
+
+    const config = vscode.workspace.getConfiguration('ideye');
+    const maxSurrounding = config.get<number>('syncSurroundingLines', 40);
+    const startLine = Math.max(0, pos.line - Math.floor(maxSurrounding / 2));
+    const endLine = Math.min(doc.lineCount - 1, startLine + maxSurrounding);
+
+    const surrounding: string[] = [];
+    for (let l = startLine; l <= endLine; l++) {
+        surrounding.push(doc.lineAt(l).text);
+    }
+
+    const payload = {
+        type: 'EDITOR_STATE',
+        hasActiveEditor: true,
+        filePath: doc.fileName,
+        languageId: doc.languageId,
+        cursor: {
+            line: pos.line,
+            character: pos.character
+        },
+        selection: selectedText,
+        lineText: currentLine,
+        surroundingLines: surrounding,
+        workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || null
+    };
+
+    sendMessage(payload);
+}
+
+function sendMessage(payload: any) {
+    if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+        try {
+            wsClient.send(JSON.stringify(payload));
+        } catch (e) {
+            console.error('[IDEye-Bridge] Error enviando mensaje:', e);
+        }
+    }
+}
+
+async function handleInboundMessage(rawData: any) {
+    try {
+        const text = typeof rawData === 'string' ? rawData : rawData.toString();
+        const msg = JSON.parse(text);
+
+        if (msg.type === 'INSERT_SNIPPET') {
+            await handleInsertSnippet(msg);
+        } else if (msg.type === 'EXECUTE_COMMAND') {
+            await handleExecuteCommand(msg);
+        } else if (msg.type === 'PING') {
+            sendMessage({ type: 'PONG', timestamp: Date.now() });
+        }
+    } catch (err) {
+        console.error('[IDEye-Bridge] Error procesando mensaje entrante:', err);
+    }
+}
+
+async function handleInsertSnippet(msg: any) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        sendMessage({
+            type: 'ACK',
+            action: 'INSERT_SNIPPET',
+            success: false,
+            error: 'No active text editor in VS Code'
+        });
+        return;
+    }
+
+    try {
+        const snippetText = msg.snippet || '';
+        const snippetString = new vscode.SnippetString(snippetText);
+        const success = await editor.insertSnippet(snippetString);
+
+        sendMessage({
+            type: 'ACK',
+            action: 'INSERT_SNIPPET',
+            success: success,
+            snippet: snippetText.substring(0, 30)
+        });
+
+        // Trigger synchronization after injection
+        triggerEditorStateSync(50);
+    } catch (e: any) {
+        sendMessage({
+            type: 'ACK',
+            action: 'INSERT_SNIPPET',
+            success: false,
+            error: e.message || String(e)
+        });
+    }
+}
+
+async function handleExecuteCommand(msg: any) {
+    try {
+        const command = msg.command;
+        const args = msg.args || [];
+        if (args.length > 0) {
+            await vscode.commands.executeCommand(command, ...args);
+        } else {
+            await vscode.commands.executeCommand(command);
+        }
+
+        sendMessage({
+            type: 'ACK',
+            action: 'EXECUTE_COMMAND',
+            command: command,
+            success: true
+        });
+
+        triggerEditorStateSync(50);
+    } catch (e: any) {
+        sendMessage({
+            type: 'ACK',
+            action: 'EXECUTE_COMMAND',
+            command: msg.command,
+            success: false,
+            error: e.message || String(e)
+        });
+    }
+}

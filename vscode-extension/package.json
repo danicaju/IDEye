@@ -1,0 +1,87 @@
+{
+  "name": "ideye-vscode-bridge",
+  "displayName": "IDEye Look-To-Code Bridge",
+  "description": "Native WebSocket Bridge connecting VS Code to the IDEye Look-To-Code engine for hands-free eye/head programming.",
+  "version": "0.5.0",
+  "publisher": "danicaju",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other",
+    "Accessibility"
+  ],
+  "keywords": [
+    "eye-tracking",
+    "gaze",
+    "accessibility",
+    "hands-free",
+    "ideye",
+    "look-to-code"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ideye.connect",
+        "title": "IDEye: Conectar con Motor de Mirada",
+        "category": "IDEye"
+      },
+      {
+        "command": "ideye.disconnect",
+        "title": "IDEye: Desconectar del Motor de Mirada",
+        "category": "IDEye"
+      },
+      {
+        "command": "ideye.reconnect",
+        "title": "IDEye: Reconectar",
+        "category": "IDEye"
+      },
+      {
+        "command": "ideye.status",
+        "title": "IDEye: Mostrar Estado de Conexión",
+        "category": "IDEye"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "IDEye Look-To-Code Configuration",
+      "properties": {
+        "ideye.websocketHost": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "Host local donde corre el servidor WebSocket de IDEye."
+        },
+        "ideye.websocketPort": {
+          "type": "number",
+          "default": 54321,
+          "description": "Puerto del servidor WebSocket de IDEye."
+        },
+        "ideye.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Conectar automáticamente al iniciar VS Code."
+        },
+        "ideye.syncSurroundingLines": {
+          "type": "number",
+          "default": 40,
+          "description": "Número de líneas alrededor del cursor para sincronización de contexto."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.3.3"
+  }
+}

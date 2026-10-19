@@ -38,9 +38,35 @@ from PyQt6.QtWidgets import (
 try:
     import eyede.config as config
     from eyede.ui.icon_manager import IconManager
+    from eyede.actions.language_support import (
+        LANG_PYTHON,
+        LANG_TYPESCRIPT,
+        LANG_RUST,
+        LANG_CPP,
+        LANG_GO,
+        SUPPORTED_LANGUAGES,
+        LANGUAGE_DISPLAY_NAMES,
+        LANGUAGE_BADGES,
+        normalize_language,
+        get_language_display_name,
+        get_language_badge,
+    )
 except ImportError:
     import config
     from ui.icon_manager import IconManager
+    from actions.language_support import (
+        LANG_PYTHON,
+        LANG_TYPESCRIPT,
+        LANG_RUST,
+        LANG_CPP,
+        LANG_GO,
+        SUPPORTED_LANGUAGES,
+        LANGUAGE_DISPLAY_NAMES,
+        LANGUAGE_BADGES,
+        normalize_language,
+        get_language_display_name,
+        get_language_badge,
+    )
 
 
 class DebugWidget(QWidget):
@@ -58,6 +84,7 @@ class DebugWidget(QWidget):
     tracking_mode_changed = pyqtSignal(str)
     adaptive_ast_toggled = pyqtSignal(bool)
     collapsed_toggled = pyqtSignal(bool)
+    language_changed = pyqtSignal(str)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -77,11 +104,14 @@ class DebugWidget(QWidget):
 
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
         self.is_collapsed: bool = False
+        self.current_language: str = getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", "PYTHON")
+        self.is_vscode_connected: bool = False
         self._setup_ui()
 
-        # Keyboard shortcut [T] and [A] active application-wide
+        # Keyboard shortcuts [T], [A], and [L] active application-wide
         self.shortcut_t = QShortcut(QKeySequence(Qt.Key.Key_T), self, self.cycle_tracking_mode, context=Qt.ShortcutContext.ApplicationShortcut)
         self.shortcut_a = QShortcut(QKeySequence(Qt.Key.Key_A), self, self.toggle_adaptive_ast, context=Qt.ShortcutContext.ApplicationShortcut)
+        self.shortcut_l = QShortcut(QKeySequence(Qt.Key.Key_L), self, self.cycle_language, context=Qt.ShortcutContext.ApplicationShortcut)
 
     def set_gaze_estimator(self, estimator: Any) -> None:
         """Links the GazeEstimator instance for direct real-time parameter tuning."""
@@ -372,7 +402,7 @@ class DebugWidget(QWidget):
         guide_layout.setContentsMargins(8, 8, 8, 8)
         guide_layout.setSpacing(4)
 
-        lbl_guide_title = QLabel("📖 GUÍA DE GESTOS Y ATAJOS", guide_frame)
+        lbl_guide_title = QLabel("GUÍA DE GESTOS Y ATAJOS", guide_frame)
         lbl_guide_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #38bdf8;")
         guide_layout.addWidget(lbl_guide_title)
 
@@ -386,19 +416,73 @@ class DebugWidget(QWidget):
             "<div>• <b style='color: #6ee7b7;'>Guiño Ojo Derecho:</b> Pausar (Ocultar HUD) / Despertar</div>"
             "<div>• <b style='color: #93c5fd;'>Guiño Ojo Izquierdo:</b> Volver atrás / Deshacer</div>"
             "<div style='color: #7dd3fc; font-weight: bold; margin-top: 5px; margin-bottom: 2px;'>ATAJOS DE TECLADO:</div>"
-            "<div>• <b>[A]</b> AST Adaptativo &nbsp;|&nbsp; <b>[T]</b> Modo Tracking</div>"
-            "<div>• <b>[M]</b> Colapsar monitor &nbsp;|&nbsp; <b>[C]</b> Calibrar centro</div>"
+            "<div>• <b>[A]</b> AST Adaptativo &nbsp;|&nbsp; <b>[L]</b> Cambiar Lenguaje</div>"
+            "<div>• <b>[T]</b> Modo Tracking &nbsp;|&nbsp; <b>[M]</b> Colapsar monitor</div>"
             "<div>• <b>[P]</b> Pausa Lectura &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
             "</div>"
         )
         guide_layout.addWidget(guide_content)
         content_layout.addWidget(guide_frame)
 
-        # 7. Context & AI Engine Status
+        # 7. Language Selector & VS Code WebSocket Bridge Status
+        lang_bridge_frame = QFrame(self)
+        lang_bridge_frame.setObjectName("cardFrame")
+        lang_bridge_layout = QVBoxLayout(lang_bridge_frame)
+        lang_bridge_layout.setContentsMargins(6, 6, 6, 6)
+        lang_bridge_layout.setSpacing(4)
+
+        lbl_lang_section = QLabel("LENGUAJE ACTIVO Y PUENTE VS CODE (Tecla [L])", lang_bridge_frame)
+        lbl_lang_section.setStyleSheet("font-size: 10px; font-weight: bold; color: #38bdf8;")
+        lang_bridge_layout.addWidget(lbl_lang_section)
+
+        lang_row = QHBoxLayout()
+        lang_row.setSpacing(6)
+
+        self.combo_language = QComboBox(lang_bridge_frame)
+        self.combo_language.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.combo_language.addItem("Python [PY]", LANG_PYTHON)
+        self.combo_language.addItem("TypeScript / JS [TS]", LANG_TYPESCRIPT)
+        self.combo_language.addItem("Rust [RS]", LANG_RUST)
+        self.combo_language.addItem("C / C++ [C++]", LANG_CPP)
+        self.combo_language.addItem("Go [GO]", LANG_GO)
+        self.combo_language.setStyleSheet("""
+            QComboBox {
+                background-color: #1e293b;
+                border: 1px solid #0284c7;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #f8fafc;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #0f172a;
+                color: #f8fafc;
+                selection-background-color: #0284c7;
+                selection-color: #ffffff;
+                border: 1px solid #334155;
+            }
+        """)
+        self.combo_language.currentIndexChanged.connect(self._on_combo_language_changed)
+        lang_row.addWidget(self.combo_language, stretch=3)
+
+        self.lbl_vscode_status = QLabel("VS Code: Desconectado", lang_bridge_frame)
+        self.lbl_vscode_status.setStyleSheet("font-size: 10px; font-weight: bold; color: #94a3b8; padding: 3px 6px; border: 1px solid #334155; border-radius: 4px; background: #0f172a;")
+        self.lbl_vscode_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lang_row.addWidget(self.lbl_vscode_status, stretch=3)
+
+        lang_bridge_layout.addLayout(lang_row)
+        content_layout.addWidget(lang_bridge_frame)
+
+        # 8. Context & AI Engine Status
         ai_layout = QVBoxLayout()
         ai_layout.setSpacing(2)
 
-        self.lbl_active_file = QLabel("Archivo: [Auto-detectar .py]", self)
+        self.lbl_active_file = QLabel("Archivo: [Auto-detectar código]", self)
         self.lbl_active_file.setStyleSheet("font-size: 10px; color: #38bdf8;")
         ai_layout.addWidget(self.lbl_active_file)
 
@@ -414,11 +498,11 @@ class DebugWidget(QWidget):
 
         content_layout.addLayout(ai_layout)
 
-        # 8. File Link & Adaptive AST Toggle Buttons
+        # 9. File Link & Adaptive AST Toggle Buttons
         link_adaptive_layout = QHBoxLayout()
         link_adaptive_layout.setSpacing(6)
 
-        self.btn_link_file = QPushButton("Vincular .py", self)
+        self.btn_link_file = QPushButton("Vincular Código", self)
         self.btn_link_file.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_link_file.clicked.connect(self._on_link_file_clicked)
         link_adaptive_layout.addWidget(self.btn_link_file)
@@ -538,13 +622,13 @@ class DebugWidget(QWidget):
         self.reset_calibration_requested.emit()
 
     def _on_link_file_clicked(self) -> None:
-        """Opens file dialog for user to select an active Python file."""
+        """Opens file dialog for user to select an active source code file."""
         initial_dir = getattr(config, "DEFAULT_WORKSPACE_DIR", ".")
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Vincular Archivo Python",
+            "Vincular Archivo de Código",
             initial_dir,
-            "Python Files (*.py);;All Files (*)",
+            "Archivos de Código (*.py *.ts *.tsx *.js *.jsx *.rs *.cpp *.hpp *.c *.h *.go);;Python (*.py);;TypeScript/JS (*.ts *.tsx *.js *.jsx);;Rust (*.rs);;C/C++ (*.cpp *.hpp *.c *.h);;Go (*.go);;Todos (*.*)",
         )
         if file_path:
             self.set_linked_file(file_path)
@@ -715,15 +799,61 @@ class DebugWidget(QWidget):
         self.combo_mode.setCurrentIndex(idx)
 
     def keyPressEvent(self, event) -> None:
-        """Keyboard event handler for shortcut [T] to cycle tracking modes and [A] to toggle adaptive AST."""
+        """Keyboard event handler for shortcuts [T] (Tracking), [A] (AST), and [L] (Language)."""
         if event.key() == Qt.Key.Key_T:
             self.cycle_tracking_mode()
             event.accept()
         elif event.key() == Qt.Key.Key_A:
             self.toggle_adaptive_ast()
             event.accept()
+        elif event.key() == Qt.Key.Key_L:
+            self.cycle_language()
+            event.accept()
         else:
             super().keyPressEvent(event)
+
+    @pyqtSlot(str)
+    def set_language(self, lang: str) -> None:
+        """Sets the active programming language and synchronizes UI."""
+        norm = normalize_language(lang)
+        self.current_language = norm
+        if hasattr(self, "combo_language"):
+            idx = self.combo_language.findData(norm)
+            if idx >= 0 and self.combo_language.currentIndex() != idx:
+                self.combo_language.blockSignals(True)
+                self.combo_language.setCurrentIndex(idx)
+                self.combo_language.blockSignals(False)
+
+    def _on_combo_language_changed(self, index: int) -> None:
+        """Handles manual language selection from dropdown."""
+        lang = self.combo_language.currentData()
+        if lang:
+            self.current_language = lang
+            self.language_changed.emit(lang)
+
+    def cycle_language(self) -> None:
+        """Cycles to the next programming language (shortcut [L])."""
+        if hasattr(self, "combo_language") and self.combo_language.count() > 0:
+            idx = (self.combo_language.currentIndex() + 1) % self.combo_language.count()
+            self.combo_language.setCurrentIndex(idx)
+
+    @pyqtSlot(bool)
+    def set_vscode_connected(self, connected: bool) -> None:
+        """Updates the VS Code connection badge."""
+        self.is_vscode_connected = connected
+        if hasattr(self, "lbl_vscode_status"):
+            if connected:
+                self.lbl_vscode_status.setText("VS Code: Conectado (WS)")
+                self.lbl_vscode_status.setStyleSheet(
+                    "font-size: 10px; font-weight: bold; color: #34d399; padding: 3px 6px; "
+                    "border: 1px solid #10b981; border-radius: 4px; background: #064e3b;"
+                )
+            else:
+                self.lbl_vscode_status.setText("VS Code: Desconectado")
+                self.lbl_vscode_status.setStyleSheet(
+                    "font-size: 10px; font-weight: bold; color: #94a3b8; padding: 3px 6px; "
+                    "border: 1px solid #334155; border-radius: 4px; background: #0f172a;"
+                )
 
     def toggle_adaptive_ast(self) -> None:
         """Toggles adaptive AST menus mode (shortcut [A])."""

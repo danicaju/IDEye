@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="langGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <!-- Background badge -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+  <!-- Code brackets and language glyph -->
+  <path d="M 20 22 L 12 32 L 20 42" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 44 22 L 52 32 L 44 42" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Letter A glyph in center -->
+  <path d="M 27 40 L 32 23 L 37 40" fill="none" stroke="#a78bfa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="28.5" y1="34" x2="35.5" y2="34" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

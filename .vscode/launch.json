@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Lanzar Extensión VS Code (IDEye Bridge)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/vscode-extension/dist/**/*.js"
+      ]
+    },
+    {
+      "name": "Iniciar IDEye (Python App)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/eyede/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

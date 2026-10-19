@@ -24,6 +24,10 @@ class GlobalHotkeyManager(QObject):
 
     emergency_exit_requested = pyqtSignal()
     emergency_reset_requested = pyqtSignal()
+    mode_cycle_requested = pyqtSignal()
+    auto_switch_requested = pyqtSignal()
+    mode_cycle_anywhere_requested = pyqtSignal()
+    auto_switch_anywhere_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -49,12 +53,16 @@ class GlobalHotkeyManager(QObject):
                     '<ctrl>+<alt>+q': self._on_emergency_exit,
                     '<f12>': self._on_emergency_exit,
                     '<ctrl>+<alt>+r': self._on_emergency_reset,
+                    '<v>': self._on_mode_cycle,
+                    '<k>': self._on_auto_switch,
+                    '<ctrl>+<alt>+v': self._on_mode_cycle_anywhere,
+                    '<ctrl>+<alt>+k': self._on_auto_switch_anywhere,
                 }
                 self._listener = pynput_keyboard.GlobalHotKeys(hotkeys)
                 self._listener.daemon = True
                 self._listener.start()
                 self._is_running = True
-                print("[HotkeyManager] Global hotkeys active (Ctrl+Alt+Q / F12: Salida Emergencia | Ctrl+Alt+R: Reset Calibración).")
+                print("[HotkeyManager] Global hotkeys active (Ctrl+Alt+Q / F12: Salida Emergencia | Ctrl+Alt+R: Reset Calibración | V/K mirando al botón de modo o Ctrl+Alt+V/K).")
                 return True
             except Exception as e:
                 print(f"[HotkeyManager] Warning: Failed to start global hotkey listener: {e}")
@@ -84,3 +92,19 @@ class GlobalHotkeyManager(QObject):
         """Callback from pynput thread when emergency calibration reset is pressed."""
         print("\n[HotkeyManager] EMERGENCY RESET TRIGGERED (Ctrl+Alt+R)")
         self.emergency_reset_requested.emit()
+
+    def _on_mode_cycle(self) -> None:
+        """Callback for V mode cycling (gated by gaze in the main app)."""
+        self.mode_cycle_requested.emit()
+
+    def _on_auto_switch(self) -> None:
+        """Callback for K auto-switch toggle (gated by gaze in the main app)."""
+        self.auto_switch_requested.emit()
+
+    def _on_mode_cycle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+V mode cycling from any window."""
+        self.mode_cycle_anywhere_requested.emit()
+
+    def _on_auto_switch_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+K auto-switch toggle from any window."""
+        self.auto_switch_anywhere_requested.emit()

@@ -59,3 +59,14 @@ IDEye/
 └── tests/
     └── synthetic_gaze/ # Generador sintético de eventos oculares para pruebas sin cámara
 ```
+
+---
+
+## Flujo de Trabajo y Publicación
+
+* **Publicar siempre**: al terminar una tarea, haz `commit` y `push` a `origin/main` sin esperar a que el usuario lo pida, siempre que las pruebas relevantes pasen.
+* **Verificar antes de publicar**: ejecuta la suite afectada (o la suite completa si el cambio toca varios módulos) y revisa `git status` para no dejar cambios importantes fuera del commit.
+* **Commits atómicos**: usa mensajes claros con prefijo convencional (`feat:`, `fix:`, `docs:`, `test:`, `chore:`). No mezcles cambios no relacionados cuando sea evitable.
+* **Nunca subir artefactos ignorados**: respeta `.gitignore` (`dist/`, `build/`, `node_modules/`, logs y cachés).
+* **Recompilar si afecta a la app**: si el cambio modifica comportamiento visible, regenera `dist/IDEye/IDEye.exe` con `python build_app.py` antes de terminar.
+* **Si el push falla**: no lo ocultes; informa del error, deja el commit local hecho y explica qué falta para resolverlo.

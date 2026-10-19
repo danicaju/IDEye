@@ -136,6 +136,20 @@ def test_header_mode_button_layout_1280(qapp):
     assert overlay.header_help_rect.right() <= overlay.header_exit_rect.left()
 
 
+def test_last_action_pill_stays_left_of_mode_button(qapp):
+    overlay = OverlayWindow()
+    overlay.resize(1280, 720)
+    overlay.show()
+    qapp.processEvents()
+    overlay.grab()
+
+    pill = overlay._last_action_pill_rect
+    assert pill.isValid()
+    assert pill.right() <= overlay.header_mode_rect.left()
+    assert pill.right() <= overlay.header_lang_rect.left()
+    overlay.close()
+
+
 def test_mode_shortcut_requires_header_gaze(qapp):
     overlay = OverlayWindow()
     overlay.resize(1280, 720)

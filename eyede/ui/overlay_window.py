@@ -1341,6 +1341,19 @@ class OverlayWindow(QWidget):
         effective_right_margin = self._get_effective_right_margin(w)
         header_w = max(1.0, w - 2.0 * margin - effective_right_margin)
         header_rect = QRectF(margin, margin, header_w, header_h)
+
+        # Right-side header buttons are computed before the breadcrumb so the
+        # left text and the "last action" pill can never run underneath them.
+        pill_h = header_h - 14.0
+        exit_btn_w = 160.0
+        help_btn_w = 140.0
+        lang_btn_w = 124.0
+        mode_btn_w = 150.0
+        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 5.0, exit_btn_w, pill_h)
+        self.header_help_rect = QRectF(self.header_exit_rect.left() - help_btn_w - 8.0, header_rect.y() + 5.0, help_btn_w, pill_h)
+        self.header_lang_rect = QRectF(self.header_help_rect.left() - lang_btn_w - 8.0, header_rect.y() + 5.0, lang_btn_w, pill_h)
+        self.header_mode_rect = QRectF(self.header_lang_rect.left() - mode_btn_w - 8.0, header_rect.y() + 5.0, mode_btn_w, pill_h)
+
         painter.setOpacity(0.95 if not self.reading_mode else 0.30)
 
         # Header background pill
@@ -1354,7 +1367,6 @@ class OverlayWindow(QWidget):
         IconManager.instance().render_icon(painter, "eyede_logo", logo_rect)
 
         pill_w = 136.0
-        pill_h = header_h - 14.0
         pill_rect = QRectF(logo_rect.right() + 8.0, header_rect.y() + 7.0, pill_w, pill_h)
 
         if self.reading_mode:
@@ -1382,8 +1394,30 @@ class OverlayWindow(QWidget):
         else:
             left_text = breadcrumb_path
 
-        text_start_x = pill_rect.right() + 12.0
-        max_left_w = int(header_rect.width() * 0.32)
+        # Far-left: last executed action pill. It stays to the left of the
+        # breadcrumb so it can never collide with the mode selector on the right.
+        last_action_str = f"Última: {self.last_action_desc}"
+        last_pill_max_w = float(min(int(header_rect.width() * 0.18), 220))
+        last_pill_available = (
+            self.header_mode_rect.left() - 8.0 - (pill_rect.right() + 8.0) - 12.0 - 100.0
+        )
+        last_pill_w = min(last_pill_max_w, max(0.0, last_pill_available))
+        last_pill_rect = QRectF(pill_rect.right() + 8.0, header_rect.y() + 5.0, last_pill_w, pill_h)
+        if last_pill_w < 70.0:
+            last_pill_rect = QRectF()
+        self._last_action_pill_rect = last_pill_rect
+
+        text_start_x = (last_pill_rect.right() + 12.0) if last_pill_rect.isValid() else (pill_rect.right() + 12.0)
+
+        emergency_left = header_rect.center().x() - 115.0
+        emergency_right = header_rect.center().x() + 115.0
+        emergency_fits = (
+            emergency_left >= text_start_x + 80.0
+            and emergency_right <= self.header_mode_rect.left() - 8.0
+        )
+        text_right_limit = (emergency_left - 12.0) if emergency_fits else (self.header_mode_rect.left() - 8.0)
+        max_left_w = int(min(header_rect.width() * 0.32, max(0.0, text_right_limit - text_start_x)))
+
         painter.setPen(self._pen_header_left)
         painter.setFont(self._font_header_left)
         elided_left = painter.fontMetrics().elidedText(left_text, Qt.TextElideMode.ElideMiddle, max_left_w)
@@ -1397,9 +1431,6 @@ class OverlayWindow(QWidget):
         )
 
         # Far Right: Hands-free Gaze-Selectable & Mouth-Clickable Exit Target [SALIR]
-        exit_btn_w = 160.0
-        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 5.0, exit_btn_w, pill_h)
-
         if self.active_click_header_exit:
             exit_brush = self._brush_click
             exit_pen = self._pen_click
@@ -1436,9 +1467,6 @@ class OverlayWindow(QWidget):
         )
 
         # Help / Cheat Sheet Button [? AYUDA] next to [SALIR]
-        help_btn_w = 140.0
-        self.header_help_rect = QRectF(self.header_exit_rect.left() - help_btn_w - 8.0, header_rect.y() + 5.0, help_btn_w, pill_h)
-
         if self.active_click_header_help:
             help_brush = self._brush_click
             help_pen = self._pen_click
@@ -1473,11 +1501,6 @@ class OverlayWindow(QWidget):
         )
 
         # Hands-free Mode Selector Button [MODO] next to [LANG]
-        mode_btn_w = 150.0
-        lang_btn_w = 124.0
-        self.header_lang_rect = QRectF(self.header_help_rect.left() - lang_btn_w - 8.0, header_rect.y() + 5.0, lang_btn_w, pill_h)
-        self.header_mode_rect = QRectF(self.header_lang_rect.left() - mode_btn_w - 8.0, header_rect.y() + 5.0, mode_btn_w, pill_h)
-
         mode_color = QColor(self.theme_color or "#00F0FF")
 
         if self.active_click_header_mode:
@@ -1562,11 +1585,8 @@ class OverlayWindow(QWidget):
 
         # Center: Emergency Hotkey Documentation Pill (only when it fits without overlap)
         emergency_text = "Emergencia: Ctrl+Alt+Q para salir"
-        center_pill_w = 230.0
-        center_pill_rect = QRectF(header_rect.center().x() - center_pill_w * 0.5, header_rect.y() + 5.0, center_pill_w, pill_h)
-        left_text_right = text_start_x + max_left_w
-        right_group_left = self.header_mode_rect.left() - 8.0
-        if center_pill_rect.left() >= left_text_right + 8.0 and center_pill_rect.right() <= right_group_left:
+        center_pill_rect = QRectF(emergency_left, header_rect.y() + 5.0, 230.0, pill_h)
+        if emergency_fits:
             painter.setBrush(QBrush(QColor(239, 68, 68, 25)))
             painter.setPen(QPen(QColor(239, 68, 68, 120), 1.0))
             painter.drawRoundedRect(center_pill_rect, 5.0, 5.0)
@@ -1575,22 +1595,24 @@ class OverlayWindow(QWidget):
             painter.setFont(self._font_header_center)
             painter.drawText(center_pill_rect, Qt.AlignmentFlag.AlignCenter, emergency_text)
 
-        # Right-Center: Last executed action pill
-        last_action_str = f"Última: {self.last_action_desc}"
-        max_right_w = min(int(header_rect.width() * 0.18), 240)
-        right_pill_rect = QRectF(self.header_lang_rect.left() - max_right_w - 8.0, header_rect.y() + 5.0, max_right_w, pill_h)
-        painter.setBrush(QBrush(QColor(56, 189, 248, 22)))
-        painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
-        painter.drawRoundedRect(right_pill_rect, 5.0, 5.0)
+        # Far-left: Last executed action pill
+        if last_pill_rect.isValid():
+            painter.setBrush(QBrush(QColor(56, 189, 248, 22)))
+            painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
+            painter.drawRoundedRect(last_pill_rect, 5.0, 5.0)
 
-        painter.setPen(self._pen_header_right)
-        painter.setFont(self._font_header_right)
-        elided_right = painter.fontMetrics().elidedText(last_action_str, Qt.TextElideMode.ElideRight, max_right_w - 16)
-        painter.drawText(
-            right_pill_rect,
-            Qt.AlignmentFlag.AlignCenter,
-            elided_right,
-        )
+            painter.setPen(self._pen_header_right)
+            painter.setFont(self._font_header_right)
+            elided_right = painter.fontMetrics().elidedText(
+                last_action_str,
+                Qt.TextElideMode.ElideRight,
+                int(max(0.0, last_pill_rect.width() - 16.0)),
+            )
+            painter.drawText(
+                last_pill_rect,
+                Qt.AlignmentFlag.AlignCenter,
+                elided_right,
+            )
 
         # =====================================================================
         # 1b. Transient mode-change banner (makes coding/writing switch obvious)

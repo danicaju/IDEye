@@ -70,3 +70,12 @@ IDEye/
 * **Nunca subir artefactos ignorados**: respeta `.gitignore` (`dist/`, `build/`, `node_modules/`, logs y cachés).
 * **Recompilar si afecta a la app**: si el cambio modifica comportamiento visible, regenera `dist/IDEye/IDEye.exe` con `python build_app.py` antes de terminar.
 * **Si el push falla**: no lo ocultes; informa del error, deja el commit local hecho y explica qué falta para resolverlo.
+
+---
+
+## Herramientas de Desarrollo
+
+* **MCP `ideye-dev-tools`**: definido en `.opencode/opencode.jsonc` y servido por `tools/ideye-mcp/index.mjs`. Expone simulación de mirada, benchmark del One Euro Filter, calibración polinomial, detección de cámaras y resolución de objetivos AST. Úsalo para diagnóstico y pruebas sin hardware.
+* **Skills locales**: `.agents/skills/` incluye skills de pipeline ocular, UX de mirada, teclado predictivo, edición AST, entrada virtual, hardware, pruebas sintéticas, testing PyQt6 offscreen, empaquetado Windows y puente WebSocket de VS Code.
+* **Context7**: disponible para consultar documentación actualizada de librerías (PyQt6, MediaPipe, websockets, VS Code API).
+* **GitHub MCP**: configurado pero requiere autenticación OAuth; para operaciones de repositorio usa `git` mientras no esté conectado.

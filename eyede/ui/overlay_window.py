@@ -21,9 +21,18 @@ import sys
 import os
 import time
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QRectF, QPointF
-from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtCore import (
+    Qt,
+    QTimer,
+    QVariantAnimation,
+    QEasingCurve,
+    pyqtSignal,
+    pyqtSlot,
+    QRectF,
+    QPointF,
+)
+from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush, QPainterPath, QLinearGradient
+from PyQt6.QtWidgets import QWidget, QApplication
 
 try:
     import eyede.config as config
@@ -265,8 +274,23 @@ class OverlayWindow(QWidget):
 
         # Layout constants & right dock margin (clears space for DebugWidget)
         self.breadcrumb_height: float = 52.0
-        self.margin: float = 8.0
+        self.margin: float = 12.0
+        self.gap: float = 10.0
         self.grid_right_margin: float = float(getattr(config, "OVERLAY_GRID_RIGHT_MARGIN", 364.0))
+        self.debug_widget: Optional[QWidget] = None
+        self._animated_right_margin: Optional[float] = None
+        self._right_margin_animation: Optional[QVariantAnimation] = None
+        self.header_rect: QRectF = QRectF()
+        self._header_logo_rect: QRectF = QRectF()
+        self._header_breadcrumb_rect: QRectF = QRectF()
+        self._header_status_rect: QRectF = QRectF()
+        self._last_action_pill_rect: QRectF = QRectF()
+        self._header_exit_w: float = 112.0
+        self._header_help_w: float = 96.0
+        self._header_lang_w: float = 62.0
+        self._header_mode_w: float = 220.0
+        self.current_mar: float = 0.0
+        self.mar_threshold: float = float(getattr(config, "MAR_THRESHOLD", 0.55))
         self.resize(1920, 1080)
 
         # Window title for identification
@@ -274,25 +298,60 @@ class OverlayWindow(QWidget):
 
         # 4. Pre-allocated rendering objects to prevent 30/60 FPS GC pressure and memory leaks
         self._font_header_pill = QFont("Segoe UI", 9, QFont.Weight.Bold)
-        self._font_header_bold_btn = QFont("Segoe UI", 11, QFont.Weight.Bold)
-        self._font_header_left = QFont("Segoe UI", 10, QFont.Weight.Bold)
+        self._font_header_bold_btn = QFont("Segoe UI", 10, QFont.Weight.Bold)
+        self._font_header_left = QFont("Segoe UI", 9, QFont.Weight.Medium)
         self._font_header_center = QFont("Segoe UI", 9, QFont.Weight.Bold)
-        self._font_header_right = QFont("Segoe UI", 9)
-        self._font_label = QFont("Segoe UI", 12, QFont.Weight.Bold)
+        self._font_header_right = QFont("Segoe UI", 8)
+        self._font_label = QFont("Segoe UI", 14, QFont.Weight.Bold)
         self._font_hint = QFont("Segoe UI", 9)
-        self._font_badge = QFont("Segoe UI", 8, QFont.Weight.Bold)
+        self._font_badge = QFont("Segoe UI", 7, QFont.Weight.Bold)
+        self._font_card_number = QFont("Segoe UI", 11, QFont.Weight.Bold)
+        self._font_card_subtitle = QFont("Segoe UI", 9)
+        self._font_status = QFont("Segoe UI", 7, QFont.Weight.Bold)
         self._font_modal_title = QFont("Segoe UI", 15, QFont.Weight.Bold)
         self._font_modal_subtitle = QFont("Segoe UI", 9)
         self._font_modal_section = QFont("Segoe UI", 11, QFont.Weight.Bold)
         self._font_modal_item_title = QFont("Segoe UI", 10, QFont.Weight.Bold)
         self._font_modal_item_desc = QFont("Segoe UI", 8)
 
-        # Header bar styles (Acrylic Glassmorphism)
-        self._brush_header_bg = QBrush(QColor(13, 17, 23, 160))
-        self._pen_header_border = QPen(QColor(48, 54, 61, 200), 1.5)
-        self._pen_header_left = QPen(QColor(240, 246, 252))
+        # Header / command bar styles
+        self._brush_header_bg = QBrush(QColor(11, 15, 25, 235))
+        self._pen_header_border = QPen(QColor(255, 255, 255, 40), 1.0)
+        self._pen_header_left = QPen(QColor(148, 163, 184))
         self._pen_header_center = QPen(QColor(248, 113, 113))
         self._pen_header_right = QPen(QColor(56, 189, 248))
+
+        # Focus hierarchy: neutral inactive cards, theme-colored active card.
+        self._brush_card_inactive = QBrush(QColor(15, 23, 42, 18))
+        self._pen_card_inactive = QPen(QColor(255, 255, 255, 28), 1.0)
+        self._brush_card_active = QBrush(QColor(15, 23, 42, 115))
+        self._pen_card_active = QPen(QColor("#00F0FF"), 2.5)
+        self._pen_card_danger = QPen(QColor(239, 68, 68), 2.5)
+        self._brush_band_inactive = QBrush(QColor(11, 15, 25, 175))
+        self._brush_band_active = QBrush(QColor(11, 15, 25, 225))
+        self._color_card_text_inactive = QColor(248, 250, 252, 166)
+        self._color_card_text_active = QColor(248, 250, 252, 255)
+        self._color_card_subtitle = QColor(148, 163, 184, 220)
+        self._color_card_subtitle_inactive = QColor(148, 163, 184, 143)
+        self._pen_badge_active = QPen(QColor(255, 255, 255, 90), 1.0)
+        self._brush_badge_active = QBrush(QColor(255, 255, 255, 28))
+        self._brush_badge_inactive = QBrush(QColor(255, 255, 255, 12))
+        self._brush_status_pill = QBrush(QColor(56, 189, 248, 18))
+        self._pen_status_pill = QPen(QColor(56, 189, 248, 70), 1.0)
+        self._brush_btn_idle = QBrush(QColor(255, 255, 255, 8))
+        self._pen_btn_idle = QPen(QColor(255, 255, 255, 35), 1.0)
+        self._brush_help_idle = QBrush(QColor(14, 165, 233, 22))
+        self._pen_help_idle = QPen(QColor(14, 165, 233, 90), 1.0)
+        self._brush_exit_idle = QBrush(QColor(239, 68, 68, 28))
+        self._pen_exit_idle = QPen(QColor(239, 68, 68, 105), 1.0)
+        self._brush_exit_glow = QBrush(QColor(239, 68, 68, 55))
+        self._brush_help_glow = QBrush(QColor(14, 165, 233, 50))
+        self._color_exit_text = QColor(254, 202, 202)
+        self._color_help_text = QColor(186, 230, 253)
+        self._brush_mode_idle = QBrush(QColor(0, 240, 255, 24))
+        self._pen_mode_idle = QPen(QColor("#00F0FF"), 1.0)
+        self._brush_mode_glow = QBrush(QColor(0, 240, 255, 55))
+        self._color_mode_text = QColor(224, 251, 255)
 
         # Mode indicator pills
         self._brush_pill_edit = QBrush(QColor(16, 185, 129, 220))
@@ -395,60 +454,176 @@ class OverlayWindow(QWidget):
             "DEFAULT": ("ACCIÓN", QColor(148, 163, 184)),
         }
 
-        # High-visibility Dual-ring Gaze Pointer Reticle
-        self._brush_pointer_glow = QBrush(QColor(56, 189, 248, 45))
-        self._pen_pointer_ring = QPen(QColor(*config.OVERLAY_POINTER_OUTLINE), 2.2)
-        self._brush_pointer_dot = QBrush(QColor(*config.OVERLAY_POINTER_COLOR))
-        self._pen_pointer_ticks = QPen(QColor(255, 255, 255, 200), 1.5)
+        # Dynamic reticle: clean center point + thin outer ring + MAR progress arc.
+        self._brush_pointer_glow = QBrush(QColor(56, 189, 248, 38))
+        self._pen_pointer_ring = QPen(QColor(248, 250, 252, 210), 1.8)
+        self._brush_pointer_dot = QBrush(QColor(248, 250, 252, 245))
+        self._pen_pointer_progress = QPen(QColor(34, 211, 238), 2.2)
+        self._color_progress_cool = QColor(34, 211, 238)
+        self._color_progress_warm = QColor(251, 146, 60)
+        self._set_theme_color(self.theme_color)
         self._update_header_exit_rect()
 
     def resizeEvent(self, event) -> None:
         """Handles window resize events to keep interactive target geometry updated."""
         super().resizeEvent(event)
+        if self.debug_widget is not None:
+            self.refresh_grid_right_margin(animate=False)
         self._update_header_exit_rect()
 
     def showEvent(self, event) -> None:
         """Ensures Win32 non-activating and topmost styles are reapplied when shown/restored."""
         super().showEvent(event)
+        if self.debug_widget is not None:
+            self.refresh_grid_right_margin(animate=False)
         self._update_header_exit_rect()
         if sys.platform == "win32":
             self._apply_win32_no_activate()
 
+    def _set_theme_color(self, theme_color: str) -> None:
+        """Updates the cached active-card and mode-button colors for a mode."""
+        color = QColor(theme_color or "#00F0FF")
+        self._pen_card_active = QPen(color, 2.5)
+        self._pen_mode_idle = QPen(color, 1.0)
+        glow = QColor(color)
+        glow.setAlpha(55)
+        self._brush_mode_glow = QBrush(glow)
+        idle = QColor(color)
+        idle.setAlpha(24)
+        self._brush_mode_idle = QBrush(idle)
+        badge = QColor(color)
+        badge.setAlpha(58)
+        self._brush_badge_theme = QBrush(badge)
+        self._pen_badge_theme = QPen(QColor(color.red(), color.green(), color.blue(), 150), 1.0)
+        self._color_theme_text = QColor(color)
+
+    def _get_grid_left(self, w: float, effective_right_margin: float) -> float:
+        """Returns the grid's left origin.
+
+        With a docked monitor the grid is centered symmetrically so normalized
+        gaze (0.5, 0.5) still lands on the center card. Without a monitor the
+        historical left-anchored layout is preserved for multi-resolution
+        center-gaze compatibility.
+        """
+        if self.debug_widget is not None:
+            return self.margin + effective_right_margin
+        return self.margin
+
     def _get_effective_right_margin(self, w: float) -> float:
-        """
-        Returns the effective right margin to accommodate the docked DebugWidget
-        while guaranteeing normalized center gaze (0.5, 0.5) always lands on Center Block 4.
-        """
+        """Returns the right margin, including the docked DebugWidget when visible."""
+        if self.debug_widget is not None:
+            if self._animated_right_margin is not None:
+                return max(0.0, float(self._animated_right_margin))
+            return self._target_right_margin(w)
+        # No monitor attached: preserve the historical scaled default used by tests.
         base_right_margin = float(getattr(self, "grid_right_margin", 364.0))
         if w >= 1920.0:
             return base_right_margin
         return base_right_margin * (w / 1920.0)
 
-    def set_grid_right_margin(self, margin: float) -> None:
-        """Sets the reserved right margin to prevent HUD overlap with docked debug window."""
-        self.grid_right_margin = max(0.0, float(margin))
+    def _target_right_margin(self, w: Optional[float] = None) -> float:
+        """Computes the monitor-aware right margin (width + 16px safety gap)."""
+        if self.debug_widget is None:
+            return 0.0
+        if not self.debug_widget.isVisible() or getattr(self.debug_widget, "is_collapsed", False):
+            return 0.0
+        width = float(w if w is not None else (self.width() or 1920.0))
+        debug_left = float(self.debug_widget.x() - self.x())
+        # The monitor's true left edge determines the gap; the width+16 rule is
+        # kept as a floor so the grid never slides under the panel.
+        return max(float(self.debug_widget.width()) + 16.0, width - debug_left + 16.0)
+
+    def set_debug_widget(self, widget: Optional[QWidget]) -> None:
+        """Links the docked DebugWidget so the grid can react to its layout."""
+        self.debug_widget = widget
+        if widget is not None:
+            try:
+                widget.collapsed_toggled.connect(self._on_debug_widget_layout_changed)
+            except Exception:
+                pass
+            try:
+                widget.visibility_changed.connect(self._on_debug_widget_visible_changed)
+            except Exception:
+                pass
+        self.refresh_grid_right_margin(animate=False)
+
+    def _on_debug_widget_layout_changed(self, _collapsed: bool = False) -> None:
+        self.refresh_grid_right_margin()
+
+    def _on_debug_widget_visible_changed(self, _visible: bool = False) -> None:
+        self.refresh_grid_right_margin()
+
+    def refresh_grid_right_margin(self, animate: bool = True) -> None:
+        """Animates the grid between docked and expanded layouts."""
+        if self._right_margin_animation is not None:
+            self._right_margin_animation.stop()
+            self._right_margin_animation = None
+
+        if self.debug_widget is None:
+            self._animated_right_margin = None
+            self._update_header_exit_rect()
+            self.update()
+            return
+
+        target = self._target_right_margin()
+        current = (
+            self._animated_right_margin
+            if self._animated_right_margin is not None
+            else self._get_effective_right_margin(float(self.width() or 1920.0))
+        )
+        if not animate or abs(current - target) < 0.5:
+            self._animated_right_margin = target
+            self._update_header_exit_rect()
+            self.update()
+            return
+
+        if self._right_margin_animation is not None:
+            self._right_margin_animation.stop()
+        animation = QVariantAnimation(self)
+        animation.setStartValue(float(current))
+        animation.setEndValue(float(target))
+        animation.setDuration(180)
+        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        animation.valueChanged.connect(self._on_right_margin_animated)
+        animation.finished.connect(lambda: setattr(self, "_animated_right_margin", float(target)))
+        self._right_margin_animation = animation
+        animation.start()
+
+    def _on_right_margin_animated(self, value: Any) -> None:
+        try:
+            self._animated_right_margin = float(value)
+        except (TypeError, ValueError):
+            return
         self._update_header_exit_rect()
         self.update()
 
+    def set_grid_right_margin(self, margin: float) -> None:
+        """Sets the fallback reserved margin when no DebugWidget is attached."""
+        self.grid_right_margin = max(0.0, float(margin))
+        if self.debug_widget is None:
+            self._update_header_exit_rect()
+            self.update()
+
     def get_block_rect(self, index: int) -> QRectF:
-        """Computes the QRectF bounding box for a given 3x3 block index."""
+        """Computes the QRectF for a 3x3 card with 12px padding and 10px gaps."""
         w = float(self.width()) if self.width() > 0 else 1920.0
         h = float(self.height()) if self.height() > 0 else 1080.0
-        margin = self.margin
-        header_h = self.breadcrumb_height
-        avail_y = margin + header_h + margin
-        avail_h = max(1.0, h - avail_y - margin)
-        effective_right_margin = self._get_effective_right_margin(w)
-        avail_w = max(1.0, w - 2.0 * margin - effective_right_margin)
-        cell_w = avail_w / 3.0
-        cell_h = avail_h / 3.0
+        right_margin = self._get_effective_right_margin(w)
+        left = self._get_grid_left(w, right_margin)
+        right = w - self.margin - right_margin
+        top = self.margin + self.breadcrumb_height + self.gap
+        bottom = h - self.margin
+        avail_w = max(1.0, right - left)
+        avail_h = max(1.0, bottom - top)
+        cell_w = max(1.0, (avail_w - 2.0 * self.gap) / 3.0)
+        cell_h = max(1.0, (avail_h - 2.0 * self.gap) / 3.0)
         col = index % 3
         row = index // 3
         return QRectF(
-            margin + col * cell_w + 5.0,
-            avail_y + row * cell_h + 5.0,
-            max(1.0, cell_w - 10.0),
-            max(1.0, cell_h - 10.0),
+            left + col * (cell_w + self.gap),
+            top + row * (cell_h + self.gap),
+            cell_w,
+            cell_h,
         )
 
     def _update_help_modal_rect(self) -> None:
@@ -470,22 +645,86 @@ class OverlayWindow(QWidget):
         )
 
     def _update_header_exit_rect(self) -> None:
-        """Computes the interactive bounding boxes of the top-right exit, help, and language buttons."""
+        """Computes the unified floating command bar and its interactive targets."""
         w = float(self.width()) if self.width() > 0 else 1920.0
         margin = self.margin
         header_h = self.breadcrumb_height
-        pill_h = max(24.0, header_h - 10.0)
-        exit_btn_w = 160.0
-        help_btn_w = 140.0
-        lang_btn_w = 124.0
-        mode_btn_w = 150.0
-        effective_right_margin = self._get_effective_right_margin(w)
-        header_w = max(1.0, w - 2.0 * margin - effective_right_margin)
-        header_rect = QRectF(margin, margin, header_w, header_h)
-        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 5.0, exit_btn_w, pill_h)
-        self.header_help_rect = QRectF(self.header_exit_rect.left() - help_btn_w - 8.0, header_rect.y() + 5.0, help_btn_w, pill_h)
-        self.header_lang_rect = QRectF(self.header_help_rect.left() - lang_btn_w - 8.0, header_rect.y() + 5.0, lang_btn_w, pill_h)
-        self.header_mode_rect = QRectF(self.header_lang_rect.left() - mode_btn_w - 8.0, header_rect.y() + 5.0, mode_btn_w, pill_h)
+        pill_h = max(24.0, header_h - 12.0)
+        right_margin = self._get_effective_right_margin(w)
+        grid_left = self._get_grid_left(w, right_margin)
+        grid_right = w - margin - right_margin
+        area_w = max(1.0, grid_right - grid_left)
+        bar_w = max(1.0, min(1020.0, area_w))
+        bar_x = grid_left + (area_w - bar_w) * 0.5
+
+        if bar_w >= 900.0:
+            # Preserve the large, comfortable targets validated by the test suite.
+            self._header_exit_w = max(150.0, min(160.0, bar_w * 0.12))
+            self._header_help_w = max(130.0, min(140.0, bar_w * 0.10))
+        else:
+            # Compact layout for a narrowed grid beside the debug monitor.
+            self._header_exit_w = max(80.0, min(110.0, bar_w * 0.14))
+            self._header_help_w = max(70.0, min(90.0, bar_w * 0.10))
+        self._header_lang_w = max(56.0, min(64.0, bar_w * 0.07))
+        self._header_mode_w = max(140.0, min(220.0, bar_w * 0.26))
+
+        header_rect = QRectF(bar_x, margin, bar_w, header_h)
+        self.header_rect = header_rect
+        inner = 8.0
+        self.header_exit_rect = QRectF(
+            header_rect.right() - inner - self._header_exit_w,
+            header_rect.y() + 6.0,
+            self._header_exit_w,
+            pill_h,
+        )
+        self.header_help_rect = QRectF(
+            self.header_exit_rect.left() - 6.0 - self._header_help_w,
+            header_rect.y() + 6.0,
+            self._header_help_w,
+            pill_h,
+        )
+        self.header_lang_rect = QRectF(
+            self.header_help_rect.left() - 6.0 - self._header_lang_w,
+            header_rect.y() + 6.0,
+            self._header_lang_w,
+            pill_h,
+        )
+        self.header_mode_rect = QRectF(
+            self.header_lang_rect.left() - 8.0 - self._header_mode_w,
+            header_rect.y() + 6.0,
+            self._header_mode_w,
+            pill_h,
+        )
+
+        logo_size = 24.0
+        self._header_logo_rect = QRectF(
+            header_rect.x() + inner,
+            header_rect.y() + (header_h - logo_size) * 0.5,
+            logo_size,
+            logo_size,
+        )
+        status_left = self._header_logo_rect.right() + 8.0
+        status_right = self.header_mode_rect.left() - 8.0
+        status_w = max(0.0, status_right - status_left)
+        self._header_status_rect = QRectF(status_left, header_rect.y() + 6.0, status_w, pill_h)
+
+        last_w = min(190.0, status_w * 0.55)
+        if last_w >= 70.0:
+            self._last_action_pill_rect = QRectF(
+                status_right - last_w,
+                header_rect.y() + 6.0,
+                last_w,
+                pill_h,
+            )
+        else:
+            self._last_action_pill_rect = QRectF()
+        breadcrumb_w = max(0.0, status_w - (last_w + 8.0 if last_w >= 70.0 else 0.0))
+        self._header_breadcrumb_rect = QRectF(
+            status_left,
+            header_rect.y() + 4.0,
+            breadcrumb_w,
+            header_h - 8.0,
+        )
         self._update_help_modal_rect()
 
     def _apply_win32_no_activate(self) -> None:
@@ -728,24 +967,23 @@ class OverlayWindow(QWidget):
 
         self.hovered_header_lang = False
 
-        if py < avail_y:
-            row = 0
-        elif py >= avail_y + avail_h:
-            row = 2
-        else:
-            row = min(2, max(0, int((py - avail_y) / cell_h)))
-
-        effective_right_margin = self._get_effective_right_margin(w)
-        avail_w = max(1.0, w - 2.0 * margin - effective_right_margin)
-        cell_w = avail_w / 3.0
-        if px < margin:
-            col = 0
-        elif px >= margin + avail_w:
-            col = 2
-        else:
-            col = min(2, max(0, int((px - margin) / cell_w)))
-
-        block_idx = row * 3 + col
+        # Hit-test the actual card rectangles. This is exact even when the
+        # monitor-aware layout shifts the grid and adds 10px gaps.
+        point = QPointF(px, py)
+        block_idx = None
+        for candidate in range(9):
+            if self.get_block_rect(candidate).adjusted(-6.0, -6.0, 6.0, 6.0).contains(point):
+                block_idx = candidate
+                break
+        if block_idx is None:
+            nearest = min(
+                range(9),
+                key=lambda idx: (
+                    self.get_block_rect(idx).center().x() - px
+                ) ** 2
+                + (self.get_block_rect(idx).center().y() - py) ** 2,
+            )
+            block_idx = nearest
 
         if self.reading_mode:
             # In reading mode, inhibit all blocks except Block 4 (Resume trigger)
@@ -782,6 +1020,16 @@ class OverlayWindow(QWidget):
         self._update_help_modal_rect()
         self.last_action_desc = "Guía de Gestos" if self.show_help_modal else "Cerrar Ayuda"
         self.update()
+
+    @pyqtSlot(object, float)
+    def on_mar_updated(self, _frame: Any, current_mar: float) -> None:
+        """Receives the current mouth-aspect ratio for reticle click feedback."""
+        try:
+            self.current_mar = float(current_mar)
+        except (TypeError, ValueError):
+            self.current_mar = 0.0
+        if self.hovered_block is not None:
+            self.update()
 
     @pyqtSlot(str)
     def on_gesture_triggered(self, gesture_name: str) -> None:
@@ -1276,6 +1524,7 @@ class OverlayWindow(QWidget):
         self.current_context_mode_id = mode_id
         self.current_context_mode_name = display_name
         self.theme_color = theme_color
+        self._set_theme_color(theme_color)
 
         if mode_id == "writing":
             mode = self._writing_mode()
@@ -1584,61 +1833,25 @@ class OverlayWindow(QWidget):
         # =====================================================================
         # 1. Top Breadcrumb Bar (Acrylic Glassmorphism)
         # =====================================================================
-        effective_right_margin = self._get_effective_right_margin(w)
-        header_w = max(1.0, w - 2.0 * margin - effective_right_margin)
-        header_rect = QRectF(margin, margin, header_w, header_h)
-
-        # Right-side header buttons are computed before the breadcrumb so the
-        # left text and the "last action" pill can never run underneath them.
-        pill_h = header_h - 14.0
-        exit_btn_w = 160.0
-        help_btn_w = 140.0
-        lang_btn_w = 124.0
-        mode_btn_w = 150.0
-        self.header_exit_rect = QRectF(header_rect.right() - exit_btn_w - 6.0, header_rect.y() + 5.0, exit_btn_w, pill_h)
-        self.header_help_rect = QRectF(self.header_exit_rect.left() - help_btn_w - 8.0, header_rect.y() + 5.0, help_btn_w, pill_h)
-        self.header_lang_rect = QRectF(self.header_help_rect.left() - lang_btn_w - 8.0, header_rect.y() + 5.0, lang_btn_w, pill_h)
-        self.header_mode_rect = QRectF(self.header_lang_rect.left() - mode_btn_w - 8.0, header_rect.y() + 5.0, mode_btn_w, pill_h)
+        self._update_header_exit_rect()
+        header_rect = self.header_rect
+        pill_h = max(24.0, header_h - 12.0)
+        logo_rect = self._header_logo_rect
+        last_pill_rect = self._last_action_pill_rect
 
         painter.setOpacity(0.95 if not self.reading_mode else 0.30)
 
-        # Header background pill
+        # Unified floating command bar (Dynamic Island / Linear style)
         painter.setBrush(self._brush_header_bg)
         painter.setPen(self._pen_header_border)
-        painter.drawRoundedRect(header_rect, 8.0, 8.0)
+        painter.drawRoundedRect(header_rect, 14.0, 14.0)
 
-        # Left: App Logo + Mode Pill Badge + Navigation Trail
-        logo_size = 28.0
-        logo_rect = QRectF(header_rect.x() + 8.0, header_rect.y() + (header_h - logo_size) * 0.5, logo_size, logo_size)
         IconManager.instance().render_icon(painter, "eyede_logo", logo_rect)
 
-        pill_w = 136.0
-        pill_rect = QRectF(logo_rect.right() + 8.0, header_rect.y() + 7.0, pill_w, pill_h)
-
-        if self.reading_mode:
-            painter.setBrush(self._brush_pill_read)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(pill_rect, 5.0, 5.0)
-            painter.setPen(self._color_pill_text)
-            painter.setFont(self._font_header_pill)
-            painter.drawText(pill_rect, Qt.AlignmentFlag.AlignCenter, "MODO LECTURA")
-        else:
-            painter.setBrush(self._brush_pill_edit)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(pill_rect, 5.0, 5.0)
-            painter.setPen(self._color_pill_text)
-            painter.setFont(self._font_header_pill)
-            painter.drawText(
-                pill_rect,
-                Qt.AlignmentFlag.AlignCenter,
-                f"MODO: {self._short_mode_label()}",
-            )
-
-        # Breadcrumb trail text
+        # Compact breadcrumb trail (left of the command controls)
         breadcrumb_path = get_breadcrumb_path(self.menu_tree, self.current_node_id).replace(" > ", " › ")
         if curr_node and curr_node.sticky:
             breadcrumb_path += "  [FIJO]"
-
         if self.current_node_id == "MODE_SELECT" and curr_node:
             left_text = curr_node.breadcrumb_label
         elif self.current_node_id == "ROOT" and getattr(self, "adaptive_ast_enabled", True) and curr_node:
@@ -1646,217 +1859,145 @@ class OverlayWindow(QWidget):
         else:
             left_text = breadcrumb_path
 
-        # Far-left: last executed action pill. It stays to the left of the
-        # breadcrumb so it can never collide with the mode selector on the right.
-        last_action_str = f"Última: {self.last_action_desc}"
-        last_pill_max_w = float(min(int(header_rect.width() * 0.18), 220))
-        last_pill_available = (
-            self.header_mode_rect.left() - 8.0 - (pill_rect.right() + 8.0) - 12.0 - 100.0
-        )
-        last_pill_w = min(last_pill_max_w, max(0.0, last_pill_available))
-        last_pill_rect = QRectF(pill_rect.right() + 8.0, header_rect.y() + 5.0, last_pill_w, pill_h)
-        if last_pill_w < 70.0:
-            last_pill_rect = QRectF()
-        self._last_action_pill_rect = last_pill_rect
+        breadcrumb_rect = self._header_breadcrumb_rect
+        if breadcrumb_rect.width() > 40.0:
+            painter.setPen(self._pen_header_left)
+            painter.setFont(self._font_header_left)
+            elided_left = painter.fontMetrics().elidedText(
+                left_text,
+                Qt.TextElideMode.ElideMiddle,
+                int(breadcrumb_rect.width()),
+            )
+            painter.drawText(
+                breadcrumb_rect,
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                elided_left,
+            )
 
-        text_start_x = (last_pill_rect.right() + 12.0) if last_pill_rect.isValid() else (pill_rect.right() + 12.0)
+        # Compact last-action status
+        if last_pill_rect.isValid():
+            painter.setBrush(self._brush_status_pill)
+            painter.setPen(self._pen_status_pill)
+            painter.drawRoundedRect(last_pill_rect, 7.0, 7.0)
+            painter.setPen(self._pen_header_right)
+            painter.setFont(self._font_header_right)
+            status_text = painter.fontMetrics().elidedText(
+                f"Última: {self.last_action_desc}",
+                Qt.TextElideMode.ElideRight,
+                int(max(0.0, last_pill_rect.width() - 14.0)),
+            )
+            painter.drawText(last_pill_rect, Qt.AlignmentFlag.AlignCenter, status_text)
 
-        emergency_left = header_rect.center().x() - 115.0
-        emergency_right = header_rect.center().x() + 115.0
-        emergency_fits = (
-            emergency_left >= text_start_x + 80.0
-            and emergency_right <= self.header_mode_rect.left() - 8.0
-        )
-        text_right_limit = (emergency_left - 12.0) if emergency_fits else (self.header_mode_rect.left() - 8.0)
-        max_left_w = int(min(header_rect.width() * 0.32, max(0.0, text_right_limit - text_start_x)))
+        icon_size = 20.0
 
-        painter.setPen(self._pen_header_left)
-        painter.setFont(self._font_header_left)
-        elided_left = painter.fontMetrics().elidedText(left_text, Qt.TextElideMode.ElideMiddle, max_left_w)
-        painter.drawText(
-            int(text_start_x),
-            int(header_rect.y()),
-            max_left_w,
-            int(header_rect.height()),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            elided_left,
-        )
-
-        # Far Right: Hands-free Gaze-Selectable & Mouth-Clickable Exit Target [SALIR]
+        # Exit: soft red command button
         if self.active_click_header_exit:
-            exit_brush = self._brush_click
-            exit_pen = self._pen_click
-            exit_text_color = self._color_click_text
+            exit_brush, exit_pen, exit_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_exit:
-            # Outer neon glow aura for instant visual confirmation
-            glow_exit_rect = self.header_exit_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
-            painter.setBrush(QBrush(QColor(239, 68, 68, 70)))
+            painter.setBrush(self._brush_exit_glow)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(glow_exit_rect, 10.0, 10.0)
-
-            exit_brush = QBrush(QColor(239, 68, 68, 245))
-            exit_pen = QPen(QColor(254, 202, 202), 3.0)
-            exit_text_color = QColor(255, 255, 255)
+            painter.drawRoundedRect(self.header_exit_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
+            exit_brush, exit_pen, exit_text_color = QBrush(QColor(239, 68, 68, 230)), QPen(QColor(254, 202, 202), 2.0), QColor(255, 255, 255)
         else:
-            exit_brush = QBrush(QColor(127, 29, 29, 150))
-            exit_pen = QPen(QColor(239, 68, 68, 180), 1.8)
-            exit_text_color = QColor(254, 202, 202)
-
+            exit_brush, exit_pen, exit_text_color = self._brush_exit_idle, self._pen_exit_idle, self._color_exit_text
         painter.setBrush(exit_brush)
         painter.setPen(exit_pen)
-        painter.drawRoundedRect(self.header_exit_rect, 7.0, 7.0)
-
-        # Exit vector SVG icon + bold label inside header button
-        icon_size = 22.0
-        exit_icon_rect = QRectF(self.header_exit_rect.x() + 14.0, self.header_exit_rect.y() + (pill_h - icon_size) * 0.5, icon_size, icon_size)
+        painter.drawRoundedRect(self.header_exit_rect, 8.0, 8.0)
+        exit_icon_rect = QRectF(
+            self.header_exit_rect.x() + 12.0,
+            self.header_exit_rect.y() + (pill_h - icon_size) * 0.5,
+            icon_size,
+            icon_size,
+        )
         IconManager.instance().render_icon(painter, "exit", exit_icon_rect)
         painter.setPen(exit_text_color)
         painter.setFont(self._font_header_bold_btn)
         painter.drawText(
-            QRectF(self.header_exit_rect.x() + 42.0, self.header_exit_rect.y(), exit_btn_w - 48.0, pill_h),
+            QRectF(self.header_exit_rect.x() + 34.0, self.header_exit_rect.y(), self.header_exit_rect.width() - 38.0, pill_h),
             Qt.AlignmentFlag.AlignCenter,
             "SALIR",
         )
 
-        # Help / Cheat Sheet Button [? AYUDA] next to [SALIR]
+        # Help
         if self.active_click_header_help:
-            help_brush = self._brush_click
-            help_pen = self._pen_click
-            help_text_color = self._color_click_text
+            help_brush, help_pen, help_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_help:
-            # Outer neon glow aura for instant visual confirmation
-            glow_help_rect = self.header_help_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
-            painter.setBrush(QBrush(QColor(14, 165, 233, 70)))
+            painter.setBrush(self._brush_help_glow)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(glow_help_rect, 10.0, 10.0)
-
-            help_brush = QBrush(QColor(14, 165, 233, 245))
-            help_pen = QPen(QColor(186, 230, 253), 3.0)
-            help_text_color = QColor(255, 255, 255)
+            painter.drawRoundedRect(self.header_help_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
+            help_brush, help_pen, help_text_color = QBrush(QColor(14, 165, 233, 230)), QPen(QColor(186, 230, 253), 2.0), QColor(255, 255, 255)
         else:
-            help_brush = QBrush(QColor(12, 74, 110, 150))
-            help_pen = QPen(QColor(14, 165, 233, 180), 1.8)
-            help_text_color = QColor(186, 230, 253)
-
+            help_brush, help_pen, help_text_color = self._brush_help_idle, self._pen_help_idle, self._color_help_text
         painter.setBrush(help_brush)
         painter.setPen(help_pen)
-        painter.drawRoundedRect(self.header_help_rect, 7.0, 7.0)
-
-        help_icon_rect = QRectF(self.header_help_rect.x() + 12.0, self.header_help_rect.y() + (pill_h - icon_size) * 0.5, icon_size, icon_size)
+        painter.drawRoundedRect(self.header_help_rect, 8.0, 8.0)
+        help_icon_rect = QRectF(
+            self.header_help_rect.x() + 10.0,
+            self.header_help_rect.y() + (pill_h - icon_size) * 0.5,
+            icon_size,
+            icon_size,
+        )
         IconManager.instance().render_icon(painter, "help", help_icon_rect)
         painter.setPen(help_text_color)
         painter.setFont(self._font_header_bold_btn)
         painter.drawText(
-            QRectF(self.header_help_rect.x() + 38.0, self.header_help_rect.y(), help_btn_w - 44.0, pill_h),
+            QRectF(self.header_help_rect.x() + 32.0, self.header_help_rect.y(), self.header_help_rect.width() - 36.0, pill_h),
             Qt.AlignmentFlag.AlignCenter,
             "AYUDA",
         )
 
-        # Hands-free Mode Selector Button [MODO] next to [LANG]
-        mode_color = QColor(self.theme_color or "#00F0FF")
-
+        # Mode selector: single interactive button (mode + dropdown hint)
         if self.active_click_header_mode:
-            mode_brush = self._brush_click
-            mode_pen = self._pen_click
-            mode_text_color = self._color_click_text
+            mode_brush, mode_pen, mode_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_mode:
-            glow_mode_rect = self.header_mode_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
-            glow = QColor(mode_color)
-            glow.setAlpha(70)
-            painter.setBrush(QBrush(glow))
+            painter.setBrush(self._brush_mode_glow)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(glow_mode_rect, 10.0, 10.0)
-
-            mode_brush = QBrush(mode_color)
-            mode_pen = QPen(QColor(255, 255, 255, 230), 3.0)
-            mode_text_color = QColor(255, 255, 255)
+            painter.drawRoundedRect(self.header_mode_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 11.0, 11.0)
+            mode_brush, mode_pen, mode_text_color = self._brush_mode_idle, QPen(QColor(255, 255, 255, 170), 1.5), QColor(255, 255, 255)
         else:
-            base = QColor(mode_color)
-            base.setAlpha(150)
-            mode_brush = QBrush(base)
-            mode_pen = QPen(mode_color, 1.8)
-            mode_text_color = QColor(255, 255, 255)
-
+            mode_brush, mode_pen, mode_text_color = self._brush_mode_idle, self._pen_mode_idle, self._color_mode_text
         painter.setBrush(mode_brush)
         painter.setPen(mode_pen)
-        painter.drawRoundedRect(self.header_mode_rect, 7.0, 7.0)
-
-        icon_size = 18.0
-        mode_icon_rect = QRectF(self.header_mode_rect.x() + 8.0, self.header_mode_rect.y() + (pill_h - icon_size) * 0.5, icon_size, icon_size)
+        painter.drawRoundedRect(self.header_mode_rect, 8.0, 8.0)
+        mode_icon_rect = QRectF(
+            self.header_mode_rect.x() + 9.0,
+            self.header_mode_rect.y() + (pill_h - 18.0) * 0.5,
+            18.0,
+            18.0,
+        )
         IconManager.instance().render_icon(painter, "mode", mode_icon_rect)
-
         painter.setPen(mode_text_color)
         painter.setFont(self._font_header_bold_btn)
+        mode_label = f"MODO: {self._short_mode_label()}  ▾  (V)"
+        mode_label = painter.fontMetrics().elidedText(
+            mode_label,
+            Qt.TextElideMode.ElideRight,
+            int(max(20.0, self.header_mode_rect.width() - 36.0)),
+        )
         painter.drawText(
-            QRectF(self.header_mode_rect.x() + 30.0, self.header_mode_rect.y(), self.header_mode_rect.width() - 34.0, pill_h),
+            QRectF(self.header_mode_rect.x() + 31.0, self.header_mode_rect.y(), self.header_mode_rect.width() - 36.0, pill_h),
             Qt.AlignmentFlag.AlignCenter,
-            "MODOS [V]",
+            mode_label,
         )
 
-        # Hands-free Language Selector Button [LANG] next to [AYUDA]
+        # Language badge [ PY ]
         if self.active_click_header_lang:
-            lang_brush = self._brush_click
-            lang_pen = self._pen_click
-            lang_text_color = self._color_click_text
+            lang_brush, lang_pen, lang_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_lang:
-            glow_lang_rect = self.header_lang_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
-            painter.setBrush(QBrush(QColor(168, 85, 247, 70)))
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(glow_lang_rect, 10.0, 10.0)
-
-            lang_brush = QBrush(QColor(168, 85, 247, 245))
-            lang_pen = QPen(QColor(243, 232, 255), 3.0)
-            lang_text_color = QColor(255, 255, 255)
+            lang_brush, lang_pen, lang_text_color = QBrush(QColor(168, 85, 247, 210)), QPen(QColor(243, 232, 255), 1.6), QColor(255, 255, 255)
         else:
-            lang_brush = QBrush(QColor(88, 28, 135, 150))
-            lang_pen = QPen(QColor(168, 85, 247, 180), 1.8)
-            lang_text_color = QColor(243, 232, 255)
-
+            lang_brush, lang_pen, lang_text_color = self._brush_btn_idle, self._pen_btn_idle, QColor(216, 180, 254)
         painter.setBrush(lang_brush)
         painter.setPen(lang_pen)
-        painter.drawRoundedRect(self.header_lang_rect, 7.0, 7.0)
-
-        lang_icon_rect = QRectF(self.header_lang_rect.x() + 10.0, self.header_lang_rect.y() + (pill_h - icon_size) * 0.5, icon_size, icon_size)
-        IconManager.instance().render_icon(painter, "language", lang_icon_rect)
+        painter.drawRoundedRect(self.header_lang_rect, 8.0, 8.0)
+        lang_badge = get_language_badge(self.current_language)
         painter.setPen(lang_text_color)
         painter.setFont(self._font_header_bold_btn)
-        badge_text = get_language_badge(self.current_language)
         painter.drawText(
-            QRectF(self.header_lang_rect.x() + 34.0, self.header_lang_rect.y(), lang_btn_w - 40.0, pill_h),
+            self.header_lang_rect,
             Qt.AlignmentFlag.AlignCenter,
-            badge_text,
+            f"[ {lang_badge} ]",
         )
-
-        # Center: Emergency Hotkey Documentation Pill (only when it fits without overlap)
-        emergency_text = "Emergencia: Ctrl+Alt+Q para salir"
-        center_pill_rect = QRectF(emergency_left, header_rect.y() + 5.0, 230.0, pill_h)
-        if emergency_fits:
-            painter.setBrush(QBrush(QColor(239, 68, 68, 25)))
-            painter.setPen(QPen(QColor(239, 68, 68, 120), 1.0))
-            painter.drawRoundedRect(center_pill_rect, 5.0, 5.0)
-
-            painter.setPen(self._pen_header_center)
-            painter.setFont(self._font_header_center)
-            painter.drawText(center_pill_rect, Qt.AlignmentFlag.AlignCenter, emergency_text)
-
-        # Far-left: Last executed action pill
-        if last_pill_rect.isValid():
-            painter.setBrush(QBrush(QColor(56, 189, 248, 22)))
-            painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
-            painter.drawRoundedRect(last_pill_rect, 5.0, 5.0)
-
-            painter.setPen(self._pen_header_right)
-            painter.setFont(self._font_header_right)
-            elided_right = painter.fontMetrics().elidedText(
-                last_action_str,
-                Qt.TextElideMode.ElideRight,
-                int(max(0.0, last_pill_rect.width() - 16.0)),
-            )
-            painter.drawText(
-                last_pill_rect,
-                Qt.AlignmentFlag.AlignCenter,
-                elided_right,
-            )
 
         # =====================================================================
         # 1b. Transient mode-change banner (makes coding/writing switch obvious)
@@ -1900,175 +2041,192 @@ class OverlayWindow(QWidget):
         # =====================================================================
         # 2. 3x3 Grid Category Cards
         # =====================================================================
+        icon_map = {
+            "FLOW": "flow",
+            "STRUCT": "function",
+            "OPERATORS": "operators",
+            "NAV": "navigation",
+            "PAUSE": "pause_eye",
+            "BACK": "navigation",
+            "T9": "variables",
+            "EDIT": "edit",
+            "FORMAT": "format",
+            "AI": "ai_spark",
+            "EXIT": "exit",
+            "MODE": "mode",
+        }
+
         for i in range(9):
             if i >= len(items):
                 continue
             item = items[i]
             rect = self.get_block_rect(i)
-
             is_active_click = (self.active_click_block == i)
             is_hover = (self.hovered_block == i)
+            is_reading_center = self.reading_mode and i == 4
+            is_active = is_hover or is_active_click or is_reading_center
             cat = self._get_category_for_item(item, i)
+            is_danger = cat == "EXIT" or item.action_type == "EXIT"
 
-            # Opacity logic:
-            # - bg_opacity: Translucent glass background so editor code underneath is clearly visible
-            # - content_opacity: High-contrast typography & vector icons (WCAG AAA) for effortless legibility
-            if self.reading_mode:
-                if i == 4:
-                    bg_opacity = 0.90 if (is_active_click or is_hover) else 0.35
-                    content_opacity = 1.0 if (is_active_click or is_hover) else 0.85
-                else:
-                    bg_opacity = self.current_opacity
-                    content_opacity = self.current_opacity * 0.4
+            # Reading mode keeps only the center resume card readable.
+            if self.reading_mode and i != 4:
+                body_brush = self._brush_reading_other
+                border_pen = self._pen_reading_other
+                text_opacity = 0.22
+                band_brush = self._brush_band_inactive
+            elif is_reading_center:
+                body_brush = self._brush_card_active
+                border_pen = self._pen_reading_center
+                text_opacity = 1.0
+                band_brush = self._brush_band_active
+            elif is_active:
+                body_brush = self._brush_card_active
+                border_pen = self._pen_card_danger if is_danger else self._pen_card_active
+                text_opacity = 1.0
+                band_brush = self._brush_band_active
             else:
-                if is_active_click:
-                    bg_opacity = 0.90
-                    content_opacity = 1.0
-                elif is_hover:
-                    bg_opacity = min(1.0, max(0.65, self.current_opacity * 3.0))
-                    content_opacity = 1.0
-                else:
-                    bg_opacity = self.current_opacity
-                    content_opacity = 0.95
+                body_brush = self._brush_card_inactive
+                border_pen = self._pen_card_inactive
+                text_opacity = 0.65
+                band_brush = self._brush_band_inactive
 
-            # Pre-allocated styling determination (zero allocations per frame)
-            if is_active_click:
-                block_brush = self._brush_click
-                border_pen = self._pen_click
-                text_color = self._color_click_text
-                hint_color = self._color_click_hint
-            elif is_hover:
-                block_brush = self._brush_hover
-                border_pen = self._pen_hover
-                text_color = self._color_hover_text
-                hint_color = self._color_hover_hint
-            elif self.reading_mode:
-                if i == 4:
-                    block_brush = self._brush_reading_center
-                    border_pen = self._pen_reading_center
-                    text_color = self._color_reading_center_text
-                    hint_color = self._color_reading_center_hint
-                else:
-                    block_brush = self._brush_reading_other
-                    border_pen = self._pen_reading_other
-                    text_color = self._color_reading_other_text
-                    hint_color = self._color_reading_other_hint
-            else:
-                block_brush = self._cat_brushes.get(cat, self._brush_default)
-                border_pen = self._cat_pens.get(cat, self._pen_default)
-                text_color = self._color_default_text
-                hint_color = self._color_default_hint
-
-            # 1. Draw card background with translucent glassmorphic opacity
-            painter.setOpacity(bg_opacity)
-            painter.setBrush(block_brush)
+            # 1. Transparent body (keeps VS Code readable)
+            painter.setOpacity(1.0)
+            painter.setBrush(body_brush)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRoundedRect(rect, 12.0, 12.0)
 
-            # 2. Draw card frame border and content with crisp, readable opacity
-            painter.setOpacity(content_opacity)
+            # 2. Focused card gets a subtle theme glow at the top edge.
+            if is_active and not self.reading_mode:
+                theme = border_pen.color()
+                gradient = QLinearGradient(rect.x(), rect.y(), rect.right(), rect.y())
+                transparent = QColor(theme)
+                transparent.setAlpha(0)
+                middle = QColor(theme)
+                middle.setAlpha(105)
+                gradient.setColorAt(0.0, transparent)
+                gradient.setColorAt(0.5, middle)
+                gradient.setColorAt(1.0, transparent)
+                painter.fillRect(
+                    QRectF(rect.x() + 14.0, rect.y() + 1.0, max(1.0, rect.width() - 28.0), 3.0),
+                    QBrush(gradient),
+                )
+
+            # 3. Neutral 1px frame, or 2.5px theme frame for the focused card.
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(border_pen)
             painter.drawRoundedRect(rect, 12.0, 12.0)
 
-            # Draw subtle top accent hairline (acrylic category bar)
-            if not self.reading_mode or i == 4:
-                top_pen = self._cat_top_pens.get(cat, self._pen_default) if not (is_active_click or is_hover) else border_pen
-                painter.setPen(top_pen)
-                painter.drawLine(QPointF(rect.x() + 16.0, rect.y() + 2.0), QPointF(rect.right() - 16.0, rect.y() + 2.0))
+            # 4. High-contrast header band with rounded top corners.
+            band_h = min(52.0, rect.height())
+            if band_h > 4.0:
+                radius = 12.0
+                path = QPainterPath()
+                path.moveTo(rect.x(), rect.y() + radius)
+                path.quadTo(rect.x(), rect.y(), rect.x() + radius, rect.y())
+                path.lineTo(rect.right() - radius, rect.y())
+                path.quadTo(rect.right(), rect.y(), rect.right(), rect.y() + radius)
+                path.lineTo(rect.right(), rect.y() + band_h)
+                path.lineTo(rect.x(), rect.y() + band_h)
+                path.closeSubpath()
+                painter.setBrush(band_brush)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawPath(path)
 
-            # Render category neon vector icon in card top-right
-            icon_map = {
-                "FLOW": "flow",
-                "STRUCT": "function",
-                "OPERATORS": "operators",
-                "NAV": "navigation",
-                "PAUSE": "pause_eye",
-                "BACK": "navigation",
-                "T9": "variables",
-                "EDIT": "edit",
-                "FORMAT": "format",
-                "AI": "ai_spark",
-                "EXIT": "exit",
-                "MODE": "mode",
-            }
-            icon_name = (
-                item.icon
-                if item.action_type == "MODE_SWITCH" and item.icon
-                else icon_map.get(cat)
-            )
-            if icon_name and (not self.reading_mode or i == 4):
-                card_icon_rect = QRectF(rect.right() - 36.0, rect.y() + 10.0, 24.0, 24.0)
+            # Content (dimmed for inactive cards)
+            painter.save()
+            painter.setOpacity(text_opacity)
+
+            number = i + 1
+            number_rect = QRectF(rect.x() + 10.0, rect.y() + 8.0, 24.0, 24.0)
+            painter.setBrush(self._brush_badge_theme if is_active else self._brush_badge_inactive)
+            painter.setPen(self._pen_badge_theme if is_active else self._pen_badge_active)
+            painter.drawRoundedRect(number_rect, 7.0, 7.0)
+            painter.setPen(self._color_theme_text if is_active else self._color_card_text_inactive)
+            painter.setFont(self._font_card_number)
+            painter.drawText(number_rect, Qt.AlignmentFlag.AlignCenter, str(number))
+
+            # Status badge (right side of the band)
+            badge_text = ""
+            badge_color = self._color_badge_default
+            if item.action_type == "MODE_SWITCH":
+                badge_text = (
+                    "ACTUAL"
+                    if item.mode_id == getattr(self, "current_context_mode_id", "")
+                    else "ELEGIR"
+                )
+                badge_color = self._color_badge_sticky
+            elif item.action_type == "SUBMENU":
+                badge_text = "SUBMENÚ"
+                badge_color = self._color_badge_submenu
+            elif item.action_type == "BACK":
+                badge_text = "VOLVER"
+                badge_color = self._color_badge_back
+            elif item.sticky:
+                badge_text = "FIJO"
+                badge_color = self._color_badge_sticky
+            elif is_danger:
+                badge_text = "SALIR"
+                badge_color = self._color_badge_back
+
+            badge_w = 62.0 if badge_text else 0.0
+            if badge_text:
+                badge_rect = QRectF(rect.right() - badge_w - 10.0, rect.y() + 17.0, badge_w, 18.0)
+                painter.setBrush(self._brush_badge_active if is_active else self._brush_badge_inactive)
+                painter.setPen(self._pen_badge_active if is_active else self._pen_btn_idle)
+                painter.drawRoundedRect(badge_rect, 6.0, 6.0)
+                painter.setPen(badge_color)
+                painter.setFont(self._font_status)
+                painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, badge_text)
+
+            # Vector icon
+            icon_name = item.icon if item.action_type == "MODE_SWITCH" and item.icon else icon_map.get(cat)
+            if icon_name:
+                card_icon_rect = QRectF(rect.right() - 34.0, rect.y() + 8.0, 24.0, 24.0)
                 IconManager.instance().render_icon(painter, icon_name, card_icon_rect)
 
-            # Determine labels (the vector icon is already drawn top-right;
-            # never print internal icon identifiers such as "format" or "ai_spark").
-            label_text = _menu_card_label(item)
-            hint_text = item.hint
-
+            # Title + subtitle inside the dark band.
+            title = _clean_action_label(_menu_card_label(item)) or item.label
+            subtitle = item.hint or ""
             if self.reading_mode and i == 4:
-                label_text = "5: REANUDAR"
-                hint_text = "Modo Lectura Activo (Mire y Abra Boca)"
+                title = "REANUDAR"
+                subtitle = "Modo lectura activo · mira y abre la boca"
 
-            # Draw main label (reserving width on the right to prevent overlap with top-right vector badge)
-            max_label_w = int(rect.width() - 54)
-            painter.setPen(text_color)
+            title_left = rect.x() + 42.0
+            title_right = rect.right() - 8.0
+            if badge_text:
+                title_right -= badge_w + 8.0
+            else:
+                title_right -= 34.0
+            title_w = max(20.0, title_right - title_left)
+            painter.setPen(self._color_card_text_active if is_active else self._color_card_text_inactive)
             painter.setFont(self._font_label)
+            title_text = painter.fontMetrics().elidedText(
+                title,
+                Qt.TextElideMode.ElideRight,
+                int(title_w),
+            )
             painter.drawText(
-                int(rect.x() + 14),
-                int(rect.y() + 12),
-                max_label_w,
-                28,
+                QRectF(title_left, rect.y() + 5.0, title_w, 24.0),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                label_text,
+                title_text,
             )
 
-            # Draw hint / subtitle
-            if hint_text:
-                painter.setPen(hint_color)
-                painter.setFont(self._font_hint)
+            if subtitle:
+                painter.setPen(self._color_card_subtitle if is_active else self._color_card_subtitle_inactive)
+                painter.setFont(self._font_card_subtitle)
+                subtitle_text = painter.fontMetrics().elidedText(
+                    subtitle,
+                    Qt.TextElideMode.ElideRight,
+                    int(title_w),
+                )
                 painter.drawText(
-                    int(rect.x() + 14),
-                    int(rect.y() + 40),
-                    max_label_w,
-                    22,
+                    QRectF(title_left, rect.y() + 27.0, title_w, 17.0),
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                    hint_text,
+                    subtitle_text,
                 )
 
-            # Submenu or action pill indicator on bottom-right of block
-            if not self.reading_mode and not is_active_click:
-                badge_info = self._cat_badges.get(cat, ("", self._color_badge_default))
-                badge_text, badge_color = badge_info
-
-                if item.action_type == "MODE_SWITCH":
-                    badge_text = (
-                        "ACTUAL"
-                        if item.mode_id == getattr(self, "current_context_mode_id", "")
-                        else "ELEGIR"
-                    )
-                    badge_color = self._color_badge_sticky
-                elif item.action_type == "SUBMENU":
-                    badge_text = "SUBMENÚ"
-                    badge_color = self._color_badge_submenu
-                elif item.action_type == "BACK":
-                    badge_text = "VOLVER"
-                    badge_color = self._color_badge_back
-                elif item.sticky:
-                    badge_text = "FIJO"
-                    badge_color = self._color_badge_sticky
-
-                if badge_text:
-                    painter.setPen(badge_color)
-                    painter.setFont(self._font_badge)
-                    painter.drawText(
-                        int(rect.x() + 14),
-                        int(rect.y() + rect.height() - 26),
-                        int(rect.width() - 28),
-                        18,
-                        Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
-                        badge_text,
-                    )
+            painter.restore()
 
         # =====================================================================
         # 3. High-Contrast In-App Gesture & Shortcut Cheat Sheet Modal Card
@@ -2084,29 +2242,33 @@ class OverlayWindow(QWidget):
             gx, gy = self.current_gaze
             cx = gx * w
             cy = gy * h
-            r = float(config.OVERLAY_POINTER_RADIUS)
+            threshold = max(0.01, float(getattr(self, "mar_threshold", 0.55)))
+            ratio = max(0.0, min(1.0, float(getattr(self, "current_mar", 0.0)) / threshold))
+            ring_r = 11.0 - 2.0 * ratio
+            center = QPointF(cx, cy)
 
-            # 1. Outer subtle glow aura
+            # Soft glow, thin ring, and a 6px center point.
             painter.setBrush(self._brush_pointer_glow)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(QPointF(cx, cy), r + 8.0, r + 8.0)
+            painter.drawEllipse(center, ring_r + 7.0, ring_r + 7.0)
 
-            # 2. Middle precision ring
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(self._pen_pointer_ring)
-            painter.drawEllipse(QPointF(cx, cy), r + 2.0, r + 2.0)
+            painter.drawEllipse(center, ring_r, ring_r)
 
-            # 3. Inner crisp fixation dot
+            # MAR progress arc closes around the ring as the mouth opens.
+            if ratio > 0.005:
+                progress_color = (
+                    self._color_progress_warm if ratio >= 0.72 else self._color_progress_cool
+                )
+                self._pen_pointer_progress.setColor(progress_color)
+                painter.setPen(self._pen_pointer_progress)
+                arc_rect = QRectF(cx - ring_r, cy - ring_r, ring_r * 2.0, ring_r * 2.0)
+                painter.drawArc(arc_rect, 90 * 16, -int(360 * 16 * ratio))
+
             painter.setBrush(self._brush_pointer_dot)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(QPointF(cx, cy), r - 3.0, r - 3.0)
-
-            # 4. Micro crosshairs (hairline precision ticks)
-            painter.setPen(self._pen_pointer_ticks)
-            painter.drawLine(QPointF(cx - r - 7.0, cy), QPointF(cx - r - 2.0, cy))
-            painter.drawLine(QPointF(cx + r + 2.0, cy), QPointF(cx + r + 7.0, cy))
-            painter.drawLine(QPointF(cx, cy - r - 7.0), QPointF(cx, cy - r - 2.0))
-            painter.drawLine(QPointF(cx, cy + r + 2.0), QPointF(cx, cy + r + 7.0))
+            painter.drawEllipse(center, 3.0, 3.0)
 
         painter.end()
 

@@ -84,11 +84,14 @@ class DebugWidget(QWidget):
     tracking_mode_changed = pyqtSignal(str)
     adaptive_ast_toggled = pyqtSignal(bool)
     collapsed_toggled = pyqtSignal(bool)
+    visibility_changed = pyqtSignal(bool)
     language_changed = pyqtSignal(str)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
 
+        self.setObjectName("DebugWidget")
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.gaze_estimator = gaze_estimator
         self._last_frame_time: Optional[float] = None
         self._fps: float = 30.0
@@ -113,6 +116,14 @@ class DebugWidget(QWidget):
         self.shortcut_a = QShortcut(QKeySequence(Qt.Key.Key_A), self, self.toggle_adaptive_ast, context=Qt.ShortcutContext.ApplicationShortcut)
         self.shortcut_l = QShortcut(QKeySequence(Qt.Key.Key_L), self, self.cycle_language, context=Qt.ShortcutContext.ApplicationShortcut)
 
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self.visibility_changed.emit(True)
+
+    def hideEvent(self, event) -> None:
+        super().hideEvent(event)
+        self.visibility_changed.emit(False)
+
     def set_gaze_estimator(self, estimator: Any) -> None:
         """Links the GazeEstimator instance for direct real-time parameter tuning."""
         self.gaze_estimator = estimator
@@ -130,24 +141,30 @@ class DebugWidget(QWidget):
     def _setup_ui(self) -> None:
         """Constructs UI layout, styles, and controls."""
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(6)
+        main_layout.setContentsMargins(14, 14, 14, 14)
+        main_layout.setSpacing(10)
 
         # 1. Dark theme stylesheet
         self.setStyleSheet("""
+            QWidget#DebugWidget {
+                background-color: #0b0f19;
+                border: 1px solid rgba(255, 255, 255, 28);
+                border-radius: 14px;
+            }
             QWidget {
-                background-color: #0f172a;
+                background-color: transparent;
                 color: #e2e8f0;
                 font-family: 'Segoe UI', Arial, sans-serif;
             }
             QLabel {
+                background-color: transparent;
                 font-size: 11px;
                 color: #94a3b8;
             }
             QProgressBar {
-                border: 1px solid #334155;
-                border-radius: 4px;
-                background-color: #0b0f19;
+                border: 1px solid rgba(255, 255, 255, 28);
+                border-radius: 5px;
+                background-color: #070a12;
                 text-align: center;
                 height: 16px;
                 font-size: 10px;
@@ -155,65 +172,65 @@ class DebugWidget(QWidget):
                 color: #f8fafc;
             }
             QProgressBar::chunk {
-                background-color: #38bdf8;
-                border-radius: 3px;
+                background-color: #22d3ee;
+                border-radius: 4px;
             }
             QSlider::groove:horizontal {
                 height: 6px;
-                background: #1e293b;
-                border: 1px solid #334155;
+                background: #111827;
+                border: 1px solid rgba(255, 255, 255, 24);
                 border-radius: 3px;
             }
             QSlider::sub-page:horizontal {
-                background: #0284c7;
+                background: #0891b2;
                 border-radius: 3px;
             }
             QSlider::handle:horizontal {
-                background: #38bdf8;
-                border: 1px solid #e0f2fe;
+                background: #67e8f9;
+                border: 1px solid #ecfeff;
                 width: 14px;
                 margin-top: -4px;
                 margin-bottom: -4px;
                 border-radius: 7px;
             }
             QSlider::handle:horizontal:hover {
-                background: #7dd3fc;
+                background: #a5f3fc;
             }
             QPushButton {
-                background-color: #1e293b;
-                border: 1px solid #475569;
-                border-radius: 5px;
+                background-color: rgba(255, 255, 255, 8);
+                border: 1px solid rgba(255, 255, 255, 32);
+                border-radius: 7px;
                 padding: 6px 10px;
                 font-size: 11px;
                 font-weight: 600;
-                color: #f1f5f9;
+                color: #e2e8f0;
             }
             QPushButton:hover {
-                background-color: #334155;
-                border-color: #64748b;
+                background-color: rgba(255, 255, 255, 16);
+                border-color: rgba(255, 255, 255, 55);
             }
             QPushButton:pressed {
-                background-color: #0b0f19;
+                background-color: #070a12;
             }
             QPushButton#btnReset {
-                background-color: #1e3a5f;
-                border-color: #2563eb;
+                background-color: rgba(14, 165, 233, 34);
+                border-color: rgba(56, 189, 248, 120);
             }
             QPushButton#btnReset:hover {
-                background-color: #2563eb;
+                background-color: rgba(14, 165, 233, 60);
             }
             QPushButton#btnExit {
-                background-color: #7f1d1d;
-                border-color: #991b1b;
+                background-color: rgba(239, 68, 68, 30);
+                border-color: rgba(239, 68, 68, 110);
             }
             QPushButton#btnExit:hover {
-                background-color: #991b1b;
+                background-color: rgba(239, 68, 68, 58);
             }
             QFrame#cardFrame {
-                background-color: #162032;
-                border: 1px solid #1e293b;
-                border-radius: 6px;
-                padding: 4px;
+                background-color: rgba(15, 23, 42, 170);
+                border: 1px solid rgba(255, 255, 255, 22);
+                border-radius: 10px;
+                padding: 6px;
             }
         """)
 

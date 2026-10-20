@@ -693,6 +693,7 @@ class EyeDEApplication(QObject):
             start_in_mode_selector=getattr(config, "START_IN_MODE_SELECTOR", True),
         )
         self.debug_widget = DebugWidget()
+        self.overlay.set_debug_widget(self.debug_widget)
         self.calibration_ui: Optional[CalibrationUI] = None
         self._is_shutting_down: bool = False
         self.tray_icon: Optional[QSystemTrayIcon] = None
@@ -758,6 +759,7 @@ class EyeDEApplication(QObject):
 
         # Tracker signals to DebugWidget
         self.tracker.frame_ready.connect(self.debug_widget.on_frame_ready)
+        self.tracker.frame_ready.connect(self.overlay.on_mar_updated)
 
         # WebSocket Bridge connections (Phase 5)
         if self.ws_bridge is not None:
@@ -876,14 +878,17 @@ class EyeDEApplication(QObject):
             pass
 
     def _configure_geometry(self) -> None:
-        """Configures geometry of overlay across screen and docks debug monitor."""
+        """Configures geometry of overlay across the usable desktop area."""
         screen = QApplication.primaryScreen()
         if screen:
-            screen_geo = screen.geometry()
+            # availableGeometry() excludes the Windows taskbar, so the HUD can
+            # never cover the bottom taskbar or overflow the usable desktop.
+            screen_geo = screen.availableGeometry()
             self.overlay.setGeometry(screen_geo)
-            dw_x = screen_geo.x() + screen_geo.width() - config.DEBUG_WINDOW_WIDTH - 20
-            dw_y = screen_geo.y() + 40
-            self.debug_widget.move(max(0, dw_x), max(0, dw_y))
+            dw_x = screen_geo.x() + screen_geo.width() - config.DEBUG_WINDOW_WIDTH - 12
+            dw_y = screen_geo.y() + 24
+            self.debug_widget.move(max(screen_geo.x(), dw_x), max(screen_geo.y(), dw_y))
+            self.overlay.refresh_grid_right_margin(animate=False)
         else:
             self.overlay.resize(config.FRAME_WIDTH, config.FRAME_HEIGHT)
 

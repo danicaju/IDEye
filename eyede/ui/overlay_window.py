@@ -31,7 +31,7 @@ from PyQt6.QtCore import (
     QRectF,
     QPointF,
 )
-from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush, QPainterPath, QLinearGradient
+from PyQt6.QtGui import QPainter, QColor, QFont, QFontMetrics, QPen, QBrush, QPainterPath, QLinearGradient
 from PyQt6.QtWidgets import QWidget, QApplication
 
 try:
@@ -135,6 +135,36 @@ MODE_SELECTOR_ENTRIES = (
     ("terminal", "Terminal", "Git, consola y pruebas", "operators"),
     ("data_math", "Datos", "SQL, JSON, YAML y fórmulas", "variables"),
     ("navigation", "Navegación", "Moverse por el editor y VS Code", "navigation"),
+)
+
+# Data displayed in the in-app help modal. Extracted as constants so the
+# rendered content can be verified without instantiating a QPainter.
+HELP_GESTURES = (
+    (
+        "Apertura de Boca (MAR)",
+        "Clic / Inyectar código o navegar",
+        "Abra la boca ligeramente para activar la casilla enfocada.",
+    ),
+    (
+        "Guiño Ojo Derecho",
+        "Pausar / Despertar HUD",
+        "Cierre el ojo derecho ~200ms para ocultar totalmente el HUD y descansar.",
+    ),
+    (
+        "Guiño Ojo Izquierdo",
+        "Volver atrás / Deshacer (Ctrl+Z)",
+        "Cierre el ojo izquierdo ~200ms para retroceder menú o deshacer cambios.",
+    ),
+)
+
+HELP_SHORTCUTS = (
+    ("[A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
+    ("[V] / [K]", "Elegir modo / Auto-switch", "V abre el selector de modos; K alterna el cambio automático."),
+    ("[T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
+    ("[M]", "Colapsar Monitor", "Alterna monitor entre ventana y barra compacta."),
+    ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
+    ("[P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
+    ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
 )
 
 
@@ -663,10 +693,10 @@ class OverlayWindow(QWidget):
             self._header_help_w = max(130.0, min(140.0, bar_w * 0.10))
         else:
             # Compact layout for a narrowed grid beside the debug monitor.
-            self._header_exit_w = max(80.0, min(110.0, bar_w * 0.14))
-            self._header_help_w = max(70.0, min(90.0, bar_w * 0.10))
+            self._header_exit_w = max(104.0, min(120.0, bar_w * 0.14))
+            self._header_help_w = max(100.0, min(112.0, bar_w * 0.10))
         self._header_lang_w = max(56.0, min(64.0, bar_w * 0.07))
-        self._header_mode_w = max(140.0, min(220.0, bar_w * 0.26))
+        self._header_mode_w = max(140.0, min(200.0, bar_w * 0.26))
 
         header_rect = QRectF(bar_x, margin, bar_w, header_h)
         self.header_rect = header_rect
@@ -726,6 +756,45 @@ class OverlayWindow(QWidget):
             header_h - 8.0,
         )
         self._update_help_modal_rect()
+
+    def _card_header_rects(
+        self, rect: QRectF, badge_text: str, has_icon: bool
+    ) -> tuple[QRectF, QRectF]:
+        """Compute status badge and vector icon rectangles for a menu card header.
+
+        The badge stays at the top-right of the band. The icon is rendered
+        immediately to its left with a fixed 8 px gap. If the remaining title
+        width would drop below 70 px, the icon is hidden but the badge is kept.
+        """
+        y = rect.y()
+        badge_rect = QRectF()
+        icon_rect = QRectF()
+
+        if badge_text:
+            metrics = QFontMetrics(self._font_status)
+            badge_w = max(62.0, metrics.horizontalAdvance(badge_text) + 14.0)
+            badge_rect = QRectF(rect.right() - 10.0 - badge_w, y + 17.0, badge_w, 18.0)
+
+        icon_size = 22.0
+        if has_icon:
+            if badge_rect.isValid():
+                icon_x = badge_rect.left() - 8.0 - icon_size
+            else:
+                icon_x = rect.right() - 32.0
+            icon_y = y + 15.0
+            icon_rect = QRectF(icon_x, icon_y, icon_size, icon_size)
+
+        # Hide the icon if the title area would become too narrow.
+        title_left = rect.x() + 42.0
+        first_right = min(
+            badge_rect.left() if badge_rect.isValid() else rect.right() - 8.0,
+            icon_rect.left() if icon_rect.isValid() else rect.right() - 8.0,
+        )
+        title_w = max(20.0, first_right - 8.0 - title_left)
+        if title_w < 70.0 and icon_rect.isValid():
+            icon_rect = QRectF()
+
+        return badge_rect, icon_rect
 
     def _apply_win32_no_activate(self) -> None:
         """Applies WS_EX_NOACTIVATE and WS_EX_TRANSPARENT styles on Windows to guarantee zero focus stealing."""
@@ -1931,8 +2000,9 @@ class OverlayWindow(QWidget):
         painter.setBrush(help_brush)
         painter.setPen(help_pen)
         painter.drawRoundedRect(self.header_help_rect, 8.0, 8.0)
+        help_vpad = 2.0
         help_icon_rect = QRectF(
-            self.header_help_rect.x() + 10.0,
+            self.header_help_rect.x() + 12.0,
             self.header_help_rect.y() + (pill_h - icon_size) * 0.5,
             icon_size,
             icon_size,
@@ -1941,7 +2011,12 @@ class OverlayWindow(QWidget):
         painter.setPen(help_text_color)
         painter.setFont(self._font_header_bold_btn)
         painter.drawText(
-            QRectF(self.header_help_rect.x() + 32.0, self.header_help_rect.y(), self.header_help_rect.width() - 36.0, pill_h),
+            QRectF(
+                self.header_help_rect.x() + 36.0,
+                self.header_help_rect.y() + help_vpad,
+                self.header_help_rect.width() - 46.0,
+                pill_h - help_vpad * 2.0,
+            ),
             Qt.AlignmentFlag.AlignCenter,
             "AYUDA",
         )
@@ -2169,9 +2244,11 @@ class OverlayWindow(QWidget):
                 badge_text = "SALIR"
                 badge_color = self._color_badge_back
 
-            badge_w = 62.0 if badge_text else 0.0
-            if badge_text:
-                badge_rect = QRectF(rect.right() - badge_w - 10.0, rect.y() + 17.0, badge_w, 18.0)
+            # Status badge + vector icon at the right of the band.
+            icon_name = item.icon if item.action_type == "MODE_SWITCH" and item.icon else icon_map.get(cat)
+            badge_rect, icon_rect = self._card_header_rects(rect, badge_text, bool(icon_name))
+
+            if badge_rect.isValid():
                 painter.setBrush(self._brush_badge_active if is_active else self._brush_badge_inactive)
                 painter.setPen(self._pen_badge_active if is_active else self._pen_btn_idle)
                 painter.drawRoundedRect(badge_rect, 6.0, 6.0)
@@ -2179,11 +2256,8 @@ class OverlayWindow(QWidget):
                 painter.setFont(self._font_status)
                 painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, badge_text)
 
-            # Vector icon
-            icon_name = item.icon if item.action_type == "MODE_SWITCH" and item.icon else icon_map.get(cat)
-            if icon_name:
-                card_icon_rect = QRectF(rect.right() - 34.0, rect.y() + 8.0, 24.0, 24.0)
-                IconManager.instance().render_icon(painter, icon_name, card_icon_rect)
+            if icon_rect.isValid() and icon_name:
+                IconManager.instance().render_icon(painter, icon_name, icon_rect)
 
             # Title + subtitle inside the dark band.
             title = _clean_action_label(_menu_card_label(item)) or item.label
@@ -2193,11 +2267,11 @@ class OverlayWindow(QWidget):
                 subtitle = "Modo lectura activo · mira y abre la boca"
 
             title_left = rect.x() + 42.0
-            title_right = rect.right() - 8.0
-            if badge_text:
-                title_right -= badge_w + 8.0
-            else:
-                title_right -= 34.0
+            first_right = min(
+                badge_rect.left() if badge_rect.isValid() else rect.right() - 8.0,
+                icon_rect.left() if icon_rect.isValid() else rect.right() - 8.0,
+            )
+            title_right = first_right - 8.0
             title_w = max(20.0, title_right - title_left)
             painter.setPen(self._color_card_text_active if is_active else self._color_card_text_inactive)
             painter.setFont(self._font_label)
@@ -2335,17 +2409,11 @@ class OverlayWindow(QWidget):
         painter.drawText(
             QRectF(col_a_rect.x() + 14.0, col_a_rect.y() + 8.0, col_w - 28.0, 22.0),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            "👁 GESTOS FACIALES Y OCULARES",
+            "GESTOS FACIALES Y OCULARES",
         )
 
-        gestures_list = [
-            ("👄 Apertura de Boca (MAR)", "Clic / Inyectar código o navegar", "Abra la boca ligeramente para activar la casilla enfocada."),
-            ("😉 Guiño Ojo Derecho", "Pausar / Despertar HUD", "Cierre el ojo derecho ~200ms para ocultar totalmente el HUD y descansar."),
-            ("😉 Guiño Ojo Izquierdo", "Volver atrás / Deshacer (Ctrl+Z)", "Cierre el ojo izquierdo ~200ms para retroceder menú o deshacer cambios."),
-        ]
-
         item_y = col_a_rect.y() + 36.0
-        for title, action, desc in gestures_list:
+        for title, action, desc in HELP_GESTURES:
             painter.setFont(self._font_modal_item_title)
             painter.setPen(QColor(253, 224, 71))  # amber-300
             painter.drawText(QRectF(col_a_rect.x() + 14.0, item_y, col_w - 28.0, 18.0), Qt.AlignmentFlag.AlignLeft, title)
@@ -2370,21 +2438,11 @@ class OverlayWindow(QWidget):
         painter.drawText(
             QRectF(col_b_rect.x() + 14.0, col_b_rect.y() + 8.0, col_w - 28.0, 22.0),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            "⌨ ATAJOS DE TECLADO RÁPIDOS",
+            "ATAJOS DE TECLADO RÁPIDOS",
         )
 
-        shortcuts_list = [
-            ("[A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
-            ("[V]", "Cambiar Modo", "Cicla Código, Redacción, Terminal, Datos y Navegación."),
-            ("[T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
-            ("[M]", "Colapsar Monitor", "Alterna monitor entre ventana y barra compacta."),
-            ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
-            ("[P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
-            ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
-        ]
-
         item_y = col_b_rect.y() + 34.0
-        for key, name, desc in shortcuts_list:
+        for key, name, desc in HELP_SHORTCUTS:
             painter.setFont(self._font_modal_item_title)
             painter.setPen(QColor(248, 113, 113) if "Ctrl" in key else QColor(125, 211, 252))
             painter.drawText(QRectF(col_b_rect.x() + 14.0, item_y, 88.0, 16.0), Qt.AlignmentFlag.AlignLeft, key)

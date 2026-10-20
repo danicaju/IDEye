@@ -65,7 +65,7 @@ class TestGlassFocusLayout(unittest.TestCase):
         self.assertLessEqual(self.overlay.header_help_rect.right(), self.overlay.header_exit_rect.left())
         self.assertLessEqual(self.overlay.header_exit_rect.right(), self.overlay.header_rect.right())
         self.assertGreaterEqual(self.overlay.header_exit_rect.width(), 80)
-        self.assertGreaterEqual(self.overlay.header_help_rect.width(), 70)
+        self.assertGreaterEqual(self.overlay.header_help_rect.width(), 100)
 
     def test_header_keeps_large_targets_at_1080p(self):
         self.overlay.resize(1920, 1080)

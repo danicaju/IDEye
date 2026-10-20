@@ -16,6 +16,7 @@ try:
     from eyede.modes.terminal_git_mode import TerminalGitMode
     from eyede.modes.data_math_mode import DataMathMode
     from eyede.modes.ide_nav_mode import IdeNavMode
+    from eyede.modes.sniper_mouse_mode import SniperMouseMode
 except ImportError:  # pragma: no cover
     from modes.base_mode import BaseMode
     from modes.coding_mode import CodingMode
@@ -23,9 +24,10 @@ except ImportError:  # pragma: no cover
     from modes.terminal_git_mode import TerminalGitMode
     from modes.data_math_mode import DataMathMode
     from modes.ide_nav_mode import IdeNavMode
+    from modes.sniper_mouse_mode import SniperMouseMode
 
 
-MODE_ORDER: List[str] = ["coding", "writing", "terminal", "data_math", "navigation"]
+MODE_ORDER: List[str] = ["coding", "writing", "terminal", "data_math", "navigation", "sniper"]
 
 MODE_CLASSES: Dict[str, type] = {
     "coding": CodingMode,
@@ -33,6 +35,7 @@ MODE_CLASSES: Dict[str, type] = {
     "terminal": TerminalGitMode,
     "data_math": DataMathMode,
     "navigation": IdeNavMode,
+    "sniper": SniperMouseMode,
 }
 
 # Friendly aliases accepted by set_mode
@@ -54,6 +57,10 @@ MODE_ALIASES: Dict[str, str] = {
     "navigation_mode": "navigation",
     "read": "navigation",
     "ide_nav": "navigation",
+    "sniper": "sniper",
+    "sniper_mouse": "sniper",
+    "mouse": "sniper",
+    "francotirador": "sniper",
 }
 
 SOURCE_EXTENSIONS = {

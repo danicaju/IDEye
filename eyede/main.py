@@ -33,6 +33,8 @@ try:
     from eyede.core.gesture_detector import GestureDetector
     from eyede.core.hotkey_manager import GlobalHotkeyManager
     from eyede.core.websocket_bridge import WebSocketBridge
+    from eyede.core.sound_feedback import SoundFeedbackManager
+    from eyede.core.mouse_controller import OSMouseController
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.calibration_ui import CalibrationUI
@@ -47,6 +49,8 @@ except ImportError:
     from core.gesture_detector import GestureDetector
     from core.hotkey_manager import GlobalHotkeyManager
     from core.websocket_bridge import WebSocketBridge
+    from core.sound_feedback import SoundFeedbackManager
+    from core.mouse_controller import OSMouseController
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
     from ui.calibration_ui import CalibrationUI
@@ -694,6 +698,14 @@ class EyeDEApplication(QObject):
         )
         self.debug_widget = DebugWidget()
         self.overlay.set_debug_widget(self.debug_widget)
+        self.sound_feedback = SoundFeedbackManager(
+            enabled=getattr(config, "SOUND_ENABLED", True),
+            volume=getattr(config, "SOUND_VOLUME", 0.5),
+        )
+        self.overlay.set_sound_feedback(self.sound_feedback)
+        self.mouse_controller = OSMouseController()
+        self.overlay.set_mouse_controller(self.mouse_controller)
+        self.overlay.set_vscode_connected(False)
         self.calibration_ui: Optional[CalibrationUI] = None
         self._is_shutting_down: bool = False
         self.tray_icon: Optional[QSystemTrayIcon] = None
@@ -718,6 +730,10 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.auto_switch_requested.connect(self._on_auto_switch_shortcut)
         self.hotkey_manager.mode_cycle_anywhere_requested.connect(self._on_mode_shortcut_anywhere)
         self.hotkey_manager.auto_switch_anywhere_requested.connect(self._on_auto_switch_shortcut_anywhere)
+        self.hotkey_manager.sound_toggle_requested.connect(self._on_sound_shortcut)
+        self.hotkey_manager.sound_toggle_anywhere_requested.connect(self._on_sound_shortcut_anywhere)
+        self.hotkey_manager.sniper_toggle_requested.connect(self._on_sniper_shortcut)
+        self.hotkey_manager.sniper_toggle_anywhere_requested.connect(self._on_sniper_shortcut_anywhere)
 
         self._setup_connections()
         self._configure_geometry()
@@ -750,6 +766,24 @@ class EyeDEApplication(QObject):
         enabled = self.overlay.toggle_auto_switch()
         self.overlay.last_action_desc = f"Auto-switch: {'ON' if enabled else 'OFF'}"
         self.overlay.update()
+
+    def _on_sound_shortcut(self) -> None:
+        """S while gazing at the header toggles procedural sound."""
+        if self.overlay.is_mode_shortcut_targeted():
+            self._on_sound_shortcut_anywhere()
+
+    def _on_sound_shortcut_anywhere(self) -> None:
+        """Ctrl+Alt+S (or a validated plain S) toggles audio feedback."""
+        self.overlay.toggle_sound_feedback()
+
+    def _on_sniper_shortcut(self) -> None:
+        """F while gazing at the header activates sniper mode."""
+        if self.overlay.is_mode_shortcut_targeted():
+            self._on_sniper_shortcut_anywhere()
+
+    def _on_sniper_shortcut_anywhere(self) -> None:
+        """Ctrl+Alt+F (or a validated plain F) toggles sniper mode."""
+        self.overlay.toggle_sniper_mode()
 
     def _setup_connections(self) -> None:
         """Connects signals between tracker, overlay, debug monitor, and lifecycle."""

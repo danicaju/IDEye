@@ -435,6 +435,7 @@ class DebugWidget(QWidget):
             "<div style='color: #7dd3fc; font-weight: bold; margin-top: 5px; margin-bottom: 2px;'>ATAJOS DE TECLADO:</div>"
             "<div>• <b>[A]</b> Menús inteligentes &nbsp;|&nbsp; <b>[L]</b> Cambiar Lenguaje</div>"
             "<div>• <b>[T]</b> Modo Tracking &nbsp;|&nbsp; <b>[M]</b> Colapsar monitor</div>"
+            "<div>• <b>[S]</b> Sonido &nbsp;|&nbsp; <b>[F]</b> Francotirador</div>"
             "<div>• <b>[P]</b> Pausa Lectura &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
             "</div>"
         )

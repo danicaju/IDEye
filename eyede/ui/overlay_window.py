@@ -37,6 +37,8 @@ from PyQt6.QtWidgets import QWidget, QApplication
 try:
     import eyede.config as config
     from eyede.ui.icon_manager import IconManager
+    from eyede.core.sound_feedback import SoundFeedbackManager
+    from eyede.core.mouse_controller import OSMouseController
     from eyede.actions.code_injector import CodeInjector
     from eyede.actions.language_support import (
         LANG_PYTHON,
@@ -69,6 +71,8 @@ try:
 except ImportError:
     import config
     from ui.icon_manager import IconManager
+    from core.sound_feedback import SoundFeedbackManager
+    from core.mouse_controller import OSMouseController
     from actions.code_injector import CodeInjector
     from actions.language_support import (
         LANG_PYTHON,
@@ -126,6 +130,7 @@ MODE_SHORT_LABELS = {
     "terminal": "TERMINAL",
     "data_math": "DATOS",
     "navigation": "NAV",
+    "sniper": "RATÓN",
 }
 
 # (mode_id, display label, hint, icon) in the order shown in the mode hub.
@@ -135,6 +140,7 @@ MODE_SELECTOR_ENTRIES = (
     ("terminal", "Terminal", "Git, consola y pruebas", "terminal"),
     ("data_math", "Datos", "SQL, JSON, YAML y fórmulas", "database"),
     ("navigation", "Navegación", "Moverse por el editor y VS Code", "navigation"),
+    ("sniper", "Francotirador", "Control preciso del ratón del sistema", "crosshair"),
 )
 
 # Data displayed in the in-app help modal. Extracted as constants so the
@@ -164,6 +170,8 @@ HELP_SHORTCUTS = (
     ("[M]", "Colapsar Monitor", "Alterna monitor entre ventana y barra compacta."),
     ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
     ("[P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
+    ("[S]", "Sonido", "Silencia o activa el feedback acústico."),
+    ("[F]", "Francotirador", "Activa el control preciso del ratón."),
     ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
 )
 
@@ -249,6 +257,16 @@ class OverlayWindow(QWidget):
         self.last_action_desc: str = "Ninguna"
         self._mode_selection_in_progress: bool = False
         self._ws_connected: bool = False
+
+        # Phase 7: sound feedback and sniper targeting state
+        self.sound_feedback: Optional[SoundFeedbackManager] = None
+        self.mouse_controller: Optional[OSMouseController] = None
+        self._sniper_step: int = 1
+        self._sniper_locked_sector: Optional[int] = None
+        self._sniper_previous_mode: Optional[str] = None
+        self.hovered_subcell: Optional[int] = None
+        self.hovered_sniper_action: bool = False
+        self._sniper_action_pill_rect: QRectF = QRectF()
 
         # Adaptive AST Context Menu Subsystem (Phase Extra - Option A)
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
@@ -441,6 +459,7 @@ class OverlayWindow(QWidget):
             "AI": QBrush(QColor(28, 16, 38, 215)),
             "EXIT": QBrush(QColor(36, 14, 16, 215)),
             "MODE": QBrush(QColor(10, 30, 40, 220)),
+            "SNIPER": QBrush(QColor(40, 10, 22, 220)),
             "DEFAULT": self._brush_default,
         }
         self._cat_pens = {
@@ -454,6 +473,7 @@ class OverlayWindow(QWidget):
             "AI": QPen(QColor(217, 70, 239, 200), 1.8),
             "EXIT": QPen(QColor(239, 68, 68, 200), 1.8),
             "MODE": QPen(QColor(34, 211, 238, 200), 1.8),
+            "SNIPER": QPen(QColor(244, 63, 94, 210), 1.8),
             "DEFAULT": self._pen_default,
         }
         self._cat_top_pens = {
@@ -468,6 +488,7 @@ class OverlayWindow(QWidget):
             "EXIT": QPen(QColor(248, 113, 113, 220), 2.5),
             "LANG": QPen(QColor(168, 85, 247, 220), 2.5),
             "MODE": QPen(QColor(34, 211, 238, 220), 2.5),
+            "SNIPER": QPen(QColor(244, 63, 94, 230), 2.5),
             "DEFAULT": QPen(QColor(100, 116, 139, 180), 2.0),
         }
         self._cat_badges = {
@@ -482,6 +503,7 @@ class OverlayWindow(QWidget):
             "EXIT": ("SALIR", QColor(248, 113, 113)),
             "LANG": ("LENGUAJE", QColor(168, 85, 247)),
             "MODE": ("MODO", QColor(34, 211, 238)),
+            "SNIPER": ("SECTOR", QColor(244, 63, 94)),
             "DEFAULT": ("ACCIÓN", QColor(148, 163, 184)),
         }
 
@@ -779,9 +801,27 @@ class OverlayWindow(QWidget):
         else:
             self._last_action_pill_rect = QRectF()
 
+        # In sniper mode the same slot becomes a clickable mouse-action selector.
+        if self.current_context_mode_id == "sniper":
+            sniper_w = min(170.0, max(130.0, last_w))
+            self._sniper_action_pill_rect = QRectF(
+                self.header_help_rect.left() - gap - sniper_w,
+                header_rect.y() + 6.0,
+                sniper_w,
+                pill_h,
+            )
+            self._last_action_pill_rect = QRectF()
+        else:
+            self._sniper_action_pill_rect = QRectF()
+
+        selector_rect = (
+            self._sniper_action_pill_rect
+            if self._sniper_action_pill_rect.isValid()
+            else self._last_action_pill_rect
+        )
         lang_left = (
-            self._last_action_pill_rect.left() - gap - self._header_lang_w
-            if self._last_action_pill_rect.isValid()
+            selector_rect.left() - gap - self._header_lang_w
+            if selector_rect.isValid()
             else self.header_help_rect.left() - gap - self._header_lang_w
         )
         self.header_lang_rect = QRectF(
@@ -1088,6 +1128,14 @@ class OverlayWindow(QWidget):
         """
         self.current_gaze = (gx, gy)
 
+        # Sniper step 2: the precision sub-grid replaces normal card hit-testing.
+        if self.current_context_mode_id == "sniper" and self._sniper_step == 2:
+            self.hovered_subcell = self._subcell_from_gaze(gx, gy)
+            self.hovered_block = None
+            self.hovered_sniper_action = False
+            self.update()
+            return
+
         # Determine 3x3 block index with card geometry alignment
         w = float(self.width()) if self.width() > 0 else 1920.0
         h = float(self.height()) if self.height() > 0 else 1080.0
@@ -1165,6 +1213,18 @@ class OverlayWindow(QWidget):
 
         self.hovered_header_lang = False
 
+        # Sniper action selector pill (between language and help).
+        if (
+            self.current_context_mode_id == "sniper"
+            and self._sniper_action_pill_rect.isValid()
+            and self._sniper_action_pill_rect.adjusted(-10.0, -10.0, 10.0, 10.0).contains(px, py)
+        ):
+            self.hovered_sniper_action = True
+            self.hovered_block = None
+            self.update()
+            return
+        self.hovered_sniper_action = False
+
         # Hit-test the actual card rectangles. This is exact even when the
         # monitor-aware layout shifts the grid and adds 10px gaps.
         point = QPointF(px, py)
@@ -1212,6 +1272,234 @@ class OverlayWindow(QWidget):
         self.active_click_header_lang = False
         self.update()
 
+    # ------------------------------------------------------------------ #
+    # Phase 7: sound feedback
+    # ------------------------------------------------------------------ #
+    def set_sound_feedback(self, manager: Optional[SoundFeedbackManager]) -> None:
+        """Injects the procedural sound manager (optional in tests)."""
+        self.sound_feedback = manager
+
+    def _play_sound(self, sound_name: str) -> None:
+        """Plays a UI sound without ever blocking the Qt thread."""
+        try:
+            if self.sound_feedback is not None:
+                self.sound_feedback.play(sound_name)
+        except Exception:
+            pass
+
+    def toggle_sound_feedback(self) -> bool:
+        """Mutes/unmutes procedural audio and reports the new state."""
+        if self.sound_feedback is None:
+            return True
+        enabled = bool(self.sound_feedback.toggle_mute())
+        self.last_action_desc = f"Sonido: {'ON' if enabled else 'OFF'}"
+        self.update()
+        return enabled
+
+    # ------------------------------------------------------------------ #
+    # Phase 7: sniper targeting
+    # ------------------------------------------------------------------ #
+    def set_mouse_controller(self, controller: Optional[OSMouseController]) -> None:
+        self.mouse_controller = controller
+
+    def _get_screen_size(self) -> Tuple[int, int]:
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            return max(1, self.width()), max(1, self.height())
+        rect = screen.geometry()
+        # Qt reports logical pixels; pynput injects physical screen pixels.
+        dpr = float(screen.devicePixelRatio() or 1.0)
+        return max(1, int(rect.width() * dpr)), max(1, int(rect.height() * dpr))
+
+    def _calculate_sector_rect(
+        self,
+        sector_index: int,
+        screen_w: Optional[int] = None,
+        screen_h: Optional[int] = None,
+    ) -> Tuple[int, int, int, int]:
+        """Returns the screen-pixel rectangle of a 3x3 macro sector."""
+        if screen_w is None or screen_h is None:
+            screen_w, screen_h = self._get_screen_size()
+        col = sector_index % 3
+        row = sector_index // 3
+        sector_w = screen_w / 3.0
+        sector_h = screen_h / 3.0
+        return (
+            int(col * sector_w),
+            int(row * sector_h),
+            int(sector_w),
+            int(sector_h),
+        )
+
+    def _calculate_subcell_coords(
+        self,
+        subcell_index: int,
+        sector_rect: Tuple[int, int, int, int],
+    ) -> Tuple[int, int]:
+        """Returns the absolute screen-pixel center of a precision sub-cell."""
+        x, y, w, h = sector_rect
+        col = subcell_index % 3
+        row = subcell_index // 3
+        cell_w = w / 3.0
+        cell_h = h / 3.0
+        return (
+            int(x + (col + 0.5) * cell_w),
+            int(y + (row + 0.5) * cell_h),
+        )
+
+    def _subcell_rects_in_overlay(self) -> List[QRectF]:
+        """Maps the locked sector's 3x3 sub-grid into overlay coordinates."""
+        if self._sniper_locked_sector is None:
+            return []
+        screen_w, screen_h = self._get_screen_size()
+        sx, sy, sw, sh = self._calculate_sector_rect(
+            self._sniper_locked_sector, screen_w, screen_h
+        )
+        scale_x = self.width() / float(screen_w)
+        scale_y = self.height() / float(screen_h)
+        left = sx * scale_x
+        top = sy * scale_y
+        width = sw * scale_x
+        height = sh * scale_y
+        cell_w = width / 3.0
+        cell_h = height / 3.0
+        rects: List[QRectF] = []
+        for row in range(3):
+            for col in range(3):
+                rects.append(
+                    QRectF(
+                        left + col * cell_w,
+                        top + row * cell_h,
+                        cell_w,
+                        cell_h,
+                    )
+                )
+        return rects
+
+    def _subcell_from_gaze(self, gx: float, gy: float) -> Optional[int]:
+        if self._sniper_locked_sector is None:
+            return None
+        screen_w, screen_h = self._get_screen_size()
+        sx, sy, sw, sh = self._calculate_sector_rect(
+            self._sniper_locked_sector, screen_w, screen_h
+        )
+        px = gx * screen_w
+        py = gy * screen_h
+        if not (sx <= px < sx + sw and sy <= py < sy + sh):
+            return None
+        col = min(2, max(0, int((px - sx) / (sw / 3.0))))
+        row = min(2, max(0, int((py - sy) / (sh / 3.0))))
+        return row * 3 + col
+
+    def _sniper_mode(self):
+        try:
+            return self.mode_manager.get_mode("sniper") if self.mode_manager else None
+        except Exception:
+            return None
+
+    def _cycle_sniper_action(self) -> str:
+        mode = self._sniper_mode()
+        if mode is None or not hasattr(mode, "cycle_action"):
+            return "LEFT_CLICK"
+        action = mode.cycle_action()
+        self.last_action_desc = f"Ratón: {getattr(mode, 'action_label', action)}"
+        self._play_sound("mode")
+        self.update()
+        return action
+
+    def _execute_sniper_action(self, x: int, y: int) -> None:
+        mode = self._sniper_mode()
+        action = getattr(mode, "get_action", lambda: "LEFT_CLICK")() if mode else "LEFT_CLICK"
+        controller = self.mouse_controller
+        if controller is None:
+            controller = OSMouseController()
+            self.mouse_controller = controller
+        if action == "RIGHT_CLICK":
+            controller.right_click(x, y)
+        elif action == "DOUBLE_CLICK":
+            controller.double_click(x, y)
+        elif action == "SCROLL_UP":
+            controller.scroll_at(x, y, 3)
+        elif action == "SCROLL_DOWN":
+            controller.scroll_at(x, y, -3)
+        else:
+            controller.left_click(x, y)
+
+    def toggle_sniper_mode(self) -> None:
+        """Enters sniper mode from any mode, or returns to the previous one."""
+        if self.current_context_mode_id == "sniper":
+            self._exit_sniper_mode()
+            return
+        if self.mode_manager is None:
+            return
+        self._sniper_previous_mode = self.current_context_mode_id
+        self._mode_selection_in_progress = True
+        try:
+            self.mode_manager.set_mode("sniper", emit=True)
+        finally:
+            self._mode_selection_in_progress = False
+        self._sniper_step = 1
+        self._sniper_locked_sector = None
+        self.hovered_subcell = None
+        self.navigate_to("ROOT")
+        self.last_action_desc = "Francotirador"
+        self._play_sound("mode")
+        self.update()
+
+    def _exit_sniper_mode(self) -> None:
+        previous = self._sniper_previous_mode or "coding"
+        self._sniper_previous_mode = None
+        if self.mode_manager is not None:
+            self._mode_selection_in_progress = True
+            try:
+                self.mode_manager.set_mode(previous, emit=True)
+            finally:
+                self._mode_selection_in_progress = False
+        self._sniper_step = 1
+        self._sniper_locked_sector = None
+        self.hovered_subcell = None
+        self.navigate_to("ROOT")
+        self.last_action_desc = "Modo anterior"
+        self._play_sound("back")
+        self.update()
+
+    def _paint_sniper_overlay(self, painter: QPainter) -> None:
+        """Draws the step-2 precision sub-grid over the locked sector."""
+        if self.current_context_mode_id != "sniper" or self._sniper_step != 2:
+            return
+        rects = self._subcell_rects_in_overlay()
+        if not rects:
+            return
+        painter.save()
+        mode = self._sniper_mode()
+        action_label = getattr(mode, "action_label", "Clic Izq") if mode else "Clic Izq"
+        for idx, rect in enumerate(rects):
+            selected = idx == self.hovered_subcell
+            painter.setBrush(QColor(244, 63, 94, 45) if selected else QColor(2, 6, 23, 38))
+            painter.setPen(QPen(QColor(244, 63, 94, 235 if selected else 150), 2.0 if selected else 1.0))
+            painter.drawRoundedRect(rect.adjusted(2, 2, -2, -2), 6.0, 6.0)
+            painter.setPen(QColor(248, 250, 252) if selected else QColor(203, 213, 225))
+            painter.setFont(QFont("Segoe UI", 15, QFont.Weight.Bold))
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(idx + 1))
+        # Compact instruction banner.
+        banner = QRectF(
+            self.width() * 0.5 - 230.0,
+            self.margin,
+            460.0,
+            32.0,
+        )
+        painter.setBrush(QColor(11, 15, 25, 235))
+        painter.setPen(QPen(QColor(244, 63, 94, 220), 1.2))
+        painter.drawRoundedRect(banner, 9.0, 9.0)
+        painter.setPen(QColor(248, 250, 252))
+        painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        painter.drawText(
+            banner,
+            Qt.AlignmentFlag.AlignCenter,
+            f"PASO 2 · {action_label} · elige sub-zona y abre la boca",
+        )
+        painter.restore()
+
     def toggle_help_modal(self) -> None:
         """Toggles the in-app gesture and shortcut cheat sheet modal."""
         self.show_help_modal = not getattr(self, "show_help_modal", False)
@@ -1238,6 +1526,7 @@ class OverlayWindow(QWidget):
         - 'WINK_LEFT': Submenu 'Volver atrás' (parent menu node), or Undo 'Ctrl+Z' at ROOT.
         """
         if gesture_name == "WINK_RIGHT":
+            self._play_sound("pause")
             if self.show_help_modal:
                 self.show_help_modal = False
                 self.update()
@@ -1247,6 +1536,7 @@ class OverlayWindow(QWidget):
             return
 
         if gesture_name == "WINK_LEFT":
+            self._play_sound("back")
             if self.show_help_modal:
                 self.show_help_modal = False
                 self.last_action_desc = "Cerrar Ayuda"
@@ -1291,6 +1581,8 @@ class OverlayWindow(QWidget):
             self.update()
             return
 
+        self._play_sound("click")
+
         # Hands-free header exit click handler
         if self.hovered_header_exit:
             self.hovered_header_exit = False
@@ -1315,6 +1607,12 @@ class OverlayWindow(QWidget):
             self.update()
             return
 
+        # Sniper action selector (only visible in sniper mode)
+        if getattr(self, "hovered_sniper_action", False):
+            self.hovered_sniper_action = False
+            self._cycle_sniper_action()
+            return
+
         # Hands-free header mode click handler
         if getattr(self, "hovered_header_mode", False):
             self.hovered_header_mode = False
@@ -1331,6 +1629,23 @@ class OverlayWindow(QWidget):
             self.navigate_to("LANG_SELECT")
             self.last_action_desc = "Seleccionar Lenguaje"
             self.update()
+            return
+
+        # Sniper step 2: fire the selected OS mouse action at the sub-cell.
+        if self.current_context_mode_id == "sniper" and self._sniper_step == 2:
+            if self.hovered_subcell is not None and self._sniper_locked_sector is not None:
+                screen_w, screen_h = self._get_screen_size()
+                sector_rect = self._calculate_sector_rect(
+                    self._sniper_locked_sector, screen_w, screen_h
+                )
+                x, y = self._calculate_subcell_coords(self.hovered_subcell, sector_rect)
+                self._execute_sniper_action(x, y)
+                self._play_sound("click")
+                self.last_action_desc = f"Ratón en ({x}, {y})"
+                self._sniper_step = 1
+                self._sniper_locked_sector = None
+                self.hovered_subcell = None
+                self.update()
             return
 
         target_block = self.hovered_block
@@ -1372,6 +1687,21 @@ class OverlayWindow(QWidget):
             self.navigate_to(target_id)
             target_title = self.menu_tree[target_id].title if target_id in self.menu_tree else "RAÍZ"
             self.last_action_desc = f"Volver a {target_title}"
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        # Sniper step 1: lock the macro sector and show its precision sub-grid.
+        if item.action_type == "SNIPER_SECTOR":
+            try:
+                self._sniper_locked_sector = int(item.snippet)
+            except (TypeError, ValueError):
+                self._sniper_locked_sector = None
+            if self._sniper_locked_sector is not None:
+                self._sniper_step = 2
+                self.hovered_subcell = self._subcell_from_gaze(*self.current_gaze)
+                self.last_action_desc = f"Sector {self._sniper_locked_sector + 1}"
+                self._play_sound("mode")
+                self.update()
             self.block_activated.emit(target_block, item.id)
             return
 
@@ -1666,6 +1996,12 @@ class OverlayWindow(QWidget):
         elif event.key() == Qt.Key.Key_K:
             self.toggle_auto_switch()
             event.accept()
+        elif event.key() == Qt.Key.Key_S:
+            self.toggle_sound_feedback()
+            event.accept()
+        elif event.key() == Qt.Key.Key_F:
+            self.toggle_sniper_mode()
+            event.accept()
         else:
             super().keyPressEvent(event)
 
@@ -1723,6 +2059,10 @@ class OverlayWindow(QWidget):
         self.current_context_mode_name = display_name
         self.theme_color = theme_color
         self._set_theme_color(theme_color)
+        if mode_id != "sniper":
+            self._sniper_step = 1
+            self._sniper_locked_sector = None
+            self.hovered_subcell = None
 
         if mode_id == "writing":
             mode = self._writing_mode()
@@ -1831,15 +2171,17 @@ class OverlayWindow(QWidget):
 
         # Slot 7: back to the current mode's ROOT (cancel).
         items.append(create_back_action("ROOT", "7"))
-        # Slot 8: help / cheat sheet.
+        # Slot 8: sniper mouse mode (help remains in the header and [H]).
+        _, sniper_label, sniper_hint, sniper_icon = entry_by_id["sniper"]
+        sniper_current = self.current_context_mode_id == "sniper"
         items.append(
             MenuAction(
-                id="MODE_HELP",
-                label="8: Ayuda",
-                hint="Ver gestos y atajos",
-                action_type="SUBMENU",
-                submenu_id="HELP",
-                icon="help",
+                id="MODE_SNIPER",
+                label=f"8: {sniper_label}",
+                hint=("Estás en este modo" if sniper_current else sniper_hint),
+                action_type="MODE_SWITCH",
+                icon=sniper_icon,
+                mode_id="sniper",
             )
         )
         # Slot 9: exit.
@@ -1883,6 +2225,9 @@ class OverlayWindow(QWidget):
         """Enters a mode selected from the hub and lands on its ROOT menu."""
         if not mode_id or self.mode_manager is None:
             return
+        previous_mode = self.current_context_mode_id
+        if mode_id == "sniper" and previous_mode != "sniper":
+            self._sniper_previous_mode = previous_mode
         self._mode_selection_in_progress = True
         try:
             self.mode_manager.set_mode(mode_id, emit=True)
@@ -1890,7 +2235,11 @@ class OverlayWindow(QWidget):
             self._mode_selection_in_progress = False
         if "ROOT" in self.menu_tree:
             self.navigate_to("ROOT")
+        self._sniper_step = 1
+        self._sniper_locked_sector = None
+        self.hovered_subcell = None
         self.last_action_desc = f"Modo: {getattr(self, 'current_context_mode_name', '')}"
+        self._play_sound("mode")
         self.update()
 
     def cycle_context_mode(self) -> None:
@@ -1979,6 +2328,8 @@ class OverlayWindow(QWidget):
             return "PAUSE"
         if item.action_type == "MODE_SWITCH":
             return "MODE"
+        if item.action_type == "SNIPER_SECTOR":
+            return "SNIPER"
         if item.action_type == "BACK":
             return "BACK"
         if (
@@ -2036,6 +2387,7 @@ class OverlayWindow(QWidget):
         pill_h = max(24.0, header_h - 12.0)
         logo_rect = self._header_logo_rect
         last_pill_rect = self._last_action_pill_rect
+        sniper_pill_rect = self._sniper_action_pill_rect
 
         painter.setOpacity(0.95 if not self.reading_mode else 0.30)
 
@@ -2075,8 +2427,22 @@ class OverlayWindow(QWidget):
                     ws_text,
                 )
 
-        # Compact last-action status (between LANG and HELP)
-        if last_pill_rect.isValid():
+        # Sniper action selector, or compact last-action status.
+        if sniper_pill_rect.isValid():
+            mode = self._sniper_mode()
+            action_label = getattr(mode, "action_label", "Clic Izq") if mode else "Clic Izq"
+            painter.setBrush(QBrush(QColor(244, 63, 94, 38)))
+            painter.setPen(QPen(QColor(244, 63, 94, 220), 1.2))
+            painter.drawRoundedRect(sniper_pill_rect, 7.0, 7.0)
+            painter.setPen(QColor(254, 205, 211))
+            painter.setFont(self._font_header_bold_btn)
+            action_text = painter.fontMetrics().elidedText(
+                f"RATÓN: {action_label}",
+                Qt.TextElideMode.ElideRight,
+                int(max(0.0, sniper_pill_rect.width() - 14.0)),
+            )
+            painter.drawText(sniper_pill_rect, Qt.AlignmentFlag.AlignCenter, action_text)
+        elif last_pill_rect.isValid():
             painter.setBrush(self._brush_status_pill)
             painter.setPen(self._pen_status_pill)
             painter.drawRoundedRect(last_pill_rect, 7.0, 7.0)
@@ -2262,6 +2628,7 @@ class OverlayWindow(QWidget):
             "AI": "ai_spark",
             "EXIT": "exit",
             "MODE": "mode",
+            "SNIPER": "crosshair",
         }
 
         for i in range(9):
@@ -2450,6 +2817,12 @@ class OverlayWindow(QWidget):
         # =====================================================================
         if getattr(self, "show_help_modal", False):
             self._paint_help_modal(painter, w, h)
+
+        # =====================================================================
+        # 3b. Sniper precision sub-grid (step 2)
+        # =====================================================================
+        if self.current_context_mode_id == "sniper":
+            self._paint_sniper_overlay(painter)
 
         # =====================================================================
         # 4. Refined High-Visibility Dual-Ring Reticle with Glow Aura

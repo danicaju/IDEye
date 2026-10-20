@@ -1,0 +1,56 @@
+"""
+IDEye - OS Mouse Controller (Phase 7)
+Thin wrapper around pynput to inject mouse events from the gaze pipeline.
+"""
+
+from __future__ import annotations
+
+import time
+from typing import Optional
+
+try:
+    from pynput.mouse import Button, Controller
+except Exception:  # pragma: no cover - import fallback for stub environments
+    Button = object
+    Controller = object
+
+
+class OSMouseController:
+    """Injects mouse movement and clicks at absolute screen coordinates."""
+
+    _MOVE_CLICK_PAUSE: float = 0.01
+
+    def __init__(self, controller: Optional[object] = None) -> None:
+        self._controller = controller if controller is not None else Controller()
+
+    def move_to(self, x: int, y: int) -> None:
+        """Move the cursor to absolute screen coordinates."""
+        self._controller.position = (int(x), int(y))
+
+    def move_only(self, x: int, y: int) -> None:
+        """Alias for move_to; used when no click is required."""
+        self.move_to(x, y)
+
+    def left_click(self, x: int, y: int) -> None:
+        """Move and perform a single left click."""
+        self.move_to(x, y)
+        time.sleep(self._MOVE_CLICK_PAUSE)
+        self._controller.click(Button.left)
+
+    def right_click(self, x: int, y: int) -> None:
+        """Move and perform a single right click."""
+        self.move_to(x, y)
+        time.sleep(self._MOVE_CLICK_PAUSE)
+        self._controller.click(Button.right)
+
+    def double_click(self, x: int, y: int) -> None:
+        """Move and perform a double left click."""
+        self.move_to(x, y)
+        time.sleep(self._MOVE_CLICK_PAUSE)
+        self._controller.click(Button.left, 2)
+
+    def scroll_at(self, x: int, y: int, dy: int) -> None:
+        """Move to coordinates and scroll vertically by dy lines."""
+        self.move_to(x, y)
+        time.sleep(self._MOVE_CLICK_PAUSE)
+        self._controller.scroll(0, int(dy))

@@ -92,13 +92,14 @@ def test_manual_cycle(qapp):
         "terminal": "#A855F7",
         "data_math": "#F59E0B",
         "navigation": "#E2E8F0",
+        "sniper": "#F43F5E",
     }
-    for expected in MODE_ORDER:
+    for _ in MODE_ORDER:
         mm.cycle_next_mode()
-    # after 5 cycles returns to coding
+    # after a full cycle returns to coding
     assert mm.current_mode_id == "coding"
-    # received 5 transitions (initial not emitted)
-    assert len(received) == 5
+    # one transition per mode (initial not emitted)
+    assert len(received) == len(MODE_ORDER)
     for mid, name, color in received:
         assert color == expected_colors[mid]
 
@@ -224,11 +225,12 @@ def test_mode_hub_is_the_initial_screen(qapp):
     assert overlay.current_node_id == "MODE_SELECT"
     node = overlay.menu_tree["MODE_SELECT"]
     assert len(node.items) == 9
-    assert sum(1 for item in node.items if item.action_type == "MODE_SWITCH") == 5
+    assert sum(1 for item in node.items if item.action_type == "MODE_SWITCH") == 6
     assert node.items[4].action_type == "PAUSE"
     assert node.items[6].action_type == "BACK"
     assert node.items[6].submenu_id == "ROOT"
-    assert node.items[7].submenu_id == "HELP"
+    assert node.items[7].action_type == "MODE_SWITCH"
+    assert node.items[7].mode_id == "sniper"
     assert node.items[8].action_type == "EXIT"
 
     ok, errors = validate_menu_tree(overlay.menu_tree)

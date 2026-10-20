@@ -34,6 +34,8 @@ _SVG_FILES = (
     "language.svg",
     "operators.svg",
     "variables.svg",
+    "crosshair.svg",
+    "mouse.svg",
 )
 
 
@@ -150,7 +152,7 @@ class TestHeaderAndChips(unittest.TestCase):
     def test_submenu_preview_chips(self):
         help_item = next(
             item
-            for item in self.overlay.menu_tree["MODE_SELECT"].items
+            for item in self.overlay.menu_tree["ROOT"].items
             if item.action_type == "SUBMENU"
         )
         labels = self.overlay._preview_chip_labels(help_item)

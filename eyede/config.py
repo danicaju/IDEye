@@ -314,3 +314,9 @@ WEBSOCKET_HOST: str = "127.0.0.1"
 WEBSOCKET_PORT: int = 54321
 ENABLE_WEBSOCKET_BRIDGE: bool = True
 WEBSOCKET_RECONNECT_INTERVAL_SEC: float = 2.0
+
+# ==============================================================================
+# Phase 7: Sniper Lens, Sound Feedback & OS Mouse Injection
+# ==============================================================================
+SOUND_ENABLED: bool = True
+SOUND_VOLUME: float = 0.5

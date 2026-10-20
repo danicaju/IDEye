@@ -80,3 +80,25 @@ IDEye/
 * **Context7**: disponible para consultar documentación actualizada de librerías (PyQt6, MediaPipe, websockets, VS Code API).
 * **GitHub MCP**: configurado pero requiere autenticación OAuth; para operaciones de repositorio usa `git` mientras no esté conectado.
 * **Uso obligatorio bajo petición**: cuando el usuario pida usar una skill, MCP o plugin concreto, cárgalo o invócalo antes de responder. Si la tarea coincide claramente con una skill local o con una herramienta de `ideye-dev-tools`, úsala en lugar de resolverlo con herramientas genéricas.
+
+---
+
+## Enrutado de Modelos en IDEye
+
+Antes de editar, declara la clase y el agente elegido. La tabla completa está en el `AGENTS.md` global; para este repo:
+
+| Tarea típica | Clase | Agente / modelo |
+| :--- | :--- | :--- |
+| Fix de una línea, ajuste de test, typo | S | `build` con `deepseek-v4.1-flash` |
+| Feature de 2–5 archivos (T9, modo nuevo, puente WebSocket) | M | `@refactor` (`kimi-k2.7-code`) |
+| Rediseño de HUD/overlay, refactor multiarchivo, cambio de arquitectura | L | `@architect` (`qwen3.7-plus`) + `@refactor` |
+| Bug difícil tras 2 intentos, matemáticas de mirada/filtros | H | `@scalpel` (`deepseek-v4-pro`), solo el fix |
+| README, guías, changelog, commit | Docs | `@documenter` (`longcat-2.5-preview-free`) |
+| Revisión de UI, seguridad o regresiones | Review | `@reviewer` / `@security` (`qwen3.7-plus`) |
+
+Reglas específicas:
+
+- **Un rediseño visual del overlay es L**, aunque parezca “solo pintar”: toca geometría, hit-testing, estilos, main y tests.
+- **T9/redacción y el hub de modos son M**: no se implementan con `build`/flash.
+- **F12/killswitch**: investigación y fix pequeño pueden ser S, pero si el root cause no aparece en 2 intentos, escala a `@scalpel`.
+- No mezclar modelos dentro del mismo commit: primero se implementa con el agente correcto, luego se revisa con `@reviewer` si aplica.

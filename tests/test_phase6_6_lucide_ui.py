@@ -73,6 +73,20 @@ class TestHighDpiIcons(unittest.TestCase):
         self.assertEqual(pix.height(), 40)
         self.assertAlmostEqual(pix.devicePixelRatioF(), 2.0, places=2)
 
+    def test_high_dpi_icon_fills_its_physical_pixmap(self):
+        pix = IconManager.get_pixmap("function", 20, 20, color=QColor("#FFFFFF"), dpr=2.0)
+        image = pix.toImage()
+        xs = []
+        ys = []
+        for y in range(image.height()):
+            for x in range(image.width()):
+                if image.pixelColor(x, y).alpha() > 0:
+                    xs.append(x)
+                    ys.append(y)
+        self.assertTrue(xs, "icon rendered no pixels")
+        self.assertGreater(max(xs) - min(xs), 25, "icon was clipped to a quarter of the DPR pixmap")
+        self.assertGreater(max(ys) - min(ys), 20, "icon was clipped to a quarter of the DPR pixmap")
+
     def test_current_color_is_replaced(self):
         svg = b'<svg stroke="currentColor"></svg>'
         out = IconManager._apply_current_color(svg, "#FF0000")

@@ -168,7 +168,7 @@ class IconManager:
                 p = QPainter(pix)
                 p.setRenderHint(QPainter.RenderHint.Antialiasing)
                 p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-                renderer.render(p, QRectF(0, 0, width, height))
+                renderer.render(p, QRectF(0, 0, target_rect.width(), target_rect.height()))
                 p.end()
             inst._pixmap_cache[cache_key] = pix
 
@@ -234,7 +234,8 @@ class IconManager:
             p = QPainter(pixmap)
             p.setRenderHint(QPainter.RenderHint.Antialiasing)
             p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-            renderer.render(p, QRectF(0, 0, target_w, target_h))
+            # QPainter on a DPR-scaled pixmap uses logical coordinates.
+            renderer.render(p, QRectF(0, 0, width, height))
             p.end()
 
         inst._pixmap_cache[cache_key] = pixmap

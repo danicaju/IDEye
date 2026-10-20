@@ -1,16 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="varGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ec4899"/>
-      <stop offset="100%" stop-color="#f472b6"/>
-    </linearGradient>
-  </defs>
-  <!-- Background -->
-  <rect x="4" y="4" width="56" height="56" rx="14" fill="#2d0c22" stroke="#be185d" stroke-width="1.5"/>
-  <!-- Variable tag box -->
-  <rect x="12" y="16" width="40" height="32" rx="8" fill="#1f0917" stroke="#ec4899" stroke-width="2"/>
-  <!-- 'var' or 'x_y' lettering -->
-  <text x="32" y="38" font-family="'Segoe UI', 'Consolas', monospace" font-size="16" font-weight="bold" fill="#f472b6" text-anchor="middle">x : val</text>
-  <!-- Indicator dot -->
-  <circle cx="46" cy="22" r="2.5" fill="#f43f5e"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1"/><path d="M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1"/></svg>

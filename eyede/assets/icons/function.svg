@@ -1,16 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="funcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f59e0b"/>
-      <stop offset="100%" stop-color="#fbbf24"/>
-    </linearGradient>
-  </defs>
-  <!-- Background -->
-  <rect x="4" y="4" width="56" height="56" rx="14" fill="#2d1c08" stroke="#b45309" stroke-width="1.5"/>
-  <!-- Curly brace left -->
-  <path d="M 17 18 C 17 24, 13 26, 11 32 C 13 38, 17 40, 17 46" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
-  <!-- Curly brace right -->
-  <path d="M 47 18 C 47 24, 51 26, 53 32 C 51 38, 47 40, 47 46" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
-  <!-- f(x) math/code symbol -->
-  <text x="32" y="38" font-family="'Segoe UI', 'Consolas', sans-serif" font-size="20" font-weight="bold" font-style="italic" fill="#fbbf24" text-anchor="middle">f(x)</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>

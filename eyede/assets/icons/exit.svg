@@ -1,16 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="exitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ef4444"/>
-      <stop offset="100%" stop-color="#f87171"/>
-    </linearGradient>
-  </defs>
-  <!-- Background -->
-  <rect x="4" y="4" width="56" height="56" rx="14" fill="#300d0d" stroke="#b91c1c" stroke-width="1.5"/>
-  <!-- Power standby arc + vertical bar -->
-  <path d="M 23 23 C 17 29, 17 39, 23 45 C 29 51, 35 51, 41 45 C 47 39, 47 29, 41 23" fill="none" stroke="#f87171" stroke-width="3.5" stroke-linecap="round"/>
-  <!-- Top vertical power line -->
-  <line x1="32" y1="14" x2="32" y2="30" stroke="#fecaca" stroke-width="3.5" stroke-linecap="round"/>
-  <!-- Warning badge or small inner dot -->
-  <circle cx="32" cy="38" r="3" fill="#ef4444"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>

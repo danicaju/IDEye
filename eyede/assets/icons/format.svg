@@ -1,17 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="formatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#818cf8"/>
-    </linearGradient>
-  </defs>
-  <!-- Soft rounded background -->
-  <rect x="4" y="4" width="56" height="56" rx="16" fill="#0b1f33" stroke="#0369a1" stroke-width="1.5"/>
-  <!-- Paragraph lines -->
-  <rect x="17" y="16" width="30" height="5" rx="2.5" fill="url(#formatGrad)"/>
-  <rect x="17" y="25" width="24" height="5" rx="2.5" fill="#7dd3fc"/>
-  <rect x="17" y="34" width="30" height="5" rx="2.5" fill="url(#formatGrad)"/>
-  <!-- Friendly return arrow -->
-  <path d="M 23 47 H 43" fill="none" stroke="#bae6fd" stroke-width="3" stroke-linecap="round"/>
-  <path d="M 38 42 L 43 47 L 38 52" fill="none" stroke="#bae6fd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>

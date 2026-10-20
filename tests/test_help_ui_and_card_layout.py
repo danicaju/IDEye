@@ -132,8 +132,8 @@ class TestCardHeaderRects(unittest.TestCase):
             badge_rect.left() - 6.0,
             "icon must sit at least 6px left of the badge",
         )
-        self.assertEqual(icon_rect.width(), 22.0)
-        self.assertEqual(icon_rect.height(), 22.0)
+        self.assertEqual(icon_rect.width(), 28.0)
+        self.assertEqual(icon_rect.height(), 28.0)
 
     def test_badge_width_fits_text(self):
         rect = QRectF(100.0, 100.0, 300.0, 200.0)

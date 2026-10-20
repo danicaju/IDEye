@@ -132,8 +132,8 @@ MODE_SHORT_LABELS = {
 MODE_SELECTOR_ENTRIES = (
     ("coding", "Código", "Programar con menús inteligentes", "function"),
     ("writing", "Redacción", "Textos, Markdown y documentación", "format"),
-    ("terminal", "Terminal", "Git, consola y pruebas", "operators"),
-    ("data_math", "Datos", "SQL, JSON, YAML y fórmulas", "variables"),
+    ("terminal", "Terminal", "Git, consola y pruebas", "terminal"),
+    ("data_math", "Datos", "SQL, JSON, YAML y fórmulas", "database"),
     ("navigation", "Navegación", "Moverse por el editor y VS Code", "navigation"),
 )
 
@@ -248,6 +248,7 @@ class OverlayWindow(QWidget):
         self.current_node_id: str = "ROOT"
         self.last_action_desc: str = "Ninguna"
         self._mode_selection_in_progress: bool = False
+        self._ws_connected: bool = False
 
         # Adaptive AST Context Menu Subsystem (Phase Extra - Option A)
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
@@ -357,12 +358,12 @@ class OverlayWindow(QWidget):
         self._brush_card_active = QBrush(QColor(15, 23, 42, 115))
         self._pen_card_active = QPen(QColor("#00F0FF"), 2.5)
         self._pen_card_danger = QPen(QColor(239, 68, 68), 2.5)
-        self._brush_band_inactive = QBrush(QColor(11, 15, 25, 175))
+        self._brush_band_inactive = QBrush(QColor(11, 15, 25, 230))
         self._brush_band_active = QBrush(QColor(11, 15, 25, 225))
-        self._color_card_text_inactive = QColor(248, 250, 252, 166)
+        self._color_card_text_inactive = QColor(226, 232, 240, 255)
         self._color_card_text_active = QColor(248, 250, 252, 255)
         self._color_card_subtitle = QColor(148, 163, 184, 220)
-        self._color_card_subtitle_inactive = QColor(148, 163, 184, 143)
+        self._color_card_subtitle_inactive = QColor(148, 163, 184, 255)
         self._pen_badge_active = QPen(QColor(255, 255, 255, 90), 1.0)
         self._brush_badge_active = QBrush(QColor(255, 255, 255, 28))
         self._brush_badge_inactive = QBrush(QColor(255, 255, 255, 12))
@@ -577,6 +578,12 @@ class OverlayWindow(QWidget):
                 pass
         self.refresh_grid_right_margin(animate=False)
 
+    @pyqtSlot(bool)
+    def set_vscode_connected(self, connected: bool) -> None:
+        """Updates the VS Code WebSocket connection badge in the header."""
+        self._ws_connected = bool(connected)
+        self.update()
+
     def _on_debug_widget_layout_changed(self, _collapsed: bool = False) -> None:
         self.refresh_grid_right_margin()
 
@@ -674,6 +681,18 @@ class OverlayWindow(QWidget):
             close_btn_h,
         )
 
+    def _should_show_last_action(self) -> bool:
+        """Returns True when the last-action pill should be rendered."""
+        desc = (self.last_action_desc or "").strip()
+        if not desc:
+            return False
+        lowered = desc.lower()
+        if lowered in ("ninguna", "elegir modo", "elige un modo", "elige un modo"):
+            return False
+        if lowered.startswith("modo:"):
+            return False
+        return True
+
     def _update_header_exit_rect(self) -> None:
         """Computes the unified floating command bar and its interactive targets."""
         w = float(self.width()) if self.width() > 0 else 1920.0
@@ -688,11 +707,9 @@ class OverlayWindow(QWidget):
         bar_x = grid_left + (area_w - bar_w) * 0.5
 
         if bar_w >= 900.0:
-            # Preserve the large, comfortable targets validated by the test suite.
             self._header_exit_w = max(150.0, min(160.0, bar_w * 0.12))
             self._header_help_w = max(130.0, min(140.0, bar_w * 0.10))
         else:
-            # Compact layout for a narrowed grid beside the debug monitor.
             self._header_exit_w = max(104.0, min(120.0, bar_w * 0.14))
             self._header_help_w = max(100.0, min(112.0, bar_w * 0.10))
         self._header_lang_w = max(56.0, min(64.0, bar_w * 0.07))
@@ -701,6 +718,9 @@ class OverlayWindow(QWidget):
         header_rect = QRectF(bar_x, margin, bar_w, header_h)
         self.header_rect = header_rect
         inner = 8.0
+        gap = 6.0
+
+        # Right-to-left: EXIT | HELP | [LAST ACTION] | LANG | MODE
         self.header_exit_rect = QRectF(
             header_rect.right() - inner - self._header_exit_w,
             header_rect.y() + 6.0,
@@ -708,19 +728,70 @@ class OverlayWindow(QWidget):
             pill_h,
         )
         self.header_help_rect = QRectF(
-            self.header_exit_rect.left() - 6.0 - self._header_help_w,
+            self.header_exit_rect.left() - gap - self._header_help_w,
             header_rect.y() + 6.0,
             self._header_help_w,
             pill_h,
         )
+
+        show_last = self._should_show_last_action()
+        last_w = min(170.0, max(70.0, bar_w * 0.22))
+        right_block = (
+            self._header_mode_w + self._header_lang_w + self._header_help_w
+            + self._header_exit_w + 3.0 * gap
+        )
+        if show_last:
+            right_block += last_w + gap
+
+        # Brand area needs logo + IDEye + optional WS status
+        brand_fm = QFontMetrics(self._font_header_bold_btn)
+        brand_w = float(brand_fm.horizontalAdvance("IDEye")) + 2.0
+        ws_dot = 6.0
+        ws_gap = 5.0
+        ws_full_w = ws_dot + ws_gap + float(QFontMetrics(self._font_header_left).horizontalAdvance("VS Code"))
+        ws_min_w = ws_dot
+        brand_min = 24.0 + 8.0 + brand_w + 10.0 + ws_min_w
+
+        # If it doesn't fit, shrink or hide the last-action pill
+        if right_block + brand_min + 12.0 > bar_w:
+            last_w = max(70.0, last_w - 40.0)
+            right_block = (
+                self._header_mode_w + self._header_lang_w + self._header_help_w
+                + self._header_exit_w + 3.0 * gap + last_w + gap
+            ) if show_last else right_block
+        if show_last and right_block + brand_min + 12.0 > bar_w:
+            show_last = False
+            right_block = (
+                self._header_mode_w + self._header_lang_w + self._header_help_w
+                + self._header_exit_w + 3.0 * gap
+            )
+        if right_block + brand_min + 12.0 > bar_w:
+            # Last resort: narrow the mode button to its hard minimum
+            self._header_mode_w = max(120.0, min(self._header_mode_w, bar_w - right_block + self._header_mode_w - brand_min - 12.0))
+
+        if show_last:
+            self._last_action_pill_rect = QRectF(
+                self.header_help_rect.left() - gap - last_w,
+                header_rect.y() + 6.0,
+                last_w,
+                pill_h,
+            )
+        else:
+            self._last_action_pill_rect = QRectF()
+
+        lang_left = (
+            self._last_action_pill_rect.left() - gap - self._header_lang_w
+            if self._last_action_pill_rect.isValid()
+            else self.header_help_rect.left() - gap - self._header_lang_w
+        )
         self.header_lang_rect = QRectF(
-            self.header_help_rect.left() - 6.0 - self._header_lang_w,
+            lang_left,
             header_rect.y() + 6.0,
             self._header_lang_w,
             pill_h,
         )
         self.header_mode_rect = QRectF(
-            self.header_lang_rect.left() - 8.0 - self._header_mode_w,
+            self.header_lang_rect.left() - gap - self._header_mode_w,
             header_rect.y() + 6.0,
             self._header_mode_w,
             pill_h,
@@ -733,68 +804,126 @@ class OverlayWindow(QWidget):
             logo_size,
             logo_size,
         )
+
         status_left = self._header_logo_rect.right() + 8.0
-        status_right = self.header_mode_rect.left() - 8.0
+        status_right = self.header_mode_rect.left() - gap
         status_w = max(0.0, status_right - status_left)
         self._header_status_rect = QRectF(status_left, header_rect.y() + 6.0, status_w, pill_h)
+        self._header_ws_dot_only = status_w < ws_full_w + 4.0
+        self._header_ws_show = status_w >= ws_min_w + 4.0
 
-        last_w = min(190.0, status_w * 0.55)
-        if last_w >= 70.0:
-            self._last_action_pill_rect = QRectF(
-                status_right - last_w,
-                header_rect.y() + 6.0,
-                last_w,
-                pill_h,
-            )
-        else:
-            self._last_action_pill_rect = QRectF()
-        breadcrumb_w = max(0.0, status_w - (last_w + 8.0 if last_w >= 70.0 else 0.0))
-        self._header_breadcrumb_rect = QRectF(
-            status_left,
-            header_rect.y() + 4.0,
-            breadcrumb_w,
-            header_h - 8.0,
-        )
+        # Breadcrumb is no longer painted; keep an empty rect for compatibility.
+        self._header_breadcrumb_rect = QRectF()
         self._update_help_modal_rect()
 
     def _card_header_rects(
         self, rect: QRectF, badge_text: str, has_icon: bool
     ) -> tuple[QRectF, QRectF]:
-        """Compute status badge and vector icon rectangles for a menu card header.
+        """Compute status badge and vector icon cell rectangles for a menu card header.
 
-        The badge stays at the top-right of the band. The icon is rendered
-        immediately to its left with a fixed 8 px gap. If the remaining title
-        width would drop below 70 px, the icon is hidden but the badge is kept.
+        Returns a 2-tuple (badge_rect, cell_rect). The badge stays at the top-right
+        of the band. The icon cell (28x28) is rendered immediately to its left with
+        an 8-10 px gap. If the remaining title width would drop below 72 px, the
+        icon cell is hidden but the badge is kept.
         """
         y = rect.y()
         badge_rect = QRectF()
-        icon_rect = QRectF()
+        cell_rect = QRectF()
 
         if badge_text:
             metrics = QFontMetrics(self._font_status)
             badge_w = max(62.0, metrics.horizontalAdvance(badge_text) + 14.0)
             badge_rect = QRectF(rect.right() - 10.0 - badge_w, y + 17.0, badge_w, 18.0)
 
-        icon_size = 22.0
+        cell_size = 28.0
         if has_icon:
             if badge_rect.isValid():
-                icon_x = badge_rect.left() - 8.0 - icon_size
+                cell_x = badge_rect.left() - 10.0 - cell_size
             else:
-                icon_x = rect.right() - 32.0
-            icon_y = y + 15.0
-            icon_rect = QRectF(icon_x, icon_y, icon_size, icon_size)
+                cell_x = rect.right() - 10.0 - cell_size
+            icon_y = y + 12.0
+            cell_rect = QRectF(cell_x, icon_y, cell_size, cell_size)
 
-        # Hide the icon if the title area would become too narrow.
+        # Hide the icon cell if the title area would become too narrow.
         title_left = rect.x() + 42.0
         first_right = min(
             badge_rect.left() if badge_rect.isValid() else rect.right() - 8.0,
-            icon_rect.left() if icon_rect.isValid() else rect.right() - 8.0,
+            cell_rect.left() if cell_rect.isValid() else rect.right() - 8.0,
         )
         title_w = max(20.0, first_right - 8.0 - title_left)
-        if title_w < 70.0 and icon_rect.isValid():
-            icon_rect = QRectF()
+        if title_w < 72.0 and cell_rect.isValid():
+            cell_rect = QRectF()
 
-        return badge_rect, icon_rect
+        return badge_rect, cell_rect
+
+    def _preview_chip_labels(self, item: MenuAction) -> list[str]:
+        """Returns up to 4 preview labels for MODE_SWITCH and SUBMENU cards."""
+        source_items: list = []
+        if item.action_type == "MODE_SWITCH" and self.mode_manager is not None:
+            try:
+                mode = self.mode_manager.get_mode(item.mode_id)
+                node = mode.get_root_menu(self.current_language)
+                source_items = list(node.items)
+            except Exception:
+                source_items = []
+        elif item.action_type == "SUBMENU" and item.submenu_id in self.menu_tree:
+            source_items = list(self.menu_tree[item.submenu_id].items)
+        else:
+            return []
+
+        labels: list[str] = []
+        seen: set[str] = set()
+        for child in source_items:
+            if child.action_type in ("PAUSE", "BACK", "EXIT"):
+                continue
+            raw = _clean_action_label(getattr(child, "label", "") or "")
+            if not raw:
+                continue
+            for part in raw.split(" / "):
+                part = part.strip()
+                if not part:
+                    continue
+                if len(part) > 14:
+                    part = part[:14] + "…"
+                key = part.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                labels.append(part)
+                if len(labels) >= 4:
+                    return labels
+        return labels
+
+    def _paint_preview_chips(
+        self,
+        painter: QPainter,
+        card_rect: QRectF,
+        chip_labels: list[str],
+    ) -> None:
+        """Paints small preview chips under the card header band."""
+        if not chip_labels:
+            return
+        fm = QFontMetrics(self._font_card_subtitle)
+        chip_h = 18.0
+        gap = 4.0
+        radius = 5.0
+        start_x = card_rect.x() + 12.0
+        y = card_rect.y() + 58.0
+        max_right = card_rect.right() - 12.0
+
+        painter.setFont(self._font_card_subtitle)
+        for label in chip_labels:
+            text_w = fm.horizontalAdvance(label)
+            chip_w = float(text_w) + 10.0
+            if start_x + chip_w > max_right:
+                break
+            chip_rect = QRectF(start_x, y, chip_w, chip_h)
+            painter.setBrush(QColor(255, 255, 255, 12))
+            painter.setPen(QPen(QColor(255, 255, 255, 28), 1.0))
+            painter.drawRoundedRect(chip_rect, radius, radius)
+            painter.setPen(QColor(203, 213, 225))
+            painter.drawText(chip_rect, Qt.AlignmentFlag.AlignCenter, label)
+            start_x += chip_w + gap
 
     def _apply_win32_no_activate(self) -> None:
         """Applies WS_EX_NOACTIVATE and WS_EX_TRANSPARENT styles on Windows to guarantee zero focus stealing."""
@@ -1910,40 +2039,43 @@ class OverlayWindow(QWidget):
 
         painter.setOpacity(0.95 if not self.reading_mode else 0.30)
 
+        dpr = self.devicePixelRatioF() or 1.0
+
         # Unified floating command bar (Dynamic Island / Linear style)
         painter.setBrush(self._brush_header_bg)
         painter.setPen(self._pen_header_border)
         painter.drawRoundedRect(header_rect, 14.0, 14.0)
 
-        IconManager.instance().render_icon(painter, "eyede_logo", logo_rect)
+        IconManager.instance().render_icon(painter, "eyede_logo", logo_rect, dpr=dpr)
 
-        # Compact breadcrumb trail (left of the command controls)
-        breadcrumb_path = get_breadcrumb_path(self.menu_tree, self.current_node_id).replace(" > ", " › ")
-        if curr_node and curr_node.sticky:
-            breadcrumb_path += "  [FIJO]"
-        if self.current_node_id == "MODE_SELECT" and curr_node:
-            left_text = curr_node.breadcrumb_label
-        elif self.current_node_id == "ROOT" and getattr(self, "adaptive_ast_enabled", True) and curr_node:
-            left_text = curr_node.breadcrumb_label
-        else:
-            left_text = breadcrumb_path
+        # Brand + WS status (left side)
+        brand_x = logo_rect.right() + 8.0
+        painter.setPen(self._color_card_text_active)
+        painter.setFont(self._font_header_bold_btn)
+        painter.drawText(
+            QRectF(brand_x, header_rect.y() + 6.0, 80.0, pill_h),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            "IDEye",
+        )
+        brand_w = float(painter.fontMetrics().horizontalAdvance("IDEye")) + 2.0
+        ws_x = brand_x + brand_w + 10.0
+        if getattr(self, "_header_ws_show", False):
+            ws_color = QColor(34, 197, 94) if self._ws_connected else QColor(148, 163, 184)
+            painter.setBrush(QBrush(ws_color))
+            painter.setPen(Qt.PenStyle.NoPen)
+            y = header_rect.y() + 6.0 + (pill_h - 6.0) * 0.5
+            painter.drawEllipse(QRectF(ws_x, y, 6.0, 6.0))
+            if not getattr(self, "_header_ws_dot_only", False):
+                ws_text = "VS Code" if self._ws_connected else "Local"
+                painter.setPen(self._pen_header_left)
+                painter.setFont(self._font_header_left)
+                painter.drawText(
+                    QRectF(ws_x + 11.0, header_rect.y() + 6.0, 120.0, pill_h),
+                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                    ws_text,
+                )
 
-        breadcrumb_rect = self._header_breadcrumb_rect
-        if breadcrumb_rect.width() > 40.0:
-            painter.setPen(self._pen_header_left)
-            painter.setFont(self._font_header_left)
-            elided_left = painter.fontMetrics().elidedText(
-                left_text,
-                Qt.TextElideMode.ElideMiddle,
-                int(breadcrumb_rect.width()),
-            )
-            painter.drawText(
-                breadcrumb_rect,
-                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                elided_left,
-            )
-
-        # Compact last-action status
+        # Compact last-action status (between LANG and HELP)
         if last_pill_rect.isValid():
             painter.setBrush(self._brush_status_pill)
             painter.setPen(self._pen_status_pill)
@@ -1978,7 +2110,7 @@ class OverlayWindow(QWidget):
             icon_size,
             icon_size,
         )
-        IconManager.instance().render_icon(painter, "exit", exit_icon_rect)
+        IconManager.instance().render_icon(painter, "exit", exit_icon_rect, color="#FCA5A5", dpr=dpr)
         painter.setPen(exit_text_color)
         painter.setFont(self._font_header_bold_btn)
         painter.drawText(
@@ -2007,7 +2139,7 @@ class OverlayWindow(QWidget):
             icon_size,
             icon_size,
         )
-        IconManager.instance().render_icon(painter, "help", help_icon_rect)
+        IconManager.instance().render_icon(painter, "help", help_icon_rect, color="#7DD3FC", dpr=dpr)
         painter.setPen(help_text_color)
         painter.setFont(self._font_header_bold_btn)
         painter.drawText(
@@ -2040,7 +2172,8 @@ class OverlayWindow(QWidget):
             18.0,
             18.0,
         )
-        IconManager.instance().render_icon(painter, "mode", mode_icon_rect)
+        mode_icon_color = self.theme_color or "#00F0FF"
+        IconManager.instance().render_icon(painter, "mode", mode_icon_rect, color=mode_icon_color, dpr=dpr)
         painter.setPen(mode_text_color)
         painter.setFont(self._font_header_bold_btn)
         mode_label = f"MODO: {self._short_mode_label()}  ▾  (V)"
@@ -2122,7 +2255,7 @@ class OverlayWindow(QWidget):
             "OPERATORS": "operators",
             "NAV": "navigation",
             "PAUSE": "pause_eye",
-            "BACK": "navigation",
+            "BACK": "arrow_left",
             "T9": "variables",
             "EDIT": "edit",
             "FORMAT": "format",
@@ -2162,7 +2295,7 @@ class OverlayWindow(QWidget):
             else:
                 body_brush = self._brush_card_inactive
                 border_pen = self._pen_card_inactive
-                text_opacity = 0.65
+                text_opacity = 1.0
                 band_brush = self._brush_band_inactive
 
             # 1. Transparent body (keeps VS Code readable)
@@ -2257,7 +2390,14 @@ class OverlayWindow(QWidget):
                 painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, badge_text)
 
             if icon_rect.isValid() and icon_name:
-                IconManager.instance().render_icon(painter, icon_name, icon_rect)
+                IconManager.instance().render_cell_icon(
+                    painter,
+                    icon_name,
+                    icon_rect,
+                    icon_size=20.0,
+                    color=(border_pen.color() if is_active else QColor("#CBD5E1")),
+                    dpr=dpr,
+                )
 
             # Title + subtitle inside the dark band.
             title = _clean_action_label(_menu_card_label(item)) or item.label
@@ -2299,6 +2439,9 @@ class OverlayWindow(QWidget):
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                     subtitle_text,
                 )
+
+            if not self.reading_mode:
+                self._paint_preview_chips(painter, rect, self._preview_chip_labels(item))
 
             painter.restore()
 

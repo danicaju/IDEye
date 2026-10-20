@@ -769,6 +769,12 @@ class EyeDEApplication(QObject):
             self.ws_bridge.client_disconnected.connect(
                 lambda client_id: self.debug_widget.set_vscode_connected(self.ws_bridge.is_connected)
             )
+            self.ws_bridge.client_connected.connect(
+                lambda *_: self.overlay.set_vscode_connected(True)
+            )
+            self.ws_bridge.client_disconnected.connect(
+                lambda *_: self.overlay.set_vscode_connected(self.ws_bridge.is_connected)
+            )
             self.ws_bridge.editor_state_received.connect(self._on_vscode_editor_state_received)
 
         # Multi-language synchronization between overlay, debug monitor, and context reader

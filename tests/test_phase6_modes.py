@@ -140,17 +140,29 @@ def test_header_mode_button_layout_1280(qapp):
     assert overlay.header_help_rect.right() <= overlay.header_exit_rect.left()
 
 
-def test_last_action_pill_stays_left_of_mode_button(qapp):
+def test_last_action_pill_sits_between_language_and_help(qapp):
     overlay = OverlayWindow()
     overlay.resize(1280, 720)
+    overlay.last_action_desc = "git status"
     overlay.show()
     qapp.processEvents()
     overlay.grab()
 
     pill = overlay._last_action_pill_rect
     assert pill.isValid()
-    assert pill.right() <= overlay.header_mode_rect.left()
-    assert pill.right() <= overlay.header_lang_rect.left()
+    assert pill.left() >= overlay.header_lang_rect.right()
+    assert pill.right() <= overlay.header_help_rect.left()
+    overlay.close()
+
+
+def test_last_action_pill_hidden_for_redundant_mode_text(qapp):
+    overlay = OverlayWindow()
+    overlay.resize(1280, 720)
+    overlay.last_action_desc = "Elegir modo"
+    overlay.show()
+    qapp.processEvents()
+    overlay.grab()
+    assert not overlay._last_action_pill_rect.isValid()
     overlay.close()
 
 

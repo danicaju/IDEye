@@ -81,7 +81,7 @@ class TestGlassFocusLayout(unittest.TestCase):
         self.assertEqual(self.overlay._brush_card_inactive.color().alpha(), 18)
         self.assertEqual(self.overlay._brush_card_active.color().alpha(), 115)
         self.assertEqual(self.overlay._brush_band_active.color().alpha(), 225)
-        self.assertEqual(self.overlay._brush_band_inactive.color().alpha(), 175)
+        self.assertEqual(self.overlay._brush_band_inactive.color().alpha(), 230)
 
     def test_mar_updates_reticle_progress_state(self):
         self.overlay.mar_threshold = 0.5

@@ -13,3 +13,5 @@ __pycache__/
 *.spec
 *.bak
 build_log.txt
+user_settings.json
+user_settings.json.tmp

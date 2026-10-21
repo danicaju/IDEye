@@ -194,6 +194,8 @@ class OverlayWindow(QWidget):
     ast_context_detected = pyqtSignal(str)  # (context_name)
     language_changed = pyqtSignal(str)  # (language_code)
     context_mode_changed = pyqtSignal(str, str, str)  # (mode_id, display_name, theme_color)
+    sound_enabled_changed = pyqtSignal(bool)
+    auto_switch_changed = pyqtSignal(bool)
     mode_changed = context_mode_changed
 
     def __init__(
@@ -1369,6 +1371,7 @@ class OverlayWindow(QWidget):
             return True
         enabled = bool(self.sound_feedback.toggle_mute())
         self.last_action_desc = f"Sonido: {'ON' if enabled else 'OFF'}"
+        self.sound_enabled_changed.emit(enabled)
         self.update()
         return enabled
 
@@ -2562,7 +2565,9 @@ class OverlayWindow(QWidget):
 
     def toggle_auto_switch(self, enabled=None) -> bool:
         if self.mode_manager is not None:
-            return self.mode_manager.toggle_auto_switch(enabled)
+            value = self.mode_manager.toggle_auto_switch(enabled)
+            self.auto_switch_changed.emit(value)
+            return value
         return False
 
     @pyqtSlot(bool)

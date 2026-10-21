@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-402%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-411%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -262,7 +262,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Spanish T9/common-word dictionary
 │       └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 402 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
+└── tests/ # 411 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
     ├── test_phase1.py # Core computer vision & MAR state machine tests
     ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
     ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -294,11 +294,11 @@ pytest -q
 ```
 
 ```text
-402 passed, 53 subtests, 12.20s
+411 passed, 53 subtests, 12.18s
 ```
 
 > [!NOTE]
-> All 402 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 411 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 
@@ -317,6 +317,7 @@ pytest -q
 - [x] **Phase 7.5:** Grid-free FreeLook at 60 Hz, Jaw-Lock, Gaming/Roblox profile, and Smart Prefix Deduplication (`h + hola` -> `ola`).
 - [x] **Phase 7.6:** Sub-pixel cranial centroid stability, PURE_IRIS orbital multi-anchor + median, HYBRID saccade fusion, and bidirectional VS Code WebSocket auto-context.
 - [x] **Phase 7.7:** Full-screen FreeLook mapping, comfortable edge overscan, and Windows taskbar magnetic rail.
+- [x] **Phase 8.1:** Persistent `user_settings.json`, live debounced settings sync, 6th-step biometric MAR calibration, and live MAR slider.
 - [ ] **Phase 8:** Multi-monitor gaze handover, custom macro builder, and Linux/macOS packaging.
 
 ---

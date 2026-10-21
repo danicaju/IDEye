@@ -15,6 +15,7 @@ mapping via GazeEstimator, and saves calibration_profile.json.
 """
 
 from typing import Optional, List, Dict, Any, Tuple
+import json
 import os
 import sys
 import time
@@ -34,12 +35,28 @@ except ImportError:
     from ui.icon_manager import IconManager
 
 
+def compute_auto_mar_threshold(
+    rest_samples: List[float],
+    peak_samples: List[float],
+) -> float:
+    """Computes the 60% ergonomic MAR trigger point, clamped to [0.25, 0.70]."""
+    try:
+        rest = float(np.median(rest_samples)) if rest_samples else float(config.MAR_THRESHOLD)
+        peaks = [float(p) for p in peak_samples if np.isfinite(float(p))]
+        peak = float(np.median(peaks)) if peaks else rest + 0.20
+        threshold = rest + 0.60 * (peak - rest)
+        return float(np.clip(threshold, 0.25, 0.70))
+    except (TypeError, ValueError):
+        return float(config.MAR_THRESHOLD)
+
+
 class CalibrationUI(QWidget):
     """
     Full-screen 5-point calibration interface for IDEye.
     """
 
     calibration_finished = pyqtSignal(bool)  # Emits True if succeeded, False if cancelled
+    mar_threshold_calibrated = pyqtSignal(float)
 
     def __init__(
         self,
@@ -47,12 +64,29 @@ class CalibrationUI(QWidget):
         profile_path: str = config.CALIBRATION_PROFILE_PATH,
         samples_per_point: int = config.CALIBRATION_SAMPLES_PER_POINT,
         parent: Optional[QWidget] = None,
+        auto_mar_enabled: bool = False,
+        settings_manager: Optional[Any] = None,
+        sound_feedback: Optional[Any] = None,
     ):
         super().__init__(parent)
 
         self.gaze_estimator = gaze_estimator or GazeEstimator()
         self.profile_path = profile_path
         self.samples_per_point = max(3, samples_per_point)
+        self.auto_mar_enabled = bool(auto_mar_enabled)
+        self.settings_manager = settings_manager
+        self.sound_feedback = sound_feedback
+
+        # Step 6 biometric MAR state
+        self._calibration_step: int = 1
+        self._mar_phase: str = "gaze"
+        self._rest_mar_samples: List[float] = []
+        self._peak_mar_samples: List[float] = []
+        self._rest_mar: float = float(config.MAR_THRESHOLD)
+        self._last_mar: float = 0.0
+        self._mouth_open: bool = False
+        self._current_peak: float = 0.0
+        self._auto_mar_threshold: Optional[float] = None
 
         # Calibration points configuration
         self.points: List[Dict[str, Any]] = list(config.CALIBRATION_POINTS)
@@ -104,8 +138,112 @@ class CalibrationUI(QWidget):
 
     def on_gesture_triggered(self, gesture_name: str) -> None:
         """Slot for facial gestures from tracker."""
-        if gesture_name == "MOUTH_CLICK" and not self.is_sampling and not self.is_completed:
+        if (
+            gesture_name == "MOUTH_CLICK"
+            and self._calibration_step != 6
+            and not self.is_sampling
+            and not self.is_completed
+        ):
             self.start_sampling()
+
+    def on_mar_updated(self, mar: float) -> None:
+        """Step 6 biometric MAR sampling from the tracker's frame signal."""
+        if self._calibration_step != 6:
+            return
+        try:
+            value = float(mar)
+        except (TypeError, ValueError):
+            return
+        if not np.isfinite(value):
+            return
+        self._last_mar = max(0.0, value)
+
+        if self._mar_phase == "rest":
+            self._rest_mar_samples.append(self._last_mar)
+            if len(self._rest_mar_samples) >= 45:
+                self._rest_mar = float(np.median(self._rest_mar_samples))
+                self._mar_phase = "peaks"
+                self.status_message = "Abre la boca cómodamente 3 veces como para hacer clic (1/3)"
+                self.update()
+            return
+
+        if self._mar_phase != "peaks":
+            return
+
+        open_threshold = self._rest_mar + 0.12
+        close_threshold = self._rest_mar + 0.06
+        if not self._mouth_open and self._last_mar > open_threshold:
+            self._mouth_open = True
+            self._current_peak = self._last_mar
+        elif self._mouth_open:
+            self._current_peak = max(self._current_peak, self._last_mar)
+            if self._last_mar < close_threshold:
+                self._mouth_open = False
+                self._peak_mar_samples.append(self._current_peak)
+                if self.sound_feedback is not None:
+                    try:
+                        self.sound_feedback.play("click")
+                    except Exception:
+                        pass
+                count = len(self._peak_mar_samples)
+                if count < 3:
+                    self.status_message = (
+                        f"Abre la boca cómodamente 3 veces como para hacer clic ({count + 1}/3)"
+                    )
+                self.update()
+                if count >= 3:
+                    self._finish_auto_mar_calibration()
+
+    def _start_auto_mar_calibration(self) -> None:
+        self._calibration_step = 6
+        self._mar_phase = "rest"
+        self._rest_mar_samples = []
+        self._peak_mar_samples = []
+        self._mouth_open = False
+        self._current_peak = 0.0
+        self._last_mar = 0.0
+        self.status_message = "Mantén la boca cerrada y relajada..."
+        self.update()
+
+    def _finish_auto_mar_calibration(self) -> None:
+        threshold = compute_auto_mar_threshold(
+            self._rest_mar_samples, self._peak_mar_samples
+        )
+        self._auto_mar_threshold = threshold
+        self.mar_threshold_calibrated.emit(threshold)
+        if self.settings_manager is not None:
+            try:
+                self.settings_manager.set("mar_threshold", threshold)
+            except Exception:
+                pass
+        self.status_message = f"Umbral MAR personalizado: {threshold:.2f}. Guardando..."
+        self.update()
+        self._mar_phase = "done"
+        QTimer.singleShot(500, self._complete_calibration)
+
+    def _skip_auto_mar(self) -> None:
+        self._auto_mar_threshold = None
+        self._mar_phase = "done"
+        self._calibration_step = 6
+        self._complete_calibration()
+
+    def _persist_mar_threshold(self) -> None:
+        if self._auto_mar_threshold is None:
+            return
+        try:
+            data: Dict[str, Any] = {}
+            if os.path.isfile(self.profile_path):
+                with open(self.profile_path, "r", encoding="utf-8") as fh:
+                    loaded = json.load(fh)
+                    if isinstance(loaded, dict):
+                        data = loaded
+            data["mar_threshold"] = float(self._auto_mar_threshold)
+            tmp = self.profile_path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump(data, fh, indent=2)
+            os.replace(tmp, self.profile_path)
+        except Exception as exc:
+            print(f"[CalibrationUI] Warning: could not persist MAR threshold: {exc}")
 
     def start_sampling(self) -> None:
         """Begins collecting samples for the active calibration point."""
@@ -171,7 +309,10 @@ class CalibrationUI(QWidget):
             next_pt = self.points[self.current_pt_idx]
             self.status_message = f"Mire hacia '{next_pt['name']}' y abra la boca para registrar"
         else:
-            self._complete_calibration()
+            if self.auto_mar_enabled:
+                self._start_auto_mar_calibration()
+            else:
+                self._complete_calibration()
 
     def _complete_calibration(self) -> None:
         """Solves 5-point calibration model, saves JSON profile, and closes."""
@@ -182,6 +323,7 @@ class CalibrationUI(QWidget):
         success = self.gaze_estimator.calibrate_5_points(self.collected_data)
         if success:
             saved = self.gaze_estimator.save_calibration_profile(self.profile_path)
+            self._persist_mar_threshold()
             if saved:
                 self.status_message = "¡Calibración completada con éxito! Guardando perfil..."
             else:
@@ -204,7 +346,10 @@ class CalibrationUI(QWidget):
         self.close()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        """Keyboard shortcuts: Space triggers sample, Esc cancels."""
+        """Keyboard shortcuts: Space samples/skips, Esc cancels or skips Step 6."""
+        if self._calibration_step == 6 and event.key() in (Qt.Key.Key_Space, Qt.Key.Key_Escape):
+            self._skip_auto_mar()
+            return
         if event.key() == Qt.Key.Key_Space:
             if not self.is_sampling and not self.is_completed:
                 self.start_sampling()
@@ -227,6 +372,65 @@ class CalibrationUI(QWidget):
         if not self.is_sampling and not self.is_completed:
             self.start_sampling()
 
+    def _paint_mar_step(self, painter: QPainter, w: int, h: int) -> None:
+        """Step 6: resting baseline and three natural mouth-click peaks."""
+        painter.setPen(QColor(230, 235, 245))
+        painter.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
+        painter.drawText(0, 50, w, 40, Qt.AlignmentFlag.AlignCenter, "PASO 6: CALIBRACIÓN DE CLIC BUCAL")
+
+        painter.setFont(QFont("Segoe UI", 12))
+        painter.setPen(QColor(160, 170, 190))
+        painter.drawText(0, 95, w, 30, Qt.AlignmentFlag.AlignCenter, self.status_message)
+
+        cx, cy = w / 2.0, h / 2.0
+        radius = 96.0
+        ratio = max(0.0, min(1.0, self._last_mar / 0.70))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(QColor(55, 65, 85), 8))
+        painter.drawEllipse(QPointF(cx, cy), radius, radius)
+        painter.setPen(QPen(QColor(255, 195, 45), 8))
+        painter.drawArc(
+            QRectF(cx - radius, cy - radius, radius * 2, radius * 2),
+            90 * 16,
+            -int(360 * 16 * ratio),
+        )
+        painter.setPen(QColor(230, 235, 245))
+        painter.setFont(QFont("Segoe UI", 26, QFont.Weight.Bold))
+        painter.drawText(
+            QRectF(cx - 80, cy - 24, 160, 48),
+            Qt.AlignmentFlag.AlignCenter,
+            f"MAR {self._last_mar:.2f}",
+        )
+
+        # Baseline and captured peaks.
+        painter.setFont(QFont("Segoe UI", 10))
+        painter.setPen(QColor(125, 211, 252))
+        painter.drawText(
+            int(cx - 180),
+            int(cy + radius + 18),
+            360,
+            24,
+            Qt.AlignmentFlag.AlignCenter,
+            f"Reposo: {self._rest_mar:.2f}",
+        )
+        for i in range(3):
+            dot_x = cx + (i - 1) * 34
+            dot_y = cy + radius + 52
+            painter.setBrush(QBrush(QColor(40, 210, 110) if i < len(self._peak_mar_samples) else QColor(50, 55, 70)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(QPointF(dot_x, dot_y), 8, 8)
+
+        painter.setPen(QColor(110, 120, 140))
+        painter.setFont(QFont("Segoe UI", 10))
+        painter.drawText(
+            0,
+            h - 50,
+            w,
+            30,
+            Qt.AlignmentFlag.AlignCenter,
+            "Cierra la boca entre cada apertura · ESPACIO/ESC para omitir este paso",
+        )
+
     def paintEvent(self, event) -> None:
         """Renders calibration targets, animated progress ring, and instructions."""
         painter = QPainter(self)
@@ -237,6 +441,11 @@ class CalibrationUI(QWidget):
 
         # 1. Background fill
         painter.fillRect(0, 0, w, h, QColor(18, 21, 28))
+
+        if self._calibration_step == 6:
+            self._paint_mar_step(painter, w, h)
+            painter.end()
+            return
 
         # 2. Header and instructions
         painter.setPen(QColor(230, 235, 245))

@@ -35,6 +35,7 @@ try:
     from eyede.core.websocket_bridge import WebSocketBridge
     from eyede.core.sound_feedback import SoundFeedbackManager
     from eyede.core.mouse_controller import OSMouseController
+    from eyede.core.settings_manager import SettingsManager
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.calibration_ui import CalibrationUI
@@ -51,6 +52,7 @@ except ImportError:
     from core.websocket_bridge import WebSocketBridge
     from core.sound_feedback import SoundFeedbackManager
     from core.mouse_controller import OSMouseController
+    from core.settings_manager import SettingsManager
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
     from ui.calibration_ui import CalibrationUI
@@ -679,6 +681,10 @@ class EyeDEApplication(QObject):
         if not app_icon.isNull():
             self.qapp.setWindowIcon(app_icon)
 
+        # Persistent live settings (Phase 8.1)
+        self.settings_manager = SettingsManager()
+        self._settings = self.settings_manager.as_dict()
+
         # Core subsystems
         self.tracker = CameraTracker(camera_index=self.camera_index, threaded=self.threaded)
         self.context_reader = ContextReader(
@@ -689,7 +695,7 @@ class EyeDEApplication(QObject):
         self.mode_manager = ModeManager(
             initial_mode="coding",
             language=getattr(self.context_reader, "active_language", getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", "PYTHON")),
-            auto_switch_enabled=getattr(config, "CONTEXT_AUTO_SWITCH_ENABLED", False),
+            auto_switch_enabled=bool(self._settings.get("auto_switch_enabled", getattr(config, "CONTEXT_AUTO_SWITCH_ENABLED", False))),
         )
         self.overlay = OverlayWindow(
             context_reader=self.context_reader,
@@ -699,13 +705,14 @@ class EyeDEApplication(QObject):
         self.debug_widget = DebugWidget()
         self.overlay.set_debug_widget(self.debug_widget)
         self.sound_feedback = SoundFeedbackManager(
-            enabled=getattr(config, "SOUND_ENABLED", True),
+            enabled=bool(self._settings.get("sound_enabled", getattr(config, "SOUND_ENABLED", True))),
             volume=getattr(config, "SOUND_VOLUME", 0.5),
         )
         self.overlay.set_sound_feedback(self.sound_feedback)
         self.mouse_controller = OSMouseController()
         self.overlay.set_mouse_controller(self.mouse_controller)
         self.overlay.set_vscode_connected(False)
+        self._apply_settings(self._settings)
         self.calibration_ui: Optional[CalibrationUI] = None
         self._is_shutting_down: bool = False
         self.tray_icon: Optional[QSystemTrayIcon] = None
@@ -797,6 +804,68 @@ class EyeDEApplication(QObject):
         if self.overlay.current_context_mode_id == "sniper":
             self.overlay.toggle_gaming_mode()
 
+    def _apply_settings(self, values: Dict[str, Any]) -> None:
+        """Applies persisted settings to every subsystem at startup/reset."""
+        values = dict(values or {})
+        estimator = getattr(self.tracker, "gaze_estimator", None)
+        detector = getattr(self.tracker, "gesture_detector", None)
+
+        mode = str(values.get("tracking_mode", "HEAD_PRIMARY")).upper()
+        sx = float(values.get("sensitivity_x", getattr(config, "DEFAULT_HEAD_SENSITIVITY_X", 2.6)))
+        sy = float(values.get("sensitivity_y", getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 3.0)))
+        level = int(values.get("one_euro_level", 6))
+        mar = float(values.get("mar_threshold", getattr(config, "MAR_THRESHOLD", 0.45)))
+        lang = str(values.get("active_language", "python")).lower()
+        ast_enabled = bool(values.get("adaptive_ast_enabled", True))
+        auto_switch = bool(values.get("auto_switch_enabled", False))
+        sound_enabled = bool(values.get("sound_enabled", True))
+        collapsed = bool(values.get("debug_panel_collapsed", False))
+
+        if estimator is not None:
+            estimator.set_tracking_mode(mode)
+            estimator.set_sensitivity(
+                head_x=sx,
+                head_y=sy,
+                iris_x=sx * 1.35,
+                iris_y=sy * 1.30,
+            )
+            estimator.set_anti_jitter_damping(level)
+        if detector is not None:
+            detector.mar_threshold = mar
+            detector.release_threshold = max(0.20, mar - 0.10)
+        config.MAR_THRESHOLD = mar
+
+        self.sound_feedback.set_enabled(sound_enabled)
+        self.overlay.set_adaptive_ast_enabled(ast_enabled)
+        self.overlay.toggle_auto_switch(auto_switch)
+        self.overlay.set_language(lang)
+        self.debug_widget.set_language(lang)
+        self.debug_widget.set_tracking_mode_by_name(mode)
+        self.debug_widget.set_adaptive_ast_enabled(ast_enabled)
+        self.debug_widget.set_mar_threshold(mar, emit=False)
+        if hasattr(self.mode_manager, "set_language"):
+            self.mode_manager.set_language(lang)
+        if hasattr(self.context_reader, "set_active_language"):
+            self.context_reader.set_active_language(lang)
+
+        # Sync sliders without re-triggering debounced saves.
+        self.debug_widget.slider_sens_x.blockSignals(True)
+        self.debug_widget.slider_sens_y.blockSignals(True)
+        self.debug_widget.slider_damping.blockSignals(True)
+        self.debug_widget.slider_sens_x.setValue(int(round(sx * 10)))
+        self.debug_widget.slider_sens_y.setValue(int(round(sy * 10)))
+        self.debug_widget.slider_damping.setValue(level)
+        self.debug_widget.slider_sens_x.blockSignals(False)
+        self.debug_widget.slider_sens_y.blockSignals(False)
+        self.debug_widget.slider_damping.blockSignals(False)
+        self.debug_widget.lbl_sens_x.setText(f"Sensibilidad X: {sx:.1f}x")
+        self.debug_widget.lbl_sens_y.setText(f"Sensibilidad Y (Ergonómica): {sy:.1f}x")
+        self.debug_widget.lbl_damping.setText(f"Anti-Temblor (Filtro 1€): Nivel {level}")
+
+        if collapsed != bool(getattr(self.debug_widget, "is_collapsed", False)):
+            self.debug_widget.toggle_collapse()
+        self._settings = values
+
     def _setup_connections(self) -> None:
         """Connects signals between tracker, overlay, debug monitor, and lifecycle."""
         # Tracker signals to Overlay
@@ -844,6 +913,28 @@ class EyeDEApplication(QObject):
                 lambda v: self.tracker.gaze_estimator.set_anti_jitter_damping(v)
             )
             self.debug_widget.tracking_mode_changed.connect(self._on_tracking_mode_changed)
+            self.debug_widget.sensitivity_x_changed.connect(
+                lambda v: self.settings_manager.set("sensitivity_x", v)
+            )
+            self.debug_widget.sensitivity_y_changed.connect(
+                lambda v: self.settings_manager.set("sensitivity_y", v)
+            )
+            self.debug_widget.anti_jitter_changed.connect(
+                lambda v: self.settings_manager.set("one_euro_level", int(v))
+            )
+            self.debug_widget.mar_threshold_changed.connect(self._on_mar_threshold_changed)
+            self.debug_widget.collapsed_toggled.connect(
+                lambda v: self.settings_manager.set("debug_panel_collapsed", bool(v))
+            )
+            self.debug_widget.language_changed.connect(
+                lambda lang: self.settings_manager.set("active_language", str(lang).lower())
+            )
+            self.debug_widget.adaptive_ast_toggled.connect(
+                lambda v: self.settings_manager.set("adaptive_ast_enabled", bool(v))
+            )
+            self.debug_widget.tracking_mode_changed.connect(
+                lambda mode: self.settings_manager.set("tracking_mode", str(mode).upper())
+            )
 
         # Overlay actions
         self.overlay.block_activated.connect(self._on_block_activated)
@@ -855,6 +946,18 @@ class EyeDEApplication(QObject):
         self.overlay.ai_status_updated.connect(self.debug_widget.update_ai_status)
         self.debug_widget.adaptive_ast_toggled.connect(self.overlay.set_adaptive_ast_enabled)
         self.overlay.adaptive_ast_toggled.connect(self.debug_widget.set_adaptive_ast_enabled)
+        self.overlay.adaptive_ast_toggled.connect(
+            lambda v: self.settings_manager.set("adaptive_ast_enabled", bool(v))
+        )
+        self.overlay.language_changed.connect(
+            lambda lang: self.settings_manager.set("active_language", str(lang).lower())
+        )
+        self.overlay.sound_enabled_changed.connect(
+            lambda v: self.settings_manager.set("sound_enabled", bool(v))
+        )
+        self.overlay.auto_switch_changed.connect(
+            lambda v: self.settings_manager.set("auto_switch_enabled", bool(v))
+        )
         self.overlay.ast_context_detected.connect(self.debug_widget.update_ast_context)
 
         # Controls from UI to application lifecycle
@@ -906,6 +1009,19 @@ class EyeDEApplication(QObject):
             self.overlay.update()
         print(f"[INFO] Modo de seguimiento activo: {display_name} ({mode})")
 
+    def _on_mar_threshold_changed(self, value: float) -> None:
+        """Applies a live MAR threshold from the debug slider or Step 6."""
+        mar = max(0.25, min(0.70, float(value)))
+        config.MAR_THRESHOLD = mar
+        if hasattr(self.tracker, "gesture_detector") and self.tracker.gesture_detector is not None:
+            self.tracker.gesture_detector.mar_threshold = mar
+            self.tracker.gesture_detector.release_threshold = max(0.20, mar - 0.10)
+        self.debug_widget.set_mar_threshold(mar, emit=False)
+        self.settings_manager.set("mar_threshold", mar)
+        if self.overlay is not None:
+            self.overlay.last_action_desc = f"Umbral MAR: {mar:.2f}"
+            self.overlay.update()
+
     def _on_block_activated(self, block_idx: int, action: str) -> None:
         """Handles actions triggered from macro blocks."""
         try:
@@ -954,13 +1070,22 @@ class EyeDEApplication(QObject):
         self.calibration_ui = CalibrationUI(
             gaze_estimator=self.tracker.gaze_estimator,
             profile_path=self.profile_path,
+            auto_mar_enabled=True,
+            settings_manager=self.settings_manager,
+            sound_feedback=self.sound_feedback,
         )
         self.tracker.raw_gaze_updated.connect(self.calibration_ui.on_raw_gaze_updated)
         self.tracker.gaze_updated.connect(self.calibration_ui.on_gaze_updated)
         self.tracker.gesture_triggered.connect(self.calibration_ui.on_gesture_triggered)
+        self.tracker.frame_ready.connect(self._on_calibration_frame)
+        self.calibration_ui.mar_threshold_calibrated.connect(self._on_mar_threshold_changed)
         self.calibration_ui.calibration_finished.connect(self._on_calibration_finished)
 
         self.calibration_ui.showFullScreen()
+
+    def _on_calibration_frame(self, _frame: Any, mar: float) -> None:
+        if self.calibration_ui is not None:
+            self.calibration_ui.on_mar_updated(mar)
 
     def _on_calibration_finished(self, succeeded: bool) -> None:
         """Handles calibration completion/cancellation and restores overlay and debug widget."""
@@ -973,6 +1098,8 @@ class EyeDEApplication(QObject):
             try:
                 self.tracker.gaze_updated.disconnect(self.calibration_ui.on_gaze_updated)
                 self.tracker.gesture_triggered.disconnect(self.calibration_ui.on_gesture_triggered)
+                self.tracker.frame_ready.disconnect(self._on_calibration_frame)
+                self.calibration_ui.mar_threshold_calibrated.disconnect(self._on_mar_threshold_changed)
             except Exception:
                 pass
             self.calibration_ui.close()
@@ -1006,22 +1133,8 @@ class EyeDEApplication(QObject):
             except Exception as e:
                 print(f"[AVISO] Could not backup calibration profile: {e}")
 
-        if hasattr(self, "debug_widget") and self.debug_widget is not None:
-            hx = getattr(config, "DEFAULT_HEAD_SENSITIVITY_X", 2.6)
-            hy = getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 3.0)
-            self.debug_widget.slider_sens_x.blockSignals(True)
-            self.debug_widget.slider_sens_y.blockSignals(True)
-            self.debug_widget.slider_damping.blockSignals(True)
-            self.debug_widget.slider_sens_x.setValue(int(hx * 10))
-            self.debug_widget.slider_sens_y.setValue(int(hy * 10))
-            self.debug_widget.slider_damping.setValue(6)
-            self.debug_widget.slider_sens_x.blockSignals(False)
-            self.debug_widget.slider_sens_y.blockSignals(False)
-            self.debug_widget.slider_damping.blockSignals(False)
-            self.debug_widget.lbl_sens_x.setText(f"Sensibilidad X: {hx:.1f}x")
-            self.debug_widget.lbl_sens_y.setText(f"Sensibilidad Y (Ergonómica): {hy:.1f}x")
-            self.debug_widget.lbl_damping.setText("Anti-Temblor (Filtro 1€): Nivel 6")
-
+        defaults = self.settings_manager.reset_to_defaults()
+        self._apply_settings(defaults)
         if self.overlay is not None:
             self.overlay.last_action_desc = "Calibración reseteada"
             self.overlay.update()

@@ -86,6 +86,7 @@ class DebugWidget(QWidget):
     collapsed_toggled = pyqtSignal(bool)
     visibility_changed = pyqtSignal(bool)
     language_changed = pyqtSignal(str)
+    mar_threshold_changed = pyqtSignal(float)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -106,6 +107,8 @@ class DebugWidget(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
+        self.mar_threshold: float = float(getattr(config, "MAR_THRESHOLD", 0.45))
+        self._last_mar: float = 0.0
         self.is_collapsed: bool = False
         self.current_language: str = getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", "PYTHON")
         self.is_vscode_connected: bool = False
@@ -287,7 +290,7 @@ class DebugWidget(QWidget):
         mar_layout = QVBoxLayout()
         mar_layout.setSpacing(2)
 
-        self.mar_label = QLabel(f"Nivel MAR: 0.00 (Umbral Clic: {config.MAR_THRESHOLD:.2f})", self)
+        self.mar_label = QLabel(f"Nivel MAR: 0.00 (Umbral: {self.mar_threshold:.2f})", self)
         mar_layout.addWidget(self.mar_label)
 
         self.mar_bar = QProgressBar(self)
@@ -295,6 +298,16 @@ class DebugWidget(QWidget):
         self.mar_bar.setValue(0)
         self.mar_bar.setTextVisible(True)
         mar_layout.addWidget(self.mar_bar)
+
+        self.lbl_mar_threshold = QLabel(f"Umbral MAR: {self.mar_threshold:.2f}", self)
+        self.lbl_mar_threshold.setStyleSheet("font-size: 10px; color: #fbbf24;")
+        mar_layout.addWidget(self.lbl_mar_threshold)
+        self.slider_mar_threshold = QSlider(Qt.Orientation.Horizontal, self)
+        self.slider_mar_threshold.setRange(25, 70)
+        self.slider_mar_threshold.setValue(int(round(self.mar_threshold * 100)))
+        self.slider_mar_threshold.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.slider_mar_threshold.valueChanged.connect(self._on_slider_mar_changed)
+        mar_layout.addWidget(self.slider_mar_threshold)
 
         content_layout.addLayout(mar_layout)
 
@@ -624,6 +637,22 @@ class DebugWidget(QWidget):
         if self.gaze_estimator is not None:
             self.gaze_estimator.set_sensitivity(head_y=val, iris_y=val * 1.30)
 
+    def _on_slider_mar_changed(self, value: int) -> None:
+        self.mar_threshold = max(0.25, min(0.70, value / 100.0))
+        self.lbl_mar_threshold.setText(f"Umbral MAR: {self.mar_threshold:.2f}")
+        self.mar_threshold_changed.emit(self.mar_threshold)
+        self.update_mar(self._last_mar)
+
+    def set_mar_threshold(self, value: float, emit: bool = False) -> None:
+        value = max(0.25, min(0.70, float(value)))
+        self.mar_threshold = value
+        self.slider_mar_threshold.blockSignals(True)
+        self.slider_mar_threshold.setValue(int(round(value * 100)))
+        self.slider_mar_threshold.blockSignals(False)
+        self.lbl_mar_threshold.setText(f"Umbral MAR: {value:.2f}")
+        if emit:
+            self.mar_threshold_changed.emit(value)
+
     def _on_slider_damping_changed(self, value: int) -> None:
         self.lbl_damping.setText(f"Anti-Temblor (Filtro 1€): Nivel {value}")
         self.anti_jitter_changed.emit(float(value))
@@ -667,14 +696,15 @@ class DebugWidget(QWidget):
     @pyqtSlot(float)
     def update_mar(self, current_mar: float) -> None:
         """Updates the MAR progress bar and style based on threshold."""
+        self._last_mar = float(current_mar)
         val = max(0.0, min(1.0, current_mar))
         pct = int(val * 100)
         self.mar_bar.setValue(pct)
         self.mar_bar.setFormat(f"MAR: {current_mar:.2f}")
-        self.mar_label.setText(f"Nivel MAR: {current_mar:.2f} (Umbral: {config.MAR_THRESHOLD:.2f})")
+        self.mar_label.setText(f"Nivel MAR: {current_mar:.2f} (Umbral: {self.mar_threshold:.2f})")
 
         # Visual indicator when mouth opens past threshold
-        if current_mar >= config.MAR_THRESHOLD:
+        if current_mar >= self.mar_threshold:
             self.mar_bar.setStyleSheet("""
                 QProgressBar::chunk {
                     background-color: #22c55e;

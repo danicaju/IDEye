@@ -44,6 +44,7 @@ def build():
         "--hidden-import=eyede.core.hotkey_manager",
         "--hidden-import=eyede.core.sound_feedback",
         "--hidden-import=eyede.core.mouse_controller",
+        "--hidden-import=eyede.core.settings_manager",
         "--hidden-import=eyede.modes.sniper_mouse_mode",
         "--hidden-import=eyede.ui.overlay_window",
         "--hidden-import=eyede.ui.debug_widget",

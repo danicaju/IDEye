@@ -205,6 +205,7 @@ class OverlayWindow(QWidget):
         menu_tree: Optional[Dict[str, MenuNode]] = None,
         context_reader: Optional[ContextReader] = None,
         mode_manager: Optional[Any] = None,
+        macro_manager: Optional[Any] = None,
         start_in_mode_selector: bool = False,
     ):
         super().__init__(parent)
@@ -264,6 +265,7 @@ class OverlayWindow(QWidget):
         # Phase 7: sound feedback and sniper targeting state
         self.sound_feedback: Optional[SoundFeedbackManager] = None
         self.mouse_controller: Optional[OSMouseController] = None
+        self.macro_manager: Optional[Any] = macro_manager
         self._sniper_step: int = 1
         self._sniper_locked_sector: Optional[int] = None
         self._sniper_previous_mode: Optional[str] = None
@@ -301,6 +303,7 @@ class OverlayWindow(QWidget):
             )
 
         self._install_auxiliary_nodes()
+        self._apply_macro_overrides()
         if start_in_mode_selector:
             self.current_node_id = "MODE_SELECT"
             self.last_action_desc = "Elige un modo"
@@ -1016,10 +1019,47 @@ class OverlayWindow(QWidget):
                 self._last_detected_context_name = ctx_name
                 self.ast_context_detected.emit(ctx_name)
             node = get_adaptive_context_node(ctx_info, std_root, language=self.current_language)
+            if self.macro_manager is not None:
+                try:
+                    node = self.macro_manager.apply_overrides(node, "coding")
+                except Exception:
+                    pass
             self._cached_adaptive_node = node
             self._last_ast_eval_time = now
             return node
         return self.menu_tree.get(self.current_node_id, self.menu_tree.get("ROOT"))
+
+    def set_macro_manager(self, manager: Optional[Any]) -> None:
+        self.macro_manager = manager
+        self._apply_macro_overrides()
+        self.update()
+
+    def _apply_macro_overrides(self) -> None:
+        if self.macro_manager is None:
+            return
+        mode_id = getattr(self, "current_context_mode_id", "coding")
+        try:
+            if "ROOT" in self.menu_tree:
+                self.menu_tree["ROOT"] = self.macro_manager.apply_overrides(
+                    self.menu_tree["ROOT"], mode_id
+                )
+            if "MENU_STANDARD" in self.menu_tree:
+                self.menu_tree["MENU_STANDARD"] = self.macro_manager.apply_overrides(
+                    self.menu_tree["MENU_STANDARD"], mode_id
+                )
+        except Exception as exc:
+            print(f"[Overlay] Warning: could not apply custom macros: {exc}")
+        self._cached_adaptive_node = None
+        self._last_ast_eval_time = 0.0
+
+    def refresh_custom_macros(self, mode_id: Optional[str] = None) -> None:
+        """Re-applies custom macros after the editor saves."""
+        if mode_id is not None and str(mode_id).lower() != str(
+            getattr(self, "current_context_mode_id", "coding")
+        ).lower():
+            return
+        self._apply_macro_overrides()
+        self.update()
 
     @pyqtSlot(str)
     def on_file_linked(self, file_path: str) -> None:
@@ -2322,6 +2362,7 @@ class OverlayWindow(QWidget):
             else:
                 self.menu_tree = build_menu_tree(self.current_language)
         self._install_auxiliary_nodes()
+        self._apply_macro_overrides()
         self._cached_adaptive_node = None
         self._last_ast_eval_time = 0.0
         badge = get_language_badge(self.current_language)
@@ -2380,6 +2421,7 @@ class OverlayWindow(QWidget):
                 self.menu_tree = {"ROOT": self.mode_manager.get_root_menu(self.current_language)}
 
         self._install_auxiliary_nodes()
+        self._apply_macro_overrides()
 
         # Keep the mode hub open when an automatic editor-state change arrives.
         # When the user explicitly picked a mode, _activate_mode() sets the flag

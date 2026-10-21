@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-411%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-417%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -294,11 +294,11 @@ pytest -q
 ```
 
 ```text
-411 pruebas superadas, 53 subtests, 12.18s
+417 pruebas superadas, 53 subtests, 11.93s
 ```
 
 > [!NOTE]
-> Todos los 411 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 417 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 
@@ -318,6 +318,7 @@ pytest -q
 - [x] **Fase 7.6:** Estabilidad subpíxel con centroide craneal, multi-anclaje orbital + mediana en PURE_IRIS, fusión de sácadas HYBRID y WebSocket bidireccional con contexto automático.
 - [x] **Fase 7.7:** Mapeo FreeLook a pantalla completa, overscan cómodo en bordes y carril magnético de la barra de tareas de Windows.
 - [x] **Fase 8.1:** `user_settings.json` persistente, sincronización live con debounce, calibración biométrica MAR de 6º paso y slider MAR en vivo.
+- [x] **Fase 8.2:** Constructor de Macros: `custom_macros.json` persistente, editor de 9 celdas, snippets/comandos/atajos OS y parcheo del HUD en vivo.
 - [ ] **Fase 8:** Traspaso de mirada entre monitores, constructor de macros personalizadas y empaquetado para Linux/macOS.
 
 ---

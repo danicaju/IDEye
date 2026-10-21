@@ -36,6 +36,8 @@ try:
     from eyede.core.sound_feedback import SoundFeedbackManager
     from eyede.core.mouse_controller import OSMouseController
     from eyede.core.settings_manager import SettingsManager
+    from eyede.core.macro_manager import MacroManager
+    from eyede.ui.macro_editor_dialog import CustomMacroDialog
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.calibration_ui import CalibrationUI
@@ -53,6 +55,8 @@ except ImportError:
     from core.sound_feedback import SoundFeedbackManager
     from core.mouse_controller import OSMouseController
     from core.settings_manager import SettingsManager
+    from core.macro_manager import MacroManager
+    from ui.macro_editor_dialog import CustomMacroDialog
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
     from ui.calibration_ui import CalibrationUI
@@ -684,6 +688,7 @@ class EyeDEApplication(QObject):
         # Persistent live settings (Phase 8.1)
         self.settings_manager = SettingsManager()
         self._settings = self.settings_manager.as_dict()
+        self.macro_manager = MacroManager()
 
         # Core subsystems
         self.tracker = CameraTracker(camera_index=self.camera_index, threaded=self.threaded)
@@ -700,6 +705,7 @@ class EyeDEApplication(QObject):
         self.overlay = OverlayWindow(
             context_reader=self.context_reader,
             mode_manager=self.mode_manager,
+            macro_manager=self.macro_manager,
             start_in_mode_selector=getattr(config, "START_IN_MODE_SELECTOR", True),
         )
         self.debug_widget = DebugWidget()
@@ -963,6 +969,7 @@ class EyeDEApplication(QObject):
         # Controls from UI to application lifecycle
         self.debug_widget.recalibrate_requested.connect(self.launch_calibration)
         self.debug_widget.reset_calibration_requested.connect(self.reset_calibration)
+        self.debug_widget.macro_editor_requested.connect(self.open_macro_editor)
         self.debug_widget.exit_requested.connect(self.shutdown)
         self.overlay.exit_requested.connect(self.shutdown)
 
@@ -1008,6 +1015,18 @@ class EyeDEApplication(QObject):
             self.overlay.last_action_desc = f"Modo: {display_name}"
             self.overlay.update()
         print(f"[INFO] Modo de seguimiento activo: {display_name} ({mode})")
+
+    def open_macro_editor(self) -> None:
+        """Opens the Phase 8.2 custom 3x3 cell editor."""
+        dialog = CustomMacroDialog(
+            macro_manager=self.macro_manager,
+            mode_manager=self.mode_manager,
+            on_apply=self.overlay.refresh_custom_macros,
+            parent=self.debug_widget,
+        )
+        dialog.exec()
+        self.overlay.refresh_custom_macros()
+        self.overlay.update()
 
     def _on_mar_threshold_changed(self, value: float) -> None:
         """Applies a live MAR threshold from the debug slider or Step 6."""

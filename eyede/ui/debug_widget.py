@@ -87,6 +87,7 @@ class DebugWidget(QWidget):
     visibility_changed = pyqtSignal(bool)
     language_changed = pyqtSignal(str)
     mar_threshold_changed = pyqtSignal(float)
+    macro_editor_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -546,6 +547,12 @@ class DebugWidget(QWidget):
 
         content_layout.addLayout(link_adaptive_layout)
 
+        self.btn_macro_editor = QPushButton("Editor de Macros", self)
+        self.btn_macro_editor.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_macro_editor.setToolTip("Editar las 9 celdas de cualquier modo")
+        self.btn_macro_editor.clicked.connect(self.macro_editor_requested.emit)
+        content_layout.addWidget(self.btn_macro_editor)
+
         # 9. Action Buttons
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(6)
@@ -596,6 +603,10 @@ class DebugWidget(QWidget):
         spark_icon = icon_mgr.get_icon("ai_spark", 16)
         if not spark_icon.isNull():
             self.btn_toggle_adaptive.setIcon(spark_icon)
+
+        macro_icon = icon_mgr.get_icon("edit", 16)
+        if not macro_icon.isNull():
+            self.btn_macro_editor.setIcon(macro_icon)
 
         # 10. Emergency Hotkey Documentation Label
         self.lbl_emergency_hint = QLabel("Emergencia: Ctrl+Alt+Q para salir", self)

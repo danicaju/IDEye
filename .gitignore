@@ -15,3 +15,5 @@ __pycache__/
 build_log.txt
 user_settings.json
 user_settings.json.tmp
+custom_macros.json
+custom_macros.json.tmp

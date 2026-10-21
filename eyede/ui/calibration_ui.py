@@ -35,6 +35,10 @@ except ImportError:
     from ui.icon_manager import IconManager
 
 
+from eyede.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 def compute_auto_mar_threshold(
     rest_samples: List[float],
     peak_samples: List[float],
@@ -292,7 +296,7 @@ class CalibrationUI(QWidget):
                 json.dump(data, fh, indent=2)
             os.replace(tmp, self.profile_path)
         except Exception as exc:
-            print(f"[CalibrationUI] Warning: could not persist MAR threshold: {exc}")
+            logger.warning(f"[CalibrationUI] Warning: could not persist MAR threshold: {exc}")
 
     def start_sampling(self) -> None:
         """Begins collecting samples for the active calibration point."""
@@ -378,7 +382,7 @@ class CalibrationUI(QWidget):
         try:
             success = self.gaze_estimator.calibrate_5_points(self.collected_data)
         except Exception as exc:
-            print(f"[CalibrationUI] Warning: calibration fit failed: {exc}")
+            logger.warning(f"[CalibrationUI] Warning: calibration fit failed: {exc}")
             success = False
         if success:
             saved = self.gaze_estimator.save_calibration_profile(self.profile_path)

@@ -14,6 +14,10 @@ except ImportError:  # pragma: no cover
     from actions.menu_trees import MenuAction, MenuNode
 
 
+from eyede.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 def default_macros_path() -> str:
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     return os.path.join(root, "custom_macros.json")
@@ -45,7 +49,7 @@ class MacroManager:
             else:
                 self._macros = {}
         except Exception as exc:
-            print(f"[MacroManager] Warning: could not load '{self.path}': {exc}. Using defaults.")
+            logger.warning(f"[MacroManager] Warning: could not load '{self.path}': {exc}. Using defaults.")
             self._macros = {}
         return copy.deepcopy(self._macros)
 
@@ -135,7 +139,7 @@ class MacroManager:
             os.replace(tmp, self.path)
             return True
         except Exception as exc:
-            print(f"[MacroManager] Warning: could not save '{self.path}': {exc}")
+            logger.warning(f"[MacroManager] Warning: could not save '{self.path}': {exc}")
             try:
                 if os.path.exists(tmp):
                     os.remove(tmp)

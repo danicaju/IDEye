@@ -74,6 +74,10 @@ from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QBrush
 from PyQt6.QtCore import Qt, QObject, QTimer, pyqtSlot
 
 
+from eyede.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 class EyeDEMainApp:
     """
     Orchestrates the Phase 1 IDEye interface:
@@ -458,15 +462,15 @@ class EyeDEMainApp:
         action = block_info["action"]
         label = block_info["label"]
 
-        print(f"\n[IDEye ACTION] [CLICK] Disparado en Bloque {block_idx + 1}: '{label}'")
-        print(f"               Accion: {action} | Coordenada: (X={norm_x:.3f}, Y={norm_y:.3f})")
+        logger.info(f"\n[IDEye ACTION] [CLICK] Disparado en Bloque {block_idx + 1}: '{label}'")
+        logger.info(f"               Accion: {action} | Coordenada: (X={norm_x:.3f}, Y={norm_y:.3f})")
 
         if action == "PAUSE_RESUME":
             self.is_paused = not self.is_paused
             state_str = "PAUSADO (Zona de reposo)" if self.is_paused else "REANUDADO"
-            print(f"[IDEye ACTION] Estado de seguimiento: {state_str}")
+            logger.info(f"[IDEye ACTION] Estado de seguimiento: {state_str}")
         elif action == "ACTION_EXIT":
-            print("[IDEye ACTION] Bloque SALIR activado. Cerrando aplicacion...")
+            logger.info("[IDEye ACTION] Bloque SALIR activado. Cerrando aplicacion...")
 
     def run(self, max_frames: Optional[int] = None) -> None:
         """
@@ -475,21 +479,21 @@ class EyeDEMainApp:
         Args:
             max_frames: Optional frame limit (useful for non-blocking automated testing).
         """
-        print("=" * 60)
-        print("  IDEye - Motor de Vision, Tracking Hibrido y Gestos (Fase 1)")
-        print("=" * 60)
-        print("Inicializando subsistemas de vision y FaceMesh (478 landmarks)...")
+        logger.info("=" * 60)
+        logger.info("  IDEye - Motor de Vision, Tracking Hibrido y Gestos (Fase 1)")
+        logger.info("=" * 60)
+        logger.info("Inicializando subsistemas de vision y FaceMesh (478 landmarks)...")
 
         if not self.tracker.start():
-            print(f"[ERROR] No se pudo inicializar la camara indice {self.tracker.camera_index}.")
+            logger.warning(f"[ERROR] No se pudo inicializar la camara indice {self.tracker.camera_index}.")
             return
 
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.window_name, self.canvas_width, self.canvas_height)
 
-        print("[OK] Camara activa. Presiona [C] mirando al centro para calibrar.")
-        print("[OK] Abre ligeramente la boca durante 150ms para disparar CLICK.")
-        print("[OK] Presiona [Ctrl+Alt+Q] o [F12] o [Q/ESC] para salir limpiamente.\n")
+        logger.info("[OK] Camara activa. Presiona [C] mirando al centro para calibrar.")
+        logger.info("[OK] Abre ligeramente la boca durante 150ms para disparar CLICK.")
+        logger.info("[OK] Presiona [Ctrl+Alt+Q] o [F12] o [Q/ESC] para salir limpiamente.\n")
 
         self.hotkey_manager.start()
         processed_frames = 0
@@ -497,7 +501,7 @@ class EyeDEMainApp:
         try:
             while True:
                 if self._emergency_exit_requested:
-                    print("\n[INFO] Salida de emergencia solicitada via global hotkey (Ctrl+Alt+Q / F12).")
+                    logger.info("\n[INFO] Salida de emergencia solicitada via global hotkey (Ctrl+Alt+Q / F12).")
                     break
 
                 now = time.time()
@@ -546,12 +550,12 @@ class EyeDEMainApp:
                     self.is_paused = not self.is_paused
                     self.status_message = "Modo reposo activado (Guiño derecho)" if self.is_paused else "Modo activo restaurado (Guiño derecho)"
                     self.status_message_time = time.time()
-                    print(f"[INFO] {self.status_message}")
+                    logger.info(f"[INFO] {self.status_message}")
 
                 if "WINK_LEFT" in triggered_winks and not self.is_paused:
                     self.status_message = "Guiño izquierdo: Volver / Deshacer"
                     self.status_message_time = time.time()
-                    print(f"[INFO] {self.status_message}")
+                    logger.info(f"[INFO] {self.status_message}")
 
                 # 5. Create UI Canvas
                 canvas = np.full((self.canvas_height, self.canvas_width, 3), config.COLOR_BG, dtype=np.uint8)
@@ -584,38 +588,38 @@ class EyeDEMainApp:
 
                 processed_frames += 1
                 if max_frames is not None and processed_frames >= max_frames:
-                    print(f"[TEST] Limite de {max_frames} fotogramas alcanzado.")
+                    logger.info(f"[TEST] Limite de {max_frames} fotogramas alcanzado.")
                     break
 
                 # Keyboard interaction
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord('q'), ord('Q'), 27):  # 'q' or ESC
-                    print("[INFO] Salida solicitada por usuario (tecla Q/ESC).")
+                    logger.info("[INFO] Salida solicitada por usuario (tecla Q/ESC).")
                     break
                 elif key in (ord('c'), ord('C')):
                     # Calibrate center & distance-adaptive gain
                     if face_landmarks is not None and self.gaze_estimator.calibrate_center(face_landmarks):
                         scale_pct = int(self.gaze_estimator.distance_scale * 100)
-                        print(f"[INFO] [CALIB] Calibracion central completada. Escala de ganancia: {scale_pct}%.")
+                        logger.info(f"[INFO] [CALIB] Calibracion central completada. Escala de ganancia: {scale_pct}%.")
                     else:
-                        print("[AVISO] No se pudo calibrar: rostro no detectado en el fotograma.")
+                        logger.warning("[AVISO] No se pudo calibrar: rostro no detectado en el fotograma.")
                 elif key in (ord('+'), ord('=')):
                     self.gaze_estimator.adjust_sensitivity(1.10)
-                    print(f"[INFO] Sensibilidad aumentada (+10%).")
+                    logger.info(f"[INFO] Sensibilidad aumentada (+10%).")
                 elif key in (ord('-'), ord('_')):
                     self.gaze_estimator.adjust_sensitivity(0.90)
-                    print(f"[INFO] Sensibilidad reducida (-10%).")
+                    logger.info(f"[INFO] Sensibilidad reducida (-10%).")
                 elif key in (ord('m'), ord('M')):
                     self.show_mini_feed = not self.show_mini_feed
-                    print(f"[INFO] Mini-feed {'mostrado' if self.show_mini_feed else 'ocultado'}.")
+                    logger.info(f"[INFO] Mini-feed {'mostrado' if self.show_mini_feed else 'ocultado'}.")
                 elif key in (ord('p'), ord('P'), 32):  # 'p' or space
                     self.is_paused = not self.is_paused
-                    print(f"[INFO] Modo reposo {'activado' if self.is_paused else 'desactivado'}.")
+                    logger.info(f"[INFO] Modo reposo {'activado' if self.is_paused else 'desactivado'}.")
                 elif key in (ord('r'), ord('R')):
                     self.gaze_estimator.reset()
                     self.gesture_detector.reset()
                     self.is_paused = False
-                    print("[INFO] Estado y calibracion reseteados.")
+                    logger.info("[INFO] Estado y calibracion reseteados.")
                 elif key in (ord('t'), ord('T')):
                     modes = ["PURE_IRIS", "HYBRID", "HEAD_PRIMARY"]
                     curr_idx = modes.index(self.gaze_estimator.tracking_mode) if self.gaze_estimator.tracking_mode in modes else 0
@@ -624,23 +628,23 @@ class EyeDEMainApp:
                     mode_names = {"PURE_IRIS": "Solo Iris", "HYBRID": "Híbrido", "HEAD_PRIMARY": "Solo Cabeza (Recomendado)"}
                     self.status_message = f"Modo: {mode_names.get(next_mode, next_mode)}"
                     self.status_message_time = time.time()
-                    print(f"[INFO] Modo de seguimiento cambiado a: {next_mode}")
+                    logger.info(f"[INFO] Modo de seguimiento cambiado a: {next_mode}")
 
                 # Check if user closed the window directly with the 'X' button
                 try:
                     if cv2.getWindowProperty(self.window_name, cv2.WND_PROP_VISIBLE) < 1:
-                        print("[INFO] Ventana cerrada por el usuario.")
+                        logger.info("[INFO] Ventana cerrada por el usuario.")
                         break
                 except cv2.error:
                     break
 
         finally:
-            print("\n[INFO] Liberando recursos de camara y cerrando ventanas...")
+            logger.info("\n[INFO] Liberando recursos de camara y cerrando ventanas...")
             if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
                 self.hotkey_manager.stop()
             self.tracker.release()
             cv2.destroyAllWindows()
-            print("[INFO] IDEye finalizado limpiamente.")
+            logger.info("[INFO] IDEye finalizado limpiamente.")
 
 
 # Brand alias for Phase 1 main app
@@ -1061,7 +1065,7 @@ class EyeDEApplication(QObject):
         if self.overlay is not None:
             self.overlay.last_action_desc = f"Modo: {display_name}"
             self.overlay.update()
-        print(f"[INFO] Modo de seguimiento activo: {display_name} ({mode})")
+        logger.info(f"[INFO] Modo de seguimiento activo: {display_name} ({mode})")
 
     def open_macro_editor(self) -> None:
         """Opens the Phase 8.2 custom 3x3 cell editor."""
@@ -1098,16 +1102,16 @@ class EyeDEApplication(QObject):
                     label = item.label
                     msg = f"\n[IDEye ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action} (Nodo: {self.overlay.current_node_id})"
                     try:
-                        print(msg)
+                        logger.info(msg)
                     except UnicodeEncodeError:
-                        print(msg.encode("ascii", errors="replace").decode("ascii"))
+                        logger.info(msg.encode("ascii", errors="replace").decode("ascii"))
                     return
             label = config.MACRO_BLOCKS[block_idx]["label"] if 0 <= block_idx < len(config.MACRO_BLOCKS) else f"Block {block_idx}"
             msg = f"\n[IDEye ACTION] [CLICK] Bloque {block_idx + 1} Activado: '{label}' -> Accion: {action}"
             try:
-                print(msg)
+                logger.info(msg)
             except UnicodeEncodeError:
-                print(msg.encode("ascii", errors="replace").decode("ascii"))
+                logger.info(msg.encode("ascii", errors="replace").decode("ascii"))
         except Exception:
             pass
 
@@ -1119,7 +1123,9 @@ class EyeDEApplication(QObject):
             # never cover the bottom taskbar or overflow the usable desktop.
             screen_geo = screen.availableGeometry()
             self.overlay.setGeometry(screen_geo)
-            if self.tracker is not None and hasattr(self.tracker, "gaze_estimator"):
+            if getattr(self, "screen_manager", None) is not None:
+                self.screen_manager.bind_gaze_to_screen(screen)
+            elif self.tracker is not None and hasattr(self.tracker, "gaze_estimator"):
                 self.tracker.gaze_estimator.set_target_screen(
                     screen_geo.width(), screen_geo.height()
                 )
@@ -1132,7 +1138,7 @@ class EyeDEApplication(QObject):
 
     def launch_calibration(self) -> None:
         """Launches the full-screen 5-point calibration interface."""
-        print("[INFO] Launching 5-Point Calibration UI...")
+        logger.info("[INFO] Launching 5-Point Calibration UI...")
         self.overlay.hide()
         if hasattr(self, "debug_widget") and self.debug_widget is not None:
             self.debug_widget.hide()
@@ -1152,6 +1158,15 @@ class EyeDEApplication(QObject):
         self.calibration_ui.mar_threshold_calibrated.connect(self._on_mar_threshold_changed)
         self.calibration_ui.calibration_finished.connect(self._on_calibration_finished)
 
+        active_screen = None
+        if getattr(self, "screen_manager", None) is not None:
+            active_screen = self.screen_manager.current_screen()
+        active_screen = active_screen or QApplication.primaryScreen()
+        if active_screen is not None:
+            try:
+                self.calibration_ui.setScreen(active_screen)
+            except Exception:
+                pass
         self.calibration_ui.showFullScreen()
 
     @pyqtSlot(object, float)
@@ -1208,7 +1223,7 @@ class EyeDEApplication(QObject):
 
     def _on_calibration_finished(self, succeeded: bool) -> None:
         """Handles calibration completion/cancellation and restores overlay and debug widget."""
-        print(f"[INFO] Calibration completed (succeeded={succeeded}). Restoring overlay HUD.")
+        logger.info(f"[INFO] Calibration completed (succeeded={succeeded}). Restoring overlay HUD.")
         if self.calibration_ui is not None:
             try:
                 self.tracker.raw_gaze_updated.disconnect(self.calibration_ui.on_raw_gaze_updated)
@@ -1239,7 +1254,7 @@ class EyeDEApplication(QObject):
             QTimer.singleShot(0, self.reset_calibration)
             return
 
-        print("[INFO] [EMERGENCIA] Resetting calibration to safe neutral baselines...")
+        logger.warning("[INFO] [EMERGENCIA] Resetting calibration to safe neutral baselines...")
         if self.tracker is not None:
             self.tracker.gaze_estimator.reset()
 
@@ -1249,9 +1264,16 @@ class EyeDEApplication(QObject):
                 if os.path.exists(bak_path):
                     os.remove(bak_path)
                 os.rename(self.profile_path, bak_path)
-                print(f"[INFO] Moved active calibration profile to '{bak_path}'.")
+                logger.info(f"[INFO] Moved active calibration profile to '{bak_path}'.")
             except Exception as e:
-                print(f"[AVISO] Could not backup calibration profile: {e}")
+                logger.warning(f"[AVISO] Could not backup calibration profile: {e}")
+
+        if self.tracker is not None:
+            try:
+                if self.tracker.gaze_estimator.clear_monitor_profiles(backup=True):
+                    logger.info("[INFO] Moved per-monitor profiles to backup.")
+            except Exception as e:
+                logger.warning(f"[AVISO] Could not backup per-monitor profiles: {e}")
 
         defaults = self.settings_manager.reset_to_defaults()
         self._apply_settings(defaults)
@@ -1308,7 +1330,7 @@ class EyeDEApplication(QObject):
             self.tray_icon.setContextMenu(tray_menu)
             self.tray_icon.show()
         except Exception as e:
-            print(f"[IDEye] Warning: Could not initialize system tray: {e}")
+            logger.warning(f"[IDEye] Warning: Could not initialize system tray: {e}")
             self.tray_icon = None
 
     def start(self) -> None:
@@ -1316,13 +1338,17 @@ class EyeDEApplication(QObject):
         # Check if calibration profile exists
         has_profile = os.path.exists(self.profile_path)
         if has_profile and not self.force_calibrate:
-            print(f"[INFO] Loaded calibration profile from '{self.profile_path}'.")
+            logger.info(f"[INFO] Loaded calibration profile from '{self.profile_path}'.")
             self.tracker.gaze_estimator.load_calibration_profile(self.profile_path)
+
+        # Re-bind after loading so the active monitor's per-monitor profile wins.
+        if getattr(self, "screen_manager", None) is not None:
+            self.screen_manager.bind_gaze_to_screen(QApplication.primaryScreen())
 
         # Start CameraTracker QThread
         started = self.tracker.start()
         if not started:
-            print(f"[AVISO] No se pudo abrir la camara {self.tracker.camera_index}. Continuando...")
+            logger.warning(f"[AVISO] No se pudo abrir la camara {self.tracker.camera_index}. Continuando...")
 
         # Start global emergency hotkey listener
         if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
@@ -1343,7 +1369,7 @@ class EyeDEApplication(QObject):
             self.overlay.show()
             self.debug_widget.show()
         elif not has_profile or self.force_calibrate:
-            print("[INFO] No calibration profile found. Starting initial 5-point calibration...")
+            logger.info("[INFO] No calibration profile found. Starting initial 5-point calibration...")
             self.debug_widget.show()
             self.launch_calibration()
         else:
@@ -1363,7 +1389,7 @@ class EyeDEApplication(QObject):
         if self._is_shutting_down:
             return
         self._is_shutting_down = True
-        print("\n[INFO] Gracefully shutting down IDEye Phase 2...")
+        logger.info("\n[INFO] Gracefully shutting down IDEye Phase 2...")
 
         if self.ws_bridge is not None:
             self.ws_bridge.stop()
@@ -1395,7 +1421,7 @@ class EyeDEApplication(QObject):
             self.calibration_ui.close()
 
         self.qapp.quit()
-        print("[INFO] IDEye Phase 2 terminated cleanly.")
+        logger.info("[INFO] IDEye Phase 2 terminated cleanly.")
 
     def run(self) -> int:
         """Runs the Qt event loop until termination."""

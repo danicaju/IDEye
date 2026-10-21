@@ -170,6 +170,12 @@ MACRO_BLOCKS: List[Dict[str, Any]] = [
 CLICK_FLASH_DURATION_SEC: float = 0.40
 EXIT_DOUBLE_CLICK_SEC: float = 1.50
 
+# Multi-monitor bezel crossing (Phase 8.3)
+BEZEL_AUTO_HANDOVER_ENABLED: bool = True
+BEZEL_YAW_THRESHOLD_DEG: float = 21.0
+BEZEL_HOLD_SEC: float = 0.40
+BEZEL_COOLDOWN_SEC: float = 1.0
+
 # ==============================================================================
 # Visual Theme & Colors (BGR for OpenCV)
 # ==============================================================================

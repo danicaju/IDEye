@@ -9,6 +9,8 @@ from collections import deque
 import math
 import os
 import json
+import re
+import shutil
 import time
 import threading
 import numpy as np
@@ -27,6 +29,10 @@ TRACKING_MODE_HYBRID = getattr(config, "TRACKING_MODE_HYBRID", "HYBRID") if conf
 TRACKING_MODE_HEAD_PRIMARY = getattr(config, "TRACKING_MODE_HEAD_PRIMARY", "HEAD_PRIMARY") if config else "HEAD_PRIMARY"
 DEFAULT_TRACKING_MODE = getattr(config, "DEFAULT_TRACKING_MODE", TRACKING_MODE_HEAD_PRIMARY) if config else TRACKING_MODE_HEAD_PRIMARY
 
+
+from eyede.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class OneEuroFilter:
     """
@@ -154,6 +160,11 @@ class GazeEstimator:
         self.target_screen_aspect: float = 1920.0 / 1080.0
         self.last_head_yaw: float = 0.0
         self.head_yaw_sign: float = 1.0 if mirror else -1.0
+        self._profile_path: Optional[str] = None
+        self.active_monitor_key: Optional[str] = None
+        self.active_monitor_calibrated: bool = False
+        self.active_monitor_physical_mm: Tuple[float, float] = (0.0, 0.0)
+        self.active_monitor_dpi: float = 1.0
 
         self.ema_alpha = max(0.01, min(1.0, float(ema_alpha)))
 
@@ -614,6 +625,97 @@ class GazeEstimator:
 
     def get_target_screen(self) -> Tuple[int, int]:
         return self.target_screen_size
+
+    def _monitor_profile_path(self, monitor_key: str) -> Optional[str]:
+        """Returns the per-monitor profile path next to the base profile."""
+        if not self._profile_path:
+            return None
+        base_dir = os.path.dirname(os.path.abspath(self._profile_path))
+        safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(monitor_key))[:140]
+        if not safe:
+            safe = "unknown_monitor"
+        return os.path.join(base_dir, "calibration_profiles", f"{safe}.json")
+
+    def set_active_monitor(
+        self,
+        monitor_key: str,
+        width: int,
+        height: int,
+        physical_width_mm: float = 0.0,
+        physical_height_mm: float = 0.0,
+        dpi: float = 1.0,
+    ) -> bool:
+        """Binds to a physical monitor and loads its calibration when present.
+
+        Returns True when a per-monitor profile was found and applied. When no
+        profile exists, the current weights remain as a fallback and
+        ``active_monitor_calibrated`` becomes False so a later save does not
+        mislabel the fallback as a calibration of this monitor.
+        """
+        self.set_target_screen(width, height)
+        key = str(monitor_key)
+        if self.active_monitor_key == key and self.active_monitor_calibrated:
+            self.active_monitor_physical_mm = (float(physical_width_mm), float(physical_height_mm))
+            self.active_monitor_dpi = float(dpi)
+            return True
+        self.active_monitor_key = key
+        self.active_monitor_physical_mm = (float(physical_width_mm), float(physical_height_mm))
+        self.active_monitor_dpi = float(dpi)
+        path = self._monitor_profile_path(self.active_monitor_key)
+        if path and os.path.isfile(path):
+            if self._load_profile_file(path):
+                self.active_monitor_calibrated = True
+                return True
+        self.active_monitor_calibrated = False
+        return False
+
+    def clear_monitor_profiles(self, backup: bool = True) -> bool:
+        """Removes (or backs up) the per-monitor calibration directory."""
+        if not self._profile_path:
+            return False
+        base_dir = os.path.dirname(os.path.abspath(self._profile_path))
+        profiles_dir = os.path.join(base_dir, "calibration_profiles")
+        if not os.path.isdir(profiles_dir):
+            return False
+        try:
+            if backup:
+                bak_dir = profiles_dir + ".bak"
+                if os.path.isdir(bak_dir):
+                    shutil.rmtree(bak_dir, ignore_errors=True)
+                os.rename(profiles_dir, bak_dir)
+            else:
+                shutil.rmtree(profiles_dir, ignore_errors=True)
+            self.active_monitor_calibrated = False
+            return True
+        except Exception as exc:
+            logger.warning("Could not clear per-monitor profiles: %s", exc)
+            return False
+
+    def get_active_monitor_state(self) -> Dict[str, Any]:
+        return {
+            "key": self.active_monitor_key,
+            "calibrated": self.active_monitor_calibrated,
+            "size": self.target_screen_size,
+            "physical_mm": self.active_monitor_physical_mm,
+            "dpi": self.active_monitor_dpi,
+        }
+
+    def _write_profile(self, filepath: str, profile: Dict[str, Any]) -> bool:
+        try:
+            parent = os.path.dirname(os.path.abspath(filepath))
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            tmp_path = filepath + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(profile, f, indent=2)
+            if os.path.exists(filepath):
+                os.replace(tmp_path, filepath)
+            else:
+                os.rename(tmp_path, filepath)
+            return True
+        except Exception as exc:
+            logger.warning(f"[GazeEstimator] Warning: Could not write profile '{filepath}': {exc}")
+            return False
 
     def _extract_head_yaw(self, landmarks: Any) -> float:
         """Rough yaw in degrees from nose vs. left/right ear landmarks."""
@@ -1236,47 +1338,56 @@ class GazeEstimator:
                 self.calibration_rmse = rmse
                 self.calibration_points_data = points_data
                 self.calibration_screen_aspect = self.target_screen_aspect
+                self.active_monitor_calibrated = True
             return True
         except Exception:
             return False
 
 
     def save_calibration_profile(self, filepath: str = "calibration_profile.json") -> bool:
-        """
-        Saves current calibration parameters (5-point weights, neutral anchors) to JSON.
-        """
-        try:
-            with self._lock:
-                profile = {
-                    "version": 2,
-                    "type": "5_point_bilinear",
-                    "timestamp": time.time(),
-                    "has_5_point_calibration": self.has_5_point_calibration,
-                    "weights_x": self.calib_weights_x,
-                    "weights_y": self.calib_weights_y,
-                    "rmse": self.calibration_rmse,
-                    "neutral_head": [self.neutral_head_x, self.neutral_head_y],
-                    "neutral_iris": [self.neutral_iris_x, self.neutral_iris_y],
-                    "distance_scale": self.distance_scale,
-                    "head_sensitivities": [self.head_sensitivity_x, self.head_sensitivity_y],
-                    "iris_sensitivities": [self.iris_sensitivity_x, self.iris_sensitivity_y],
-                    "tracking_mode": self.tracking_mode,
-                    "screen_aspect": self.calibration_screen_aspect,
-                    "screen_size": self.target_screen_size,
-                    "points": self.calibration_points_data or []
-                }
-            tmp_path = filepath + ".tmp"
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(profile, f, indent=2)
-            if os.path.exists(filepath):
-                os.replace(tmp_path, filepath)
-            else:
-                os.rename(tmp_path, filepath)
-            return True
-        except Exception:
-            return False
+        """Saves the base profile and a per-monitor copy when calibrated."""
+        self._profile_path = filepath
+        with self._lock:
+            profile = {
+                "version": 2,
+                "type": "5_point_bilinear",
+                "timestamp": time.time(),
+                "has_5_point_calibration": self.has_5_point_calibration,
+                "weights_x": self.calib_weights_x,
+                "weights_y": self.calib_weights_y,
+                "rmse": self.calibration_rmse,
+                "neutral_head": [self.neutral_head_x, self.neutral_head_y],
+                "neutral_iris": [self.neutral_iris_x, self.neutral_iris_y],
+                "distance_scale": self.distance_scale,
+                "head_sensitivities": [self.head_sensitivity_x, self.head_sensitivity_y],
+                "iris_sensitivities": [self.iris_sensitivity_x, self.iris_sensitivity_y],
+                "tracking_mode": self.tracking_mode,
+                "screen_aspect": self.calibration_screen_aspect,
+                "screen_size": self.target_screen_size,
+                "monitor_key": self.active_monitor_key,
+                "monitor_physical_mm": list(self.active_monitor_physical_mm),
+                "monitor_dpi": self.active_monitor_dpi,
+                "points": self.calibration_points_data or [],
+            }
+            monitor_key = self.active_monitor_key
+            monitor_calibrated = self.active_monitor_calibrated
+
+        ok = self._write_profile(filepath, profile)
+        if ok and monitor_key and monitor_calibrated:
+            monitor_path = self._monitor_profile_path(monitor_key)
+            if monitor_path:
+                self._write_profile(monitor_path, profile)
+        return ok
 
     def load_calibration_profile(self, filepath: str = "calibration_profile.json") -> bool:
+        """Loads the base profile and remembers its path for per-monitor files."""
+        ok = self._load_profile_file(filepath)
+        if ok:
+            self._profile_path = filepath
+            self.active_monitor_calibrated = False
+        return ok
+
+    def _load_profile_file(self, filepath: str = "calibration_profile.json") -> bool:
         """
         Loads calibration profile from JSON, restoring weights and anchors.
         Returns True on success, False if file is missing, corrupt, empty, or degenerate.
@@ -1289,14 +1400,14 @@ class GazeEstimator:
                 content = f.read().strip()
 
             if not content:
-                print(f"[GazeEstimator] Warning: Calibration file '{filepath}' is empty. Restoring safe defaults.")
+                logger.warning(f"[GazeEstimator] Warning: Calibration file '{filepath}' is empty. Restoring safe defaults.")
                 self.reset()
                 return False
 
             profile = json.loads(content)
 
             if not isinstance(profile, dict):
-                print(f"[GazeEstimator] Warning: Calibration file '{filepath}' is not a valid JSON object. Restoring safe defaults.")
+                logger.warning(f"[GazeEstimator] Warning: Calibration file '{filepath}' is not a valid JSON object. Restoring safe defaults.")
                 self.reset()
                 return False
 
@@ -1314,11 +1425,11 @@ class GazeEstimator:
                         raw_xs = [r[0] for r in raw_pts if isinstance(r, (list, tuple)) and len(r) >= 2]
                         raw_ys = [r[1] for r in raw_pts if isinstance(r, (list, tuple)) and len(r) >= 2]
                         if raw_xs and (min(raw_xs) == max(raw_xs)):
-                            print(f"[GazeEstimator] Warning: Calibration points degenerate (raw min_x == max_x). Restoring safe defaults.")
+                            logger.warning(f"[GazeEstimator] Warning: Calibration points degenerate (raw min_x == max_x). Restoring safe defaults.")
                             self.reset()
                             return False
                         if raw_ys and (min(raw_ys) == max(raw_ys)):
-                            print(f"[GazeEstimator] Warning: Calibration points degenerate (raw min_y == max_y). Restoring safe defaults.")
+                            logger.warning(f"[GazeEstimator] Warning: Calibration points degenerate (raw min_y == max_y). Restoring safe defaults.")
                             self.reset()
                             return False
 
@@ -1326,11 +1437,11 @@ class GazeEstimator:
                         screen_xs = [s[0] for s in screen_pts if isinstance(s, (list, tuple)) and len(s) >= 2]
                         screen_ys = [s[1] for s in screen_pts if isinstance(s, (list, tuple)) and len(s) >= 2]
                         if screen_xs and (min(screen_xs) == max(screen_xs)):
-                            print(f"[GazeEstimator] Warning: Calibration points degenerate (screen min_x == max_x). Restoring safe defaults.")
+                            logger.warning(f"[GazeEstimator] Warning: Calibration points degenerate (screen min_x == max_x). Restoring safe defaults.")
                             self.reset()
                             return False
                         if screen_ys and (min(screen_ys) == max(screen_ys)):
-                            print(f"[GazeEstimator] Warning: Calibration points degenerate (screen min_y == max_y). Restoring safe defaults.")
+                            logger.warning(f"[GazeEstimator] Warning: Calibration points degenerate (screen min_y == max_y). Restoring safe defaults.")
                             self.reset()
                             return False
 
@@ -1342,20 +1453,20 @@ class GazeEstimator:
                         or len(weights_y) != 4
                         or any(math.isnan(float(w)) or math.isinf(float(w)) for w in weights_x + weights_y)
                     ):
-                        print(f"[GazeEstimator] Warning: Calibration weights corrupt or invalid. Restoring safe defaults.")
+                        logger.warning(f"[GazeEstimator] Warning: Calibration weights corrupt or invalid. Restoring safe defaults.")
                         self.reset()
                         return False
 
                     max_weight_mag = max(abs(float(w)) for w in weights_x + weights_y)
                     if max_weight_mag > 10.0:
-                        print(f"[GazeEstimator] Warning: Stored calibration weights excessive (max={max_weight_mag:.1f}). Attempting robust re-fit from points.")
+                        logger.warning(f"[GazeEstimator] Warning: Stored calibration weights excessive (max={max_weight_mag:.1f}). Attempting robust re-fit from points.")
                         refit_ok = False
                         if points and isinstance(points, list) and len(points) >= 4:
                             if self.calibrate_5_points(points):
-                                print("[GazeEstimator] Successfully re-fitted robust regularized calibration model from profile points.")
+                                logger.info("[GazeEstimator] Successfully re-fitted robust regularized calibration model from profile points.")
                                 refit_ok = True
                         if not refit_ok:
-                            print(f"[GazeEstimator] Warning: Could not re-fit safely. Restoring safe defaults.")
+                            logger.warning(f"[GazeEstimator] Warning: Could not re-fit safely. Restoring safe defaults.")
                             self.reset()
                             return False
                     else:
@@ -1391,7 +1502,7 @@ class GazeEstimator:
 
             return True
         except Exception as e:
-            print(f"[GazeEstimator] Warning: Failed to load calibration profile '{filepath}': {e}. Restoring safe defaults.")
+            logger.warning(f"[GazeEstimator] Warning: Failed to load calibration profile '{filepath}': {e}. Restoring safe defaults.")
             self.reset()
             return False
 
@@ -1427,3 +1538,4 @@ class GazeEstimator:
             self.calibration_rmse = 0.0
             self.calibration_screen_aspect = None
             self.last_head_yaw = 0.0
+            self.active_monitor_calibrated = False

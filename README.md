@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-440%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-449%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -238,7 +238,9 @@ IDEye/
 │   │   ├── gesture_detector.py # MAR calculation, wink detection & debounced state machine
 │   │   ├── hotkey_manager.py # Global OS hotkeys (killswitch, reset, mode toggles)
 │   │   ├── mouse_controller.py # OS mouse injection (SetCursorPos, gaming controls)
-│   │   ├── screen_manager.py # Multi-monitor handover & bezel crossing
+│   │   ├── screen_manager.py # Multi-monitor handover & per-monitor binding
+│   │   ├── bezel_crossing.py # Configurable yaw/hold/cooldown detector
+│   │   ├── logging_config.py # Structured logging bootstrap
 │   │   ├── sound_feedback.py # Procedural numpy RAM WAV audio feedback
 │   │   └── websocket_bridge.py # Bidirectional VS Code WebSocket client/server
 │   ├── modes/
@@ -252,6 +254,7 @@ IDEye/
 │   │   └── sniper_mouse_mode.py # FreeLook direct OS mouse, Jaw-Lock & gaming
 │   ├── ui/
 │   │   ├── overlay_window.py # Transparent No-Focus PyQt6 HUD
+│   │   ├── header_layout.py # Pure command-bar geometry
 │   │   ├── calibration_ui.py # Fullscreen calibration wizard
 │   │   ├── debug_widget.py # Mini camera feed, tracking toggles & controls
 │   │   └── icon_manager.py # High-DPI Lucide/SVG icon rendering & glass badges
@@ -266,7 +269,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Spanish T9/common-word dictionary
 │       └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 440 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
+└── tests/ # 449 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
     ├── test_phase1.py # Core computer vision & MAR state machine tests
     ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
     ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -298,11 +301,11 @@ pytest -q
 ```
 
 ```text
-440 passed, 62 subtests, 14.93s
+449 passed, 62 subtests, 14.95s
 ```
 
 > [!NOTE]
-> All 440 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 449 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 
@@ -324,6 +327,7 @@ pytest -q
 - [x] **Phase 8.1:** Persistent `user_settings.json`, live debounced settings sync, 6th-step biometric MAR calibration, and live MAR slider.
 - [x] **Phase 8.2:** Custom Macro Builder: persistent `custom_macros.json`, 3x3 slot editor, snippets/commands/OS keys, and live HUD tree patching.
 - [x] **Phase 8.3:** Multi-monitor gaze handover, bezel crossing, per-screen calibration bounds, and cross-platform PyInstaller packaging.
+- [x] **Phase 8.4:** True per-monitor calibration profiles, extracted `BezelCrossingDetector`/`HeaderLayout`, structured logging, configurable handover thresholds, and a Windows/macOS/Linux CI build matrix.
 - [ ] **Phase 8:** Multi-monitor gaze handover, custom macro builder, and Linux/macOS packaging.
 
 ---

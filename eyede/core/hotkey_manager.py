@@ -43,6 +43,10 @@ HOTKEY_ACTIONS = {
 }
 
 
+from eyede.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 class GlobalHotkeyManager(QObject):
     """
     Background global hotkey listener using pynput.
@@ -85,7 +89,7 @@ class GlobalHotkeyManager(QObject):
             if self._is_running:
                 return True
             if not _PYNPUT_AVAILABLE:
-                print("[HotkeyManager] Warning: pynput not available. Global hotkeys disabled.")
+                logger.warning("[HotkeyManager] Warning: pynput not available. Global hotkeys disabled.")
                 return False
 
             try:
@@ -97,10 +101,10 @@ class GlobalHotkeyManager(QObject):
                 self._listener.daemon = True
                 self._listener.start()
                 self._is_running = True
-                print("[HotkeyManager] Global hotkeys active (Ctrl+Alt+Q/F12: Salida | Ctrl+Alt+R: Reset | Ctrl+Alt+A/T/C/P: AST, Tracking, Centro, Pausa | Ctrl+Alt+V/K/S/F/G/M: modos y paneles).")
+                logger.info("[HotkeyManager] Global hotkeys active (Ctrl+Alt+Q/F12: Salida | Ctrl+Alt+R: Reset | Ctrl+Alt+A/T/C/P: AST, Tracking, Centro, Pausa | Ctrl+Alt+V/K/S/F/G/M: modos y paneles).")
                 return True
             except Exception as e:
-                print(f"[HotkeyManager] Warning: Failed to start global hotkey listener: {e}")
+                logger.warning(f"[HotkeyManager] Warning: Failed to start global hotkey listener: {e}")
                 self._is_running = False
                 return False
 
@@ -120,12 +124,12 @@ class GlobalHotkeyManager(QObject):
 
     def _on_emergency_exit(self) -> None:
         """Callback from pynput thread when emergency exit shortcut is pressed."""
-        print("\n[HotkeyManager] EMERGENCY EXIT TRIGGERED (Ctrl+Alt+Q / F12)")
+        logger.warning("\n[HotkeyManager] EMERGENCY EXIT TRIGGERED (Ctrl+Alt+Q / F12)")
         self.emergency_exit_requested.emit()
 
     def _on_emergency_reset(self) -> None:
         """Callback from pynput thread when emergency calibration reset is pressed."""
-        print("\n[HotkeyManager] EMERGENCY RESET TRIGGERED (Ctrl+Alt+R)")
+        logger.warning("\n[HotkeyManager] EMERGENCY RESET TRIGGERED (Ctrl+Alt+R)")
         self.emergency_reset_requested.emit()
 
     def _on_mode_cycle(self) -> None:

@@ -1,8 +1,7 @@
-"""IDEye - Multi-monitor handover (Phase 8.3)."""
+"""IDEye - Multi-monitor handover and per-monitor calibration binding."""
 
 from __future__ import annotations
 
-import math
 import time
 from typing import Any, List, Optional
 
@@ -14,9 +13,14 @@ try:
 except ImportError:  # pragma: no cover
     import config  # type: ignore
 
+from eyede.core.bezel_crossing import BezelCrossingDetector
+from eyede.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class ScreenManager(QObject):
-    """Moves the HUD across monitors and re-anchors the gaze target bounds."""
+    """Moves the HUD across monitors and binds gaze to each monitor profile."""
 
     screen_changed = pyqtSignal(int, int)  # current index, total count
 
@@ -27,6 +31,7 @@ class ScreenManager(QObject):
         gaze_estimator: Optional[Any] = None,
         parent: Optional[QObject] = None,
         screens_override: Optional[List[Any]] = None,
+        bezel_detector: Optional[BezelCrossingDetector] = None,
     ) -> None:
         super().__init__(parent)
         self.overlay = overlay
@@ -35,8 +40,8 @@ class ScreenManager(QObject):
         self._screens_override = screens_override
         self._cached_screens: Optional[List[Any]] = None
         self._current_index = 0
-        self._yaw_since: Optional[float] = None
-        self._last_handover = 0.0
+        self.bezel_detector = bezel_detector or BezelCrossingDetector()
+
         app = QApplication.instance()
         if app is not None:
             try:
@@ -92,6 +97,92 @@ class ScreenManager(QObject):
         self.screen_changed.emit(self._current_index, count)
 
     # ------------------------------------------------------------------
+    @staticmethod
+    def _call_screen(screen: Any, attr: str, default: Any = None) -> Any:
+        value = getattr(screen, attr, None)
+        if callable(value):
+            try:
+                value = value()
+            except Exception:
+                value = None
+        return default if value is None else value
+
+    @staticmethod
+    def screen_key(screen: Any) -> str:
+        """Returns a stable identity for a physical monitor + resolution."""
+        try:
+            geo = screen.availableGeometry()
+            geometry = f"{geo.width()}x{geo.height()}"
+        except Exception:
+            geometry = "unknown"
+        name = str(ScreenManager._call_screen(screen, "name", ""))
+        serial = str(ScreenManager._call_screen(screen, "serialNumber", ""))
+        manufacturer = str(ScreenManager._call_screen(screen, "manufacturer", ""))
+        model = str(ScreenManager._call_screen(screen, "model", ""))
+        identity = serial or name or f"{manufacturer}-{model}"
+        return f"{manufacturer}|{model}|{identity}|{geometry}"
+
+    @staticmethod
+    def _physical_size_mm(screen: Any) -> tuple[float, float]:
+        try:
+            size = screen.physicalSize()
+            return float(size.width()), float(size.height())
+        except Exception:
+            return 0.0, 0.0
+
+    @staticmethod
+    def _device_pixel_ratio(screen: Any) -> float:
+        try:
+            return float(screen.devicePixelRatio())
+        except Exception:
+            return 1.0
+
+    def bind_gaze_to_screen(self, screen: Any, index: Optional[int] = None) -> bool:
+        """Binds the gaze estimator to a monitor and loads its calibration."""
+        if screen is None:
+            return False
+        try:
+            geo = screen.availableGeometry()
+        except Exception:
+            return False
+        key = self.screen_key(screen)
+        physical_w, physical_h = self._physical_size_mm(screen)
+        dpr = self._device_pixel_ratio(screen)
+        loaded = False
+
+        estimator = self.gaze_estimator
+        if estimator is not None:
+            if hasattr(estimator, "set_active_monitor"):
+                try:
+                    loaded = bool(
+                        estimator.set_active_monitor(
+                            key,
+                            geo.width(),
+                            geo.height(),
+                            physical_w,
+                            physical_h,
+                            dpr,
+                        )
+                    )
+                except Exception as exc:
+                    logger.warning("Per-monitor calibration binding failed: %s", exc)
+            elif hasattr(estimator, "set_target_screen"):
+                try:
+                    estimator.set_target_screen(geo.width(), geo.height())
+                except Exception:
+                    pass
+
+        idx = self._current_index if index is None else index
+        if self.overlay is not None:
+            try:
+                state = "calibrado" if loaded else "sin calibrar"
+                self.overlay.last_action_desc = f"Monitor {idx + 1}: {state}"
+                self.overlay.update()
+            except Exception:
+                pass
+        return loaded
+
+    # ------------------------------------------------------------------
     def handover_to_screen(
         self,
         screen_index: int,
@@ -122,7 +213,7 @@ class ScreenManager(QObject):
                     self.overlay.set_screen_info(index, len(screens))
                 self.overlay.update()
             except Exception as exc:
-                print(f"[ScreenManager] Warning: overlay handover failed: {exc}")
+                logger.warning("Overlay handover failed: %s", exc)
 
         if self.debug_widget is not None:
             try:
@@ -132,19 +223,13 @@ class ScreenManager(QObject):
                 self.debug_widget.move(max(geo.x(), x), max(geo.y(), y))
                 self.debug_widget.update()
             except Exception as exc:
-                print(f"[ScreenManager] Warning: monitor handover failed: {exc}")
-
-        if self.gaze_estimator is not None:
-            try:
-                self.gaze_estimator.set_target_screen(geo.width(), geo.height())
-            except Exception:
-                pass
+                logger.warning("Monitor panel handover failed: %s", exc)
 
         self._current_index = index
-        self._last_handover = timestamp if timestamp is not None else time.time()
-        self._yaw_since = None
+        self.bind_gaze_to_screen(screen, index)
+        self.bezel_detector.note_handover(timestamp if timestamp is not None else time.time())
         self.screen_changed.emit(index, len(screens))
-        print(f"[ScreenManager] Handover -> screen {index + 1}/{len(screens)} ({reason})")
+        logger.info("Handover -> screen %d/%d (%s)", index + 1, len(screens), reason)
         return True
 
     def cycle_next_screen(self) -> bool:
@@ -155,29 +240,16 @@ class ScreenManager(QObject):
 
     # ------------------------------------------------------------------
     def update_head_yaw(self, yaw_degrees: float, timestamp: Optional[float] = None) -> bool:
-        """Bezel crossing: >21 degrees toward an edge for >400 ms."""
-        try:
-            yaw = float(yaw_degrees)
-        except (TypeError, ValueError):
-            yaw = 0.0
-        if not math.isfinite(yaw) or abs(yaw) <= 21.0:
-            self._yaw_since = None
-            return False
-
-        direction = 1 if yaw > 0 else -1
+        """Feeds yaw to the detector and performs a handover when it fires."""
         screens = self.get_available_screens()
-        target = self._current_index + direction
-        if target < 0 or target >= len(screens):
-            self._yaw_since = None
+        count = len(screens)
+        direction = self.bezel_detector.update(
+            yaw_degrees,
+            can_move_left=self._current_index > 0,
+            can_move_right=self._current_index < count - 1,
+            timestamp=timestamp,
+        )
+        if direction == 0:
             return False
-
         now = timestamp if timestamp is not None else time.time()
-        if self._yaw_since is None:
-            self._yaw_since = now
-            return False
-        if now - self._yaw_since < 0.40:
-            return False
-        if now - self._last_handover < 1.0:
-            return False
-        self._yaw_since = None
-        return self.handover_to_screen(target, "bezel", timestamp=now)
+        return self.handover_to_screen(self._current_index + direction, "bezel", timestamp=now)

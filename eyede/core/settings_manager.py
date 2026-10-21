@@ -34,6 +34,10 @@ _FACTORY_DEFAULTS: Dict[str, Any] = {
 }
 
 
+from eyede.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 def _defaults() -> Dict[str, Any]:
     return dict(_FACTORY_DEFAULTS)
 
@@ -79,7 +83,7 @@ class SettingsManager(QObject):
                 else:
                     raise ValueError("settings root must be an object")
         except Exception as exc:
-            print(f"[SettingsManager] Warning: could not load '{self.path}': {exc}. Using defaults.")
+            logger.warning(f"[SettingsManager] Warning: could not load '{self.path}': {exc}. Using defaults.")
             loaded = {}
 
         with self._lock:
@@ -160,7 +164,7 @@ class SettingsManager(QObject):
             os.replace(tmp_path, self.path)
             return True
         except Exception as exc:
-            print(f"[SettingsManager] Warning: could not save '{self.path}': {exc}")
+            logger.warning(f"[SettingsManager] Warning: could not save '{self.path}': {exc}")
             try:
                 if os.path.exists(tmp_path):
                     os.remove(tmp_path)

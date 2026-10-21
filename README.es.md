@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-440%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-449%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -238,7 +238,9 @@ IDEye/
 │   │   ├── gesture_detector.py # Cálculo MAR, detección de guiños y máquina de estados
 │   │   ├── hotkey_manager.py # Atajos globales del SO (killswitch, reset, modos)
 │   │   ├── mouse_controller.py # Inyección de ratón SO (SetCursorPos, controles gaming)
-│   │   ├── screen_manager.py # Handover multi-monitor y cruce de bisel
+│   │   ├── screen_manager.py # Handover multi-monitor y binding por monitor
+│   │   ├── bezel_crossing.py # Detector configurable de yaw/hold/cooldown
+│   │   ├── logging_config.py # Logging estructurado
 │   │   ├── sound_feedback.py # Audio procedural numpy RAM WAV
 │   │   └── websocket_bridge.py # Cliente/servidor WebSocket bidireccional con VS Code
 │   ├── modes/
@@ -252,6 +254,7 @@ IDEye/
 │   │   └── sniper_mouse_mode.py # Ratón directo OS FreeLook, Jaw-Lock y gaming
 │   ├── ui/
 │   │   ├── overlay_window.py # HUD transparente PyQt6 No-Focus
+│   │   ├── header_layout.py # Geometría pura de la barra de comandos
 │   │   ├── calibration_ui.py # Asistente de calibración a pantalla completa
 │   │   ├── debug_widget.py # Mini-feed de cámara, botones de modo y controles
 │   │   └── icon_manager.py # Renderizado de iconos Lucide/SVG alta DPI y badges glass
@@ -266,7 +269,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Diccionario T9/palabras comunes en español
 │       └── icons/ # Suite de iconos SVG/Lucide neón de alta definición
-└── tests/ # 440 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
+└── tests/ # 449 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
     ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
     ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
     ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
@@ -298,11 +301,11 @@ pytest -q
 ```
 
 ```text
-440 pruebas superadas, 62 subtests, 14.93s
+449 pruebas superadas, 62 subtests, 14.95s
 ```
 
 > [!NOTE]
-> Todos los 440 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 449 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 
@@ -324,6 +327,7 @@ pytest -q
 - [x] **Fase 8.1:** `user_settings.json` persistente, sincronización live con debounce, calibración biométrica MAR de 6º paso y slider MAR en vivo.
 - [x] **Fase 8.2:** Constructor de Macros: `custom_macros.json` persistente, editor de 9 celdas, snippets/comandos/atajos OS y parcheo del HUD en vivo.
 - [x] **Fase 8.3:** Handover de mirada multi-monitor, cruce de bisel, límites de calibración por pantalla y empaquetado PyInstaller multiplataforma.
+- [x] **Fase 8.4:** Perfiles de calibración por monitor, `BezelCrossingDetector`/`HeaderLayout` extraídos, logging estructurado, umbrales de handover configurables y matriz CI Windows/macOS/Linux.
 - [ ] **Fase 8:** Traspaso de mirada entre monitores, constructor de macros personalizadas y empaquetado para Linux/macOS.
 
 ---

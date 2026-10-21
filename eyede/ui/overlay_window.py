@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import QWidget, QApplication
 try:
     import eyede.config as config
     from eyede.ui.icon_manager import IconManager
+    from eyede.ui.header_layout import HeaderLayout
     from eyede.core.sound_feedback import SoundFeedbackManager
     from eyede.core.mouse_controller import OSMouseController
     from eyede.actions.code_injector import CodeInjector
@@ -71,6 +72,7 @@ try:
 except ImportError:
     import config
     from ui.icon_manager import IconManager
+    from ui.header_layout import HeaderLayout
     from core.sound_feedback import SoundFeedbackManager
     from core.mouse_controller import OSMouseController
     from actions.code_injector import CodeInjector
@@ -103,6 +105,10 @@ except ImportError:
     from actions.ai_predictor import AIPredictorWorker
     from modes.mode_manager import ModeManager
 
+
+from eyede.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 def _clean_action_label(label: str) -> str:
     """Removes the numeric slot prefix from a menu label for status messages.
@@ -355,6 +361,7 @@ class OverlayWindow(QWidget):
         self.debug_widget: Optional[QWidget] = None
         self._animated_right_margin: Optional[float] = None
         self._right_margin_animation: Optional[QVariantAnimation] = None
+        self._right_margin_target: float = 0.0
         self.header_rect: QRectF = QRectF()
         self._header_logo_rect: QRectF = QRectF()
         self._header_breadcrumb_rect: QRectF = QRectF()
@@ -670,9 +677,18 @@ class OverlayWindow(QWidget):
         animation.setDuration(180)
         animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         animation.valueChanged.connect(self._on_right_margin_animated)
-        animation.finished.connect(lambda: setattr(self, "_animated_right_margin", float(target)))
+        self._right_margin_target = float(target)
+        animation.finished.connect(self._on_right_margin_finished)
         self._right_margin_animation = animation
         animation.start()
+
+    def _on_right_margin_finished(self) -> None:
+        try:
+            self._animated_right_margin = float(self._right_margin_target)
+            self._update_header_exit_rect()
+            self.update()
+        except RuntimeError:
+            pass
 
     def _on_right_margin_animated(self, value: Any) -> None:
         try:
@@ -744,161 +760,41 @@ class OverlayWindow(QWidget):
     def _update_header_exit_rect(self) -> None:
         """Computes the unified floating command bar and its interactive targets."""
         w = float(self.width()) if self.width() > 0 else 1920.0
-        margin = self.margin
-        header_h = self.breadcrumb_height
-        pill_h = max(24.0, header_h - 12.0)
         right_margin = self._get_effective_right_margin(w)
         grid_left = self._get_grid_left(w, right_margin)
-        grid_right = w - margin - right_margin
-        area_w = max(1.0, grid_right - grid_left)
-        bar_w = max(1.0, min(1020.0, area_w))
-        bar_x = grid_left + (area_w - bar_w) * 0.5
-
-        if bar_w >= 900.0:
-            self._header_exit_w = max(150.0, min(160.0, bar_w * 0.12))
-            self._header_help_w = max(130.0, min(140.0, bar_w * 0.10))
-        else:
-            self._header_exit_w = max(104.0, min(120.0, bar_w * 0.14))
-            self._header_help_w = max(100.0, min(112.0, bar_w * 0.10))
-        self._header_lang_w = max(56.0, min(64.0, bar_w * 0.07))
-        self._header_mode_w = max(140.0, min(200.0, bar_w * 0.26))
-
-        header_rect = QRectF(bar_x, margin, bar_w, header_h)
-        self.header_rect = header_rect
-        inner = 8.0
-        gap = 6.0
-
-        # Right-to-left: EXIT | HELP | [LAST ACTION] | LANG | MODE
-        self.header_exit_rect = QRectF(
-            header_rect.right() - inner - self._header_exit_w,
-            header_rect.y() + 6.0,
-            self._header_exit_w,
-            pill_h,
+        brand_w = float(QFontMetrics(self._font_header_bold_btn).horizontalAdvance("IDEye"))
+        ws_full_w = float(QFontMetrics(self._font_header_left).horizontalAdvance("VS Code")) + 11.0
+        layout = HeaderLayout.compute(
+            width=w,
+            margin=self.margin,
+            header_height=self.breadcrumb_height,
+            right_margin=right_margin,
+            grid_left=grid_left,
+            show_last_action=self._should_show_last_action(),
+            screen_count=self.screen_count,
+            mode_id=self.current_context_mode_id,
+            brand_text_width=brand_w,
+            ws_full_width=ws_full_w,
         )
-        self.header_help_rect = QRectF(
-            self.header_exit_rect.left() - gap - self._header_help_w,
-            header_rect.y() + 6.0,
-            self._header_help_w,
-            pill_h,
-        )
-
-        show_screen = self.screen_count > 1 and self.current_context_mode_id != "sniper"
-        show_last = self._should_show_last_action() or show_screen
-        last_w = min(170.0, max(70.0, bar_w * 0.22))
-        right_block = (
-            self._header_mode_w + self._header_lang_w + self._header_help_w
-            + self._header_exit_w + 3.0 * gap
-        )
-        if show_last:
-            right_block += last_w + gap
-
-        # Brand area needs logo + IDEye + optional WS status
-        brand_fm = QFontMetrics(self._font_header_bold_btn)
-        brand_w = float(brand_fm.horizontalAdvance("IDEye")) + 2.0
-        ws_dot = 6.0
-        ws_gap = 5.0
-        ws_full_w = ws_dot + ws_gap + float(QFontMetrics(self._font_header_left).horizontalAdvance("VS Code"))
-        ws_min_w = ws_dot
-        brand_min = 24.0 + 8.0 + brand_w + 10.0 + ws_min_w
-
-        # If it doesn't fit, shrink or hide the last-action pill
-        if right_block + brand_min + 12.0 > bar_w:
-            last_w = max(70.0, last_w - 40.0)
-            right_block = (
-                self._header_mode_w + self._header_lang_w + self._header_help_w
-                + self._header_exit_w + 3.0 * gap + last_w + gap
-            ) if show_last else right_block
-        if show_last and right_block + brand_min + 12.0 > bar_w:
-            show_last = False
-            right_block = (
-                self._header_mode_w + self._header_lang_w + self._header_help_w
-                + self._header_exit_w + 3.0 * gap
-            )
-        if right_block + brand_min + 12.0 > bar_w:
-            # Last resort: narrow the mode button to its hard minimum
-            self._header_mode_w = max(120.0, min(self._header_mode_w, bar_w - right_block + self._header_mode_w - brand_min - 12.0))
-
-        if show_last and show_screen:
-            self.header_screen_rect = QRectF(
-                self.header_help_rect.left() - gap - last_w,
-                header_rect.y() + 6.0,
-                last_w,
-                pill_h,
-            )
-            self._last_action_pill_rect = QRectF()
-        elif show_last:
-            self.header_screen_rect = QRectF()
-            self._last_action_pill_rect = QRectF(
-                self.header_help_rect.left() - gap - last_w,
-                header_rect.y() + 6.0,
-                last_w,
-                pill_h,
-            )
-        else:
-            self.header_screen_rect = QRectF()
-            self._last_action_pill_rect = QRectF()
-
-        # In sniper mode the same slot becomes a clickable mouse-action selector.
-        if self.current_context_mode_id == "sniper":
-            sniper_w = min(170.0, max(130.0, last_w))
-            self._sniper_action_pill_rect = QRectF(
-                self.header_help_rect.left() - gap - sniper_w,
-                header_rect.y() + 6.0,
-                sniper_w,
-                pill_h,
-            )
-            self._last_action_pill_rect = QRectF()
-        else:
-            self._sniper_action_pill_rect = QRectF()
-
-        # The screen selector pill is never active in sniper mode, nor when it
-        # was hidden to make room. Reset hover state so stale values cannot
-        # trigger a screen cycle.
-        if self.current_context_mode_id == "sniper" or not show_last:
-            self.header_screen_rect = QRectF()
+        self.header_rect = layout.header
+        self._header_logo_rect = layout.logo
+        self._header_breadcrumb_rect = layout.breadcrumb
+        self._header_status_rect = layout.status
+        self.header_exit_rect = layout.exit
+        self.header_help_rect = layout.help
+        self.header_lang_rect = layout.lang
+        self.header_mode_rect = layout.mode
+        self._last_action_pill_rect = layout.last_action
+        self._sniper_action_pill_rect = layout.sniper_action
+        self.header_screen_rect = layout.screen
+        self._header_exit_w = layout.exit_w
+        self._header_help_w = layout.help_w
+        self._header_lang_w = layout.lang_w
+        self._header_mode_w = layout.mode_w
+        self._header_ws_dot_only = layout.ws_dot_only
+        self._header_ws_show = layout.ws_show
         if not self.header_screen_rect.isValid():
             self.hovered_header_screen = False
-
-        selector_rect = (
-            self._sniper_action_pill_rect
-            if self._sniper_action_pill_rect.isValid()
-            else self._last_action_pill_rect
-        )
-        lang_left = (
-            selector_rect.left() - gap - self._header_lang_w
-            if selector_rect.isValid()
-            else self.header_help_rect.left() - gap - self._header_lang_w
-        )
-        self.header_lang_rect = QRectF(
-            lang_left,
-            header_rect.y() + 6.0,
-            self._header_lang_w,
-            pill_h,
-        )
-        self.header_mode_rect = QRectF(
-            self.header_lang_rect.left() - gap - self._header_mode_w,
-            header_rect.y() + 6.0,
-            self._header_mode_w,
-            pill_h,
-        )
-
-        logo_size = 24.0
-        self._header_logo_rect = QRectF(
-            header_rect.x() + inner,
-            header_rect.y() + (header_h - logo_size) * 0.5,
-            logo_size,
-            logo_size,
-        )
-
-        status_left = self._header_logo_rect.right() + 8.0
-        status_right = self.header_mode_rect.left() - gap
-        status_w = max(0.0, status_right - status_left)
-        self._header_status_rect = QRectF(status_left, header_rect.y() + 6.0, status_w, pill_h)
-        self._header_ws_dot_only = status_w < ws_full_w + 4.0
-        self._header_ws_show = status_w >= ws_min_w + 4.0
-
-        # Breadcrumb is no longer painted; keep an empty rect for compatibility.
-        self._header_breadcrumb_rect = QRectF()
         self._update_help_modal_rect()
 
     def _card_header_rects(
@@ -1081,7 +977,7 @@ class OverlayWindow(QWidget):
                     self.menu_tree["MENU_STANDARD"], mode_id
                 )
         except Exception as exc:
-            print(f"[Overlay] Warning: could not apply custom macros: {exc}")
+            logger.warning(f"[Overlay] Warning: could not apply custom macros: {exc}")
         self._cached_adaptive_node = None
         self._last_ast_eval_time = 0.0
 
@@ -3488,6 +3384,12 @@ class OverlayWindow(QWidget):
 
     def closeEvent(self, event) -> None:
         """Safely stops background code injector and AI worker threads on window close without terminate()."""
+        if self._right_margin_animation is not None:
+            try:
+                self._right_margin_animation.stop()
+            except Exception:
+                pass
+            self._right_margin_animation = None
         if hasattr(self, "ai_predictor_worker") and self.ai_predictor_worker is not None:
             try:
                 if self.ai_predictor_worker.isRunning():

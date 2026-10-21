@@ -35,6 +35,7 @@ HOTKEY_ACTIONS = {
     "<ctrl>+<alt>+f": "_on_sniper_toggle_anywhere",
     "<ctrl>+<alt>+g": "_on_gaming_toggle_anywhere",
     "<ctrl>+<alt>+m": "_on_monitor_toggle_anywhere",
+    "<ctrl>+<shift>+m": "_on_screen_cycle",
 }
 
 
@@ -58,6 +59,7 @@ class GlobalHotkeyManager(QObject):
     gaming_toggle_anywhere_requested = pyqtSignal()
     monitor_toggle_requested = pyqtSignal()
     monitor_toggle_anywhere_requested = pyqtSignal()
+    screen_cycle_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -165,3 +167,7 @@ class GlobalHotkeyManager(QObject):
     def _on_monitor_toggle_anywhere(self) -> None:
         """Callback for Ctrl+Alt+M monitor toggle from any window."""
         self.monitor_toggle_anywhere_requested.emit()
+
+    def _on_screen_cycle(self) -> None:
+        """Callback for Ctrl+Shift+M multi-monitor handover."""
+        self.screen_cycle_requested.emit()

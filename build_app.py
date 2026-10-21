@@ -1,6 +1,6 @@
-"""
-IDEye - Desktop Application Builder (PyInstaller)
-Compiles IDEye into a native Windows desktop executable with custom icon and bundled assets.
+"""IDEye - Cross-platform PyInstaller builder (Phase 8.3).
+
+Builds a self-contained onedir distribution on Windows, macOS and Linux.
 """
 
 import os
@@ -10,18 +10,51 @@ import shutil
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(ROOT_DIR, "eyede", "assets")
-ICON_PATH = os.path.join(ROOT_DIR, "eyede.ico")
+ICON_ICO = os.path.join(ROOT_DIR, "eyede.ico")
+ICON_ICNS = os.path.join(ROOT_DIR, "eyede.icns")
 MAIN_PY = os.path.join(ROOT_DIR, "main.py")
 
-def build():
-    print("=" * 60)
-    print("  IDEye - Building Native Windows Desktop Executable")
-    print("=" * 60)
+IS_WINDOWS = sys.platform.startswith("win")
+IS_MACOS = sys.platform == "darwin"
+IS_LINUX = sys.platform.startswith("linux")
+DATA_SEP = ";" if IS_WINDOWS else ":"
 
-    if not os.path.exists(ICON_PATH):
-        print(f"[ERROR] Icon not found at {ICON_PATH}")
-        return False
+USER_FILES = ("calibration_profile.json", "user_settings.json", "custom_macros.json")
 
+
+def _data_arg(source: str, destination: str) -> str:
+    return f"--add-data={source}{DATA_SEP}{destination}"
+
+
+def _icon_arg() -> str:
+    if IS_WINDOWS and os.path.exists(ICON_ICO):
+        return f"--icon={ICON_ICO}"
+    if IS_MACOS and os.path.exists(ICON_ICNS):
+        return f"--icon={ICON_ICNS}"
+    if IS_MACOS and os.path.exists(ICON_ICO):
+        return f"--icon={ICON_ICO}"
+    return ""
+
+
+def _pynput_backends() -> list:
+    if IS_WINDOWS:
+        return [
+            "--hidden-import=pynput.keyboard._win32",
+            "--hidden-import=pynput.mouse._win32",
+        ]
+    if IS_MACOS:
+        return [
+            "--hidden-import=pynput.keyboard._darwin",
+            "--hidden-import=pynput.mouse._darwin",
+        ]
+    return [
+        "--hidden-import=pynput.keyboard._xorg",
+        "--hidden-import=pynput.mouse._xorg",
+    ]
+
+
+def build_command() -> list:
+    """Returns the complete PyInstaller command for the current platform."""
     cmd = [
         sys.executable,
         "-m",
@@ -29,9 +62,8 @@ def build():
         "--noconfirm",
         "--clean",
         "--name=IDEye",
-        "--windowed",  # No console window popup
-        f"--icon={ICON_PATH}",
-        f"--add-data={ASSETS_DIR};eyede/assets",
+        "--windowed",
+        _data_arg(ASSETS_DIR, "eyede/assets"),
         "--collect-data=mediapipe",
         "--collect-binaries=mediapipe",
         "--copy-metadata=mediapipe",
@@ -46,6 +78,7 @@ def build():
         "--hidden-import=eyede.core.mouse_controller",
         "--hidden-import=eyede.core.settings_manager",
         "--hidden-import=eyede.core.macro_manager",
+        "--hidden-import=eyede.core.screen_manager",
         "--hidden-import=eyede.ui.macro_editor_dialog",
         "--hidden-import=eyede.modes.sniper_mouse_mode",
         "--hidden-import=eyede.ui.overlay_window",
@@ -62,12 +95,55 @@ def build():
         "--hidden-import=websockets",
         "--hidden-import=websockets.asyncio",
         "--hidden-import=websockets.asyncio.server",
-        "--hidden-import=pynput.keyboard._win32",
-        "--hidden-import=pynput.mouse._win32",
-        "--onedir",
-        MAIN_PY,
+        "--hidden-import=PyQt6.QtSvg",
+        "--hidden-import=PyQt6.QtNetwork",
+    ]
+    icon = _icon_arg()
+    if icon:
+        cmd.append(icon)
+    for filename in USER_FILES:
+        path = os.path.join(ROOT_DIR, filename)
+        if os.path.isfile(path):
+            cmd.append(_data_arg(path, "."))
+    cmd.extend(_pynput_backends())
+    if IS_MACOS:
+        cmd.append("--osx-bundle-identifier=com.vistax.ideye")
+    cmd.extend(["--onedir", MAIN_PY])
+    return cmd
+
+
+def _dist_candidates() -> list:
+    return [
+        os.path.join(ROOT_DIR, "dist", "IDEye", "IDEye.exe"),
+        os.path.join(ROOT_DIR, "dist", "IDEye.app"),
+        os.path.join(ROOT_DIR, "dist", "IDEye", "IDEye"),
     ]
 
+
+def _copy_user_files(dist_dir: str) -> None:
+    for filename in USER_FILES:
+        src = os.path.join(ROOT_DIR, filename)
+        if os.path.isfile(src):
+            try:
+                shutil.copy2(src, os.path.join(dist_dir, filename))
+                print(f"[INFO] Copied {filename} to {dist_dir}")
+            except Exception as exc:
+                print(f"[WARN] Could not copy {filename}: {exc}")
+
+
+def build():
+    print("=" * 60)
+    print(f"  IDEye - Building Native Desktop Application ({sys.platform})")
+    print("=" * 60)
+
+    if not os.path.isdir(ASSETS_DIR):
+        print(f"[ERROR] Assets directory not found at {ASSETS_DIR}")
+        return False
+    if not os.path.isfile(MAIN_PY):
+        print(f"[ERROR] Entrypoint not found at {MAIN_PY}")
+        return False
+
+    cmd = build_command()
     print("[INFO] Running PyInstaller command:")
     print(" ".join(cmd))
     print("-" * 60)
@@ -77,22 +153,19 @@ def build():
         print(f"[ERROR] PyInstaller failed with exit code {result.returncode}")
         return False
 
-    dist_dir = os.path.join(ROOT_DIR, "dist", "IDEye")
-    exe_path = os.path.join(dist_dir, "IDEye.exe")
-    print("-" * 60)
-    if os.path.exists(exe_path):
-        print(f"[SUCCESS] Native desktop executable generated at:\n  {exe_path}")
-
-        # Also copy calibration profile if exists
-        profile_src = os.path.join(ROOT_DIR, "calibration_profile.json")
-        if os.path.exists(profile_src):
-            shutil.copy2(profile_src, dist_dir)
-            print(f"[INFO] Copied calibration_profile.json to {dist_dir}")
-
-        return True
-    else:
-        print(f"[ERROR] Expected executable not found at {exe_path}")
+    artifact = next((path for path in _dist_candidates() if os.path.exists(path)), None)
+    if artifact is None:
+        print("[ERROR] Expected build artifact was not found in dist/.")
         return False
+
+    print("-" * 60)
+    print(f"[SUCCESS] Native application generated at:\n  {artifact}")
+    if IS_MACOS and artifact.endswith(".app"):
+        _copy_user_files(os.path.join(artifact, "Contents", "MacOS"))
+    elif os.path.isdir(artifact):
+        _copy_user_files(artifact)
+    return True
+
 
 if __name__ == "__main__":
     success = build()

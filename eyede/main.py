@@ -37,6 +37,7 @@ try:
     from eyede.core.mouse_controller import OSMouseController
     from eyede.core.settings_manager import SettingsManager
     from eyede.core.macro_manager import MacroManager
+    from eyede.core.screen_manager import ScreenManager
     from eyede.ui.macro_editor_dialog import CustomMacroDialog
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
@@ -56,6 +57,7 @@ except ImportError:
     from core.mouse_controller import OSMouseController
     from core.settings_manager import SettingsManager
     from core.macro_manager import MacroManager
+    from core.screen_manager import ScreenManager
     from ui.macro_editor_dialog import CustomMacroDialog
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
@@ -718,6 +720,15 @@ class EyeDEApplication(QObject):
         self.mouse_controller = OSMouseController()
         self.overlay.set_mouse_controller(self.mouse_controller)
         self.overlay.set_vscode_connected(False)
+        self.screen_manager = ScreenManager(
+            overlay=self.overlay,
+            debug_widget=self.debug_widget,
+            gaze_estimator=self.tracker.gaze_estimator,
+            parent=self,
+        )
+        self.overlay.set_screen_info(0, self.screen_manager.screen_count)
+        self.overlay.screen_cycle_requested.connect(self.screen_manager.cycle_next_screen)
+        self.screen_manager.screen_changed.connect(self.overlay.set_screen_info)
         self._apply_settings(self._settings)
         self.calibration_ui: Optional[CalibrationUI] = None
         self._is_shutting_down: bool = False
@@ -752,6 +763,7 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.gaming_toggle_anywhere_requested.connect(self._on_gaming_shortcut_anywhere)
         self.hotkey_manager.monitor_toggle_requested.connect(self._on_monitor_shortcut)
         self.hotkey_manager.monitor_toggle_anywhere_requested.connect(self._on_monitor_shortcut_anywhere)
+        self.hotkey_manager.screen_cycle_requested.connect(self.screen_manager.cycle_next_screen)
 
         self._setup_connections()
         self._configure_geometry()
@@ -893,6 +905,7 @@ class EyeDEApplication(QObject):
         """Connects signals between tracker, overlay, debug monitor, and lifecycle."""
         # Tracker signals to Overlay
         self.tracker.gaze_updated.connect(self.overlay.on_gaze_updated)
+        self.tracker.gaze_updated.connect(self._on_gaze_for_screen_handover)
         self.tracker.gesture_triggered.connect(self.overlay.on_gesture_triggered)
 
         # Tracker signals to DebugWidget
@@ -1132,6 +1145,7 @@ class EyeDEApplication(QObject):
             return
         for signal, slot in (
             (self.tracker.gaze_updated, self.overlay.on_gaze_updated),
+            (self.tracker.gaze_updated, self._on_gaze_for_screen_handover),
             (self.tracker.gesture_triggered, self.overlay.on_gesture_triggered),
             (self.tracker.frame_ready, self.overlay.on_mar_updated),
             (self.tracker.frame_ready, self.debug_widget.on_frame_ready),
@@ -1148,6 +1162,7 @@ class EyeDEApplication(QObject):
             return
         for signal, slot in (
             (self.tracker.gaze_updated, self.overlay.on_gaze_updated),
+            (self.tracker.gaze_updated, self._on_gaze_for_screen_handover),
             (self.tracker.gesture_triggered, self.overlay.on_gesture_triggered),
             (self.tracker.frame_ready, self.overlay.on_mar_updated),
             (self.tracker.frame_ready, self.debug_widget.on_frame_ready),
@@ -1157,6 +1172,14 @@ class EyeDEApplication(QObject):
             except (TypeError, RuntimeError):
                 pass
         self._hud_input_suspended = False
+
+    def _on_gaze_for_screen_handover(self, _gx: float, _gy: float) -> None:
+        """Feeds head yaw to the bezel-crossing state machine."""
+        try:
+            yaw = float(getattr(self.tracker.gaze_estimator, "last_head_yaw", 0.0))
+            self.screen_manager.update_head_yaw(yaw)
+        except Exception:
+            pass
 
     def _on_calibration_frame(self, _frame: Any, mar: float) -> None:
         if self.calibration_ui is not None:

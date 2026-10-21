@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-422%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-429%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -206,6 +206,7 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`[+]` / `[-]`** | **Sensitivity Adjust** | Increase or decrease gaze tracking sensitivity on the fly |
 | **`[P]` / `[Space]`** | **Pause / Reading Mode** | Dim HUD to 10% opacity so you can read code without accidental clicks |
 | **`[M]` / `Ctrl+Alt+M`** | **Toggle Mini-Feed** | Look at the top bar and press `M`, or use `Ctrl+Alt+M` anywhere; toggles the monitor panel |
+| **`Ctrl+Shift+M`** | **Multi-Monitor Handover** | Moves the HUD and gaze mapping to the next connected display |
 | **`[Q]` / `[ESC]`** | **Safe Exit** | Release camera handles and gracefully stop all worker threads |
 | **Eye Exit** | **[X EXIT] Hands-Free** | Gaze at the top-right header `[X EXIT]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 
@@ -235,6 +236,7 @@ IDEye/
 │   │   ├── gesture_detector.py # MAR calculation, wink detection & debounced state machine
 │   │   ├── hotkey_manager.py # Global OS hotkeys (killswitch, reset, mode toggles)
 │   │   ├── mouse_controller.py # OS mouse injection (SetCursorPos, gaming controls)
+│   │   ├── screen_manager.py # Multi-monitor handover & bezel crossing
 │   │   ├── sound_feedback.py # Procedural numpy RAM WAV audio feedback
 │   │   └── websocket_bridge.py # Bidirectional VS Code WebSocket client/server
 │   ├── modes/
@@ -262,7 +264,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Spanish T9/common-word dictionary
 │       └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 422 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
+└── tests/ # 429 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
     ├── test_phase1.py # Core computer vision & MAR state machine tests
     ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
     ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -294,11 +296,11 @@ pytest -q
 ```
 
 ```text
-422 passed, 57 subtests, 14.37s
+429 passed, 58 subtests, 13.71s
 ```
 
 > [!NOTE]
-> All 422 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 429 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 
@@ -319,6 +321,7 @@ pytest -q
 - [x] **Phase 7.7:** Full-screen FreeLook mapping, comfortable edge overscan, and Windows taskbar magnetic rail.
 - [x] **Phase 8.1:** Persistent `user_settings.json`, live debounced settings sync, 6th-step biometric MAR calibration, and live MAR slider.
 - [x] **Phase 8.2:** Custom Macro Builder: persistent `custom_macros.json`, 3x3 slot editor, snippets/commands/OS keys, and live HUD tree patching.
+- [x] **Phase 8.3:** Multi-monitor gaze handover, bezel crossing, per-screen calibration bounds, and cross-platform PyInstaller packaging.
 - [ ] **Phase 8:** Multi-monitor gaze handover, custom macro builder, and Linux/macOS packaging.
 
 ---

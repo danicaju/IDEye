@@ -173,6 +173,7 @@ HELP_SHORTCUTS = (
     ("[Ctrl+Alt+S]", "Sonido", "Silencia o activa el feedback acústico desde cualquier ventana."),
     ("[Ctrl+Alt+F]", "FreeLook", "Activa el ratón directo por mirada desde cualquier ventana."),
     ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming dentro de FreeLook desde cualquier ventana."),
+    ("[Ctrl+Shift+M]", "Cambiar pantalla", "Mueve el HUD y el mapeo de mirada al siguiente monitor."),
     ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
 )
 
@@ -196,6 +197,7 @@ class OverlayWindow(QWidget):
     context_mode_changed = pyqtSignal(str, str, str)  # (mode_id, display_name, theme_color)
     sound_enabled_changed = pyqtSignal(bool)
     auto_switch_changed = pyqtSignal(bool)
+    screen_cycle_requested = pyqtSignal()
     mode_changed = context_mode_changed
 
     def __init__(
@@ -272,6 +274,10 @@ class OverlayWindow(QWidget):
         self.hovered_subcell: Optional[int] = None
         self.hovered_sniper_action: bool = False
         self._sniper_action_pill_rect: QRectF = QRectF()
+        self.header_screen_rect: QRectF = QRectF()
+        self.hovered_header_screen: bool = False
+        self.screen_index: int = 0
+        self.screen_count: int = 1
 
         # FreeLook / gaming state
         self._freelook_last_pos: Tuple[int, int] = (0, 0)
@@ -775,7 +781,8 @@ class OverlayWindow(QWidget):
             pill_h,
         )
 
-        show_last = self._should_show_last_action()
+        show_screen = self.screen_count > 1 and self.current_context_mode_id != "sniper"
+        show_last = self._should_show_last_action() or show_screen
         last_w = min(170.0, max(70.0, bar_w * 0.22))
         right_block = (
             self._header_mode_w + self._header_lang_w + self._header_help_w
@@ -810,7 +817,16 @@ class OverlayWindow(QWidget):
             # Last resort: narrow the mode button to its hard minimum
             self._header_mode_w = max(120.0, min(self._header_mode_w, bar_w - right_block + self._header_mode_w - brand_min - 12.0))
 
-        if show_last:
+        if show_last and show_screen:
+            self.header_screen_rect = QRectF(
+                self.header_help_rect.left() - gap - last_w,
+                header_rect.y() + 6.0,
+                last_w,
+                pill_h,
+            )
+            self._last_action_pill_rect = QRectF()
+        elif show_last:
+            self.header_screen_rect = QRectF()
             self._last_action_pill_rect = QRectF(
                 self.header_help_rect.left() - gap - last_w,
                 header_rect.y() + 6.0,
@@ -818,6 +834,7 @@ class OverlayWindow(QWidget):
                 pill_h,
             )
         else:
+            self.header_screen_rect = QRectF()
             self._last_action_pill_rect = QRectF()
 
         # In sniper mode the same slot becomes a clickable mouse-action selector.
@@ -1029,6 +1046,13 @@ class OverlayWindow(QWidget):
             return node
         return self.menu_tree.get(self.current_node_id, self.menu_tree.get("ROOT"))
 
+    def set_screen_info(self, index: int, count: int) -> None:
+        """Updates the compact multi-monitor selector in the command bar."""
+        self.screen_index = max(0, int(index))
+        self.screen_count = max(1, int(count))
+        self._update_header_exit_rect()
+        self.update()
+
     def set_macro_manager(self, manager: Optional[Any]) -> None:
         self.macro_manager = manager
         self._apply_macro_overrides()
@@ -1206,6 +1230,7 @@ class OverlayWindow(QWidget):
                 ("hovered_header_help", self.header_help_rect),
                 ("hovered_header_mode", self.header_mode_rect),
                 ("hovered_header_lang", self.header_lang_rect),
+                ("hovered_header_screen", self.header_screen_rect),
                 ("hovered_sniper_action", self._sniper_action_pill_rect),
             )
             for attr, rect in header_targets:
@@ -1296,6 +1321,18 @@ class OverlayWindow(QWidget):
                 return
 
         self.hovered_header_lang = False
+
+        # Multi-monitor selector pill (between language and help).
+        if (
+            not self.reading_mode
+            and self.header_screen_rect.isValid()
+            and self.header_screen_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
+        ):
+            self.hovered_header_screen = True
+            self.hovered_block = None
+            self.update()
+            return
+        self.hovered_header_screen = False
 
         # Sniper action selector pill (between language and help).
         if (
@@ -1937,6 +1974,12 @@ class OverlayWindow(QWidget):
             self.toggle_help_modal()
             self.last_action_desc = "Guía de Gestos"
             self.update()
+            return
+
+        # Multi-monitor selector
+        if getattr(self, "hovered_header_screen", False):
+            self.hovered_header_screen = False
+            self.screen_cycle_requested.emit()
             return
 
         # Sniper action selector (only visible in sniper mode)
@@ -2755,6 +2798,7 @@ class OverlayWindow(QWidget):
         logo_rect = self._header_logo_rect
         last_pill_rect = self._last_action_pill_rect
         sniper_pill_rect = self._sniper_action_pill_rect
+        screen_pill_rect = self.header_screen_rect
 
         painter.setOpacity(0.95 if not self.reading_mode else 0.30)
 
@@ -2810,8 +2854,20 @@ class OverlayWindow(QWidget):
                             ),
                         )
 
+        # Multi-monitor selector.
+        if screen_pill_rect.isValid():
+            painter.setBrush(QBrush(QColor(14, 165, 233, 35)))
+            painter.setPen(QPen(QColor(56, 189, 248, 210), 1.2))
+            painter.drawRoundedRect(screen_pill_rect, 7.0, 7.0)
+            painter.setPen(QColor(186, 230, 253))
+            painter.setFont(self._font_header_bold_btn)
+            painter.drawText(
+                screen_pill_rect,
+                Qt.AlignmentFlag.AlignCenter,
+                f"MON {self.screen_index + 1}/{self.screen_count}",
+            )
         # Sniper action selector, or compact last-action status.
-        if sniper_pill_rect.isValid():
+        elif sniper_pill_rect.isValid():
             mode = self._sniper_mode()
             action_label = getattr(mode, "action_label", "Clic Izq") if mode else "Clic Izq"
             painter.setBrush(QBrush(QColor(244, 63, 94, 38)))

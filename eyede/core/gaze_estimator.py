@@ -149,6 +149,9 @@ class GazeEstimator:
         self.iris_sensitivity_x = self.base_iris_sensitivity_x
         self.iris_sensitivity_y = self.base_iris_sensitivity_y
         self.distance_scale: float = 1.0
+        self.target_screen_size: Tuple[int, int] = (1920, 1080)
+        self.target_screen_aspect: float = 1920.0 / 1080.0
+        self.last_head_yaw: float = 0.0
 
         self.ema_alpha = max(0.01, min(1.0, float(ema_alpha)))
 
@@ -601,6 +604,28 @@ class GazeEstimator:
             expanded = cz + self.horizontal_multiplier * excess * (1.0 + self.horizontal_expansion_gain * excess)
         return sign * expanded
 
+    def set_target_screen(self, width: int, height: int) -> None:
+        """Re-anchors the normalized mapping to the active monitor bounds."""
+        self.target_screen_size = (max(1, int(width)), max(1, int(height)))
+        self.target_screen_aspect = self.target_screen_size[0] / float(self.target_screen_size[1])
+
+    def get_target_screen(self) -> Tuple[int, int]:
+        return self.target_screen_size
+
+    def _extract_head_yaw(self, landmarks: Any) -> float:
+        """Rough yaw in degrees from nose vs. left/right ear landmarks."""
+        try:
+            left = self._safe_coord(landmarks[234])
+            right = self._safe_coord(landmarks[454])
+            nose = self._safe_coord(landmarks[self.nose_tip_idx])
+            ear_span = math.hypot(right[0] - left[0], right[1] - left[1])
+            if ear_span < 1e-6:
+                return 0.0
+            center_x = (left[0] + right[0]) * 0.5
+            return float(math.degrees(math.atan2(nose[0] - center_x, ear_span * 0.5)))
+        except (IndexError, KeyError, TypeError, ValueError):
+            return 0.0
+
     def set_tracking_mode(self, mode: str) -> None:
         """
         Switches the active gaze tracking mode:
@@ -871,6 +896,7 @@ class GazeEstimator:
             # 2. Extract raw signals
             head_x, head_y = self._extract_head_pos(landmarks)
             iris_x, iris_y = self._extract_iris_ratio(landmarks)
+            self.last_head_yaw = self._extract_head_yaw(landmarks)
 
             self.last_raw_head_x = head_x
             self.last_raw_head_y = head_y

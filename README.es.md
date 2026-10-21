@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-252%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-400%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -30,23 +30,23 @@ Los desarrolladores que sufren lesiones graves por esfuerzos repetitivos (RSI), 
 2. **Los teclados en pantalla (OptiKey)** obligan a escribir letra por letra (`f`-`o`-`r`-`espacio`...) y prácticamente exigen sensores infrarrojos caros de $300–$1,000 (Tobii) porque las webcams normales tienen un error de dispersión de 100–150px.
 3. **Los drivers de ratón por webcam (Project Gameface, eViacam)** solo mueven el cursor del sistema; hacer clic en iconos diminutos de 15px en el IDE o sufrir el *"problema del toque de Midas"* (fatiga por tiempo de espera) hace que programar sea agotador.
 
-**IDEye (Vistax)** resuelve esto replanteando la interfaz de desarrollo desde sus cimientos: combinando un **HUD de macro-zonas AST 3x3**, **seguimiento híbrido de cabeza e iris con supresión de parpadeo**, **desencadenantes instantáneos por gestos faciales** y **predicción de contexto en vivo mediante AST e IA**.
+**IDEye (Vistax)** resuelve esto replanteando la interfaz de desarrollo desde sus cimientos: combinando un **HUD de macro-zonas AST 3x3**, **seguimiento híbrido de cabeza e iris con supresión de parpadeo**, **desencadenantes instantáneos por gestos faciales**, **integración WebSocket bidireccional con VS Code** y **predicción de contexto en vivo mediante AST e IA**.
 
 ### Comparativa con el Estado del Arte
 
-| Característica / Herramienta | Webcam estándar ($0) | 100% Silencioso (Sin voz) | Inyección de Bloques de Código (AST) | Conciencia de Variables Locales |
-| :--- | :---: | :---: | :---: | :---: |
-| **Talon Voice / Cursorless** | No | No | Si | Si |
-| **OptiKey** | Parcial *(Se recomienda IR)* | Si | No *(Carácter por carácter)* | No |
-| **Google Project Gameface** | Si | Si | No *(Solo controlador de ratón)* | No |
-| ** IDEye (Vistax L2C)** | **Si Sí** | **Si Sí** | **Si Sí (Macro-HUD 3x3)** | **Si Sí (AST + IA)** |
+| Característica / Herramienta | Webcam estándar ($0) | 100% Silencioso (Sin voz) | Inyección de Bloques de Código (AST) | Conciencia de Variables Locales | Puente WebSocket bidireccional con VS Code + modos automáticos + FreeLook/Gaming a 60 Hz |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Talon Voice / Cursorless** | No | No | Sí | Sí | No |
+| **OptiKey** | Parcial *(Se recomienda IR)* | Sí | No *(Carácter por carácter)* | No | No |
+| **Google Project Gameface** | Sí | Sí | No *(Solo controlador de ratón)* | No | No |
+| **IDEye (Vistax L2C)** | **Sí** | **Sí** | **Sí (Macro-HUD 3x3)** | **Sí (AST + IA)** | **Sí** |
 
 ---
 
 ## Innovaciones Principales
 
-### 1. Vector Híbrido de Mirada + Cabeza con Filtro EMA y Supresión de Parpadeo
-El seguimiento ocular puro con webcam carece de rango dinámico a distancia normal de monitor. IDEye fusiona el desplazamiento normalizado del iris con el vector anclado 3D de la punta de la nariz, congela la posición del iris durante el parpadeo natural para evitar saltos del cursor y suaviza la salida mediante una **Media Móvil Exponencial (EMA)**:
+### 1. Centroide Craneal Subpíxel y Seguimiento Multi-Modo
+El seguimiento ocular puro con webcam carece de rango dinámico a distancia normal de monitor. IDEye fusiona el desplazamiento normalizado del iris con el vector anclado 3D de la punta de la nariz:
 
 $$\mathbf{P}_{raw} = \alpha_{head} \cdot \mathbf{V}_{nose} + (1 - \alpha_{head}) \cdot \mathbf{V}_{iris}$$
 
@@ -54,16 +54,31 @@ $$\mathbf{S}_t = \gamma \cdot \mathbf{P}_{raw} + (1 - \gamma) \cdot \mathbf{S}_{
 
 Donde $\alpha_{head} \approx 0.60$ aporta estabilidad macro en las esquinas y $1 - \alpha_{head} \approx 0.40$ permite microajustes rápidos con los ojos.
 
-### 2. Eliminación del "Toque de Midas" sin Tiempos de Espera (Dwell Time)
-En lugar de mirar fijamente un botón durante 1.5 segundos para hacer clic (lo que fatiga la vista y genera clics accidentales al leer), IDEye desacopla la navegación de la selección:
-* **Mira** para iluminar cualquiera de las 9 Macro-Zonas.
-* **Abre ligeramente la boca** (controlada mediante **MAR — Mouth Aspect Ratio** en tiempo real con una máquina de estados de 150 ms de *debounce*) para disparar un `CLICK` instantáneo y sin latencia.
+Para estabilidad subpíxel, IDEye calcula un centroide craneal a partir de los landmarks `[1,4,6,168,195,197]` de MediaPipe FaceMesh, con pesos mayores en los anclajes estables `6`, `168` y `197`. Una puerta de histéresis (`STATIC_LOCK_RADIUS=0.0035`, `STATIC_BREAKOUT_RADIUS=0.0085`, confirmación de 3 frames, deriva de `0.0px`) suprime el micro-temblor durante las fijaciones sin añadir latencia a las sácadas. Se proporcionan tres modos de seguimiento:
+* **`HEAD_PRIMARY`** — seguimiento suave basado en cabeza por defecto.
+* **`PURE_IRIS`** — mediana de 5 muestras de iris más compensación de rol con anclajes orbitales múltiples para control exclusivo con los ojos.
+* **`HYBRID`** — fusiona señales de cabeza e iris con un coeficiente de sácada adaptativo que rampa de `0.08` a `0.55` para transiciones rápidas y estables.
 
-### 3. HUD No-Intrusivo `WindowDoesNotAcceptFocus`
-Construido con `PyQt6`, el overlay transparente 3x3 se sitúa sobre VS Code, PyCharm o cualquier IDE usando `Qt.WindowType.WindowDoesNotAcceptFocus` y el estilo Win32 nativo `WS_EX_TRANSPARENT`. Tu editor **nunca pierde el foco del teclado ni el parpadeo del cursor**, y los clics de ratón físicos atraviesan la cuadrícula transparente hacia el código subyacente.
+### 2. Eliminación del "Toque de Midas" sin Tiempos de Espera + Jaw-Lock
+La navegación y la activación están totalmente desacopladas: mirar solo ilumina, nunca clica. Una breve apertura de boca realiza un clic/inyección instantáneo, mientras mantener la boca abierta al **55% MAR** activa el modo de arrastre **Jaw-Lock**. Sin temporizadores de fijación no hay clics Midas accidentales mientras se lee.
 
-### 4. Parser AST en Vivo Tolerante a Fallos y Predictor IA Asíncrono
-El código a medio escribir rara vez compila. `ContextReader` combina el módulo nativo `ast.walk()` de Python con un motor de respaldo ordenado por líneas basado en expresiones regulares para extraer variables locales, argumentos y clases del archivo activo —incluso cuando hay un `SyntaxError` temporal— alimentando un worker asíncrono (`Ollama` / API / Heurísticas locales) para rellenar 6 completados de código con un solo clic, preservando siempre los botones de Pausa y Volver.
+### 3. Motor de Estrategia de 6 Modos + Cambio Automático por WebSocket
+El `ModeManager` alberga seis modos especializados — `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` — y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; el modo Gaming asigna la mirada a un ratón del SO más pulsaciones mantenidas (p. ej., Roblox: mantener `W`, guiño izquierdo para saltar, guiño derecho para cámara 360°).
+
+### 4. Desduplicación Inteligente de Prefijos
+La tubería de escritura desduplica pulsaciones de prefijo repetidas: `h+hola` se convierte en `ola`, y `h+Hola` en retroceso seguido de `Hola`. Rastrea espacios, puntuación, flechas y estado de retroceso, y funciona de forma idéntica a través del puente WebSocket de VS Code.
+
+### 5. HUD Glass & Focus + Lucide Alta DPI + Audio Procedural
+El HUD renderiza paneles Glass y Focus con iconos Lucide/SVG de alta definición. La retroalimentación sonora se genera proceduralmente en RAM como datos WAV usando `numpy`; no se cargan archivos `.wav` externos, manteniendo el paquete ligero y offline.
+
+### 6. Parser AST en Vivo Tolerante a Fallos y Predictor IA Asíncrono
+El código a medio escribir rara vez compila. `ContextReader` combina el módulo nativo `ast.walk()` de Python con un motor de respaldo ordenado por líneas basado en expresiones regulares para extraer variables locales, argumentos y clases del archivo activo — incluso cuando hay un `SyntaxError` temporal. Alimenta un worker asíncrono (`Ollama` / API / Heurísticas locales) para rellenar completados con un solo clic, preservando siempre los botones de Pausa y Volver.
+
+### 7. HUD No-Intrusivo `WindowDoesNotAcceptFocus` + Calibración
+Construido con `PyQt6`, el overlay transparente se sitúa sobre VS Code, PyCharm o cualquier IDE usando `Qt.WindowType.WindowDoesNotAcceptFocus` y el estilo Win32 nativo `WS_EX_TRANSPARENT`. Tu editor nunca pierde el foco del teclado ni el parpadeo del cursor, y los clics de ratón físicos atraviesan la cuadrícula transparente hacia el código subyacente. El asistente de calibración visual de 5 puntos guarda el mapeo en `calibration_profile.json`.
+
+### 8. Puente Bidireccional con VS Code + Menús Multilingües
+El `WebSocketBridge` intercambia estado del editor, diagnósticos e información de selección con la extensión de VS Code en tiempo real, permitiendo el cambio automático de modo contextual y la inyección de snippets. Los árboles sintácticos están disponibles en varios idiomas, incluyendo un diccionario T9/palabras comunes en español y etiquetas de menú localizadas.
 
 ---
 
@@ -71,32 +86,46 @@ El código a medio escribir rara vez compila. `ContextReader` combina el módulo
 
 ```text
 +-------------------------------------------------------------------------+
-| TRACKER DE CÁMARA (QThread) |
-| Captura OpenCV -> MediaPipe FaceMesh (478 pts) -> Vectores Iris y Nariz|
-+-------------------+---------------------------------+-------------------+
- | pyqtSignal(x, y) | pyqtSignal("MOUTH_CLICK")
- v v
+| TRACKER DE CÁMARA (QThread)                                             |
+| Captura OpenCV -> MediaPipe FaceMesh (478 pts) -> Iris + Centroide Craneal Rígido |
++------------------------------------+------------------------------------+
+ | pyqtSignal(x, y)                  | pyqtSignal("GESTURE")
+ v                                   v
 +-------------------------------------------------------------------------+
-| HUD TRANSPARENTE PYQT6 NO-FOCUS (GUI Principal) |
-| [0: FLUJO] [1: FUNC/CLASE] [2: OPERADORES] |
-| [3: CURSOR] [4: PAUSA] [5: VARS LOCALES / T9] |
-| [6: EDIT/UNDO] [7: ENTER/TAB] [8: PREDICTOR IA] |
-+-------------------+---------------------------------+-------------------+
- | |
- v v
-+-----------------------------------+ +---------------------------------+
-| MOTOR DE INYECCIÓN DE CÓDIGO | | MOTOR DE CONTEXTO E IA (QThread)|
-| - Intercambio Atómico de Portapap.| | - AST en vivo + Parser de Símbol.|
-| - Reposicionamiento de Cursor | | - Cliente Asíncrono Ollama/OpenAI|
-| - Nodos Pegajosos vs. Retorno | | - Respaldo Heurístico Cero-Lat. |
-+-----------------------------------+ +---------------------------------+
- | |
- +----------------+----------------+
+| HUD TRANSPARENTE PYQT6 NO-FOCUS (GUI Principal)                         |
+| [0: FLUJO] [1: FUNC/CLASE] [2: OPERADORES]                             |
+| [3: CURSOR] [4: PAUSA] [5: VARS LOCALES / T9]                          |
+| [6: EDIT/UNDO] [7: ENTER/TAB] [8: PREDICTOR IA]                         |
++------------------------------------+------------------------------------+
+ |                                   |
+ v                                   v
++-------------------------------+  +--------------------------------------+
+| MODE MANAGER & PUENTE         |  | MOTOR DE CONTEXTO E IA (QThread)     |
+| WEBSOCKET CON VS CODE         |  | - AST en vivo + Parser de Símbolos   |
+| - CÓDIGO / REDACCIÓN / TERMIN.|  | - Cliente Asíncrono Ollama/OpenAI    |
+| - DATOS / NAVEGACIÓN / FREELOOK|  | - Respaldo Heurístico Cero-Lat.     |
+| - GAMING                      |  |                                      |
++-------------------------------+  +--------------------------------------+
+ |                                   |
+ v                                   v
++-------------------------------+  +--------------------------------------+
+| MOTOR DE INYECCIÓN DE CÓDIGO  |  | MOTOR DE SONIDO PROCEDURAL           |
+| - Intercambio Atómico Portap. |  | - Síntesis numpy RAM WAV             |
+| - Reposicionamiento de Cursor |  | - Sin archivos .wav externos         |
+| - Nodos Pegajosos vs. Retorno |  |                                      |
++-------------------------------+  +--------------------------------------+
+ |                                   |
+ v                                   v
++-------------------------------------------------------------------------+
+| RATÓN SO & CONTROLADOR GAMING                                           |
+| - SetCursorPos del cursor de mirada | - Jaw-Lock 55% MAR arrastre       |
+| - Mantener W / Espacio / clic der.  | - FreeLook 60 Hz / Gaming cámara 360° |
++-------------------------------+-----------------------------------------+
  |
  v
- +---------------------------------+
- | IDE DESTINO (VS Code, etc.) |
- +---------------------------------+
++---------------------------------+
+| IDE DESTINO (VS Code, etc.)     |
++---------------------------------+
 ```
 
 ---
@@ -159,21 +188,26 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 
 | Tecla | Acción | Descripción |
 | :--- | :--- | :--- |
-| **`Ctrl+Alt+Q` / `F12`** | ** Botón de Emergencia (Killswitch)** | **Atajo global en todo el SO**: apaga IDEye limpiamente de inmediato, incluso cuando VS Code tiene el foco |
-| **`Ctrl+Alt+R`** | ** Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
+| **`Ctrl+Alt+Q` / `F12`** | **Botón de Emergencia (Killswitch)** | **Atajo global en todo el SO**: apaga IDEye limpiamente de inmediato, incluso cuando VS Code tiene el foco |
+| **`Ctrl+Alt+R`** | **Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
 | **`[A]`** | **Alternar Menús Inteligentes** | Activa/desactiva menús contextuales en vivo (adapta los 9 bloques a funciones, try/except, bucles, etc.) |
-| **`[V]`** | **Elegir Modo** | Abre el menú de modos para elegir Código, Redacción, Terminal, Datos o Navegación. Mira al botón `MODOS [V]` y pulsa `V`, o usa `Ctrl+Alt+V` desde cualquier sitio |
-| **`[K]`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor. Usa `Ctrl+Alt+K` desde cualquier sitio |
+| **`[V]` / `[MODO▾]`** | **Abrir Selector de Modo** | Abre el selector de 6 modos (Código, Redacción, Terminal/Git, Datos/Mates, Navegación, FreeLook/Gaming); no cicla a ciegas. Usa `Ctrl+Alt+V` desde cualquier sitio |
+| **`[K]`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor vía WebSocket. Usa `Ctrl+Alt+K` desde cualquier sitio |
+| **`[F]`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz. Usa `Ctrl+Alt+F` desde cualquier sitio |
+| **`[G]`** | **Modo Gaming** | Overlay de ratón + controlador para juegos (Roblox: mantener `W`, guiño izquierdo para saltar, guiño derecho para cámara 360°). Usa `Ctrl+Alt+G` desde cualquier sitio |
+| **`[S]`** | **Alternar Retroalimentación Sonora** | Activa/desactiva los avisos de audio procedural. Usa `Ctrl+Alt+S` desde cualquier sitio |
 | **`[H]`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
-| **Guiño Derecho** | **Pausar / Ocultar Totalmente** | Oculta el HUD al 100% para despejar la pantalla; otro guiño derecho lo muestra de nuevo |
-| **Guiño Izquierdo** | **Volver Atrás / Deshacer** | Regresa al menú anterior o ejecuta Deshacer (Ctrl+Z) si estás en la raíz |
-| **`[T]`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`PURE_IRIS`** (Solo Iris - 100% ojos sin girar la cabeza), **`HYBRID`** (Fusión compensada por VOR) y **`HEAD_PRIMARY`** |
+| **Clic de Boca** | **Inyectar / Clic** | Una breve apertura de boca (MAR) dispara un clic sin tiempo de espera o una inyección de snippet |
+| **Boca Mantenida** | **Arrastrar / Jaw-Lock** | Mantener la boca abierta al 55% MAR habilita arrastrar/bloquear sin botones de mano |
+| **Guiño Derecho** | **Pausar / Cámara 360°** | Pausa/oculta el HUD en modos normales; rota la cámara 360° en modo Gaming |
+| **Guiño Izquierdo** | **Volver Atrás / Deshacer / Saltar** | Regresa al menú anterior o ejecuta Deshacer; hace saltar al personaje en modo Gaming |
+| **`[T]`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`HEAD_PRIMARY`**, **`PURE_IRIS`** y **`HYBRID`** |
 | **`[C]`** | **Recalibrar Centro** | Mira al centro de la pantalla y pulsa `C` para fijar tu ancla neutra |
 | **`[+]` / `[-]`** | **Ajustar Sensibilidad** | Aumenta o disminuye la sensibilidad de seguimiento sobre la marcha |
 | **`[P]` / `[Espacio]`** | **Pausa / Modo Lectura** | Atenúa el HUD al 10% de opacidad para leer código sin clics involuntarios |
 | **`[M]`** | **Alternar Mini-Feed** | Muestra u oculta la miniatura de la cámara y la barra de nivel MAR |
 | **`[Q]` / `[ESC]`** | **Salida Segura** | Libera la cámara y cierra de forma limpia todos los hilos secundarios |
-| **Salida Ocular** | **[No SALIR] Manos Libres** | Mira a la esquina superior derecha `[No SALIR]` y abre la boca; despliega un diálogo de confirmación 100% asistivo |
+| **Salida Ocular** | **[X SALIR] Manos Libres** | Mira a la esquina superior derecha `[X SALIR]` y abre la boca; despliega un diálogo de confirmación 100% asistivo |
 
 ---
 
@@ -185,55 +219,86 @@ IDEye/
 ├── config.py # Wrapper de configuración en la raíz
 ├── requirements.txt # Dependencias del proyecto
 ├── pytest.ini # Configuración y filtros de advertencias para Pytest
-├── calibration_profile.json # Perfil bilineal guardado de calibración de 5 puntos
+├── calibration_profile.json # Generado en tiempo de ejecución tras calibrar
+├── build_app.py # Build de escritorio PyInstaller onedir
+├── create_desktop_shortcut.py # Helper del acceso directo de Windows
+├── IDEye.bat / IDEye.vbs / IDEye_debug.bat # Lanzadores de Windows
+├── tools/
+│   └── ideye-mcp/ # Servidor MCP para herramientas de desarrollo de IDEye
+├── vscode-extension/ # Extensión de VS Code para el puente WebSocket bidireccional
 ├── eyede/
-│ ├── config.py # Pesos de tracking, umbrales MAR, estilos y ajustes de IA
-│ ├── main.py # Ciclo de vida de PyQt6 y enrutador de señales
-│ ├── core/
-│ │ ├── camera_tracker.py # Pipeline QThread OpenCV + MediaPipe FaceMesh (478 pts)
-│ │ ├── gaze_estimator.py # Matemáticas híbridas, supresión de parpadeo y filtro EMA
-│ │ └── gesture_detector.py # Cálculo MAR y máquina de estados con debounce
-│ ├── ui/
-│ │ ├── overlay_window.py # HUD de macro-zonas 3x3 transparente en PyQt6 (No-Focus)
-│ │ ├── calibration_ui.py # Asistente de calibración a pantalla completa de 5 puntos
-│ │ ├── debug_widget.py # Mini-feed de cámara, botones de modo de tracking y controles
-│ │ └── icon_manager.py # Pre-renderizado, caché y soporte vectorial SVG glassmorphic
-│ ├── assets/
-│ │ └── icons/ # Suite de iconos vectoriales SVG neón de alta definición
-│ └── actions/
-│ ├── code_injector.py # Inyección atómica no bloqueante con offsets de cursor
-│ ├── menu_trees.py # Árboles de sintaxis jerárquica 3x3 y nodos pegajosos
-│ ├── context_reader.py # Extractor de símbolos AST + Regex tolerante a errores
-│ └── ai_predictor.py # Worker QThread asíncrono para IA con respaldo heurístico
-└── tests/ # Suite de 444 pruebas automatizadas de unidad e integración
- ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
- ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
- ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
- ├── test_phase4.py # Tests de ContextReader AST/Regex y AIPredictorWorker
- ├── test_vision_math.py # Acotación matemática de mirada y auditorías de división por cero
- ├── test_menu_integrity.py # Verificación recursiva de las 9 casillas en todo el árbol
- ├── test_code_injector.py # Seguridad de teclas modificadoras y portapapeles
- ├── test_context_and_ai.py # Resiliencia ante errores de sintaxis y JSON de LLMs
- ├── test_calibration_and_killswitch.py # Mapeo regularizado Tikhonov y hotkeys globales
- └── test_tracking_modes_and_handsfree_exit.py # Solo Iris, desacoplo VOR y salida manos libres
+│   ├── config.py # Pesos de tracking, umbrales MAR, estilos y ajustes de IA
+│   ├── main.py # Ciclo de vida de PyQt6 y enrutador de señales
+│   ├── core/
+│   │   ├── camera_tracker.py # Pipeline QThread OpenCV + MediaPipe FaceMesh (478 pts)
+│   │   ├── gaze_estimator.py # Matemáticas híbridas, calibración y fusión de modos
+│   │   ├── gesture_detector.py # Cálculo MAR, detección de guiños y máquina de estados
+│   │   ├── hotkey_manager.py # Atajos globales del SO (killswitch, reset, modos)
+│   │   ├── mouse_controller.py # Inyección de ratón SO (SetCursorPos, controles gaming)
+│   │   ├── sound_feedback.py # Audio procedural numpy RAM WAV
+│   │   └── websocket_bridge.py # Cliente/servidor WebSocket bidireccional con VS Code
+│   ├── modes/
+│   │   ├── base_mode.py # Interfaz abstracta de modo
+│   │   ├── mode_manager.py # Motor de 6 modos y cambio automático por contexto
+│   │   ├── coding_mode.py # Árboles de menú de código e inyección de snippets
+│   │   ├── writing_mode.py # Predicciones T9/redacción de texto
+│   │   ├── terminal_git_mode.py # Paleta de comandos Terminal / Git
+│   │   ├── data_math_mode.py # Entrada de símbolos datos/matemáticas
+│   │   ├── ide_nav_mode.py # Navegación IDE y explorador de archivos
+│   │   └── sniper_mouse_mode.py # Ratón directo OS FreeLook, Jaw-Lock y gaming
+│   ├── ui/
+│   │   ├── overlay_window.py # HUD transparente PyQt6 No-Focus
+│   │   ├── calibration_ui.py # Asistente de calibración a pantalla completa
+│   │   ├── debug_widget.py # Mini-feed de cámara, botones de modo y controles
+│   │   └── icon_manager.py # Renderizado de iconos Lucide/SVG alta DPI y badges glass
+│   ├── actions/
+│   │   ├── menu_trees.py # Árboles de sintaxis jerárquica 3x3 y nodos pegajosos
+│   │   ├── context_reader.py # Extractor de símbolos AST + Regex tolerante a errores
+│   │   ├── ai_predictor.py # Worker asíncrono para IA con respaldo heurístico
+│   │   ├── code_injector.py # Inyección atómica con offsets de cursor
+│   │   ├── language_support.py # Definiciones sintácticas multi-lenguaje
+│   │   └── text_predictor.py # Motor local de predicción prefijo/T9
+│   └── assets/
+│       ├── data/
+│       │   └── es_common_words.txt # Diccionario T9/palabras comunes en español
+│       └── icons/ # Suite de iconos SVG/Lucide neón de alta definición
+└── tests/ # 400 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
+    ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
+    ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
+    ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
+    ├── test_phase4.py # Tests de ContextReader AST/Regex y AIPredictorWorker
+    ├── test_phase5_multilang_and_websocket.py # Árboles multi-lenguaje y puente WebSocket VS Code
+    ├── test_phase6_modes.py # Motor de 6 modos y cambio automático por contexto
+    ├── test_phase6_6_lucide_ui.py # Iconos Lucide/SVG y renderizado alta DPI
+    ├── test_phase7_sniper_and_sound.py # Ratón FreeLook, gestos gaming y audio procedural
+    ├── test_phase7_6_gaze_stability.py # Estabilidad subpíxel, histéresis y fusión de sácadas
+    ├── test_glass_focus_ui.py # Tests del HUD Glass/Focus
+    ├── test_help_ui_and_card_layout.py # Layout de tarjetas de ayuda y UI de gestos
+    ├── test_writing_t9_predictions.py # Tests de predicciones T9/prefijo del modo escritura
+    ├── test_vision_math.py # Acotación matemática de mirada y auditorías de división por cero
+    ├── test_menu_integrity.py # Verificación recursiva de las 9 casillas en todo el árbol
+    ├── test_code_injector.py # Seguridad de teclas modificadoras y portapapeles
+    ├── test_context_and_ai.py # Resiliencia ante errores de sintaxis y JSON de LLMs
+    ├── test_calibration_and_killswitch.py # Mapeo regularizado y hotkeys globales
+    └── test_tracking_modes_and_handsfree_exit.py # Solo Iris, desacoplo VOR y salida manos libres
 ```
 
 ---
 
 ## Testing y QA
 
-IDEye incluye una suite completa de pruebas automatizadas mediante *mocks* que cubren casos límite matemáticos, integridad recursiva de los árboles de menús, seguridad de teclas modificadoras y tolerancia a fallos del AST:
+IDEye incluye una suite completa de pruebas automatizadas mediante *mocks* que cubren casos límite matemáticos, integridad recursiva de los árboles de menús, seguridad de teclas modificadoras, tolerancia a fallos del AST, mensajería WebSocket, motor de 6 modos y estabilidad de la mirada:
 
 ```bash
-pytest -v
+pytest -q
 ```
 
 ```text
-============================ 444 passed in 10.93s =============================
+400 pruebas superadas, 53 subtests, 15.46s
 ```
 
 > [!NOTE]
-> Todos los 444 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet.
+> Todos los 400 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 
@@ -243,8 +308,15 @@ pytest -v
 - [x] **Fase 2:** HUD transparente PyQt6 `WindowDoesNotAcceptFocus` y calibración de 5 puntos en JSON.
 - [x] **Fase 3:** Árboles sintácticos jerárquicos 3x3 e inyección atómica de código con offsets de cursor.
 - [x] **Fase 4:** Extracción de símbolos AST/Regex en vivo y predicción asíncrona de código con IA.
-- [x] **Fase Extra:** Auditoría forense de código, eliminación de fugas de memoria y 198 tests automatizados.
-- [ ] **Fase 5:** Perfiles multi-lenguaje (TypeScript/JS, Rust, C++, Go) y extensión WebSocket nativa para VS Code.
+- [x] **Fase Extra:** Auditoría forense de código, eliminación de fugas de memoria y cobertura de regresión con hardware simulado.
+- [x] **Fase 5:** Perfiles multi-lenguaje (TypeScript/JS, Rust, C++, Go) y extensión WebSocket nativa para VS Code.
+- [x] **Fase 6:** Motor de 6 modos (Código, Redacción, Terminal/Git, Datos/Mates, Navegación, FreeLook/Gaming) y cambio automático por contexto.
+- [x] **Fase 6.5:** HUD Glass & Focus: diseño seguro con barra de tareas, barra de comandos de alto contraste, preview chips y jerarquía neutral/activa.
+- [x] **Fase 6.6:** Suite de iconos Lucide alta DPI, render SVG tintado, botón AYUDA más ancho y layout de tarjetas de ayuda.
+- [x] **Fase 7:** Motor de sonido procedural numpy RAM WAV y base de ratón OS (clic, arrastre, scroll).
+- [x] **Fase 7.5:** FreeLook sin cuadrícula a 60 Hz, Jaw-Lock, perfil Gaming/Roblox y Desduplicación Inteligente de Prefijos (`h + hola` -> `ola`).
+- [x] **Fase 7.6:** Estabilidad subpíxel con centroide craneal, multi-anclaje orbital + mediana en PURE_IRIS, fusión de sácadas HYBRID y WebSocket bidireccional con contexto automático.
+- [ ] **Fase 8:** Traspaso de mirada entre monitores, constructor de macros personalizadas y empaquetado para Linux/macOS.
 
 ---
 
@@ -253,5 +325,5 @@ pytest -v
 ¡Las contribuciones, sugerencias de accesibilidad y pull requests son bienvenidas! Bajo los términos de la **Licencia MIT**.
 
 <div align="center">
- <sub>Desarrollado por <b>Daniel Casado Juan</b></sub>
+  <sub>Desarrollado por <b>Daniel Casado Juan</b></sub>
 </div>

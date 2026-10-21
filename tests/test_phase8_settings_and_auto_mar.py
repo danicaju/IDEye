@@ -88,6 +88,18 @@ class TestAutoMarMath(unittest.TestCase):
         self.assertTrue(0.25 <= threshold <= 0.70)
 
 
+class TestCalibrationHudIsolation(unittest.TestCase):
+    def test_suspend_and_resume_hud_input(self):
+        from eyede.main import EyeDEApplication
+
+        app = EyeDEApplication(camera_index="synthetic", threaded=False)
+        app._suspend_hud_input_for_calibration()
+        self.assertTrue(app._hud_input_suspended)
+        app._resume_hud_input_after_calibration()
+        self.assertFalse(app._hud_input_suspended)
+        app.shutdown()
+
+
 class TestStep6AndMarSlider(unittest.TestCase):
     def test_step6_collects_rest_and_three_peaks(self):
         ui = CalibrationUI(gaze_estimator=GazeEstimator(), auto_mar_enabled=True)

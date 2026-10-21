@@ -724,6 +724,7 @@ class EyeDEApplication(QObject):
         self.tray_icon: Optional[QSystemTrayIcon] = None
         self._last_mode_shortcut_ts: float = 0.0
         self._last_auto_switch_ts: float = 0.0
+        self._hud_input_suspended: bool = False
 
         # WebSocket Bridge for native VS Code integration (Phase 5)
         self.ws_bridge: Optional[WebSocketBridge] = None
@@ -1085,6 +1086,7 @@ class EyeDEApplication(QObject):
         self.overlay.hide()
         if hasattr(self, "debug_widget") and self.debug_widget is not None:
             self.debug_widget.hide()
+        self._suspend_hud_input_for_calibration()
 
         self.calibration_ui = CalibrationUI(
             gaze_estimator=self.tracker.gaze_estimator,
@@ -1103,6 +1105,43 @@ class EyeDEApplication(QObject):
         self.calibration_ui.showFullScreen()
 
     @pyqtSlot(object, float)
+    def _suspend_hud_input_for_calibration(self) -> None:
+        """Stops hidden HUD/gesture handlers from receiving calibration mouth clicks.
+
+        A hidden overlay still receives tracker signals. During calibration those
+        clicks could start/replace an AI QThread or inject code, which is both
+        incorrect and a native Qt crash risk.
+        """
+        if self._hud_input_suspended:
+            return
+        for signal, slot in (
+            (self.tracker.gaze_updated, self.overlay.on_gaze_updated),
+            (self.tracker.gesture_triggered, self.overlay.on_gesture_triggered),
+            (self.tracker.frame_ready, self.overlay.on_mar_updated),
+            (self.tracker.frame_ready, self.debug_widget.on_frame_ready),
+        ):
+            try:
+                signal.disconnect(slot)
+            except (TypeError, RuntimeError):
+                pass
+        self._hud_input_suspended = True
+
+    def _resume_hud_input_after_calibration(self) -> None:
+        """Reconnects HUD/gesture handlers after calibration finishes or is cancelled."""
+        if not self._hud_input_suspended:
+            return
+        for signal, slot in (
+            (self.tracker.gaze_updated, self.overlay.on_gaze_updated),
+            (self.tracker.gesture_triggered, self.overlay.on_gesture_triggered),
+            (self.tracker.frame_ready, self.overlay.on_mar_updated),
+            (self.tracker.frame_ready, self.debug_widget.on_frame_ready),
+        ):
+            try:
+                signal.connect(slot)
+            except (TypeError, RuntimeError):
+                pass
+        self._hud_input_suspended = False
+
     def _on_calibration_frame(self, _frame: Any, mar: float) -> None:
         if self.calibration_ui is not None:
             self.calibration_ui.on_mar_updated(mar)
@@ -1125,6 +1164,7 @@ class EyeDEApplication(QObject):
             self.calibration_ui.close()
             self.calibration_ui = None
 
+        self._resume_hud_input_after_calibration()
         self.overlay.show()
         if hasattr(self, "debug_widget") and self.debug_widget is not None:
             self.debug_widget.show()

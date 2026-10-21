@@ -137,6 +137,8 @@ class CalibrationUI(QWidget):
 
     def _on_anim_tick(self) -> None:
         """Updates animation pulse phase and requests repaint."""
+        if self._finished_emitted or self.is_completed:
+            return
         self._pulse_phase = (self._pulse_phase + 0.08) % (2 * np.pi)
         self.update()
 
@@ -303,6 +305,8 @@ class CalibrationUI(QWidget):
 
     def _collect_sample_tick(self) -> None:
         """Timer callback that captures one sample into buffer."""
+        if self.is_completed or self._finished_emitted:
+            return
         self.samples_buffer.append(self.latest_raw_gaze)
         self.status_message = f"Registrando muestras... ({len(self.samples_buffer)}/{self.samples_per_point})"
 

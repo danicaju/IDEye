@@ -1092,13 +1092,20 @@ class OverlayWindow(QWidget):
         if self.ai_predictor_worker is not None:
             if self.ai_predictor_worker.isRunning():
                 return
+            old_worker = self.ai_predictor_worker
             try:
-                self.ai_predictor_worker.predictions_ready.disconnect()
-                self.ai_predictor_worker.status_changed.disconnect()
-                self.ai_predictor_worker.prediction_failed.disconnect()
-                self.ai_predictor_worker.finished.disconnect()
+                old_worker.predictions_ready.disconnect()
+                old_worker.status_changed.disconnect()
+                old_worker.prediction_failed.disconnect()
+                old_worker.finished.disconnect()
             except Exception:
                 pass
+            try:
+                old_worker.wait(250)
+                old_worker.deleteLater()
+            except Exception:
+                pass
+            self.ai_predictor_worker = None
 
         loading_preds = [
             "Analizando...",
@@ -1125,6 +1132,7 @@ class OverlayWindow(QWidget):
             api_key=getattr(config, "LLM_API_KEY", ""),
             temperature=getattr(config, "LLM_TEMPERATURE", 0.2),
             context_reader=self.context_reader,
+            parent=self,
         )
         self.ai_predictor_worker.predictions_ready.connect(self._on_ai_predictions_ready)
         self.ai_predictor_worker.status_changed.connect(self._on_ai_status_changed)

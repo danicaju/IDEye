@@ -192,10 +192,10 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+R`** | **Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
 | **`[A]`** | **Alternar Menús Inteligentes** | Activa/desactiva menús contextuales en vivo (adapta los 9 bloques a funciones, try/except, bucles, etc.) |
 | **`[V]` / `[MODO▾]`** | **Abrir Selector de Modo** | Abre el selector de 6 modos (Código, Redacción, Terminal/Git, Datos/Mates, Navegación, FreeLook/Gaming); no cicla a ciegas. Usa `Ctrl+Alt+V` desde cualquier sitio |
-| **`[K]`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor vía WebSocket. Usa `Ctrl+Alt+K` desde cualquier sitio |
-| **`[F]`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz. Usa `Ctrl+Alt+F` desde cualquier sitio |
-| **`[G]`** | **Modo Gaming** | Overlay de ratón + controlador para juegos (Roblox: mantener `W`, guiño izquierdo para saltar, guiño derecho para cámara 360°). Usa `Ctrl+Alt+G` desde cualquier sitio |
-| **`[S]`** | **Alternar Retroalimentación Sonora** | Mira la barra superior y pulsa `S`, o usa `Ctrl+Alt+S` desde cualquier sitio |
+| **`[K]` / `Ctrl+Alt+K`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor vía WebSocket. Usa `Ctrl+Alt+K` desde cualquier sitio |
+| **`[F]` / `Ctrl+Alt+F`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz. Usa `Ctrl+Alt+F` desde cualquier sitio |
+| **`[G]` / `Ctrl+Alt+G`** | **Modo Gaming** | Overlay de ratón + controlador para juegos (Roblox: mantener `W`, guiño izquierdo para saltar, guiño derecho para cámara 360°). Usa `Ctrl+Alt+G` desde cualquier sitio |
+| **`[S]` / `Ctrl+Alt+S`** | **Alternar Retroalimentación Sonora** | Mira la barra superior y pulsa `S`, o usa `Ctrl+Alt+S` desde cualquier sitio |
 | **`[H]`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
 | **Clic de Boca** | **Inyectar / Clic** | Una breve apertura de boca (MAR) dispara un clic sin tiempo de espera o una inyección de snippet |
 | **Boca Mantenida** | **Arrastrar / Jaw-Lock** | Mantener la boca abierta al 55% MAR habilita arrastrar/bloquear sin botones de mano |
@@ -205,7 +205,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`[C]`** | **Recalibrar Centro** | Mira al centro de la pantalla y pulsa `C` para fijar tu ancla neutra |
 | **`[+]` / `[-]`** | **Ajustar Sensibilidad** | Aumenta o disminuye la sensibilidad de seguimiento sobre la marcha |
 | **`[P]` / `[Espacio]`** | **Pausa / Modo Lectura** | Atenúa el HUD al 10% de opacidad para leer código sin clics involuntarios |
-| **`[M]`** | **Alternar Mini-Feed** | Muestra u oculta la miniatura de la cámara y la barra de nivel MAR |
+| **`[M]` / `Ctrl+Alt+M`** | **Alternar Mini-Feed** | Muestra u oculta la miniatura de la cámara y la barra de nivel MAR |
 | **`[Q]` / `[ESC]`** | **Salida Segura** | Libera la cámara y cierra de forma limpia todos los hilos secundarios |
 | **Salida Ocular** | **[X SALIR] Manos Libres** | Mira a la esquina superior derecha `[X SALIR]` y abre la boca; despliega un diálogo de confirmación 100% asistivo |
 

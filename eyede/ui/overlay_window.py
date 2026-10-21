@@ -165,14 +165,14 @@ HELP_GESTURES = (
 
 HELP_SHORTCUTS = (
     ("[A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
-    ("[V] / [K]", "Elegir modo / Auto-switch", "Mira la barra superior y pulsa V/K, o Ctrl+Alt+V/K desde cualquier ventana."),
+    ("[Ctrl+Alt+V/K]", "Elegir modo / Auto-switch", "Abre el selector de modos o alterna el cambio automático desde cualquier ventana."),
     ("[T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
-    ("[M]", "Colapsar Monitor", "Mira la barra superior y pulsa M, o Ctrl+Alt+M desde cualquier ventana."),
+    ("[Ctrl+Alt+M]", "Colapsar Monitor", "Colapsa o expande el monitor de depuración desde cualquier ventana."),
     ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
     ("[P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
-    ("[S]", "Sonido", "Mira la barra superior y pulsa S, o Ctrl+Alt+S desde cualquier ventana."),
-    ("[F]", "FreeLook", "Mira la barra superior y pulsa F, o Ctrl+Alt+F desde cualquier ventana."),
-    ("[G]", "Gaming", "Mira la barra superior y pulsa G, o Ctrl+Alt+G desde cualquier ventana."),
+    ("[Ctrl+Alt+S]", "Sonido", "Silencia o activa el feedback acústico desde cualquier ventana."),
+    ("[Ctrl+Alt+F]", "FreeLook", "Activa el ratón directo por mirada desde cualquier ventana."),
+    ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming dentro de FreeLook desde cualquier ventana."),
     ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
 )
 
@@ -2756,32 +2756,48 @@ class OverlayWindow(QWidget):
 
         IconManager.instance().render_icon(painter, "eyede_logo", logo_rect, dpr=dpr)
 
-        # Brand + WS status (left side)
+        # Brand + WS status (left side). Clip both to the space before the
+        # mode selector so "Local"/"VS Code" can never run under it.
         brand_x = logo_rect.right() + 8.0
+        status_right = self.header_mode_rect.left() - 8.0
+        available_w = max(0.0, status_right - brand_x)
+        painter.setFont(self._font_header_left)
+        ws_text = "VS Code" if self._ws_connected else "Local"
+        ws_text_w = float(painter.fontMetrics().horizontalAdvance(ws_text))
+        show_ws = bool(getattr(self, "_header_ws_show", False)) and available_w > 50.0
+        ws_reserve = (11.0 + ws_text_w + 6.0) if show_ws else 0.0
+        brand_draw_w = max(0.0, available_w - ws_reserve - 10.0)
         painter.setPen(self._color_card_text_active)
         painter.setFont(self._font_header_bold_btn)
-        painter.drawText(
-            QRectF(brand_x, header_rect.y() + 6.0, 80.0, pill_h),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            "IDEye",
-        )
-        brand_w = float(painter.fontMetrics().horizontalAdvance("IDEye")) + 2.0
-        ws_x = brand_x + brand_w + 10.0
-        if getattr(self, "_header_ws_show", False):
-            ws_color = QColor(34, 197, 94) if self._ws_connected else QColor(148, 163, 184)
-            painter.setBrush(QBrush(ws_color))
-            painter.setPen(Qt.PenStyle.NoPen)
-            y = header_rect.y() + 6.0 + (pill_h - 6.0) * 0.5
-            painter.drawEllipse(QRectF(ws_x, y, 6.0, 6.0))
-            if not getattr(self, "_header_ws_dot_only", False):
-                ws_text = "VS Code" if self._ws_connected else "Local"
-                painter.setPen(self._pen_header_left)
-                painter.setFont(self._font_header_left)
-                painter.drawText(
-                    QRectF(ws_x + 11.0, header_rect.y() + 6.0, 120.0, pill_h),
-                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                    ws_text,
-                )
+        if brand_draw_w >= 20.0:
+            brand_text = painter.fontMetrics().elidedText(
+                "IDEye", Qt.TextElideMode.ElideRight, int(brand_draw_w)
+            )
+            painter.drawText(
+                QRectF(brand_x, header_rect.y() + 6.0, brand_draw_w, pill_h),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                brand_text,
+            )
+        if show_ws:
+            ws_x = brand_x + brand_draw_w + 10.0
+            if ws_x + 6.0 <= status_right:
+                ws_color = QColor(34, 197, 94) if self._ws_connected else QColor(148, 163, 184)
+                painter.setBrush(QBrush(ws_color))
+                painter.setPen(Qt.PenStyle.NoPen)
+                y = header_rect.y() + 6.0 + (pill_h - 6.0) * 0.5
+                painter.drawEllipse(QRectF(ws_x, y, 6.0, 6.0))
+                if not getattr(self, "_header_ws_dot_only", False):
+                    text_w = max(0.0, status_right - (ws_x + 11.0))
+                    if text_w > 10.0:
+                        painter.setPen(self._pen_header_left)
+                        painter.setFont(self._font_header_left)
+                        painter.drawText(
+                            QRectF(ws_x + 11.0, header_rect.y() + 6.0, text_w, pill_h),
+                            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                            painter.fontMetrics().elidedText(
+                                ws_text, Qt.TextElideMode.ElideRight, int(text_w)
+                            ),
+                        )
 
         # Sniper action selector, or compact last-action status.
         if sniper_pill_rect.isValid():
@@ -3323,10 +3339,10 @@ class OverlayWindow(QWidget):
         for key, name, desc in HELP_SHORTCUTS:
             painter.setFont(self._font_modal_item_title)
             painter.setPen(QColor(248, 113, 113) if "Ctrl" in key else QColor(125, 211, 252))
-            painter.drawText(QRectF(col_b_rect.x() + 14.0, item_y, 88.0, 16.0), Qt.AlignmentFlag.AlignLeft, key)
+            painter.drawText(QRectF(col_b_rect.x() + 14.0, item_y, 118.0, 16.0), Qt.AlignmentFlag.AlignLeft, key)
 
             painter.setPen(QColor(241, 245, 249))
-            painter.drawText(QRectF(col_b_rect.x() + 104.0, item_y, col_w - 118.0, 16.0), Qt.AlignmentFlag.AlignLeft, name)
+            painter.drawText(QRectF(col_b_rect.x() + 134.0, item_y, col_w - 148.0, 16.0), Qt.AlignmentFlag.AlignLeft, name)
 
             painter.setFont(self._font_modal_item_desc)
             painter.setPen(QColor(148, 163, 184))

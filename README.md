@@ -192,10 +192,10 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`Ctrl+Alt+R`** | **Emergency Reset** | Immediately clears calibration weights and reverts to safe neutral mapping |
 | **`[A]`** | **Toggle Smart Menus** | Toggle real-time context-adaptive menus (auto-adapts 9 blocks to function signatures, try blocks, loops, etc.) |
 | **`[V]` / `[MODE▾]`** | **Open Mode Selector** | Opens the 6-mode selector (Coding, Writing, Terminal/Git, Data/Math, Navigation, FreeLook/Gaming); does not blindly cycle. Use `Ctrl+Alt+V` anywhere |
-| **`[K]`** | **Toggle Auto Mode Switching** | Enables/disables automatic mode changes based on editor context via WebSocket. Use `Ctrl+Alt+K` anywhere |
-| **`[F]`** | **FreeLook Mode** | Look at the top bar and press `F`, or use `Ctrl+Alt+F` anywhere |
-| **`[G]`** | **Gaming Mode** | Gaming mouse + controller overlay (Roblox: `W` hold, left-wink jump, right-wink 360° camera). Use `Ctrl+Alt+G` anywhere |
-| **`[S]`** | **Toggle Sound Feedback** | Look at the top bar and press `S`, or use `Ctrl+Alt+S` anywhere |
+| **`[K]` / `Ctrl+Alt+K`** | **Toggle Auto Mode Switching** | Enables/disables automatic mode changes based on editor context via WebSocket. Use `Ctrl+Alt+K` anywhere |
+| **`[F]` / `Ctrl+Alt+F`** | **FreeLook Mode** | Look at the top bar and press `F`, or use `Ctrl+Alt+F` anywhere |
+| **`[G]` / `Ctrl+Alt+G`** | **Gaming Mode** | Gaming mouse + controller overlay (Roblox: `W` hold, left-wink jump, right-wink 360° camera). Use `Ctrl+Alt+G` anywhere |
+| **`[S]` / `Ctrl+Alt+S`** | **Toggle Sound Feedback** | Look at the top bar and press `S`, or use `Ctrl+Alt+S` anywhere |
 | **`[H]`** | **Help & Gesture Guide** | Open/close the in-app gesture and shortcut cheat sheet modal |
 | **Mouth Click** | **Inject / Click** | Short mouth opening (MAR) triggers a zero-dwell click or snippet injection |
 | **Held Mouth** | **Drag / Jaw-Lock** | Holding the mouth open at 55% MAR enables drag/lock without hand buttons |
@@ -205,7 +205,7 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`[C]`** | **Center Recalibration** | Look at the screen center and press `C` to reset your neutral anchor |
 | **`[+]` / `[-]`** | **Sensitivity Adjust** | Increase or decrease gaze tracking sensitivity on the fly |
 | **`[P]` / `[Space]`** | **Pause / Reading Mode** | Dim HUD to 10% opacity so you can read code without accidental clicks |
-| **`[M]`** | **Toggle Mini-Feed** | Look at the top bar and press `M`, or use `Ctrl+Alt+M` anywhere; toggles the monitor panel |
+| **`[M]` / `Ctrl+Alt+M`** | **Toggle Mini-Feed** | Look at the top bar and press `M`, or use `Ctrl+Alt+M` anywhere; toggles the monitor panel |
 | **`[Q]` / `[ESC]`** | **Safe Exit** | Release camera handles and gracefully stop all worker threads |
 | **Eye Exit** | **[X EXIT] Hands-Free** | Gaze at the top-right header `[X EXIT]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 

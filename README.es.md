@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-420%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-421%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -195,7 +195,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`[K]`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor vía WebSocket. Usa `Ctrl+Alt+K` desde cualquier sitio |
 | **`[F]`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz. Usa `Ctrl+Alt+F` desde cualquier sitio |
 | **`[G]`** | **Modo Gaming** | Overlay de ratón + controlador para juegos (Roblox: mantener `W`, guiño izquierdo para saltar, guiño derecho para cámara 360°). Usa `Ctrl+Alt+G` desde cualquier sitio |
-| **`[S]`** | **Alternar Retroalimentación Sonora** | Activa/desactiva los avisos de audio procedural. Usa `Ctrl+Alt+S` desde cualquier sitio |
+| **`[S]`** | **Alternar Retroalimentación Sonora** | Mira la barra superior y pulsa `S`, o usa `Ctrl+Alt+S` desde cualquier sitio |
 | **`[H]`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
 | **Clic de Boca** | **Inyectar / Clic** | Una breve apertura de boca (MAR) dispara un clic sin tiempo de espera o una inyección de snippet |
 | **Boca Mantenida** | **Arrastrar / Jaw-Lock** | Mantener la boca abierta al 55% MAR habilita arrastrar/bloquear sin botones de mano |
@@ -262,7 +262,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Diccionario T9/palabras comunes en español
 │       └── icons/ # Suite de iconos SVG/Lucide neón de alta definición
-└── tests/ # 420 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
+└── tests/ # 421 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
     ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
     ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
     ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
@@ -294,11 +294,11 @@ pytest -q
 ```
 
 ```text
-420 pruebas superadas, 53 subtests, 13.84s
+421 pruebas superadas, 57 subtests, 13.97s
 ```
 
 > [!NOTE]
-> Todos los 420 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 421 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 

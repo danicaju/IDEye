@@ -88,6 +88,18 @@ class TestAutoMarMath(unittest.TestCase):
         self.assertTrue(0.25 <= threshold <= 0.70)
 
 
+class TestLanguageAutoDetectRegression(unittest.TestCase):
+    def test_lang_auto_uses_context_reader_api(self):
+        from eyede.actions.menu_trees import MenuAction
+        from eyede.ui.overlay_window import OverlayWindow
+
+        overlay = OverlayWindow(start_in_mode_selector=False)
+        action = MenuAction(id="LANG_AUTO_TEST", label="Auto", action_type="LANG_AUTO")
+        overlay.execute_action(action, 0)
+        self.assertIn(overlay.current_language, ("PYTHON", "TYPESCRIPT", "RUST", "CPP", "GO"))
+        overlay.close()
+
+
 class TestCalibrationHudIsolation(unittest.TestCase):
     def test_suspend_and_resume_hud_input(self):
         from eyede.main import EyeDEApplication

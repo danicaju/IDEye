@@ -165,14 +165,14 @@ HELP_GESTURES = (
 
 HELP_SHORTCUTS = (
     ("[A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
-    ("[V] / [K]", "Elegir modo / Auto-switch", "V abre el selector de modos; K alterna el cambio automático."),
+    ("[V] / [K]", "Elegir modo / Auto-switch", "Mira la barra superior y pulsa V/K, o Ctrl+Alt+V/K desde cualquier ventana."),
     ("[T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
-    ("[M]", "Colapsar Monitor", "Alterna monitor entre ventana y barra compacta."),
+    ("[M]", "Colapsar Monitor", "Mira la barra superior y pulsa M, o Ctrl+Alt+M desde cualquier ventana."),
     ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
     ("[P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
-    ("[S]", "Sonido", "Silencia o activa el feedback acústico."),
-    ("[F]", "FreeLook", "Activa el ratón directo por mirada."),
-    ("[G]", "Gaming", "Alterna el perfil Gaming dentro de FreeLook."),
+    ("[S]", "Sonido", "Mira la barra superior y pulsa S, o Ctrl+Alt+S desde cualquier ventana."),
+    ("[F]", "FreeLook", "Mira la barra superior y pulsa F, o Ctrl+Alt+F desde cualquier ventana."),
+    ("[G]", "Gaming", "Mira la barra superior y pulsa G, o Ctrl+Alt+G desde cualquier ventana."),
     ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
 )
 
@@ -2060,7 +2060,7 @@ class OverlayWindow(QWidget):
             return
 
         if item.action_type == "LANG_AUTO":
-            detected_lang = self.context_reader.detect_active_language() if self.context_reader else "PYTHON"
+            detected_lang = self.context_reader.get_active_language() if self.context_reader else "PYTHON"
             self.set_language(detected_lang)
             if self.current_node_id == "LANG_SELECT":
                 self.navigate_to("ROOT")
@@ -2227,7 +2227,7 @@ class OverlayWindow(QWidget):
             return
 
         if item.action_type == "LANG_AUTO":
-            detected_lang = self.context_reader.detect_active_language() if self.context_reader else "PYTHON"
+            detected_lang = self.context_reader.get_active_language() if self.context_reader else "PYTHON"
             self.set_language(detected_lang)
             if self.current_node_id == "LANG_SELECT":
                 self.navigate_to("ROOT")
@@ -2591,16 +2591,26 @@ class OverlayWindow(QWidget):
             self.open_mode_selector()
 
     def is_mode_shortcut_targeted(self) -> bool:
-        """True when the gaze is on/near the header mode button (global V/K gate)."""
+        """True when gaze is on the top command bar (plain-key hotkey gate)."""
         gaze = getattr(self, "current_gaze", None)
-        rect = getattr(self, "header_mode_rect", None)
-        if not gaze or rect is None or not rect.isValid():
+        if not gaze:
             return False
         try:
             gx, gy = gaze
             w = max(1.0, float(self.width()))
             h = max(1.0, float(self.height()))
-            return rect.adjusted(-24.0, -18.0, 24.0, 18.0).contains(gx * w, gy * h)
+            px, py = gx * w, gy * h
+            header = getattr(self, "header_rect", None)
+            if header is not None and header.isValid() and header.adjusted(
+                -18.0, -12.0, 18.0, 14.0
+            ).contains(px, py):
+                return True
+            rect = getattr(self, "header_mode_rect", None)
+            if rect is not None and rect.isValid() and rect.adjusted(
+                -24.0, -18.0, 24.0, 18.0
+            ).contains(px, py):
+                return True
+            return False
         except Exception:
             return False
 

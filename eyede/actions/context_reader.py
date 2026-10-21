@@ -102,6 +102,10 @@ class ContextReader:
             return detect_language_from_path(target_file)
         return self.active_language
 
+    def detect_active_language(self) -> str:
+        """Backward-compatible alias for get_active_language()."""
+        return self.get_active_language()
+
     def set_active_file(self, file_path: Optional[str]) -> None:
         """Explicitly links or unlinks an active file for context reading."""
         self._cached_detected_file = None

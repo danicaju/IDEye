@@ -750,6 +750,8 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.sniper_toggle_anywhere_requested.connect(self._on_sniper_shortcut_anywhere)
         self.hotkey_manager.gaming_toggle_requested.connect(self._on_gaming_shortcut)
         self.hotkey_manager.gaming_toggle_anywhere_requested.connect(self._on_gaming_shortcut_anywhere)
+        self.hotkey_manager.monitor_toggle_requested.connect(self._on_monitor_shortcut)
+        self.hotkey_manager.monitor_toggle_anywhere_requested.connect(self._on_monitor_shortcut_anywhere)
 
         self._setup_connections()
         self._configure_geometry()
@@ -800,6 +802,20 @@ class EyeDEApplication(QObject):
     def _on_sniper_shortcut_anywhere(self) -> None:
         """Ctrl+Alt+F (or a validated plain F) toggles sniper mode."""
         self.overlay.toggle_sniper_mode()
+
+    def _on_monitor_shortcut(self) -> None:
+        """M while gazing at the top bar collapses/expands the monitor."""
+        if self.overlay.is_mode_shortcut_targeted():
+            self._on_monitor_shortcut_anywhere()
+
+    def _on_monitor_shortcut_anywhere(self) -> None:
+        """Ctrl+Alt+M (or a validated plain M) toggles the monitor panel."""
+        if hasattr(self, "debug_widget") and self.debug_widget is not None:
+            self.debug_widget.toggle_collapse()
+            self.overlay.last_action_desc = (
+                "Monitor: colapsado" if self.debug_widget.is_collapsed else "Monitor: expandido"
+            )
+            self.overlay.update()
 
     def _on_gaming_shortcut(self) -> None:
         """G while gazing at the header toggles the FreeLook gaming profile."""

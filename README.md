@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-420%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-421%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -193,9 +193,9 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`[A]`** | **Toggle Smart Menus** | Toggle real-time context-adaptive menus (auto-adapts 9 blocks to function signatures, try blocks, loops, etc.) |
 | **`[V]` / `[MODE▾]`** | **Open Mode Selector** | Opens the 6-mode selector (Coding, Writing, Terminal/Git, Data/Math, Navigation, FreeLook/Gaming); does not blindly cycle. Use `Ctrl+Alt+V` anywhere |
 | **`[K]`** | **Toggle Auto Mode Switching** | Enables/disables automatic mode changes based on editor context via WebSocket. Use `Ctrl+Alt+K` anywhere |
-| **`[F]`** | **FreeLook Mode** | 60 Hz gaze-controlled camera/look mode. Use `Ctrl+Alt+F` anywhere |
+| **`[F]`** | **FreeLook Mode** | Look at the top bar and press `F`, or use `Ctrl+Alt+F` anywhere |
 | **`[G]`** | **Gaming Mode** | Gaming mouse + controller overlay (Roblox: `W` hold, left-wink jump, right-wink 360° camera). Use `Ctrl+Alt+G` anywhere |
-| **`[S]`** | **Toggle Sound Feedback** | Enable/disable procedural audio cues. Use `Ctrl+Alt+S` anywhere |
+| **`[S]`** | **Toggle Sound Feedback** | Look at the top bar and press `S`, or use `Ctrl+Alt+S` anywhere |
 | **`[H]`** | **Help & Gesture Guide** | Open/close the in-app gesture and shortcut cheat sheet modal |
 | **Mouth Click** | **Inject / Click** | Short mouth opening (MAR) triggers a zero-dwell click or snippet injection |
 | **Held Mouth** | **Drag / Jaw-Lock** | Holding the mouth open at 55% MAR enables drag/lock without hand buttons |
@@ -205,7 +205,7 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`[C]`** | **Center Recalibration** | Look at the screen center and press `C` to reset your neutral anchor |
 | **`[+]` / `[-]`** | **Sensitivity Adjust** | Increase or decrease gaze tracking sensitivity on the fly |
 | **`[P]` / `[Space]`** | **Pause / Reading Mode** | Dim HUD to 10% opacity so you can read code without accidental clicks |
-| **`[M]`** | **Toggle Mini-Feed** | Show or hide the bottom camera preview and MAR meter |
+| **`[M]`** | **Toggle Mini-Feed** | Look at the top bar and press `M`, or use `Ctrl+Alt+M` anywhere; toggles the monitor panel |
 | **`[Q]` / `[ESC]`** | **Safe Exit** | Release camera handles and gracefully stop all worker threads |
 | **Eye Exit** | **[X EXIT] Hands-Free** | Gaze at the top-right header `[X EXIT]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 
@@ -262,7 +262,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Spanish T9/common-word dictionary
 │       └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 420 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
+└── tests/ # 421 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
     ├── test_phase1.py # Core computer vision & MAR state machine tests
     ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
     ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -294,11 +294,11 @@ pytest -q
 ```
 
 ```text
-420 passed, 53 subtests, 13.84s
+421 passed, 57 subtests, 13.97s
 ```
 
 > [!NOTE]
-> All 420 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 421 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 

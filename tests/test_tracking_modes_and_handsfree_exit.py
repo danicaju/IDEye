@@ -15,6 +15,7 @@ import json
 import math
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -369,18 +370,24 @@ class TestOverlayWindowHandsFreeExit(unittest.TestCase):
         self.overlay.on_gaze_updated(0.2, 0.2)
         self.assertFalse(self.overlay.hovered_header_exit)
 
-    def test_mouth_click_on_header_exit_opens_safe_exit_menu(self):
-        """Mouth gesture while looking at header exit navigates safely to EXIT_CONFIRM menu."""
+    def test_double_mouth_click_on_header_exit_emits_exit(self):
+        """First mouth click arms SALIR; the second click within the window exits."""
+        emitted = []
+        self.overlay.exit_requested.connect(lambda: emitted.append(True))
         rect = self.overlay.header_exit_rect
         w = float(self.overlay.width())
         h = float(self.overlay.height())
-        self.overlay.on_gaze_updated(rect.center().x() / w, rect.center().y() / h)
-        self.assertTrue(self.overlay.hovered_header_exit)
+        nx = rect.center().x() / w
+        ny = rect.center().y() / h
 
-        # Trigger mouth open gesture
+        self.overlay.on_gaze_updated(nx, ny)
         self.overlay.on_gesture_triggered("MOUTH_CLICK")
-        # Should now be inside EXIT_CONFIRM menu
-        self.assertEqual(self.overlay.current_node_id, "EXIT_CONFIRM")
+        self.assertEqual(emitted, [])
+        self.assertGreater(self.overlay._exit_armed_until, 0.0)
+
+        self.overlay.on_gaze_updated(nx, ny)
+        self.overlay.on_gesture_triggered("MOUTH_CLICK")
+        self.assertEqual(emitted, [True])
 
     def test_reading_mode_inhibits_header_exit_hover(self):
         """In Reading Mode, looking at the header exit button must NOT trigger hover (Midas Touch protection)."""
@@ -391,41 +398,64 @@ class TestOverlayWindowHandsFreeExit(unittest.TestCase):
         self.overlay.on_gaze_updated(rect.center().x() / w, rect.center().y() / h)
         self.assertFalse(self.overlay.hovered_header_exit, "Exit hover should be inhibited in reading mode!")
 
-    def test_header_exit_mouse_click_navigates_to_exit_confirm(self):
-        """Physical mouse click on header exit button navigates to EXIT_CONFIRM."""
+    def test_pause_stops_freelook_gaze_and_mouth(self):
+        """Pause/reading mode must freeze FreeLook cursor movement and mouth holds."""
+        self.overlay.current_context_mode_id = "sniper"
+        self.overlay.current_node_id = "ROOT"
+        self.overlay.mouse_controller = MagicMock()
+        self.overlay.reading_mode = True
+        with patch.object(self.overlay, "_update_freelook_mouth") as mouth:
+            self.overlay.on_gaze_updated(0.8, 0.5)
+            self.overlay.on_mar_updated(None, 0.8)
+            mouth.assert_not_called()
+        self.overlay.mouse_controller.move_direct.assert_not_called()
+
+    def test_pause_releases_freelook_holds(self):
+        """Entering pause must release a held W key or mouse button."""
+        self.overlay.current_context_mode_id = "sniper"
+        self.overlay.current_node_id = "ROOT"
+        self.overlay.mouse_controller = MagicMock()
+        self.overlay._gaming_mode = True
+        self.overlay._hold_started = True
+        self.overlay.reading_mode = False
+        self.overlay.toggle_reading_mode()
+        self.overlay.mouse_controller.key_up.assert_called_with("w")
+        self.assertFalse(self.overlay._hold_started)
+        self.overlay.toggle_reading_mode()
+
+    def test_double_mouse_click_on_header_exit_emits_exit(self):
+        """Two physical clicks on SALIR exit without opening the confirmation grid."""
         from PyQt6.QtGui import QMouseEvent
-        from PyQt6.QtCore import QPointF, QEvent
+        from PyQt6.QtCore import QEvent
+        emitted = []
+        self.overlay.exit_requested.connect(lambda: emitted.append(True))
         rect = self.overlay.header_exit_rect
-        event = QMouseEvent(
-            QEvent.Type.MouseButtonPress,
-            rect.center(),
-            rect.center(),
-            Qt.MouseButton.LeftButton,
-            Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.NoModifier,
-        )
-        self.overlay.mousePressEvent(event)
+
+        def click():
+            event = QMouseEvent(
+                QEvent.Type.MouseButtonPress,
+                rect.center(),
+                rect.center(),
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.LeftButton,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            self.overlay.mousePressEvent(event)
+
+        click()
+        self.assertEqual(emitted, [])
+        self.assertNotEqual(self.overlay.current_node_id, "EXIT_CONFIRM")
+        click()
+        self.assertEqual(emitted, [True])
+
+    def test_exit_confirm_node_remains_available_for_menu(self):
+        """The menu confirmation node still exists as a secondary, non-header path."""
+        self.assertIn("EXIT_CONFIRM", self.overlay.menu_tree)
+        self.overlay.navigate_to("EXIT_CONFIRM")
         self.assertEqual(self.overlay.current_node_id, "EXIT_CONFIRM")
-
-    def test_exit_confirm_retains_parent_id_from_source_node(self):
-        """Cancelling exit confirmation returns user to their source menu node."""
-        self.overlay.navigate_to("STRUCT")
-        self.assertEqual(self.overlay.current_node_id, "STRUCT")
-
-        # Trigger exit from STRUCT
-        rect = self.overlay.header_exit_rect
-        w = float(self.overlay.width())
-        h = float(self.overlay.height())
-        self.overlay.on_gaze_updated(rect.center().x() / w, rect.center().y() / h)
-        self.overlay.on_gesture_triggered("MOUTH_CLICK")
-
-        self.assertEqual(self.overlay.current_node_id, "EXIT_CONFIRM")
-        self.assertEqual(self.overlay.menu_tree["EXIT_CONFIRM"].parent_id, "STRUCT")
-
-        # Click cancel (Slot 1)
         self.overlay.hovered_block = 1
         self.overlay.on_gesture_triggered("MOUTH_CLICK")
-        self.assertEqual(self.overlay.current_node_id, "STRUCT")
+        self.assertEqual(self.overlay.current_node_id, "ROOT")
 
     def test_confirm_exit_action_emits_exit_requested(self):
         """CONFIRM_EXIT action emits exit_requested signal."""

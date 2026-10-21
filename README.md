@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-437%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-440%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -192,7 +192,7 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | :--- | :--- | :--- |
 | **`Ctrl+Alt+Q` / `F12`** | **Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down IDEye from anywhere in the OS, even when VS Code has focus |
 | **`Ctrl+Alt+R`** | **Emergency Reset** | Immediately clears calibration weights and reverts to safe neutral mapping |
-| **`[A]`** | **Toggle Smart Menus** | Toggle real-time context-adaptive menus (auto-adapts 9 blocks to function signatures, try blocks, loops, etc.) |
+| **`Ctrl+Alt+A`** | **Toggle Smart Menus** | Toggle real-time context-adaptive menus (auto-adapts 9 blocks to function signatures, try blocks, loops, etc.) |
 | **`[V]` / `[MODE▾]`** | **Open Mode Selector** | Opens the 6-mode selector (Coding, Writing, Terminal/Git, Data/Math, Navigation, FreeLook/Gaming); does not blindly cycle. Use `Ctrl+Alt+V` anywhere |
 | **`[K]` / `Ctrl+Alt+K`** | **Toggle Auto Mode Switching** | Enables/disables automatic mode changes based on editor context via WebSocket. Use `Ctrl+Alt+K` anywhere |
 | **`[F]` / `Ctrl+Alt+F`** | **FreeLook Mode** | Look at the top bar and press `F`, or use `Ctrl+Alt+F` anywhere |
@@ -203,10 +203,10 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **Held Mouth** | **Drag / Jaw-Lock** | Holding the mouth open at 55% MAR enables drag/lock without hand buttons |
 | **Right Wink** | **Pause / 360° Camera** | Pauses/hides HUD in normal modes; rotates camera 360° in Gaming mode |
 | **Left Wink** | **Back / Undo / Jump** | Navigates back in menus or triggers Undo; makes the character jump in Gaming mode |
-| **`[T]`** | **Cycle Tracking Mode** | Switch between **`HEAD_PRIMARY`**, **`PURE_IRIS`**, and **`HYBRID`** |
-| **`[C]`** | **Center Recalibration** | Look at the screen center and press `C` to reset your neutral anchor |
+| **`Ctrl+Alt+T`** | **Cycle Tracking Mode** | Switch between **`HEAD_PRIMARY`**, **`PURE_IRIS`**, and **`HYBRID`** |
+| **`Ctrl+Alt+C`** | **Center Recalibration** | Look at the screen center and press `Ctrl+Alt+C` to reset your neutral anchor |
 | **`[+]` / `[-]`** | **Sensitivity Adjust** | Increase or decrease gaze tracking sensitivity on the fly |
-| **`[P]` / `[Space]`** | **Pause / Reading Mode** | Dim HUD to 10% opacity so you can read code without accidental clicks |
+| **`Ctrl+Alt+P`** | **Pause / Reading Mode** | Hides the HUD completely so you can read code without accidental clicks; use the same shortcut or a right wink to restore |
 | **`[M]` / `Ctrl+Alt+M`** | **Toggle Mini-Feed** | Look at the top bar and press `M`, or use `Ctrl+Alt+M` anywhere; toggles the monitor panel |
 | **`Ctrl+Shift+M`** | **Multi-Monitor Handover** | Moves the HUD and gaze mapping to the next connected display |
 | **`[Q]` / `[ESC]`** | **Safe Exit** | Release camera handles and gracefully stop all worker threads |
@@ -266,7 +266,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Spanish T9/common-word dictionary
 │       └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 437 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
+└── tests/ # 440 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
     ├── test_phase1.py # Core computer vision & MAR state machine tests
     ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
     ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -298,11 +298,11 @@ pytest -q
 ```
 
 ```text
-437 passed, 58 subtests, 13.33s
+440 passed, 62 subtests, 14.93s
 ```
 
 > [!NOTE]
-> All 437 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 440 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 

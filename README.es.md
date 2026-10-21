@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-437%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-440%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -192,7 +192,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | :--- | :--- | :--- |
 | **`Ctrl+Alt+Q` / `F12`** | **Botón de Emergencia (Killswitch)** | **Atajo global en todo el SO**: apaga IDEye limpiamente de inmediato, incluso cuando VS Code tiene el foco |
 | **`Ctrl+Alt+R`** | **Reset de Emergencia** | Restablece al instante la calibración a valores por defecto seguros y neutrales |
-| **`[A]`** | **Alternar Menús Inteligentes** | Activa/desactiva menús contextuales en vivo (adapta los 9 bloques a funciones, try/except, bucles, etc.) |
+| **`Ctrl+Alt+A`** | **Alternar Menús Inteligentes** | Activa/desactiva menús contextuales en vivo (adapta los 9 bloques a funciones, try/except, bucles, etc.) |
 | **`[V]` / `[MODO▾]`** | **Abrir Selector de Modo** | Abre el selector de 6 modos (Código, Redacción, Terminal/Git, Datos/Mates, Navegación, FreeLook/Gaming); no cicla a ciegas. Usa `Ctrl+Alt+V` desde cualquier sitio |
 | **`[K]` / `Ctrl+Alt+K`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor vía WebSocket. Usa `Ctrl+Alt+K` desde cualquier sitio |
 | **`[F]` / `Ctrl+Alt+F`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz. Usa `Ctrl+Alt+F` desde cualquier sitio |
@@ -203,10 +203,10 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **Boca Mantenida** | **Arrastrar / Jaw-Lock** | Mantener la boca abierta al 55% MAR habilita arrastrar/bloquear sin botones de mano |
 | **Guiño Derecho** | **Pausar / Cámara 360°** | Pausa/oculta el HUD en modos normales; rota la cámara 360° en modo Gaming |
 | **Guiño Izquierdo** | **Volver Atrás / Deshacer / Saltar** | Regresa al menú anterior o ejecuta Deshacer; hace saltar al personaje en modo Gaming |
-| **`[T]`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`HEAD_PRIMARY`**, **`PURE_IRIS`** y **`HYBRID`** |
-| **`[C]`** | **Recalibrar Centro** | Mira al centro de la pantalla y pulsa `C` para fijar tu ancla neutra |
+| **`Ctrl+Alt+T`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`HEAD_PRIMARY`**, **`PURE_IRIS`** y **`HYBRID`** |
+| **`Ctrl+Alt+C`** | **Recalibrar Centro** | Mira al centro de la pantalla y pulsa `Ctrl+Alt+C` para fijar tu ancla neutra |
 | **`[+]` / `[-]`** | **Ajustar Sensibilidad** | Aumenta o disminuye la sensibilidad de seguimiento sobre la marcha |
-| **`[P]` / `[Espacio]`** | **Pausa / Modo Lectura** | Atenúa el HUD al 10% de opacidad para leer código sin clics involuntarios |
+| **`Ctrl+Alt+P`** | **Pausa / Modo Lectura** | Oculta el HUD por completo para leer código sin clics involuntarios; usa el mismo atajo o un guiño derecho para restaurarlo |
 | **`[M]` / `Ctrl+Alt+M`** | **Alternar Mini-Feed** | Mira la barra superior y pulsa `M`, o usa `Ctrl+Alt+M` desde cualquier sitio; alterna el panel de monitor |
 | **`Ctrl+Shift+M`** | **Handover Multi-Monitor** | Mueve el HUD y el mapeo de mirada a la siguiente pantalla conectada |
 | **`[Q]` / `[ESC]`** | **Salida Segura** | Libera la cámara y cierra de forma limpia todos los hilos secundarios |
@@ -266,7 +266,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Diccionario T9/palabras comunes en español
 │       └── icons/ # Suite de iconos SVG/Lucide neón de alta definición
-└── tests/ # 437 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
+└── tests/ # 440 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
     ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
     ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
     ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
@@ -298,11 +298,11 @@ pytest -q
 ```
 
 ```text
-437 pruebas superadas, 58 subtests, 13.33s
+440 pruebas superadas, 62 subtests, 14.93s
 ```
 
 > [!NOTE]
-> Todos los 437 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 440 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 

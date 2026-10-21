@@ -764,6 +764,10 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.monitor_toggle_requested.connect(self._on_monitor_shortcut)
         self.hotkey_manager.monitor_toggle_anywhere_requested.connect(self._on_monitor_shortcut_anywhere)
         self.hotkey_manager.screen_cycle_requested.connect(self.screen_manager.cycle_next_screen)
+        self.hotkey_manager.adaptive_ast_toggle_requested.connect(self.overlay.toggle_adaptive_ast)
+        self.hotkey_manager.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
+        self.hotkey_manager.center_calibration_requested.connect(self._on_center_calibration_shortcut)
+        self.hotkey_manager.pause_toggle_requested.connect(self.overlay.toggle_pause)
 
         self._setup_connections()
         self._configure_geometry()
@@ -838,6 +842,19 @@ class EyeDEApplication(QObject):
         """Ctrl+Alt+G (or a validated plain G) toggles the gaming profile."""
         if self.overlay.current_context_mode_id == "sniper":
             self.overlay.toggle_gaming_mode()
+
+    def _on_center_calibration_shortcut(self) -> None:
+        """Ctrl+Alt+C: anchors the current face position as screen center."""
+        estimator = getattr(self.tracker, "gaze_estimator", None)
+        landmarks = None
+        if hasattr(self.tracker, "get_latest_landmarks"):
+            landmarks = self.tracker.get_latest_landmarks()
+        try:
+            ok = bool(estimator is not None and landmarks is not None and estimator.calibrate_center(landmarks))
+        except Exception:
+            ok = False
+        self.overlay.last_action_desc = "Centro calibrado" if ok else "Sin rostro: mira al centro"
+        self.overlay.update()
 
     def _apply_settings(self, values: Dict[str, Any]) -> None:
         """Applies persisted settings to every subsystem at startup/reset."""
@@ -1356,6 +1373,12 @@ class EyeDEApplication(QObject):
 
         if hasattr(self, "tray_icon") and self.tray_icon is not None:
             self.tray_icon.hide()
+
+        if self.overlay is not None:
+            try:
+                self.overlay.release_freelook_controls()
+            except Exception:
+                pass
 
         if self.tracker is not None:
             self.tracker.stop()

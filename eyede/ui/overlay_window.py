@@ -164,12 +164,12 @@ HELP_GESTURES = (
 )
 
 HELP_SHORTCUTS = (
-    ("[A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
+    ("[Ctrl+Alt+A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
     ("[Ctrl+Alt+V/K]", "Elegir modo / Auto-switch", "Abre el selector de modos o alterna el cambio automático desde cualquier ventana."),
-    ("[T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
+    ("[Ctrl+Alt+T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
     ("[Ctrl+Alt+M]", "Colapsar Monitor", "Colapsa o expande el monitor de depuración desde cualquier ventana."),
-    ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
-    ("[P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
+    ("[Ctrl+Alt+C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
+    ("[Ctrl+Alt+P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
     ("[Ctrl+Alt+S]", "Sonido", "Silencia o activa el feedback acústico desde cualquier ventana."),
     ("[Ctrl+Alt+F]", "FreeLook", "Activa el ratón directo por mirada desde cualquier ventana."),
     ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming dentro de FreeLook desde cualquier ventana."),
@@ -331,6 +331,7 @@ class OverlayWindow(QWidget):
         self.hovered_header_exit: bool = False
         self.active_click_header_exit: bool = False
         self.header_exit_rect: QRectF = QRectF()
+        self._exit_armed_until: float = 0.0
 
         # Hands-free header help button & cheat sheet modal state
         self.hovered_header_help: bool = False
@@ -1230,6 +1231,7 @@ class OverlayWindow(QWidget):
             self.current_context_mode_id == "sniper"
             and self.current_node_id != "MODE_SELECT"
             and not self.show_help_modal
+            and not self.reading_mode
         ):
             px = gx * max(1.0, float(self.width()))
             py = gy * max(1.0, float(self.height()))
@@ -1428,6 +1430,34 @@ class OverlayWindow(QWidget):
     def _clear_header_exit_flash(self) -> None:
         self.active_click_header_exit = False
         self.update()
+
+    def _disarm_exit(self) -> None:
+        """Clears the two-click exit arm after the confirmation window expires."""
+        if time.time() < self._exit_armed_until:
+            return
+        self._exit_armed_until = 0.0
+        if self.last_action_desc.startswith("SALIR:"):
+            self.last_action_desc = "Listo"
+        self.update()
+
+    def release_freelook_controls(self) -> None:
+        """Releases any FreeLook mouse/key hold before pausing or shutting down."""
+        controller = self.mouse_controller
+        try:
+            if controller is not None and getattr(self, "_gaming_right_held", False):
+                controller.mouse_up("right")
+            if controller is not None and getattr(self, "_hold_started", False):
+                if getattr(self, "_gaming_mode", False):
+                    controller.key_up("w")
+                else:
+                    controller.mouse_up("left")
+        except Exception:
+            pass
+        self._gaming_right_held = False
+        self._hold_started = False
+        self._mouth_active = False
+        self._jaw_locked = False
+        self._jaw_lock_pos = None
 
     def _clear_header_help_flash(self) -> None:
         """Clears active click visual pulse on header help button."""
@@ -1635,12 +1665,7 @@ class OverlayWindow(QWidget):
                 self.mode_manager.set_mode(previous, emit=True)
             finally:
                 self._mode_selection_in_progress = False
-        controller = self.mouse_controller
-        if controller is not None:
-            if self._gaming_right_held:
-                controller.mouse_up("right")
-            if self._hold_started:
-                controller.key_up("w") if self._gaming_mode else controller.mouse_up("left")
+        self.release_freelook_controls()
         self._sniper_step = 1
         self._sniper_locked_sector = None
         self.hovered_subcell = None
@@ -1814,11 +1839,9 @@ class OverlayWindow(QWidget):
             self.update()
 
     def toggle_gaming_mode(self) -> bool:
+        if self._gaming_mode:
+            self.release_freelook_controls()
         self._gaming_mode = not self._gaming_mode
-        if not self._gaming_mode and self._gaming_right_held:
-            if self.mouse_controller is not None:
-                self.mouse_controller.mouse_up("right")
-            self._gaming_right_held = False
         self.last_action_desc = f"FreeLook: {'GAMING' if self._gaming_mode else 'ESCRITORIO'}"
         self._play_sound("mode")
         self.update()
@@ -1878,6 +1901,7 @@ class OverlayWindow(QWidget):
             self.current_context_mode_id == "sniper"
             and self.current_node_id != "MODE_SELECT"
             and not self.show_help_modal
+            and not self.reading_mode
         ):
             self._update_freelook_mouth(self.current_mar)
             return
@@ -1960,17 +1984,22 @@ class OverlayWindow(QWidget):
 
         self._play_sound("click")
 
-        # Hands-free header exit click handler
+        # Hands-free header exit: first click arms, second click exits.
         if self.hovered_header_exit:
             self.hovered_header_exit = False
             self.active_click_header_exit = True
             QTimer.singleShot(int(config.CLICK_FLASH_DURATION_SEC * 1000), self._clear_header_exit_flash)
-            prev_node = self.current_node_id if self.current_node_id != "EXIT_CONFIRM" else "ROOT"
-            if "EXIT_CONFIRM" in self.menu_tree:
-                self.menu_tree["EXIT_CONFIRM"].parent_id = prev_node
-                self.menu_tree["EXIT_CONFIRM"].items = populate_exit_confirm_items(parent_id=prev_node)
-            self.navigate_to("EXIT_CONFIRM")
-            self.last_action_desc = "Confirmar Salida"
+            now = time.time()
+            if now < self._exit_armed_until:
+                self._exit_armed_until = 0.0
+                self.last_action_desc = "Saliendo..."
+                self.update()
+                self.exit_requested.emit()
+                return
+            arm_sec = float(getattr(config, "EXIT_DOUBLE_CLICK_SEC", 1.5))
+            self._exit_armed_until = now + arm_sec
+            self.last_action_desc = "SALIR: pulsa otra vez para confirmar"
+            QTimer.singleShot(int(arm_sec * 1000), self._disarm_exit)
             self.update()
             return
 
@@ -2437,14 +2466,8 @@ class OverlayWindow(QWidget):
         self.theme_color = theme_color
         self._set_theme_color(theme_color)
         if mode_id != "sniper":
-            if was_sniper and self.mouse_controller is not None:
-                if self._gaming_right_held:
-                    self.mouse_controller.mouse_up("right")
-                if self._hold_started:
-                    if self._gaming_mode:
-                        self.mouse_controller.key_up("w")
-                    else:
-                        self.mouse_controller.mouse_up("left")
+            if was_sniper:
+                self.release_freelook_controls()
             self._sniper_step = 1
             self._sniper_locked_sector = None
             self.hovered_subcell = None
@@ -2708,6 +2731,7 @@ class OverlayWindow(QWidget):
         self.reading_mode = not self.reading_mode
         self.current_opacity = config.OVERLAY_OPACITY_READING if self.reading_mode else config.OVERLAY_OPACITY_ACTIVE
         if self.reading_mode:
+            self.release_freelook_controls()
             self.hovered_block = None
             self.hide()
         else:
@@ -2929,7 +2953,7 @@ class OverlayWindow(QWidget):
         painter.drawText(
             QRectF(self.header_exit_rect.x() + 34.0, self.header_exit_rect.y(), self.header_exit_rect.width() - 38.0, pill_h),
             Qt.AlignmentFlag.AlignCenter,
-            "SALIR",
+            "SALIR?" if time.time() < self._exit_armed_until else "SALIR",
         )
 
         # Help

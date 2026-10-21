@@ -88,8 +88,8 @@ class TestAutoMarMath(unittest.TestCase):
         self.assertTrue(0.25 <= threshold <= 0.70)
 
 
-class TestExitConfirmationInEveryMode(unittest.TestCase):
-    def test_header_exit_works_in_terminal_mode(self):
+class TestDoubleClickExitInEveryMode(unittest.TestCase):
+    def test_header_exit_requires_two_clicks_in_terminal_mode(self):
         from eyede.ui.overlay_window import OverlayWindow
 
         overlay = OverlayWindow(start_in_mode_selector=False)
@@ -97,11 +97,21 @@ class TestExitConfirmationInEveryMode(unittest.TestCase):
         overlay._on_context_mode_changed("terminal", "Terminal", "#A855F7")
         overlay.resize(1280, 720)
         overlay._update_header_exit_rect()
+        emitted = []
+        overlay.exit_requested.connect(lambda: emitted.append(True))
         rect = overlay.header_exit_rect
-        overlay.on_gaze_updated(rect.center().x() / overlay.width(), rect.center().y() / overlay.height())
+        nx = rect.center().x() / overlay.width()
+        ny = rect.center().y() / overlay.height()
+
+        overlay.on_gaze_updated(nx, ny)
         overlay.on_gesture_triggered("MOUTH_CLICK")
-        self.assertEqual(overlay.current_node_id, "EXIT_CONFIRM")
-        self.assertIn("EXIT_CONFIRM", overlay.menu_tree)
+        self.assertEqual(emitted, [])
+        self.assertNotEqual(overlay.current_node_id, "EXIT_CONFIRM")
+        self.assertGreater(overlay._exit_armed_until, 0.0)
+
+        overlay.on_gaze_updated(nx, ny)
+        overlay.on_gesture_triggered("MOUTH_CLICK")
+        self.assertEqual(emitted, [True])
         overlay.close()
 
 

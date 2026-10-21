@@ -319,7 +319,7 @@ class DebugWidget(QWidget):
         mode_layout.setContentsMargins(6, 6, 6, 6)
         mode_layout.setSpacing(4)
 
-        lbl_mode = QLabel("MODO DE SEGUIMIENTO (Tecla [T])", mode_frame)
+        lbl_mode = QLabel("MODO DE SEGUIMIENTO (Ctrl+Alt+T)", mode_frame)
         lbl_mode.setStyleSheet("font-size: 10px; font-weight: bold; color: #38bdf8;")
         mode_layout.addWidget(lbl_mode)
 
@@ -447,10 +447,10 @@ class DebugWidget(QWidget):
             "<div>• <b style='color: #6ee7b7;'>Guiño Ojo Derecho:</b> Pausar (Ocultar HUD) / Despertar</div>"
             "<div>• <b style='color: #93c5fd;'>Guiño Ojo Izquierdo:</b> Volver atrás / Deshacer</div>"
             "<div style='color: #7dd3fc; font-weight: bold; margin-top: 5px; margin-bottom: 2px;'>ATAJOS DE TECLADO:</div>"
-            "<div>• <b>[A]</b> Menús inteligentes &nbsp;|&nbsp; <b>[L]</b> Cambiar Lenguaje</div>"
-            "<div>• <b>[T]</b> Modo Tracking &nbsp;|&nbsp; <b>[Ctrl+Alt+M]</b> Colapsar monitor</div>"
+            "<div>• <b>[Ctrl+Alt+A]</b> Menús inteligentes &nbsp;|&nbsp; <b>[Ctrl+Alt+L]</b> Cambiar Lenguaje</div>"
+            "<div>• <b>[Ctrl+Alt+T]</b> Modo Tracking &nbsp;|&nbsp; <b>[Ctrl+Alt+M]</b> Colapsar monitor</div>"
             "<div>• <b>[Ctrl+Alt+S]</b> Sonido &nbsp;|&nbsp; <b>[Ctrl+Alt+F]</b> FreeLook &nbsp;|&nbsp; <b>[Ctrl+Alt+G]</b> Gaming</div>"
-            "<div>• <b>[P]</b> Pausa Lectura &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
+            "<div>• <b>[Ctrl+Alt+P]</b> Pausa Lectura &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
             "</div>"
         )
         guide_layout.addWidget(guide_content)
@@ -539,9 +539,9 @@ class DebugWidget(QWidget):
         self.btn_link_file.clicked.connect(self._on_link_file_clicked)
         link_adaptive_layout.addWidget(self.btn_link_file)
 
-        self.btn_toggle_adaptive = QPushButton("Menús inteligentes: ON [A]", self)
+        self.btn_toggle_adaptive = QPushButton("Menús inteligentes: ON [Ctrl+Alt+A]", self)
         self.btn_toggle_adaptive.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.btn_toggle_adaptive.setToolTip("Alternar menús contextuales adaptativos según AST (Atajo: A)")
+        self.btn_toggle_adaptive.setToolTip("Alternar menús contextuales adaptativos según AST (Atajo: Ctrl+Alt+A)")
         self.btn_toggle_adaptive.clicked.connect(self.toggle_adaptive_ast)
         link_adaptive_layout.addWidget(self.btn_toggle_adaptive)
 
@@ -933,7 +933,7 @@ class DebugWidget(QWidget):
         if not hasattr(self, "btn_toggle_adaptive"):
             return
         state_str = "ON" if self.adaptive_ast_enabled else "OFF"
-        self.btn_toggle_adaptive.setText(f"AST: {state_str} [A]")
+        self.btn_toggle_adaptive.setText(f"AST: {state_str} [Ctrl+Alt+A]")
         if self.adaptive_ast_enabled:
             self.btn_toggle_adaptive.setStyleSheet("""
                 QPushButton {

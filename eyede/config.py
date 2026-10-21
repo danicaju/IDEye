@@ -168,6 +168,7 @@ MACRO_BLOCKS: List[Dict[str, Any]] = [
 
 # Visual feedback duration for click highlight (seconds)
 CLICK_FLASH_DURATION_SEC: float = 0.40
+EXIT_DOUBLE_CLICK_SEC: float = 1.50
 
 # ==============================================================================
 # Visual Theme & Colors (BGR for OpenCV)

@@ -35,6 +35,10 @@ HOTKEY_ACTIONS = {
     "<ctrl>+<alt>+f": "_on_sniper_toggle_anywhere",
     "<ctrl>+<alt>+g": "_on_gaming_toggle_anywhere",
     "<ctrl>+<alt>+m": "_on_monitor_toggle_anywhere",
+    "<ctrl>+<alt>+a": "_on_adaptive_ast_toggle_anywhere",
+    "<ctrl>+<alt>+t": "_on_tracking_mode_cycle_anywhere",
+    "<ctrl>+<alt>+c": "_on_center_calibration_anywhere",
+    "<ctrl>+<alt>+p": "_on_pause_toggle_anywhere",
     "<ctrl>+<shift>+m": "_on_screen_cycle",
 }
 
@@ -60,6 +64,10 @@ class GlobalHotkeyManager(QObject):
     monitor_toggle_requested = pyqtSignal()
     monitor_toggle_anywhere_requested = pyqtSignal()
     screen_cycle_requested = pyqtSignal()
+    adaptive_ast_toggle_requested = pyqtSignal()
+    tracking_mode_cycle_requested = pyqtSignal()
+    center_calibration_requested = pyqtSignal()
+    pause_toggle_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -89,7 +97,7 @@ class GlobalHotkeyManager(QObject):
                 self._listener.daemon = True
                 self._listener.start()
                 self._is_running = True
-                print("[HotkeyManager] Global hotkeys active (Ctrl+Alt+Q / F12: Salida Emergencia | Ctrl+Alt+R: Reset Calibración | V/K mirando al botón de modo o Ctrl+Alt+V/K).")
+                print("[HotkeyManager] Global hotkeys active (Ctrl+Alt+Q/F12: Salida | Ctrl+Alt+R: Reset | Ctrl+Alt+A/T/C/P: AST, Tracking, Centro, Pausa | Ctrl+Alt+V/K/S/F/G/M: modos y paneles).")
                 return True
             except Exception as e:
                 print(f"[HotkeyManager] Warning: Failed to start global hotkey listener: {e}")
@@ -171,3 +179,19 @@ class GlobalHotkeyManager(QObject):
     def _on_screen_cycle(self) -> None:
         """Callback for Ctrl+Shift+M multi-monitor handover."""
         self.screen_cycle_requested.emit()
+
+    def _on_adaptive_ast_toggle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+A adaptive AST menus."""
+        self.adaptive_ast_toggle_requested.emit()
+
+    def _on_tracking_mode_cycle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+T tracking-mode cycling."""
+        self.tracking_mode_cycle_requested.emit()
+
+    def _on_center_calibration_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+C center recalibration."""
+        self.center_calibration_requested.emit()
+
+    def _on_pause_toggle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+P pause/reading mode."""
+        self.pause_toggle_requested.emit()

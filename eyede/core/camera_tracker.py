@@ -381,6 +381,11 @@ class CameraTracker(QThread):
             sleep_time = max(0.001, target_delay - elapsed)
             time.sleep(sleep_time)
 
+    def get_latest_landmarks(self) -> Optional[Any]:
+        """Returns the most recent MediaPipe landmarks under the tracker lock."""
+        with self._lock:
+            return self._latest_landmarks
+
     def read_frame(self) -> Tuple[bool, Optional[np.ndarray], Optional[Any]]:
         """
         Reads one frame and processes FaceMesh landmarks.

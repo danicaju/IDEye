@@ -50,6 +50,11 @@ class TestHelpContent(unittest.TestCase):
             self.assertFalse(_has_emoji(name), f"Shortcut name contains emoji: {name!r}")
             self.assertFalse(_has_emoji(desc), f"Shortcut desc contains emoji: {desc!r}")
 
+    def test_help_shortcuts_are_global_bindings(self):
+        """Every shortcut advertised in the help modal must be a global Ctrl binding."""
+        for key, name, _ in HELP_SHORTCUTS:
+            self.assertTrue(key.startswith("[Ctrl+"), f"{name} is not a global Ctrl shortcut: {key}")
+
 
 class TestHeaderHelpButtonLayout(unittest.TestCase):
     def setUp(self):

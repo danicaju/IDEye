@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-421%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-422%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -262,7 +262,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Diccionario T9/palabras comunes en español
 │       └── icons/ # Suite de iconos SVG/Lucide neón de alta definición
-└── tests/ # 421 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
+└── tests/ # 422 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
     ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
     ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
     ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
@@ -294,11 +294,11 @@ pytest -q
 ```
 
 ```text
-421 pruebas superadas, 57 subtests, 13.97s
+422 pruebas superadas, 57 subtests, 14.37s
 ```
 
 > [!NOTE]
-> Todos los 421 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 422 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 

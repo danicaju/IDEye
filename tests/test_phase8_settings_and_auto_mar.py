@@ -88,6 +88,23 @@ class TestAutoMarMath(unittest.TestCase):
         self.assertTrue(0.25 <= threshold <= 0.70)
 
 
+class TestExitConfirmationInEveryMode(unittest.TestCase):
+    def test_header_exit_works_in_terminal_mode(self):
+        from eyede.ui.overlay_window import OverlayWindow
+
+        overlay = OverlayWindow(start_in_mode_selector=False)
+        overlay.mode_manager.set_mode("terminal", emit=False)
+        overlay._on_context_mode_changed("terminal", "Terminal", "#A855F7")
+        overlay.resize(1280, 720)
+        overlay._update_header_exit_rect()
+        rect = overlay.header_exit_rect
+        overlay.on_gaze_updated(rect.center().x() / overlay.width(), rect.center().y() / overlay.height())
+        overlay.on_gesture_triggered("MOUTH_CLICK")
+        self.assertEqual(overlay.current_node_id, "EXIT_CONFIRM")
+        self.assertIn("EXIT_CONFIRM", overlay.menu_tree)
+        overlay.close()
+
+
 class TestLanguageAutoDetectRegression(unittest.TestCase):
     def test_lang_auto_uses_context_reader_api(self):
         from eyede.actions.menu_trees import MenuAction

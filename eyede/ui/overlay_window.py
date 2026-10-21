@@ -2477,6 +2477,17 @@ class OverlayWindow(QWidget):
                 sticky=False,
             )
 
+        # EXIT_CONFIRM must exist in every mode, not only in the coding tree.
+        if "EXIT_CONFIRM" not in self.menu_tree:
+            self.menu_tree["EXIT_CONFIRM"] = MenuNode(
+                id="EXIT_CONFIRM",
+                title="CONFIRMAR SALIDA",
+                breadcrumb_label="SALIR",
+                items=populate_exit_confirm_items(parent_id="ROOT"),
+                parent_id="ROOT",
+                sticky=False,
+            )
+
         # Rebuild the hub every time because the "current mode" marker moves.
         self.menu_tree["MODE_SELECT"] = self._build_mode_select_node()
 

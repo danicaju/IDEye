@@ -18,19 +18,24 @@ except ImportError:  # pragma: no cover
     import config  # type: ignore
 
 
+# Captured once at import so runtime mutations of config.MAR_THRESHOLD never
+# contaminate "factory reset" defaults.
+_FACTORY_DEFAULTS: Dict[str, Any] = {
+    "tracking_mode": str(getattr(config, "DEFAULT_TRACKING_MODE", "HEAD_PRIMARY")),
+    "sensitivity_x": float(getattr(config, "DEFAULT_HEAD_SENSITIVITY_X", 2.6)),
+    "sensitivity_y": float(getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 3.0)),
+    "one_euro_level": 6,
+    "mar_threshold": float(getattr(config, "MAR_THRESHOLD", 0.45)),
+    "sound_enabled": bool(getattr(config, "SOUND_ENABLED", True)),
+    "auto_switch_enabled": bool(getattr(config, "CONTEXT_AUTO_SWITCH_ENABLED", False)),
+    "adaptive_ast_enabled": bool(getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)),
+    "active_language": "python",
+    "debug_panel_collapsed": False,
+}
+
+
 def _defaults() -> Dict[str, Any]:
-    return {
-        "tracking_mode": str(getattr(config, "DEFAULT_TRACKING_MODE", "HEAD_PRIMARY")),
-        "sensitivity_x": float(getattr(config, "DEFAULT_HEAD_SENSITIVITY_X", 2.6)),
-        "sensitivity_y": float(getattr(config, "DEFAULT_HEAD_SENSITIVITY_Y", 3.0)),
-        "one_euro_level": 6,
-        "mar_threshold": float(getattr(config, "MAR_THRESHOLD", 0.45)),
-        "sound_enabled": bool(getattr(config, "SOUND_ENABLED", True)),
-        "auto_switch_enabled": bool(getattr(config, "CONTEXT_AUTO_SWITCH_ENABLED", False)),
-        "adaptive_ast_enabled": bool(getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)),
-        "active_language": "python",
-        "debug_panel_collapsed": False,
-    }
+    return dict(_FACTORY_DEFAULTS)
 
 
 def default_settings_path() -> str:

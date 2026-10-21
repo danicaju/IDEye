@@ -21,7 +21,7 @@ import sys
 import time
 import numpy as np
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QRectF, QPointF
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QRectF, QPointF
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush, QKeyEvent
 from PyQt6.QtWidgets import QWidget, QApplication
 
@@ -111,6 +111,21 @@ class CalibrationUI(QWidget):
         self._sample_timer = QTimer(self)
         self._sample_timer.timeout.connect(self._collect_sample_tick)
 
+        # Owned completion timers: stopped automatically on close, preventing
+        # callbacks on a closed widget or double-completion races.
+        self._completion_timer = QTimer(self)
+        self._completion_timer.setSingleShot(True)
+        self._completion_timer.timeout.connect(self._complete_calibration)
+        self._finish_timer = QTimer(self)
+        self._finish_timer.setSingleShot(True)
+        self._finish_timer.timeout.connect(self._on_finish_timeout)
+        self._mar_timeout_timer = QTimer(self)
+        self._mar_timeout_timer.setSingleShot(True)
+        self._mar_timeout_timer.timeout.connect(self._on_mar_timeout)
+        self._finish_success: bool = True
+        self._completion_started: bool = False
+        self._auto_mar_done: bool = False
+
         # UI configuration
         self.setWindowTitle("IDEye - Calibración Visual de 5 Puntos")
         app_icon = IconManager.instance().get_app_icon()
@@ -146,9 +161,10 @@ class CalibrationUI(QWidget):
         ):
             self.start_sampling()
 
+    @pyqtSlot(float)
     def on_mar_updated(self, mar: float) -> None:
         """Step 6 biometric MAR sampling from the tracker's frame signal."""
-        if self._calibration_step != 6:
+        if self._calibration_step != 6 or self.is_completed or self._finished_emitted:
             return
         try:
             value = float(mar)
@@ -202,10 +218,37 @@ class CalibrationUI(QWidget):
         self._mouth_open = False
         self._current_peak = 0.0
         self._last_mar = 0.0
+        self._completion_started = False
+        self._auto_mar_done = False
+        self._completion_timer.stop()
+        self._finish_timer.stop()
+        self._mar_timeout_timer.start(6000)
         self.status_message = "Mantén la boca cerrada y relajada..."
         self.update()
 
+    def _on_mar_timeout(self) -> None:
+        """Prevents an indefinite Step 6 if the camera stops sending MAR frames."""
+        if self._finished_emitted or self._completion_started:
+            return
+        if self._mar_phase == "rest":
+            if len(self._rest_mar_samples) >= 5:
+                self._rest_mar = float(np.median(self._rest_mar_samples))
+                self._mar_phase = "peaks"
+                self.status_message = "Abre la boca cómodamente 3 veces como para hacer clic (1/3)"
+                self._mar_timeout_timer.start(6000)
+                self.update()
+            else:
+                self._skip_auto_mar()
+        elif self._mar_phase == "peaks" and self._peak_mar_samples:
+            self._finish_auto_mar_calibration()
+        else:
+            self._skip_auto_mar()
+
     def _finish_auto_mar_calibration(self) -> None:
+        if self._auto_mar_done or self._completion_started:
+            return
+        self._auto_mar_done = True
+        self._mar_timeout_timer.stop()
         threshold = compute_auto_mar_threshold(
             self._rest_mar_samples, self._peak_mar_samples
         )
@@ -219,9 +262,13 @@ class CalibrationUI(QWidget):
         self.status_message = f"Umbral MAR personalizado: {threshold:.2f}. Guardando..."
         self.update()
         self._mar_phase = "done"
-        QTimer.singleShot(500, self._complete_calibration)
+        self._completion_timer.start(500)
 
     def _skip_auto_mar(self) -> None:
+        if self._completion_started or self._finished_emitted:
+            return
+        self._completion_timer.stop()
+        self._mar_timeout_timer.stop()
         self._auto_mar_threshold = None
         self._mar_phase = "done"
         self._calibration_step = 6
@@ -316,11 +363,19 @@ class CalibrationUI(QWidget):
 
     def _complete_calibration(self) -> None:
         """Solves 5-point calibration model, saves JSON profile, and closes."""
+        if self._completion_started or self._finished_emitted:
+            return
+        self._completion_started = True
+        self._completion_timer.stop()
         self.is_completed = True
         self.update()
 
-        # Fit model
-        success = self.gaze_estimator.calibrate_5_points(self.collected_data)
+        # Fit model. A malformed landmark/profile must never abort the Qt event loop.
+        try:
+            success = self.gaze_estimator.calibrate_5_points(self.collected_data)
+        except Exception as exc:
+            print(f"[CalibrationUI] Warning: calibration fit failed: {exc}")
+            success = False
         if success:
             saved = self.gaze_estimator.save_calibration_profile(self.profile_path)
             self._persist_mar_threshold()
@@ -329,17 +384,25 @@ class CalibrationUI(QWidget):
             else:
                 self.status_message = "Calibración activa (no se pudo escribir el archivo JSON)."
             self.update()
-            QTimer.singleShot(700, lambda: self._finish_and_emit(True))
+            self._finish_success = True
+            self._finish_timer.start(700)
         else:
             self.status_message = "Calibración fallida: datos degenerados. Usando perfil previo o por defecto."
             self.update()
-            QTimer.singleShot(1200, lambda: self._finish_and_emit(False))
+            self._finish_success = False
+            self._finish_timer.start(1200)
+
+    def _on_finish_timeout(self) -> None:
+        self._finish_and_emit(self._finish_success)
 
     def _finish_and_emit(self, succeeded: bool) -> None:
         if self._finished_emitted:
             return
         self._finished_emitted = True
         self.is_completed = True
+        self._completion_timer.stop()
+        self._finish_timer.stop()
+        self._mar_timeout_timer.stop()
         self._anim_timer.stop()
         self._sample_timer.stop()
         self.calibration_finished.emit(succeeded)
@@ -348,7 +411,8 @@ class CalibrationUI(QWidget):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Keyboard shortcuts: Space samples/skips, Esc cancels or skips Step 6."""
         if self._calibration_step == 6 and event.key() in (Qt.Key.Key_Space, Qt.Key.Key_Escape):
-            self._skip_auto_mar()
+            if not self._completion_started:
+                self._skip_auto_mar()
             return
         if event.key() == Qt.Key.Key_Space:
             if not self.is_sampling and not self.is_completed:
@@ -362,6 +426,9 @@ class CalibrationUI(QWidget):
         """Ensures animation timers stop and signals calibration termination on window close."""
         self._anim_timer.stop()
         self._sample_timer.stop()
+        self._completion_timer.stop()
+        self._finish_timer.stop()
+        self._mar_timeout_timer.stop()
         if not self._finished_emitted:
             self._finished_emitted = True
             self.calibration_finished.emit(False)

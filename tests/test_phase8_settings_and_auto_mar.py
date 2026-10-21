@@ -105,6 +105,35 @@ class TestStep6AndMarSlider(unittest.TestCase):
         self.assertAlmostEqual(captured[0], 0.356, places=3)
         ui.close()
 
+    def test_step6_skip_cancels_pending_completion(self):
+        ui = CalibrationUI(gaze_estimator=GazeEstimator(), auto_mar_enabled=True)
+        ui.collected_data = [
+            {"id": str(i), "name": str(i), "screen": (0.5, 0.5), "raw": (0.5, 0.5)}
+            for i in range(5)
+        ]
+        finished = []
+        ui.calibration_finished.connect(lambda ok: finished.append(ok))
+        ui._start_auto_mar_calibration()
+        for _ in range(45):
+            ui.on_mar_updated(0.05)
+        for peak in (0.55, 0.58, 0.56):
+            ui.on_mar_updated(peak)
+            ui.on_mar_updated(0.05)
+        ui._skip_auto_mar()
+        for _ in range(30):
+            _APP.processEvents()
+        self.assertLessEqual(len(finished), 1)
+        ui.close()
+
+    def test_close_stops_completion_timers(self):
+        ui = CalibrationUI(gaze_estimator=GazeEstimator(), auto_mar_enabled=True)
+        ui._start_auto_mar_calibration()
+        ui._completion_timer.start(500)
+        ui._finish_timer.start(700)
+        ui.close()
+        self.assertFalse(ui._completion_timer.isActive())
+        self.assertFalse(ui._finish_timer.isActive())
+
     def test_debug_mar_slider_updates_threshold_and_signal(self):
         widget = DebugWidget()
         received = []

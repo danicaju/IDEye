@@ -69,7 +69,7 @@ import threading
 
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QBrush
-from PyQt6.QtCore import Qt, QObject, QTimer
+from PyQt6.QtCore import Qt, QObject, QTimer, pyqtSlot
 
 
 class EyeDEMainApp:
@@ -1102,6 +1102,7 @@ class EyeDEApplication(QObject):
 
         self.calibration_ui.showFullScreen()
 
+    @pyqtSlot(object, float)
     def _on_calibration_frame(self, _frame: Any, mar: float) -> None:
         if self.calibration_ui is not None:
             self.calibration_ui.on_mar_updated(mar)

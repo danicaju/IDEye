@@ -100,6 +100,14 @@ CELL_MAGNETISM_ENABLED: bool = True
 CELL_MAGNETISM_STRENGTH: float = 0.15
 CELL_MAGNETISM_DWELL: float = 0.15
 
+# Phase 7.7: FreeLook full-screen overscan and taskbar magnetic rail
+OVERSCAN_MARGIN_X: float = 0.04
+OVERSCAN_MARGIN_Y_TOP: float = 0.04
+OVERSCAN_MARGIN_Y_BOTTOM: float = 0.07
+TASKBAR_RAIL_HEIGHT: int = 52
+TASKBAR_RAIL_TARGET_Y: int = 24
+TASKBAR_RAIL_PULL: float = 0.60
+
 # Smoothing factor for Exponential Moving Average (EMA)
 # Higher = more responsive, lower = smoother (less jitter)
 EMA_ALPHA: float = 0.22

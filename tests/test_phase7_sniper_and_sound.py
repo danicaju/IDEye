@@ -244,9 +244,8 @@ class TestSniperOverlayCoordinates(unittest.TestCase):
         self.overlay.on_gaze_updated(0.5, 0.5)
         self.overlay.mouse_controller.move_direct.assert_called()
         screen_w, screen_h = self.overlay._get_screen_size()
-        self.overlay.mouse_controller.move_direct.assert_called_with(
-            int(0.5 * screen_w), int(0.5 * screen_h)
-        )
+        expected = self.overlay._freelook_screen_coords(0.5, 0.5, screen_w, screen_h)
+        self.overlay.mouse_controller.move_direct.assert_called_with(*expected)
 
     def test_jaw_lock_freezes_cursor_before_click(self):
         self.overlay.toggle_sniper_mode()
@@ -286,6 +285,23 @@ class TestSniperOverlayCoordinates(unittest.TestCase):
         self.overlay.mouse_controller.mouse_down.assert_called_with("right")
         self.overlay.on_gesture_triggered("WINK_RIGHT")
         self.overlay.mouse_controller.mouse_up.assert_called_with("right")
+
+    def test_freelook_bottom_reaches_taskbar_below_available_geometry(self):
+        # Simulated monitor: geometry 1920x1080, availableGeometry 1920x1032.
+        x, y = self.overlay._freelook_screen_coords(0.5, 0.93, 1920, 1080)
+        self.assertGreater(y, 1032, "FreeLook must cross the availableGeometry cutoff")
+        self.assertGreaterEqual(y, 1050, "FreeLook must reach the Windows taskbar rail")
+        self.assertGreaterEqual(x, 0)
+        self.assertLess(x, 1920)
+
+    def test_freelook_overscan_reaches_horizontal_edges(self):
+        left, _ = self.overlay._freelook_screen_coords(0.04, 0.5, 1920, 1080)
+        right, _ = self.overlay._freelook_screen_coords(0.96, 0.5, 1920, 1080)
+        top, y_top = self.overlay._freelook_screen_coords(0.5, 0.04, 1920, 1080)
+        self.assertEqual(left, 0)
+        self.assertEqual(right, 1919)
+        self.assertEqual(y_top, 0)
+        self.assertEqual(top, 960)
 
     def test_sound_toggle_updates_state(self):
         fake = MagicMock()

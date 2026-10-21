@@ -1523,6 +1523,8 @@ class OverlayWindow(QWidget):
         self._jaw_lock_pos = None
         self._mouth_active = False
         self._hold_started = False
+        sw, sh = self._get_screen_size()
+        self._freelook_last_pos = (sw // 2, sh // 2)
         self.navigate_to("ROOT")
         self.last_action_desc = "FreeLook"
         self._play_sound("mode")
@@ -1600,10 +1602,38 @@ class OverlayWindow(QWidget):
     def _freelook_prethreshold(self) -> float:
         return max(0.01, float(getattr(self, "mar_threshold", 0.45)) * 0.55)
 
+    def _freelook_screen_coords(
+        self, gx: float, gy: float, screen_w: int, screen_h: int
+    ) -> Tuple[int, int]:
+        """Maps normalized gaze to the full physical screen with edge overscan.
+
+        The grid still lives inside availableGeometry; only FreeLook uses the
+        full geometry so the taskbar, tray and maximized-window close button
+        remain reachable.
+        """
+        margin_x = max(0.0, min(0.20, float(getattr(config, "OVERSCAN_MARGIN_X", 0.04))))
+        margin_top = max(0.0, min(0.20, float(getattr(config, "OVERSCAN_MARGIN_Y_TOP", 0.04))))
+        margin_bottom = max(0.0, min(0.25, float(getattr(config, "OVERSCAN_MARGIN_Y_BOTTOM", 0.07))))
+        span_x = max(1e-6, 1.0 - 2.0 * margin_x)
+        span_y = max(1e-6, 1.0 - margin_top - margin_bottom)
+        nx = max(0.0, min(1.0, (float(gx) - margin_x) / span_x))
+        ny = max(0.0, min(1.0, (float(gy) - margin_top) / span_y))
+        x = int(round(nx * max(0, screen_w - 1)))
+        y = int(round(ny * max(0, screen_h - 1)))
+
+        rail_height = max(1, int(getattr(config, "TASKBAR_RAIL_HEIGHT", 52)))
+        if y >= screen_h - rail_height:
+            target_y = max(0, screen_h - int(getattr(config, "TASKBAR_RAIL_TARGET_Y", 24)))
+            pull = max(0.0, min(1.0, float(getattr(config, "TASKBAR_RAIL_PULL", 0.60))))
+            y = int(round(y + (target_y - y) * pull))
+        return (
+            max(0, min(screen_w - 1, x)),
+            max(0, min(screen_h - 1, y)),
+        )
+
     def _handle_freelook_gaze(self, gx: float, gy: float) -> None:
         screen_w, screen_h = self._get_screen_size()
-        x = int(gx * screen_w)
-        y = int(gy * screen_h)
+        x, y = self._freelook_screen_coords(gx, gy, screen_w, screen_h)
         pre = self._freelook_prethreshold()
 
         if self.current_mar >= pre:

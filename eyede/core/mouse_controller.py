@@ -5,6 +5,8 @@ Thin wrapper around pynput to inject mouse events from the gaze pipeline.
 
 from __future__ import annotations
 
+import ctypes
+import sys
 import time
 from typing import Optional
 
@@ -14,6 +16,12 @@ except Exception:  # pragma: no cover - import fallback for stub environments
     Button = object
     Controller = object
 
+try:
+    from pynput.keyboard import Controller as KeyboardController, KeyCode
+except Exception:  # pragma: no cover
+    KeyboardController = None
+    KeyCode = None
+
 
 class OSMouseController:
     """Injects mouse movement and clicks at absolute screen coordinates."""
@@ -22,10 +30,24 @@ class OSMouseController:
 
     def __init__(self, controller: Optional[object] = None) -> None:
         self._controller = controller if controller is not None else Controller()
+        try:
+            self._keyboard = KeyboardController() if KeyboardController is not None else None
+        except Exception:
+            self._keyboard = None
 
     def move_to(self, x: int, y: int) -> None:
         """Move the cursor to absolute screen coordinates."""
         self._controller.position = (int(x), int(y))
+
+    def move_direct(self, x: int, y: int) -> None:
+        """Ultra-low-latency cursor move on Windows (FreeLook)."""
+        if sys.platform == "win32":
+            try:
+                ctypes.windll.user32.SetCursorPos(int(x), int(y))
+                return
+            except Exception:
+                pass
+        self.move_to(x, y)
 
     def move_only(self, x: int, y: int) -> None:
         """Alias for move_to; used when no click is required."""
@@ -54,3 +76,21 @@ class OSMouseController:
         self.move_to(x, y)
         time.sleep(self._MOVE_CLICK_PAUSE)
         self._controller.scroll(0, int(dy))
+
+    def mouse_down(self, button: str = "left") -> None:
+        self._controller.press(Button.left if button == "left" else Button.right)
+
+    def mouse_up(self, button: str = "left") -> None:
+        self._controller.release(Button.left if button == "left" else Button.right)
+
+    def key_down(self, char: str) -> None:
+        if self._keyboard is not None:
+            self._keyboard.press(char)
+
+    def key_up(self, char: str) -> None:
+        if self._keyboard is not None:
+            self._keyboard.release(char)
+
+    def tap_key(self, char: str) -> None:
+        if self._keyboard is not None:
+            self._keyboard.tap(char)

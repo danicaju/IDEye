@@ -128,6 +128,10 @@ class CodeInjector:
         self._active_modifiers = set()
         self._mod_lock = threading.Lock()
 
+        # Phase 7.5: prefix tracker for Smart Prefix Deduplication.
+        self._current_word_prefix: str = ""
+        self._prefix_lock = threading.Lock()
+
         # Background worker thread & FIFO task queue
         self._task_queue: queue.Queue = queue.Queue()
         self._stop_event = threading.Event()
@@ -225,6 +229,69 @@ class CodeInjector:
                 except Exception:
                     pass
 
+    # ------------------------------------------------------------------ #
+    # Phase 7.5: Smart Prefix Deduplication
+    # ------------------------------------------------------------------ #
+    def set_current_word_prefix(self, prefix: str) -> None:
+        """Allows the overlay/ContextReader to seed the physical-typing prefix."""
+        with self._prefix_lock:
+            self._current_word_prefix = (prefix or "")[-64:]
+
+    def prepare_insert_text(self, text: str) -> Tuple[str, int]:
+        """Returns (text_to_insert, backspaces_needed) and advances the prefix tracker.
+
+        If the user already typed "h" and then selects "hola", this returns
+        ("ola", 0). If the selected word changes case ("Hola"), it returns
+        ("Hola", 1) so the injector can erase the stale prefix first.
+        """
+        if not text:
+            return "", 0
+        with self._prefix_lock:
+            prefix = self._current_word_prefix
+            prepared = text
+            backspaces = 0
+            stripped = text.strip()
+            if prefix and stripped:
+                if stripped.lower().startswith(prefix.lower()):
+                    if len(stripped) > len(prefix):
+                        if text[: len(prefix)] == prefix:
+                            prepared = text[len(prefix):]
+                        else:
+                            backspaces = len(prefix)
+                    elif len(text) > len(stripped):
+                        # Exact word plus trailing space/punctuation: inject only the separator.
+                        if text[: len(prefix)] == prefix:
+                            prepared = text[len(prefix):]
+                        else:
+                            backspaces = len(prefix)
+                    else:
+                        # Selecting the same word that is already typed is a no-op.
+                        prepared = ""
+            self._update_prefix_after_insert(text)
+            return prepared, backspaces
+
+    def _update_prefix_after_insert(self, text: str) -> None:
+        if not text:
+            return
+        if any(ch.isspace() for ch in text) or not all(
+            ch.isalnum() or ch == "_" for ch in text
+        ):
+            self._current_word_prefix = ""
+            return
+        if len(text) == 1:
+            self._current_word_prefix = (self._current_word_prefix + text)[-64:]
+        else:
+            self._current_word_prefix = text[-64:]
+
+    def _track_key_effect(self, key_name: str) -> None:
+        """Updates the prefix after a cursor/editing key."""
+        norm = key_name.strip().upper().replace("_", "+")
+        with self._prefix_lock:
+            if norm in {"BACKSPACE"}:
+                self._current_word_prefix = self._current_word_prefix[:-1]
+            else:
+                self._current_word_prefix = ""
+
     def insert_snippet(
         self,
         snippet: str,
@@ -258,16 +325,32 @@ class CodeInjector:
         is_async = self.async_mode if async_exec is None else async_exec
         delay = self.paste_delay if paste_delay is None else paste_delay
 
+        prepared, backspaces = self.prepare_insert_text(snippet)
+        if not prepared and backspaces == 0:
+            return True
+
         if is_async:
             self._task_queue.put((
                 self._do_insert_snippet,
-                (snippet, cursor_offset_left, cursor_offset_up, restore_clipboard, delay),
+                (
+                    prepared,
+                    cursor_offset_left,
+                    cursor_offset_up,
+                    restore_clipboard,
+                    delay,
+                    backspaces,
+                ),
                 {},
             ))
             return True
         else:
             return self._do_insert_snippet(
-                snippet, cursor_offset_left, cursor_offset_up, restore_clipboard, delay
+                prepared,
+                cursor_offset_left,
+                cursor_offset_up,
+                restore_clipboard,
+                delay,
+                backspaces,
             )
 
     def _do_insert_snippet(
@@ -277,6 +360,7 @@ class CodeInjector:
         cursor_offset_up: int,
         restore_clipboard: bool,
         delay: float,
+        backspaces: int = 0,
     ) -> bool:
         """Synchronous implementation of snippet insertion with guaranteed clipboard restoration."""
         # 1. Read and save existing clipboard
@@ -302,6 +386,13 @@ class CodeInjector:
 
         success = False
         try:
+            # 2b. Erase a stale prefix when the selected word changes case.
+            if backspaces > 0:
+                backspace_key = Key.backspace if Key is not None else "BACKSPACE"
+                for _ in range(backspaces):
+                    self.keyboard.tap(backspace_key)
+                time.sleep(0.01)
+
             # 3. Send native paste shortcut (Ctrl+V / Cmd+V) with guaranteed modifier release
             with self.hold_modifiers(self.primary_modifier):
                 self.keyboard.tap('v')
@@ -460,6 +551,7 @@ class CodeInjector:
                 logger.warning(f"Unrecognized key action: {key_name}")
                 return False
 
+            self._track_key_effect(key_name)
             return True
         except Exception as e:
             logger.error(f"Error sending key '{key_name}': {e}", exc_info=True)
@@ -493,13 +585,19 @@ class CodeInjector:
             if atype == "SNIPPET" and getattr(action, "snippet", None):
                 offset_left = getattr(action, "cursor_offset_left", 0)
                 offset_up = getattr(action, "cursor_offset_up", 0)
-                sent = ws.send_insert_snippet(
-                    snippet=action.snippet,
-                    cursor_offset_left=offset_left,
-                    cursor_offset_up=offset_up,
-                    tabstops=True,
-                )
-                if sent:
+                prepared, backspaces = self.prepare_insert_text(action.snippet)
+                for _ in range(backspaces):
+                    ws.send_execute_command("deleteLeft")
+                if prepared:
+                    sent = ws.send_insert_snippet(
+                        snippet=prepared,
+                        cursor_offset_left=offset_left,
+                        cursor_offset_up=offset_up,
+                        tabstops=True,
+                    )
+                    if sent:
+                        return True
+                elif backspaces:
                     return True
 
             elif atype == "KEY" and getattr(action, "key_name", None):
@@ -528,6 +626,7 @@ class CodeInjector:
                     args = [{"text": "\n"}] if kname == "ENTER" else ([{"text": " "}] if kname == "SPACE" else None)
                     sent = ws.send_execute_command(cmd, args)
                     if sent:
+                        self._track_key_effect(kname)
                         return True
 
         # Fallback to OS-level virtual input

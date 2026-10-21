@@ -7,6 +7,7 @@ The sniper lens tests will be added by a follow-up agent. This file covers:
 
 import os
 import sys
+import time
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -18,6 +19,7 @@ if _ROOT_DIR not in sys.path:
 
 from eyede.core.sound_feedback import SoundFeedback, SoundFeedbackManager
 from eyede.core.mouse_controller import OSMouseController
+from eyede.actions.code_injector import CodeInjector, DummyKeyboard, DummyClipboard
 from eyede.actions.menu_trees import validate_menu_tree
 from eyede.core.hotkey_manager import HOTKEY_ACTIONS
 from eyede.modes.mode_manager import ModeManager
@@ -133,7 +135,7 @@ class TestSniperMouseMode(unittest.TestCase):
     def test_mode_metadata_and_root_structure(self):
         mode = SniperMouseMode()
         self.assertEqual(mode.mode_id, "sniper")
-        self.assertEqual(mode.display_name, "FRANCOTIRADOR (RATÓN)")
+        self.assertEqual(mode.display_name, "FREELOOK (RATÓN)")
         self.assertEqual(mode.theme_color, "#F43F5E")
 
         root = mode.get_root_menu()
@@ -166,15 +168,57 @@ class TestSniperMouseMode(unittest.TestCase):
         self.assertIsInstance(manager.get_mode("sniper"), SniperMouseMode)
         manager.set_mode("sniper", emit=False)
         self.assertEqual(manager.current_mode_id, "sniper")
-        self.assertEqual(manager.current_mode.display_name, "FRANCOTIRADOR (RATÓN)")
+        self.assertEqual(manager.current_mode.display_name, "FREELOOK (RATÓN)")
 
     def test_hotkeys_include_sound_and_sniper(self):
         from pynput import keyboard
 
-        for spec in ("s", "f", "<ctrl>+<alt>+s", "<ctrl>+<alt>+f"):
+        for spec in ("s", "f", "g", "<ctrl>+<alt>+s", "<ctrl>+<alt>+f", "<ctrl>+<alt>+g"):
             with self.subTest(spec=spec):
                 self.assertIn(spec, HOTKEY_ACTIONS)
                 keyboard.HotKey.parse(spec)
+
+
+class TestSmartPrefixDeduplication(unittest.TestCase):
+    def _injector(self):
+        return CodeInjector(
+            async_mode=False,
+            keyboard_controller=DummyKeyboard(),
+            clipboard_module=DummyClipboard(),
+        )
+
+    def test_h_then_hola_injects_only_suffix(self):
+        injector = self._injector()
+        first, back1 = injector.prepare_insert_text("h")
+        second, back2 = injector.prepare_insert_text("hola ")
+        self.assertEqual(first, "h")
+        self.assertEqual(back1, 0)
+        self.assertEqual(second, "ola ")
+        self.assertEqual(back2, 0)
+        self.assertEqual(first + second, "hola ")
+
+    def test_h_then_Hola_backspaces_then_full_word(self):
+        injector = self._injector()
+        injector.prepare_insert_text("h")
+        prepared, backspaces = injector.prepare_insert_text("Hola ")
+        self.assertEqual(prepared, "Hola ")
+        self.assertEqual(backspaces, 1)
+
+    def test_backspace_and_space_update_prefix(self):
+        injector = self._injector()
+        injector.prepare_insert_text("h")
+        injector.prepare_insert_text("o")
+        injector._track_key_effect("BACKSPACE")
+        self.assertEqual(injector._current_word_prefix, "h")
+        injector._track_key_effect("SPACE")
+        self.assertEqual(injector._current_word_prefix, "")
+
+    def test_exact_word_plus_space_only_injects_separator(self):
+        injector = self._injector()
+        injector.set_current_word_prefix("hola")
+        prepared, backspaces = injector.prepare_insert_text("hola ")
+        self.assertEqual(prepared, " ")
+        self.assertEqual(backspaces, 0)
 
 
 class TestSniperOverlayCoordinates(unittest.TestCase):
@@ -194,21 +238,54 @@ class TestSniperOverlayCoordinates(unittest.TestCase):
             (320, 180),
         )
 
-    def test_two_step_click_uses_locked_sector_center(self):
+    def test_freelook_moves_real_cursor_directly(self):
         self.overlay.toggle_sniper_mode()
-        self.assertEqual(self.overlay.current_context_mode_id, "sniper")
-        self.overlay.navigate_to("ROOT")
-        self.overlay.hovered_block = 0
-        self.overlay.on_gesture_triggered("MOUTH_CLICK")
-        self.assertEqual(self.overlay._sniper_step, 2)
-        self.assertEqual(self.overlay._sniper_locked_sector, 0)
+        self.overlay.current_mar = 0.0
+        self.overlay.on_gaze_updated(0.5, 0.5)
+        self.overlay.mouse_controller.move_direct.assert_called()
+        screen_w, screen_h = self.overlay._get_screen_size()
+        self.overlay.mouse_controller.move_direct.assert_called_with(
+            int(0.5 * screen_w), int(0.5 * screen_h)
+        )
 
-        self.overlay.hovered_subcell = 4
-        self.overlay.on_gesture_triggered("MOUTH_CLICK")
-        self.assertEqual(self.overlay._sniper_step, 1)
-        sector = self.overlay._calculate_sector_rect(0, *self.overlay._get_screen_size())
-        expected = self.overlay._calculate_subcell_coords(4, sector)
-        self.overlay.mouse_controller.left_click.assert_called_once_with(*expected)
+    def test_jaw_lock_freezes_cursor_before_click(self):
+        self.overlay.toggle_sniper_mode()
+        self.overlay._freelook_last_pos = (100, 200)
+        self.overlay.mar_threshold = 0.45
+        self.overlay.current_mar = 0.30
+        self.overlay.on_gaze_updated(0.8, 0.8)
+        self.overlay.mouse_controller.move_direct.assert_not_called()
+        self.assertTrue(self.overlay._jaw_locked)
+        self.assertEqual(self.overlay._jaw_lock_pos, (100, 200))
+
+    def test_short_mouth_click_fires_at_locked_position(self):
+        self.overlay.toggle_sniper_mode()
+        self.overlay._freelook_last_pos = (300, 400)
+        self.overlay.mar_threshold = 0.45
+        self.overlay._update_freelook_mouth(0.50)
+        self.overlay._mouth_start = time.time() - 0.1
+        self.overlay._update_freelook_mouth(0.0)
+        self.overlay.mouse_controller.left_click.assert_called_once_with(300, 400)
+
+    def test_gaming_hold_mouth_walks_with_w(self):
+        self.overlay.toggle_sniper_mode()
+        self.overlay.toggle_gaming_mode()
+        self.overlay._freelook_last_pos = (300, 400)
+        self.overlay.mar_threshold = 0.45
+        self.overlay._update_freelook_mouth(0.50)
+        self.overlay._mouth_start = time.time() - 0.5
+        self.overlay._update_freelook_mouth(0.50)
+        self.overlay.mouse_controller.key_down.assert_called_with("w")
+        self.overlay._update_freelook_mouth(0.0)
+        self.overlay.mouse_controller.key_up.assert_called_with("w")
+
+    def test_gaming_right_wink_holds_right_button(self):
+        self.overlay.toggle_sniper_mode()
+        self.overlay.toggle_gaming_mode()
+        self.overlay.on_gesture_triggered("WINK_RIGHT")
+        self.overlay.mouse_controller.mouse_down.assert_called_with("right")
+        self.overlay.on_gesture_triggered("WINK_RIGHT")
+        self.overlay.mouse_controller.mouse_up.assert_called_with("right")
 
     def test_sound_toggle_updates_state(self):
         fake = MagicMock()

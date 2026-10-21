@@ -734,6 +734,8 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.sound_toggle_anywhere_requested.connect(self._on_sound_shortcut_anywhere)
         self.hotkey_manager.sniper_toggle_requested.connect(self._on_sniper_shortcut)
         self.hotkey_manager.sniper_toggle_anywhere_requested.connect(self._on_sniper_shortcut_anywhere)
+        self.hotkey_manager.gaming_toggle_requested.connect(self._on_gaming_shortcut)
+        self.hotkey_manager.gaming_toggle_anywhere_requested.connect(self._on_gaming_shortcut_anywhere)
 
         self._setup_connections()
         self._configure_geometry()
@@ -784,6 +786,16 @@ class EyeDEApplication(QObject):
     def _on_sniper_shortcut_anywhere(self) -> None:
         """Ctrl+Alt+F (or a validated plain F) toggles sniper mode."""
         self.overlay.toggle_sniper_mode()
+
+    def _on_gaming_shortcut(self) -> None:
+        """G while gazing at the header toggles the FreeLook gaming profile."""
+        if self.overlay.is_mode_shortcut_targeted():
+            self._on_gaming_shortcut_anywhere()
+
+    def _on_gaming_shortcut_anywhere(self) -> None:
+        """Ctrl+Alt+G (or a validated plain G) toggles the gaming profile."""
+        if self.overlay.current_context_mode_id == "sniper":
+            self.overlay.toggle_gaming_mode()
 
     def _setup_connections(self) -> None:
         """Connects signals between tracker, overlay, debug monitor, and lifecycle."""

@@ -31,7 +31,7 @@ class SniperMouseMode(BaseMode):
     """Precision OS mouse control using a two-step 3x3 fractal grid."""
 
     mode_id = "sniper"
-    display_name = "FRANCOTIRADOR (RATÓN)"
+    display_name = "FREELOOK (RATÓN)"
     theme_color = "#F43F5E"
 
     ACTION_LEFT = "LEFT_CLICK"
@@ -136,7 +136,7 @@ class SniperMouseMode(BaseMode):
 
         return MenuNode(
             id="ROOT",
-            title="FRANCOTIRADOR",
+            title="FREELOOK",
             breadcrumb_label="RATÓN",
             items=items,
             parent_id=None,

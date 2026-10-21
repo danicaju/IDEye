@@ -326,8 +326,8 @@ def populate_help_items(parent_id: str = "ROOT") -> List[MenuAction]:
         create_back_action(parent_id, "7"),
         MenuAction(
             id="HELP_SHORTCUTS_3",
-            label="8: [P] PAUSA | [S] SONIDO | [F] SNIPER",
-            hint="P: Pausa | S: Sonido | F: Francotirador | Ctrl+Alt+Q: Emergencia",
+            label="8: [P] PAUSA | [S] SONIDO | [F] FREELOOK",
+            hint="P: Pausa | S: Sonido | F: FreeLook | G: Gaming | Ctrl+Alt+Q: Emergencia",
             action_type="INFO",
             icon="",
         ),

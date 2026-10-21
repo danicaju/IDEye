@@ -29,8 +29,10 @@ HOTKEY_ACTIONS = {
     "<ctrl>+<alt>+k": "_on_auto_switch_anywhere",
     "s": "_on_sound_toggle",
     "f": "_on_sniper_toggle",
+    "g": "_on_gaming_toggle",
     "<ctrl>+<alt>+s": "_on_sound_toggle_anywhere",
     "<ctrl>+<alt>+f": "_on_sniper_toggle_anywhere",
+    "<ctrl>+<alt>+g": "_on_gaming_toggle_anywhere",
 }
 
 
@@ -50,6 +52,8 @@ class GlobalHotkeyManager(QObject):
     sniper_toggle_requested = pyqtSignal()
     sound_toggle_anywhere_requested = pyqtSignal()
     sniper_toggle_anywhere_requested = pyqtSignal()
+    gaming_toggle_requested = pyqtSignal()
+    gaming_toggle_anywhere_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -141,3 +145,11 @@ class GlobalHotkeyManager(QObject):
     def _on_sniper_toggle_anywhere(self) -> None:
         """Callback for Ctrl+Alt+F sniper toggle from any window."""
         self.sniper_toggle_anywhere_requested.emit()
+
+    def _on_gaming_toggle(self) -> None:
+        """Callback for G gaming-profile toggle (gated by gaze in the app)."""
+        self.gaming_toggle_requested.emit()
+
+    def _on_gaming_toggle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+G gaming-profile toggle from any window."""
+        self.gaming_toggle_anywhere_requested.emit()

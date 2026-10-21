@@ -130,7 +130,7 @@ MODE_SHORT_LABELS = {
     "terminal": "TERMINAL",
     "data_math": "DATOS",
     "navigation": "NAV",
-    "sniper": "RATÓN",
+    "sniper": "FREELOOK",
 }
 
 # (mode_id, display label, hint, icon) in the order shown in the mode hub.
@@ -140,7 +140,7 @@ MODE_SELECTOR_ENTRIES = (
     ("terminal", "Terminal", "Git, consola y pruebas", "terminal"),
     ("data_math", "Datos", "SQL, JSON, YAML y fórmulas", "database"),
     ("navigation", "Navegación", "Moverse por el editor y VS Code", "navigation"),
-    ("sniper", "Francotirador", "Control preciso del ratón del sistema", "crosshair"),
+    ("sniper", "FreeLook", "Ratón directo y perfil Gaming", "crosshair"),
 )
 
 # Data displayed in the in-app help modal. Extracted as constants so the
@@ -171,7 +171,8 @@ HELP_SHORTCUTS = (
     ("[C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
     ("[P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
     ("[S]", "Sonido", "Silencia o activa el feedback acústico."),
-    ("[F]", "Francotirador", "Activa el control preciso del ratón."),
+    ("[F]", "FreeLook", "Activa el ratón directo por mirada."),
+    ("[G]", "Gaming", "Alterna el perfil Gaming dentro de FreeLook."),
     ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
 )
 
@@ -267,6 +268,17 @@ class OverlayWindow(QWidget):
         self.hovered_subcell: Optional[int] = None
         self.hovered_sniper_action: bool = False
         self._sniper_action_pill_rect: QRectF = QRectF()
+
+        # FreeLook / gaming state
+        self._freelook_last_pos: Tuple[int, int] = (0, 0)
+        self._jaw_locked: bool = False
+        self._jaw_lock_pos: Optional[Tuple[int, int]] = None
+        self._mouth_active: bool = False
+        self._mouth_start: float = 0.0
+        self._hold_started: bool = False
+        self._gaming_mode: bool = False
+        self._gaming_right_held: bool = False
+        self._font_freelook_hint = QFont("Segoe UI", 10, QFont.Weight.Bold)
 
         # Adaptive AST Context Menu Subsystem (Phase Extra - Option A)
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
@@ -1128,12 +1140,32 @@ class OverlayWindow(QWidget):
         """
         self.current_gaze = (gx, gy)
 
-        # Sniper step 2: the precision sub-grid replaces normal card hit-testing.
-        if self.current_context_mode_id == "sniper" and self._sniper_step == 2:
-            self.hovered_subcell = self._subcell_from_gaze(gx, gy)
-            self.hovered_block = None
-            self.hovered_sniper_action = False
-            self.update()
+        # FreeLook: header remains interactive; the rest of the screen moves
+        # the real OS cursor directly and hides the 3x3 grid.
+        if (
+            self.current_context_mode_id == "sniper"
+            and self.current_node_id != "MODE_SELECT"
+            and not self.show_help_modal
+        ):
+            px = gx * max(1.0, float(self.width()))
+            py = gy * max(1.0, float(self.height()))
+            header_targets = (
+                ("hovered_header_exit", self.header_exit_rect),
+                ("hovered_header_help", self.header_help_rect),
+                ("hovered_header_mode", self.header_mode_rect),
+                ("hovered_header_lang", self.header_lang_rect),
+                ("hovered_sniper_action", self._sniper_action_pill_rect),
+            )
+            for attr, rect in header_targets:
+                if rect.isValid() and rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
+                    for other, _ in header_targets:
+                        setattr(self, other, other == attr)
+                    self.hovered_block = None
+                    self.update()
+                    return
+            for attr, _ in header_targets:
+                setattr(self, attr, False)
+            self._handle_freelook_gaze(gx, gy)
             return
 
         # Determine 3x3 block index with card geometry alignment
@@ -1441,8 +1473,14 @@ class OverlayWindow(QWidget):
         self._sniper_step = 1
         self._sniper_locked_sector = None
         self.hovered_subcell = None
+        self._gaming_mode = False
+        self._gaming_right_held = False
+        self._jaw_locked = False
+        self._jaw_lock_pos = None
+        self._mouth_active = False
+        self._hold_started = False
         self.navigate_to("ROOT")
-        self.last_action_desc = "Francotirador"
+        self.last_action_desc = "FreeLook"
         self._play_sound("mode")
         self.update()
 
@@ -1455,9 +1493,21 @@ class OverlayWindow(QWidget):
                 self.mode_manager.set_mode(previous, emit=True)
             finally:
                 self._mode_selection_in_progress = False
+        controller = self.mouse_controller
+        if controller is not None:
+            if self._gaming_right_held:
+                controller.mouse_up("right")
+            if self._hold_started:
+                controller.key_up("w") if self._gaming_mode else controller.mouse_up("left")
         self._sniper_step = 1
         self._sniper_locked_sector = None
         self.hovered_subcell = None
+        self._gaming_mode = False
+        self._gaming_right_held = False
+        self._jaw_locked = False
+        self._jaw_lock_pos = None
+        self._mouth_active = False
+        self._hold_started = False
         self.navigate_to("ROOT")
         self.last_action_desc = "Modo anterior"
         self._play_sound("back")
@@ -1500,6 +1550,146 @@ class OverlayWindow(QWidget):
         )
         painter.restore()
 
+    # ------------------------------------------------------------------ #
+    # Phase 7.5: FreeLook / direct OS mouse
+    # ------------------------------------------------------------------ #
+    def _freelook_prethreshold(self) -> float:
+        return max(0.01, float(getattr(self, "mar_threshold", 0.45)) * 0.55)
+
+    def _handle_freelook_gaze(self, gx: float, gy: float) -> None:
+        screen_w, screen_h = self._get_screen_size()
+        x = int(gx * screen_w)
+        y = int(gy * screen_h)
+        pre = self._freelook_prethreshold()
+
+        if self.current_mar >= pre:
+            if not self._jaw_locked:
+                self._jaw_locked = True
+                self._jaw_lock_pos = self._freelook_last_pos
+            if self._jaw_lock_pos is not None:
+                x, y = self._jaw_lock_pos
+        else:
+            self._jaw_locked = False
+            self._jaw_lock_pos = None
+            self._freelook_last_pos = (x, y)
+            controller = self.mouse_controller
+            if controller is not None:
+                try:
+                    controller.move_direct(x, y)
+                except Exception:
+                    pass
+
+        normalized = (x / float(screen_w), y / float(screen_h))
+        if normalized != self.current_gaze:
+            self.current_gaze = normalized
+            self.update()
+
+    def _freelook_click(self) -> None:
+        mode = self._sniper_mode()
+        action = getattr(mode, "get_action", lambda: "LEFT_CLICK")() if mode else "LEFT_CLICK"
+        x, y = self._jaw_lock_pos or self._freelook_last_pos
+        controller = self.mouse_controller
+        if controller is None:
+            controller = OSMouseController()
+            self.mouse_controller = controller
+        if action == "RIGHT_CLICK":
+            controller.right_click(x, y)
+        elif action == "DOUBLE_CLICK":
+            controller.double_click(x, y)
+        elif action == "SCROLL_UP":
+            controller.scroll_at(x, y, 3)
+        elif action == "SCROLL_DOWN":
+            controller.scroll_at(x, y, -3)
+        else:
+            controller.left_click(x, y)
+        self._play_sound("click")
+        self.last_action_desc = f"FreeLook: {getattr(mode, 'action_label', 'Clic Izq')}"
+
+    def _update_freelook_mouth(self, mar: float) -> None:
+        pre = self._freelook_prethreshold()
+        trigger = max(pre + 0.01, float(getattr(self, "mar_threshold", 0.45)))
+        now = time.time()
+
+        if mar >= trigger and not self._mouth_active:
+            self._mouth_active = True
+            self._mouth_start = now
+            self._hold_started = False
+            self._jaw_lock_pos = self._jaw_lock_pos or self._freelook_last_pos
+            self.update()
+            return
+
+        if not self._mouth_active:
+            return
+
+        held = now - self._mouth_start
+        hold_limit = 0.40 if self._gaming_mode else 0.45
+        controller = self.mouse_controller
+        if not self._hold_started and held >= hold_limit and controller is not None:
+            self._hold_started = True
+            if self._gaming_mode:
+                controller.key_down("w")
+            else:
+                controller.mouse_down("left")
+
+        if mar < pre:
+            if self._hold_started and controller is not None:
+                if self._gaming_mode:
+                    controller.key_up("w")
+                else:
+                    controller.mouse_up("left")
+            elif not self._hold_started:
+                self._freelook_click()
+            self._mouth_active = False
+            self._hold_started = False
+            self.update()
+
+    def toggle_gaming_mode(self) -> bool:
+        self._gaming_mode = not self._gaming_mode
+        if not self._gaming_mode and self._gaming_right_held:
+            if self.mouse_controller is not None:
+                self.mouse_controller.mouse_up("right")
+            self._gaming_right_held = False
+        self.last_action_desc = f"FreeLook: {'GAMING' if self._gaming_mode else 'ESCRITORIO'}"
+        self._play_sound("mode")
+        self.update()
+        return self._gaming_mode
+
+    def _toggle_gaming_right(self) -> None:
+        controller = self.mouse_controller
+        if controller is None:
+            return
+        if self._gaming_right_held:
+            controller.mouse_up("right")
+        else:
+            controller.mouse_down("right")
+        self._gaming_right_held = not self._gaming_right_held
+        self.last_action_desc = "Gaming: Clic Der mantenido" if self._gaming_right_held else "Gaming: Clic Der liberado"
+        self._play_sound("mode")
+        self.update()
+
+    def _paint_freelook_overlay(self, painter: QPainter) -> None:
+        """Draws only a compact status pill below the command bar."""
+        mode = self._sniper_mode()
+        action = getattr(mode, "action_label", "Clic Izq") if mode else "Clic Izq"
+        profile = "GAMING" if self._gaming_mode else "ESCRITORIO"
+        text = f"FREELOOK · {profile} · {action}"
+        painter.save()
+        fm = QFontMetrics(self._font_freelook_hint)
+        width = min(440.0, max(240.0, fm.horizontalAdvance(text) + 28.0))
+        rect = QRectF(
+            self.width() * 0.5 - width * 0.5,
+            self.header_rect.bottom() + 8.0,
+            width,
+            26.0,
+        )
+        painter.setBrush(QColor(11, 15, 25, 215))
+        painter.setPen(QPen(QColor(244, 63, 94, 180), 1.0))
+        painter.drawRoundedRect(rect, 8.0, 8.0)
+        painter.setPen(QColor(254, 205, 211))
+        painter.setFont(self._font_freelook_hint)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
+        painter.restore()
+
     def toggle_help_modal(self) -> None:
         """Toggles the in-app gesture and shortcut cheat sheet modal."""
         self.show_help_modal = not getattr(self, "show_help_modal", False)
@@ -1514,6 +1704,13 @@ class OverlayWindow(QWidget):
             self.current_mar = float(current_mar)
         except (TypeError, ValueError):
             self.current_mar = 0.0
+        if (
+            self.current_context_mode_id == "sniper"
+            and self.current_node_id != "MODE_SELECT"
+            and not self.show_help_modal
+        ):
+            self._update_freelook_mouth(self.current_mar)
+            return
         if self.hovered_block is not None:
             self.update()
 
@@ -1526,6 +1723,9 @@ class OverlayWindow(QWidget):
         - 'WINK_LEFT': Submenu 'Volver atrás' (parent menu node), or Undo 'Ctrl+Z' at ROOT.
         """
         if gesture_name == "WINK_RIGHT":
+            if self.current_context_mode_id == "sniper" and self._gaming_mode:
+                self._toggle_gaming_right()
+                return
             self._play_sound("pause")
             if self.show_help_modal:
                 self.show_help_modal = False
@@ -1536,6 +1736,13 @@ class OverlayWindow(QWidget):
             return
 
         if gesture_name == "WINK_LEFT":
+            if self.current_context_mode_id == "sniper":
+                if self._gaming_mode and self.mouse_controller is not None:
+                    self.mouse_controller.tap_key(" ")
+                    self._play_sound("click")
+                else:
+                    self._exit_sniper_mode()
+                return
             self._play_sound("back")
             if self.show_help_modal:
                 self.show_help_modal = False
@@ -1631,21 +1838,9 @@ class OverlayWindow(QWidget):
             self.update()
             return
 
-        # Sniper step 2: fire the selected OS mouse action at the sub-cell.
-        if self.current_context_mode_id == "sniper" and self._sniper_step == 2:
-            if self.hovered_subcell is not None and self._sniper_locked_sector is not None:
-                screen_w, screen_h = self._get_screen_size()
-                sector_rect = self._calculate_sector_rect(
-                    self._sniper_locked_sector, screen_w, screen_h
-                )
-                x, y = self._calculate_subcell_coords(self.hovered_subcell, sector_rect)
-                self._execute_sniper_action(x, y)
-                self._play_sound("click")
-                self.last_action_desc = f"Ratón en ({x}, {y})"
-                self._sniper_step = 1
-                self._sniper_locked_sector = None
-                self.hovered_subcell = None
-                self.update()
+        # FreeLook handles mouth clicks in on_mar_updated (click vs. hold).
+        # The mode hub still uses normal card selection.
+        if self.current_context_mode_id == "sniper" and self.current_node_id != "MODE_SELECT":
             return
 
         target_block = self.hovered_block
@@ -2002,6 +2197,10 @@ class OverlayWindow(QWidget):
         elif event.key() == Qt.Key.Key_F:
             self.toggle_sniper_mode()
             event.accept()
+        elif event.key() == Qt.Key.Key_G:
+            if self.current_context_mode_id == "sniper":
+                self.toggle_gaming_mode()
+            event.accept()
         else:
             super().keyPressEvent(event)
 
@@ -2055,14 +2254,29 @@ class OverlayWindow(QWidget):
 
     def _on_context_mode_changed(self, mode_id: str, display_name: str, theme_color: str) -> None:
         """Applies a context mode change to the HUD menu tree and theme."""
+        was_sniper = self.current_context_mode_id == "sniper"
         self.current_context_mode_id = mode_id
         self.current_context_mode_name = display_name
         self.theme_color = theme_color
         self._set_theme_color(theme_color)
         if mode_id != "sniper":
+            if was_sniper and self.mouse_controller is not None:
+                if self._gaming_right_held:
+                    self.mouse_controller.mouse_up("right")
+                if self._hold_started:
+                    if self._gaming_mode:
+                        self.mouse_controller.key_up("w")
+                    else:
+                        self.mouse_controller.mouse_up("left")
             self._sniper_step = 1
             self._sniper_locked_sector = None
             self.hovered_subcell = None
+            self._gaming_mode = False
+            self._gaming_right_held = False
+            self._jaw_locked = False
+            self._jaw_lock_pos = None
+            self._mouth_active = False
+            self._hold_started = False
 
         if mode_id == "writing":
             mode = self._writing_mode()
@@ -2243,8 +2457,11 @@ class OverlayWindow(QWidget):
         self.update()
 
     def cycle_context_mode(self) -> None:
-        """Compatibility alias: [V] now opens the mode hub instead of cycling."""
-        self.open_mode_selector()
+        """[V] exits FreeLook, otherwise opens the mode hub."""
+        if self.current_context_mode_id == "sniper":
+            self._exit_sniper_mode()
+        else:
+            self.open_mode_selector()
 
     def is_mode_shortcut_targeted(self) -> bool:
         """True when the gaze is on/near the header mode button (global V/K gate)."""
@@ -2578,7 +2795,11 @@ class OverlayWindow(QWidget):
         # =====================================================================
         try:
             now = time.time()
-            if self._mode_banner_text and now < self._mode_banner_until:
+            if (
+                self._mode_banner_text
+                and now < self._mode_banner_until
+                and self.current_context_mode_id != "sniper"
+            ):
                 duration = max(0.1, self._mode_banner_until - self._mode_banner_start)
                 progress = (now - self._mode_banner_start) / duration
                 progress = max(0.0, min(1.0, progress))
@@ -2632,6 +2853,8 @@ class OverlayWindow(QWidget):
         }
 
         for i in range(9):
+            if self.current_context_mode_id == "sniper" and self.current_node_id != "MODE_SELECT":
+                continue
             if i >= len(items):
                 continue
             item = items[i]
@@ -2821,8 +3044,8 @@ class OverlayWindow(QWidget):
         # =====================================================================
         # 3b. Sniper precision sub-grid (step 2)
         # =====================================================================
-        if self.current_context_mode_id == "sniper":
-            self._paint_sniper_overlay(painter)
+        if self.current_context_mode_id == "sniper" and self.current_node_id != "MODE_SELECT":
+            self._paint_freelook_overlay(painter)
 
         # =====================================================================
         # 4. Refined High-Visibility Dual-Ring Reticle with Glow Aura

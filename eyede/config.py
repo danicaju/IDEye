@@ -88,6 +88,18 @@ HORIZONTAL_MULTIPLIER: float = 1.45    # Ergonomic independent horizontal gain m
 HORIZONTAL_EXPANSION_GAIN: float = 1.75 # Non-linear horizontal edge expansion for border reach
 VOR_COMPENSATION_FACTOR: float = 0.40  # Vestibulo-Ocular Reflex decoupling factor for HYBRID mode
 
+# Phase 7.6: static hysteresis pinning and dynamic fusion
+STATIC_LOCK_RADIUS: float = 0.0035       # Enter rock-solid rest below this frame delta
+STATIC_BREAKOUT_RADIUS: float = 0.0085   # Intentional movement required to leave rest
+STATIC_LOCK_FRAMES: int = 3              # Consecutive quiet frames before pinning again
+IRIS_MEDIAN_WINDOW: int = 5              # Temporal median window for PURE_IRIS
+HYBRID_IRIS_WEIGHT_REST: float = 0.08    # Iris weight while fixating in HYBRID
+HYBRID_IRIS_WEIGHT_SACCADE: float = 0.55 # Iris weight during ocular saccades
+IRIS_SACCADE_THRESHOLD: float = 0.012    # Iris innovation that counts as a saccade
+CELL_MAGNETISM_ENABLED: bool = True
+CELL_MAGNETISM_STRENGTH: float = 0.15
+CELL_MAGNETISM_DWELL: float = 0.15
+
 # Smoothing factor for Exponential Moving Average (EMA)
 # Higher = more responsive, lower = smoother (less jitter)
 EMA_ALPHA: float = 0.22

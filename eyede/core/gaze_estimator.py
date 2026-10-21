@@ -5,6 +5,7 @@ applies neutral center calibration, and smoothes with an Exponential Moving Aver
 """
 
 from typing import Any, Optional, Tuple, Dict, List, Union
+from collections import deque
 import math
 import os
 import json
@@ -173,6 +174,35 @@ class GazeEstimator:
         self.is_fixated: bool = False
         self.stability_score: float = 1.0
 
+        # Phase 7.6: rigid 6-point cranial head anchor.
+        self.head_anchor_indices: Tuple[int, ...] = (1, 4, 6, 168, 195, 197)
+        self.head_anchor_weights: Tuple[float, ...] = (0.10, 0.10, 0.20, 0.20, 0.20, 0.20)
+
+        # Phase 7.6: static hysteresis pinning (Schmitt trigger).
+        self.static_lock_radius: float = float(getattr(config, "STATIC_LOCK_RADIUS", 0.0035))
+        self.static_breakout_radius: float = float(getattr(config, "STATIC_BREAKOUT_RADIUS", 0.0085))
+        self.static_lock_frames: int = int(getattr(config, "STATIC_LOCK_FRAMES", 3))
+        self._pinned_pos: Optional[Tuple[float, float]] = None
+        self._is_pinned: bool = True
+        self._static_quiet_frames: int = 0
+        self._static_last_filtered: Optional[Tuple[float, float]] = None
+        self._static_target: Optional[Tuple[float, float]] = None
+        self._pin_release_ramp: float = 1.0
+
+        # Phase 7.6: PURE_IRIS temporal median + orbital anchors.
+        self.iris_median_window: int = int(getattr(config, "IRIS_MEDIAN_WINDOW", 5))
+        self._iris_history: deque = deque(maxlen=max(1, self.iris_median_window))
+        self._last_iris_roll: float = 0.0
+
+        # Phase 7.6: saccade-gated dynamic HYBRID fusion.
+        self.hybrid_iris_weight_rest: float = float(getattr(config, "HYBRID_IRIS_WEIGHT_REST", 0.08))
+        self.hybrid_iris_weight_saccade: float = float(getattr(config, "HYBRID_IRIS_WEIGHT_SACCADE", 0.55))
+        self.iris_saccade_threshold: float = float(getattr(config, "IRIS_SACCADE_THRESHOLD", 0.012))
+        self._dynamic_fusion_active: bool = False
+        self._effective_iris_weight: float = self.iris_weight
+        self._iris_velocity: float = 0.0
+        self._last_filtered_iris: Optional[Tuple[float, float]] = None
+
         # Blink suppression parameters (scale-invariant EAR + absolute height fallback)
         self.ear_blink_threshold: float = float(getattr(config, "EAR_BLINK_THRESHOLD", 0.14))
         self.blink_threshold: float = float(getattr(config, "MIN_EYE_HEIGHT_RATIO", 0.008))
@@ -230,7 +260,146 @@ class GazeEstimator:
             except (IndexError, TypeError, ValueError):
                 return 0.5, 0.5
 
+    def _orbital_points(
+        self, landmarks: Any, indices: Tuple[int, ...]
+    ) -> List[Tuple[float, float]]:
+        points: List[Tuple[float, float]] = []
+        for idx in indices:
+            try:
+                point = self._safe_coord(landmarks[idx])
+            except (IndexError, KeyError, TypeError):
+                continue
+            if point != (0.5, 0.5):
+                points.append(point)
+        return points
+
+    def _eye_orbital_geometry(
+        self, landmarks: Any, indices: Tuple[int, ...], iris_indices: Tuple[int, ...]
+    ) -> Optional[Dict[str, float]]:
+        """Returns multi-anchor orbital center, size, iris center and EAR."""
+        orbital = self._orbital_points(landmarks, indices)
+        if len(orbital) < 3:
+            return None
+        xs = [p[0] for p in orbital]
+        ys = [p[1] for p in orbital]
+        width = max(max(xs) - min(xs), 1e-6)
+        height = max(max(ys) - min(ys), 1e-6)
+        center_x = sum(xs) / len(xs)
+        center_y = sum(ys) / len(ys)
+
+        iris_points = self._orbital_points(landmarks, iris_indices)
+        if not iris_points:
+            try:
+                iris_points = [self._safe_coord(landmarks[iris_indices[0]])]
+            except (IndexError, KeyError, TypeError):
+                return None
+        iris_x = sum(p[0] for p in iris_points) / len(iris_points)
+        iris_y = sum(p[1] for p in iris_points) / len(iris_points)
+        return {
+            "center_x": center_x,
+            "center_y": center_y,
+            "width": width,
+            "height": height,
+            "iris_x": iris_x,
+            "iris_y": iris_y,
+            "ear": height / width,
+        }
+
     def _extract_iris_ratio(self, landmarks: Any) -> Tuple[float, float]:
+        """PURE_IRIS: 6-point orbital normalization + 5-frame median + roll comp."""
+        eps = 1e-6
+        try:
+            left = self._eye_orbital_geometry(
+                landmarks,
+                (33, 133, 159, 145, 158, 153),
+                (468, 469, 470, 471, 472),
+            )
+            right = self._eye_orbital_geometry(
+                landmarks,
+                (362, 263, 386, 374, 385, 380),
+                (473, 474, 475, 476, 477),
+            )
+            if left is None and right is None:
+                return self.last_valid_iris_x, self.last_valid_iris_y
+
+            closed_l = left is not None and (
+                left["ear"] < self.ear_blink_threshold
+                or left["height"] < self.blink_threshold
+            )
+            closed_r = right is not None and (
+                right["ear"] < self.ear_blink_threshold
+                or right["height"] < self.blink_threshold
+            )
+            if (left is None or closed_l) and (right is None or closed_r):
+                self.is_blinking = True
+                return self.last_valid_iris_x, self.last_valid_iris_y
+            self.is_blinking = False
+
+            if left is not None and right is not None:
+                roll = math.atan2(
+                    right["center_y"] - left["center_y"],
+                    right["center_x"] - left["center_x"],
+                )
+            else:
+                roll = 0.0
+            self._last_iris_roll = roll
+            cos_r, sin_r = math.cos(roll), math.sin(roll)
+
+            ratios: List[Tuple[float, float]] = []
+            for eye in (left, right):
+                if eye is None:
+                    continue
+                if eye is left and closed_l:
+                    continue
+                if eye is right and closed_r:
+                    continue
+                dx = eye["iris_x"] - eye["center_x"]
+                dy = eye["iris_y"] - eye["center_y"]
+                # Rotate the relative iris vector back into screen axes.
+                rx = dx * cos_r + dy * sin_r
+                ry = -dx * sin_r + dy * cos_r
+                ratio_x = 0.5 + rx / max(eye["width"], eps)
+                ratio_y = 0.5 + ry / max(eye["height"], 0.70 * eye["width"], eps)
+                ratios.append(
+                    (
+                        max(0.0, min(1.0, ratio_x)),
+                        max(0.0, min(1.0, ratio_y)),
+                    )
+                )
+            if not ratios:
+                return self.last_valid_iris_x, self.last_valid_iris_y
+
+            raw_x = sum(r[0] for r in ratios) / len(ratios)
+            raw_y = sum(r[1] for r in ratios) / len(ratios)
+
+            # Temporal median rejects single-frame corneal spikes.
+            self._iris_history.append((raw_x, raw_y))
+            if len(self._iris_history) >= 2:
+                arr = np.asarray(self._iris_history, dtype=np.float64)
+                median = np.median(arr, axis=0)
+                clamped_x = float(median[0])
+                clamped_y = float(median[1])
+            else:
+                clamped_x, clamped_y = raw_x, raw_y
+
+            # Soft noise gate for residual micro-jitter.
+            d_raw = math.hypot(
+                clamped_x - self.last_valid_iris_x,
+                clamped_y - self.last_valid_iris_y,
+            )
+            raw_gate = 0.035
+            if d_raw < raw_gate:
+                weight = (d_raw / raw_gate) ** 2
+                clamped_x = (1.0 - weight) * self.last_valid_iris_x + weight * clamped_x
+                clamped_y = (1.0 - weight) * self.last_valid_iris_y + weight * clamped_y
+
+            self.last_valid_iris_x = float(np.clip(clamped_x, 0.0, 1.0))
+            self.last_valid_iris_y = float(np.clip(clamped_y, 0.0, 1.0))
+            return self.last_valid_iris_x, self.last_valid_iris_y
+        except (IndexError, AttributeError, TypeError, ValueError):
+            return self.last_valid_iris_x, self.last_valid_iris_y
+
+    def _extract_iris_ratio_legacy(self, landmarks: Any) -> Tuple[float, float]:
         """
         Calculates relative normalized horizontal and vertical iris position within
         both eye contours, safe against ZeroDivisionError and eye closure blinks.
@@ -334,10 +503,20 @@ class GazeEstimator:
             return self.last_valid_iris_x, self.last_valid_iris_y
 
     def _extract_head_pos(self, landmarks: Any) -> Tuple[float, float]:
-        """Extracts normalized nose tip position as the head pose anchor."""
+        """Weighted centroid of six rigid nasal/glabellar landmarks.
+
+        Falls back to the legacy nose anchor when the synthetic/test landmarks do
+        not populate the rigid anchor set.
+        """
         try:
-            p_nose = landmarks[self.nose_tip_idx]
-            return self._safe_coord(p_nose)
+            points = [self._safe_coord(landmarks[idx]) for idx in self.head_anchor_indices]
+            populated = sum(1 for p in points if p != (0.5, 0.5))
+            if populated < 4:
+                return self._safe_coord(landmarks[self.nose_tip_idx])
+            total = sum(self.head_anchor_weights)
+            x = sum(p[0] * w for p, w in zip(points, self.head_anchor_weights)) / total
+            y = sum(p[1] * w for p, w in zip(points, self.head_anchor_weights)) / total
+            return float(x), float(y)
         except (IndexError, AttributeError, TypeError):
             return 0.5, 0.5
 
@@ -435,6 +614,98 @@ class GazeEstimator:
         else:
             self.tracking_mode = "HYBRID"
 
+    def _apply_static_pinning(self, x: float, y: float) -> Tuple[float, float]:
+        """Schmitt-trigger static pinning: exact zero drift while at rest."""
+        cx = float(np.clip(x, 0.0, 1.0))
+        cy = float(np.clip(y, 0.0, 1.0))
+
+        if self._is_pinned:
+            if self._pinned_pos is None:
+                self._pinned_pos = (cx, cy)
+                self._static_last_filtered = (cx, cy)
+                return cx, cy
+            px, py = self._pinned_pos
+            ref = self._static_target if self._static_target is not None else (cx, cy)
+            dist = math.hypot(ref[0] - px, ref[1] - py)
+            if dist < self.static_breakout_radius:
+                return px, py
+            # Intentional breakout: snap for large excursions, short ramp for small ones.
+            self._is_pinned = False
+            self._static_quiet_frames = 0
+            self._static_last_filtered = (cx, cy)
+            if dist > 3.0 * self.static_breakout_radius:
+                self._pin_release_ramp = 1.0
+                self._pinned_pos = None
+                return cx, cy
+            self._pin_release_ramp = 0.35
+            ox = px + (cx - px) * self._pin_release_ramp
+            oy = py + (cy - py) * self._pin_release_ramp
+            return float(np.clip(ox, 0.0, 1.0)), float(np.clip(oy, 0.0, 1.0))
+
+        # In motion: continue a short ramp from the old pinned position.
+        if self._pinned_pos is not None and self._pin_release_ramp < 1.0:
+            px, py = self._pinned_pos
+            if math.hypot(cx - px, cy - py) > 3.0 * self.static_breakout_radius:
+                self._pin_release_ramp = 1.0
+                self._pinned_pos = None
+                self._static_last_filtered = (cx, cy)
+                return cx, cy
+            self._pin_release_ramp = min(1.0, self._pin_release_ramp + 0.35)
+            ox = px + (cx - px) * self._pin_release_ramp
+            oy = py + (cy - py) * self._pin_release_ramp
+            if self._pin_release_ramp >= 1.0:
+                self._pinned_pos = None
+            self._static_last_filtered = (cx, cy)
+            return float(np.clip(ox, 0.0, 1.0)), float(np.clip(oy, 0.0, 1.0))
+
+        if self._static_last_filtered is not None:
+            dx = cx - self._static_last_filtered[0]
+            dy = cy - self._static_last_filtered[1]
+            velocity = math.hypot(dx, dy)
+        else:
+            velocity = 0.0
+        target = self._static_target
+        target_gap = (
+            math.hypot(cx - target[0], cy - target[1]) if target is not None else 0.0
+        )
+        if velocity < self.static_lock_radius and target_gap < self.static_lock_radius:
+            self._static_quiet_frames += 1
+        else:
+            self._static_quiet_frames = 0
+        self._static_last_filtered = (cx, cy)
+
+        if self._static_quiet_frames >= self.static_lock_frames:
+            # Snap the pin to the filtered target (not the asymptotically
+            # approaching filter output) so extreme targets reach 0.0/1.0.
+            target = self._static_target
+            if target is not None and math.hypot(cx - target[0], cy - target[1]) < self.static_breakout_radius:
+                self._pinned_pos = (float(target[0]), float(target[1]))
+            else:
+                self._pinned_pos = (cx, cy)
+            self._is_pinned = True
+            self._static_quiet_frames = 0
+            self._pin_release_ramp = 1.0
+            return self._pinned_pos
+        return cx, cy
+
+    def _compute_effective_iris_weight(self, iris_x: float, iris_y: float) -> float:
+        """Saccade-gated HYBRID weight: 0.08 at rest, up to 0.55 during saccades."""
+        if self._last_filtered_iris is None:
+            self._iris_velocity = 0.0
+        else:
+            self._iris_velocity = math.hypot(
+                iris_x - self._last_filtered_iris[0],
+                iris_y - self._last_filtered_iris[1],
+            )
+        self._last_filtered_iris = (iris_x, iris_y)
+        norm = min(1.0, self._iris_velocity / max(self.iris_saccade_threshold, 1e-6))
+        target = self.hybrid_iris_weight_rest + (
+            self.hybrid_iris_weight_saccade - self.hybrid_iris_weight_rest
+        ) * norm
+        # Smooth the weight so the transition is not perceptible.
+        self._effective_iris_weight += 0.25 * (target - self._effective_iris_weight)
+        return self._effective_iris_weight
+
     def _compute_combined_deltas(
         self,
         delta_head_x: float,
@@ -476,8 +747,14 @@ class GazeEstimator:
             else:
                 effective_iris_x = di_x
 
-            combined_x = (self.head_weight * dh_x) + (self.iris_weight * effective_iris_x)
-            combined_y = (self.head_weight * dh_y) + (self.iris_weight * di_y)
+            if self._dynamic_fusion_active:
+                iris_w = max(0.0, min(1.0, self._effective_iris_weight))
+                head_w = 1.0 - iris_w
+            else:
+                iris_w = self.iris_weight
+                head_w = self.head_weight
+            combined_x = (head_w * dh_x) + (iris_w * effective_iris_x)
+            combined_y = (head_w * dh_y) + (iris_w * di_y)
 
         expanded_x = self._apply_horizontal_expansion_curve(combined_x)
         expanded_y = self._apply_ergonomic_vertical_curve(combined_y)
@@ -534,6 +811,15 @@ class GazeEstimator:
             self.one_euro_x.reset(now, 0.5)
             self.one_euro_y.reset(now, 0.5)
             self._has_first_sample = True
+            self._pinned_pos = (0.5, 0.5)
+            self._is_pinned = True
+            self._static_quiet_frames = 0
+            self._static_last_filtered = None
+            self._static_target = None
+            self._pin_release_ramp = 1.0
+            self._iris_history.clear()
+            self._last_filtered_iris = None
+            self._effective_iris_weight = self.iris_weight
             return True
 
         except (IndexError, AttributeError, TypeError):
@@ -599,9 +885,15 @@ class GazeEstimator:
             delta_iris_y = (iris_y - self.neutral_iris_y) * self.iris_sensitivity_y
 
             # 4. Mode-based delta computation (PURE_IRIS, HYBRID, HEAD_PRIMARY)
-            expanded_delta_x, expanded_delta_y = self._compute_combined_deltas(
-                delta_head_x, delta_head_y, delta_iris_x, delta_iris_y
-            )
+            self._dynamic_fusion_active = self.tracking_mode == "HYBRID"
+            if self._dynamic_fusion_active:
+                self._compute_effective_iris_weight(iris_x, iris_y)
+            try:
+                expanded_delta_x, expanded_delta_y = self._compute_combined_deltas(
+                    delta_head_x, delta_head_y, delta_iris_x, delta_iris_y
+                )
+            finally:
+                self._dynamic_fusion_active = False
 
             # 5. Screen coordinate mapping centered at (0.5, 0.5)
             raw_target_x = 0.5 + expanded_delta_x
@@ -669,6 +961,12 @@ class GazeEstimator:
                     self.smoothed_x = float(np.clip(self.smoothed_x, 0.0, 1.0))
                     self.smoothed_y = float(np.clip(self.smoothed_y, 0.0, 1.0))
 
+            # 8. Static hysteresis pinning (zero drift at rest).
+            self._static_target = (target_x, target_y)
+            self.smoothed_x, self.smoothed_y = self._apply_static_pinning(
+                self.smoothed_x, self.smoothed_y
+            )
+
             debug_info.update({
                 "target_raw": (raw_target_x, raw_target_y),
                 "target_calibrated": (target_x, target_y),
@@ -677,6 +975,10 @@ class GazeEstimator:
                 "is_blinking": self.is_blinking,
                 "is_fixated": self.is_fixated,
                 "stability_score": self.stability_score,
+                "is_static_pinned": self._is_pinned,
+                "static_pin": self._pinned_pos,
+                "iris_velocity": self._iris_velocity,
+                "effective_iris_weight": self._effective_iris_weight,
                 "has_5_point_calibration": self.has_5_point_calibration,
                 "calibration_rmse": self.calibration_rmse,
             })

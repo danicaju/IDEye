@@ -279,6 +279,8 @@ class OverlayWindow(QWidget):
         self._gaming_mode: bool = False
         self._gaming_right_held: bool = False
         self._font_freelook_hint = QFont("Segoe UI", 10, QFont.Weight.Bold)
+        self._gravity_block: Optional[int] = None
+        self._gravity_since: float = 0.0
 
         # Adaptive AST Context Menu Subsystem (Phase Extra - Option A)
         self.adaptive_ast_enabled: bool = getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)
@@ -1275,6 +1277,10 @@ class OverlayWindow(QWidget):
             )
             block_idx = nearest
 
+        if self.current_context_mode_id != "sniper":
+            gx, gy = self._apply_cell_gravity(gx, gy, block_idx)
+            self.current_gaze = (gx, gy)
+
         if self.reading_mode:
             # In reading mode, inhibit all blocks except Block 4 (Resume trigger)
             if block_idx == 4:
@@ -1285,6 +1291,44 @@ class OverlayWindow(QWidget):
             self.hovered_block = block_idx
 
         self.update()
+
+    def _apply_cell_gravity(
+        self, gx: float, gy: float, block_idx: Optional[int]
+    ) -> Tuple[float, float]:
+        """Soft 15% pull to a cell center after 150ms of stable dwell."""
+        if (
+            not getattr(config, "CELL_MAGNETISM_ENABLED", True)
+            or self.reading_mode
+            or self.current_context_mode_id == "sniper"
+            or block_idx is None
+        ):
+            self._gravity_block = None
+            self._gravity_since = 0.0
+            return gx, gy
+
+        now = time.time()
+        if block_idx != self._gravity_block:
+            self._gravity_block = block_idx
+            self._gravity_since = now
+            return gx, gy
+
+        rect = self.get_block_rect(block_idx)
+        if rect.width() <= 1.0 or rect.height() <= 1.0:
+            return gx, gy
+        px, py = gx * self.width(), gy * self.height()
+        rel_x = (px - rect.left()) / rect.width()
+        rel_y = (py - rect.top()) / rect.height()
+        if not (0.18 <= rel_x <= 0.82 and 0.18 <= rel_y <= 0.82):
+            self._gravity_since = now
+            return gx, gy
+        if now - self._gravity_since < float(getattr(config, "CELL_MAGNETISM_DWELL", 0.15)):
+            return gx, gy
+
+        strength = float(getattr(config, "CELL_MAGNETISM_STRENGTH", 0.15))
+        center = rect.center()
+        cx = center.x() / max(1.0, self.width())
+        cy = center.y() / max(1.0, self.height())
+        return gx + (cx - gx) * strength, gy + (cy - gy) * strength
 
     def _clear_header_exit_flash(self) -> None:
         self.active_click_header_exit = False

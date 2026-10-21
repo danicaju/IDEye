@@ -10,6 +10,7 @@ import shutil
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(ROOT_DIR, "eyede", "assets")
+DEFAULTS_DIR = os.path.join(ASSETS_DIR, "defaults")
 ICON_ICO = os.path.join(ROOT_DIR, "eyede.ico")
 ICON_ICNS = os.path.join(ROOT_DIR, "eyede.icns")
 MAIN_PY = os.path.join(ROOT_DIR, "main.py")
@@ -19,7 +20,10 @@ IS_MACOS = sys.platform == "darwin"
 IS_LINUX = sys.platform.startswith("linux")
 DATA_SEP = ";" if IS_WINDOWS else ":"
 
-USER_FILES = ("calibration_profile.json", "user_settings.json", "custom_macros.json")
+# Runtime JSON files. Defaults live in eyede/assets/defaults; live root files
+# are only bundled when IDEYE_BUNDLE_USER_DATA=1 is explicitly set.
+PROFILE_FILES = ("user_settings.json", "custom_macros.json", "calibration_profile.json")
+LIVE_DATA_ENV = "IDEYE_BUNDLE_USER_DATA"
 
 
 def _data_arg(source: str, destination: str) -> str:
@@ -31,8 +35,6 @@ def _icon_arg() -> str:
         return f"--icon={ICON_ICO}"
     if IS_MACOS and os.path.exists(ICON_ICNS):
         return f"--icon={ICON_ICNS}"
-    if IS_MACOS and os.path.exists(ICON_ICO):
-        return f"--icon={ICON_ICO}"
     return ""
 
 
@@ -53,6 +55,20 @@ def _pynput_backends() -> list:
     ]
 
 
+def _profile_sources() -> list:
+    """Returns (filename, source_path) for sanitized defaults or opt-in live data."""
+    include_live = os.environ.get(LIVE_DATA_ENV, "").strip() == "1"
+    sources = []
+    for filename in PROFILE_FILES:
+        default_path = os.path.join(DEFAULTS_DIR, filename)
+        live_path = os.path.join(ROOT_DIR, filename)
+        if include_live and os.path.isfile(live_path):
+            sources.append((filename, live_path))
+        elif os.path.isfile(default_path):
+            sources.append((filename, default_path))
+    return sources
+
+
 def build_command() -> list:
     """Returns the complete PyInstaller command for the current platform."""
     cmd = [
@@ -62,7 +78,6 @@ def build_command() -> list:
         "--noconfirm",
         "--clean",
         "--name=IDEye",
-        "--windowed",
         _data_arg(ASSETS_DIR, "eyede/assets"),
         "--collect-data=mediapipe",
         "--collect-binaries=mediapipe",
@@ -98,13 +113,13 @@ def build_command() -> list:
         "--hidden-import=PyQt6.QtSvg",
         "--hidden-import=PyQt6.QtNetwork",
     ]
+    if IS_WINDOWS or IS_MACOS:
+        cmd.append("--windowed")
     icon = _icon_arg()
     if icon:
         cmd.append(icon)
-    for filename in USER_FILES:
-        path = os.path.join(ROOT_DIR, filename)
-        if os.path.isfile(path):
-            cmd.append(_data_arg(path, "."))
+    for filename, source in _profile_sources():
+        cmd.append(_data_arg(source, "."))
     cmd.extend(_pynput_backends())
     if IS_MACOS:
         cmd.append("--osx-bundle-identifier=com.vistax.ideye")
@@ -121,14 +136,16 @@ def _dist_candidates() -> list:
 
 
 def _copy_user_files(dist_dir: str) -> None:
-    for filename in USER_FILES:
-        src = os.path.join(ROOT_DIR, filename)
-        if os.path.isfile(src):
-            try:
-                shutil.copy2(src, os.path.join(dist_dir, filename))
-                print(f"[INFO] Copied {filename} to {dist_dir}")
-            except Exception as exc:
-                print(f"[WARN] Could not copy {filename}: {exc}")
+    for filename, source in _profile_sources():
+        target = os.path.join(dist_dir, filename)
+        if os.path.exists(target):
+            print(f"[INFO] Keeping existing {filename} in {dist_dir}")
+            continue
+        try:
+            shutil.copy2(source, target)
+            print(f"[INFO] Copied {filename} to {dist_dir}")
+        except Exception as exc:
+            print(f"[WARN] Could not copy {filename}: {exc}")
 
 
 def build():

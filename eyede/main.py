@@ -1102,6 +1102,10 @@ class EyeDEApplication(QObject):
             # never cover the bottom taskbar or overflow the usable desktop.
             screen_geo = screen.availableGeometry()
             self.overlay.setGeometry(screen_geo)
+            if self.tracker is not None and hasattr(self.tracker, "gaze_estimator"):
+                self.tracker.gaze_estimator.set_target_screen(
+                    screen_geo.width(), screen_geo.height()
+                )
             dw_x = screen_geo.x() + screen_geo.width() - config.DEBUG_WINDOW_WIDTH - 12
             dw_y = screen_geo.y() + 24
             self.debug_widget.move(max(screen_geo.x(), dw_x), max(screen_geo.y(), dw_y))

@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-429%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-437%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -182,6 +182,8 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 2. Repite el proceso para las **4 esquinas** de la pantalla (Arriba-Izq, Arriba-Der, Abajo-Izq, Abajo-Der).
 3. Tu matriz de interpolación se guardará automáticamente en `calibration_profile.json`. ¡Abre VS Code, sitúa el cursor en cualquier archivo `.py` y empieza a programar con la mirada!
 
+> La calibración se guarda junto con la relación de aspecto de la pantalla. Al cambiar a un monitor con una relación muy distinta (por ejemplo 16:9 a 21:9) se aplica una corrección horizontal automática; si la precisión empeora, ejecuta `--recalibrate` en el monitor destino.
+
 ---
 
 ## Controles y Atajos en Tiempo Real
@@ -264,7 +266,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Diccionario T9/palabras comunes en español
 │       └── icons/ # Suite de iconos SVG/Lucide neón de alta definición
-└── tests/ # 422 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
+└── tests/ # 437 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
     ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
     ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
     ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
@@ -296,11 +298,11 @@ pytest -q
 ```
 
 ```text
-429 pruebas superadas, 58 subtests, 13.71s
+437 pruebas superadas, 58 subtests, 13.33s
 ```
 
 > [!NOTE]
-> Todos los 429 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 437 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 

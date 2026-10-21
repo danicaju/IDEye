@@ -125,6 +125,7 @@ class GazeEstimator:
         right_eye_top_idx: int = 386,
         right_eye_bottom_idx: int = 374,
         tracking_mode: Optional[str] = None,
+        mirror: bool = True,
     ):
         # Weights (normalized so sum == 1.0)
         total_w = max(head_weight + iris_weight, 1e-6)
@@ -152,6 +153,7 @@ class GazeEstimator:
         self.target_screen_size: Tuple[int, int] = (1920, 1080)
         self.target_screen_aspect: float = 1920.0 / 1080.0
         self.last_head_yaw: float = 0.0
+        self.head_yaw_sign: float = 1.0 if mirror else -1.0
 
         self.ema_alpha = max(0.01, min(1.0, float(ema_alpha)))
 
@@ -250,6 +252,7 @@ class GazeEstimator:
         self.calib_weights_y: Optional[List[float]] = None
         self.calibration_points_data: Optional[List[Dict[str, Any]]] = None
         self.calibration_rmse: float = 0.0
+        self.calibration_screen_aspect: Optional[float] = None
         self._lock = threading.RLock()
 
     @staticmethod
@@ -622,7 +625,7 @@ class GazeEstimator:
             if ear_span < 1e-6:
                 return 0.0
             center_x = (left[0] + right[0]) * 0.5
-            return float(math.degrees(math.atan2(nose[0] - center_x, ear_span * 0.5)))
+            return self.head_yaw_sign * float(math.degrees(math.atan2(nose[0] - center_x, ear_span * 0.5)))
         except (IndexError, KeyError, TypeError, ValueError):
             return 0.0
 
@@ -878,10 +881,12 @@ class GazeEstimator:
             "neutral_iris": (self.neutral_iris_x, self.neutral_iris_y),
             "is_fixated": self.is_fixated,
             "stability_score": self.stability_score,
+            "head_yaw": self.last_head_yaw,
         }
 
         # 1. Face loss check: maintain last valid coordinates gracefully (strictly clipped)
         if face_landmarks is None:
+            self.last_head_yaw = 0.0
             cx = float(np.clip(self.smoothed_x, 0.0, 1.0))
             cy = float(np.clip(self.smoothed_y, 0.0, 1.0))
             return cx, cy, False, debug_info
@@ -889,6 +894,7 @@ class GazeEstimator:
         try:
             landmarks = getattr(face_landmarks, "landmark", face_landmarks)
             if not landmarks:
+                self.last_head_yaw = 0.0
                 cx = float(np.clip(self.smoothed_x, 0.0, 1.0))
                 cy = float(np.clip(self.smoothed_y, 0.0, 1.0))
                 return cx, cy, False, debug_info
@@ -1058,6 +1064,17 @@ class GazeEstimator:
                     mx = u
                 if math.isnan(my) or math.isinf(my):
                     my = v
+                # Aspect-ratio correction: calibrating on one screen and handing
+                # over to a screen with a different width/height ratio scales the
+                # horizontal coordinate around the center (0.5) so the mapped
+                # gaze still spans the new display edges.
+                if (
+                    self.calibration_screen_aspect is not None
+                    and self.calibration_screen_aspect > 0.0
+                    and self.target_screen_aspect > 0.0
+                    and abs(self.calibration_screen_aspect - self.target_screen_aspect) > 1e-4
+                ):
+                    mx = 0.5 + (mx - 0.5) * (self.calibration_screen_aspect / self.target_screen_aspect)
                 # Bounded safety guard: prevent non-linear warping from launching cursor into infinity
                 mx = max(-1.0, min(2.0, float(mx)))
                 my = max(-1.0, min(2.0, float(my)))
@@ -1218,6 +1235,7 @@ class GazeEstimator:
                 self.is_calibrated = True
                 self.calibration_rmse = rmse
                 self.calibration_points_data = points_data
+                self.calibration_screen_aspect = self.target_screen_aspect
             return True
         except Exception:
             return False
@@ -1243,6 +1261,8 @@ class GazeEstimator:
                     "head_sensitivities": [self.head_sensitivity_x, self.head_sensitivity_y],
                     "iris_sensitivities": [self.iris_sensitivity_x, self.iris_sensitivity_y],
                     "tracking_mode": self.tracking_mode,
+                    "screen_aspect": self.calibration_screen_aspect,
+                    "screen_size": self.target_screen_size,
                     "points": self.calibration_points_data or []
                 }
             tmp_path = filepath + ".tmp"
@@ -1364,6 +1384,11 @@ class GazeEstimator:
                 if "points" in profile:
                     self.calibration_points_data = profile["points"]
 
+                if "screen_aspect" in profile:
+                    self.calibration_screen_aspect = (
+                        float(profile["screen_aspect"]) if profile["screen_aspect"] is not None else None
+                    )
+
             return True
         except Exception as e:
             print(f"[GazeEstimator] Warning: Failed to load calibration profile '{filepath}': {e}. Restoring safe defaults.")
@@ -1400,3 +1425,5 @@ class GazeEstimator:
             self.calib_weights_y = None
             self.calibration_points_data = None
             self.calibration_rmse = 0.0
+            self.calibration_screen_aspect = None
+            self.last_head_yaw = 0.0

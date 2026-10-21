@@ -86,6 +86,8 @@ class CameraTracker(QThread):
         # Initialize GazeEstimator and GestureDetector
         if gaze_estimator is not None:
             self.gaze_estimator = gaze_estimator
+            if hasattr(self.gaze_estimator, "head_yaw_sign"):
+                self.gaze_estimator.head_yaw_sign = 1.0 if self.mirror else -1.0
         else:
             self.gaze_estimator = GazeEstimator(
                 head_weight=config.HEAD_WEIGHT,
@@ -96,6 +98,7 @@ class CameraTracker(QThread):
                 iris_sensitivity_y=config.DEFAULT_IRIS_SENSITIVITY_Y,
                 ema_alpha=config.EMA_ALPHA,
                 tracking_mode=getattr(config, "DEFAULT_TRACKING_MODE", "PURE_IRIS"),
+                mirror=self.mirror,
             )
             # Auto-load calibration profile if present
             profile_path = getattr(config, "CALIBRATION_PROFILE_PATH", "calibration_profile.json")

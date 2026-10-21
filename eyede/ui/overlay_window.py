@@ -173,7 +173,7 @@ HELP_SHORTCUTS = (
     ("[Ctrl+Alt+S]", "Sonido", "Silencia o activa el feedback acústico desde cualquier ventana."),
     ("[Ctrl+Alt+F]", "FreeLook", "Activa el ratón directo por mirada desde cualquier ventana."),
     ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming dentro de FreeLook desde cualquier ventana."),
-    ("[Ctrl+Shift+M]", "Cambiar pantalla", "Mueve el HUD y el mapeo de mirada al siguiente monitor."),
+    ("[Ctrl+Shift+M]", "Cambiar pantalla", "Mueve el HUD y el mapeo al siguiente monitor; también cruza automáticamente mirando hacia el borde ~0.4 s."),
     ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
 )
 
@@ -850,6 +850,14 @@ class OverlayWindow(QWidget):
         else:
             self._sniper_action_pill_rect = QRectF()
 
+        # The screen selector pill is never active in sniper mode, nor when it
+        # was hidden to make room. Reset hover state so stale values cannot
+        # trigger a screen cycle.
+        if self.current_context_mode_id == "sniper" or not show_last:
+            self.header_screen_rect = QRectF()
+        if not self.header_screen_rect.isValid():
+            self.hovered_header_screen = False
+
         selector_rect = (
             self._sniper_action_pill_rect
             if self._sniper_action_pill_rect.isValid()
@@ -1048,8 +1056,8 @@ class OverlayWindow(QWidget):
 
     def set_screen_info(self, index: int, count: int) -> None:
         """Updates the compact multi-monitor selector in the command bar."""
-        self.screen_index = max(0, int(index))
         self.screen_count = max(1, int(count))
+        self.screen_index = max(0, min(int(index), self.screen_count - 1))
         self._update_header_exit_rect()
         self.update()
 

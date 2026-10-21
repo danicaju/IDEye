@@ -33,8 +33,8 @@ class ScreenManager(QObject):
         self.debug_widget = debug_widget
         self.gaze_estimator = gaze_estimator
         self._screens_override = screens_override
+        self._cached_screens: Optional[List[Any]] = None
         self._current_index = 0
-        self._head_yaw = 0.0
         self._yaw_since: Optional[float] = None
         self._last_handover = 0.0
         app = QApplication.instance()
@@ -44,18 +44,29 @@ class ScreenManager(QObject):
                 app.screenRemoved.connect(lambda *_: self._on_screens_changed())
             except Exception:
                 pass
+        self._refresh_screens()
 
     # ------------------------------------------------------------------
+    def _refresh_screens(self) -> None:
+        """Refreshes the cached screen list from QApplication."""
+        if self._screens_override is not None:
+            self._cached_screens = list(self._screens_override)
+            return
+        app = QApplication.instance()
+        if app is None:
+            self._cached_screens = []
+            return
+        try:
+            self._cached_screens = [screen for screen in app.screens() if screen.isAvailable()]
+        except Exception:
+            self._cached_screens = list(app.screens())
+
     def get_available_screens(self) -> List[Any]:
         if self._screens_override is not None:
             return list(self._screens_override)
-        app = QApplication.instance()
-        if app is None:
-            return []
-        try:
-            return [screen for screen in app.screens() if screen.isAvailable()]
-        except Exception:
-            return list(app.screens())
+        if self._cached_screens is None:
+            self._refresh_screens()
+        return list(self._cached_screens) if self._cached_screens is not None else []
 
     @property
     def screen_count(self) -> int:
@@ -72,13 +83,22 @@ class ScreenManager(QObject):
         return screens[max(0, min(len(screens) - 1, self._current_index))]
 
     def _on_screens_changed(self) -> None:
+        self._refresh_screens()
         count = self.screen_count
-        if self._current_index >= count:
-            self._current_index = max(0, count - 1)
+        if count <= 0:
+            self._current_index = 0
+        elif self._current_index >= count:
+            self._current_index = count - 1
         self.screen_changed.emit(self._current_index, count)
 
     # ------------------------------------------------------------------
-    def handover_to_screen(self, screen_index: int, reason: str = "manual") -> bool:
+    def handover_to_screen(
+        self,
+        screen_index: int,
+        reason: str = "manual",
+        timestamp: Optional[float] = None,
+    ) -> bool:
+        self._refresh_screens()
         screens = self.get_available_screens()
         if not screens:
             return False
@@ -121,7 +141,7 @@ class ScreenManager(QObject):
                 pass
 
         self._current_index = index
-        self._last_handover = time.time()
+        self._last_handover = timestamp if timestamp is not None else time.time()
         self._yaw_since = None
         self.screen_changed.emit(index, len(screens))
         print(f"[ScreenManager] Handover -> screen {index + 1}/{len(screens)} ({reason})")
@@ -160,4 +180,4 @@ class ScreenManager(QObject):
         if now - self._last_handover < 1.0:
             return False
         self._yaw_since = None
-        return self.handover_to_screen(target, "bezel")
+        return self.handover_to_screen(target, "bezel", timestamp=now)

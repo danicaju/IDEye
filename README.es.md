@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-492%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-496%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -208,6 +208,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+V`** | **Abrir Selector de Modo** | Abre el selector de 6 modos; pulsa `Ctrl+Alt+V` desde cualquier sitio |
 | **`Ctrl+Alt+K`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor vía WebSocket. Usa `Ctrl+Alt+K` desde cualquier sitio |
 | **`Ctrl+Alt+F`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz. Usa `Ctrl+Alt+F` desde cualquier sitio |
+| **Scroll por borde** | **Scroll web en FreeLook** | Mira al borde superior o inferior durante ~0.3 s para desplazar la página; vuelve al centro para detenerte |
 | **`Ctrl+Alt+G`** | **Modo Gaming** | Joystick de cabeza para WASD; guiño derecho alterna cursor de menú; guiño izquierdo salta. Usa `Ctrl+Alt+G` desde cualquier sitio |
 | **`Ctrl+Alt+S`** | **Alternar Retroalimentación Sonora** | Pulsa `Ctrl+Alt+S` desde cualquier sitio |
 | **`Ctrl+Alt+H`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
@@ -290,7 +291,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 492 pruebas de unidad e integración
+└── tests/ # 496 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -308,6 +309,7 @@ IDEye/
     ├── test_hotfix_ui_and_gaming.py # Joystick, audio y ayuda
     ├── test_writing_words_and_letters.py # Teclado de letras, predicciones y frases
     ??? test_interactive_guide.py # Generación, catálogo y accesos al manual
+    ├── test_freelook_edge_scroll.py # Scroll por borde en FreeLook
     ├── test_glass_focus_ui.py # Widgets Glass/Focus
     ├── test_help_ui_and_card_layout.py # Ayuda y guía de gestos
     ├── test_menu_integrity.py # Integridad de árboles 3x3
@@ -331,11 +333,11 @@ pytest -q
 ```
 
 ```text
-492 pruebas superadas, 70 subtests, 20.41s
+496 pruebas superadas, 70 subtests, 19.64s
 ```
 
 > [!NOTE]
-> Todos los 492 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 496 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 

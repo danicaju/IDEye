@@ -80,6 +80,13 @@ PAGES: List[Dict[str, Any]] = [
                 "text": "Pausa el HUD con Ctrl+Alt+P o un guiño derecho. Las zonas de reposo evitan el efecto Midas mientras lees.",
                 "chip": "Lectura segura",
             },
+            {
+                "icon": "scroll",
+                "badge": "↕",
+                "title": "Scroll sin manos",
+                "text": "En FreeLook, deja la mirada en el borde superior o inferior durante ~0.3 s para desplazar la página. Vuelve al centro para parar.",
+                "chip": "Web / documentos",
+            },
         ],
     },
     {

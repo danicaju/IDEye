@@ -101,6 +101,13 @@ CELL_MAGNETISM_STRENGTH: float = 0.15
 CELL_MAGNETISM_DWELL: float = 0.15
 
 # Phase 7.7: FreeLook full-screen overscan and taskbar magnetic rail
+# Phase 7.8: Easy page scrolling in desktop FreeLook.
+FREELOOK_EDGE_SCROLL_ENABLED: bool = True
+FREELOOK_EDGE_SCROLL_ZONE: float = 0.075
+FREELOOK_EDGE_SCROLL_DELAY_SEC: float = 0.30
+FREELOOK_EDGE_SCROLL_INTERVAL_SEC: float = 0.11
+FREELOOK_EDGE_SCROLL_STEP: int = 3
+
 OVERSCAN_MARGIN_X: float = 0.04
 OVERSCAN_MARGIN_Y_TOP: float = 0.04
 OVERSCAN_MARGIN_Y_BOTTOM: float = 0.07

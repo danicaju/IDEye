@@ -294,6 +294,9 @@ class OverlayWindow(QWidget):
 
         # FreeLook / gaming state
         self._freelook_last_pos: Tuple[int, int] = (0, 0)
+        self._edge_scroll_direction: int = 0
+        self._edge_scroll_since: float = 0.0
+        self._edge_scroll_last: float = 0.0
         self._jaw_locked: bool = False
         self._jaw_lock_pos: Optional[Tuple[int, int]] = None
         self._mouth_active: bool = False
@@ -1467,6 +1470,7 @@ class OverlayWindow(QWidget):
         self._mouth_active = False
         self._jaw_locked = False
         self._jaw_lock_pos = None
+        self._reset_freelook_edge_scroll()
         self.release_all_game_keys()
 
     def _clear_header_help_flash(self) -> None:
@@ -1730,6 +1734,56 @@ class OverlayWindow(QWidget):
     # ------------------------------------------------------------------ #
     # Phase 7.5: FreeLook / direct OS mouse
     # ------------------------------------------------------------------ #
+    def _reset_freelook_edge_scroll(self) -> None:
+        self._edge_scroll_direction = 0
+        self._edge_scroll_since = 0.0
+        self._edge_scroll_last = 0.0
+
+    def _update_freelook_edge_scroll(self, gy: float, now: Optional[float] = None) -> int:
+        """Scroll while the gaze rests near the top/bottom edge in desktop FreeLook."""
+        if (
+            self._gaming_mode
+            or self._jaw_locked
+            or not bool(getattr(config, "FREELOOK_EDGE_SCROLL_ENABLED", True))
+        ):
+            self._reset_freelook_edge_scroll()
+            return 0
+        zone = max(0.02, min(0.20, float(getattr(config, "FREELOOK_EDGE_SCROLL_ZONE", 0.075))))
+        if gy <= zone:
+            direction = 1
+        elif gy >= 1.0 - zone:
+            direction = -1
+        else:
+            self._reset_freelook_edge_scroll()
+            return 0
+
+        timestamp = time.time() if now is None else float(now)
+        if direction != self._edge_scroll_direction:
+            self._edge_scroll_direction = direction
+            self._edge_scroll_since = timestamp
+            self._edge_scroll_last = 0.0
+            return 0
+
+        delay = max(0.05, float(getattr(config, "FREELOOK_EDGE_SCROLL_DELAY_SEC", 0.30)))
+        interval = max(0.04, float(getattr(config, "FREELOOK_EDGE_SCROLL_INTERVAL_SEC", 0.11)))
+        if timestamp - self._edge_scroll_since < delay:
+            return 0
+        if self._edge_scroll_last and timestamp - self._edge_scroll_last < interval:
+            return 0
+
+        controller = self.mouse_controller
+        if controller is None:
+            controller = OSMouseController()
+            self.mouse_controller = controller
+        step = max(1, int(getattr(config, "FREELOOK_EDGE_SCROLL_STEP", 3)))
+        try:
+            controller.scroll(direction * step)
+        except Exception:
+            pass
+        self._edge_scroll_last = timestamp
+        self.last_action_desc = "Scroll \u2191" if direction > 0 else "Scroll \u2193"
+        return direction
+
     def _freelook_prethreshold(self) -> float:
         return max(0.01, float(getattr(self, "mar_threshold", 0.45)) * 0.55)
 
@@ -1787,6 +1841,7 @@ class OverlayWindow(QWidget):
                 except Exception:
                     pass
 
+        self._update_freelook_edge_scroll(gy)
         normalized = (x / float(screen_w), y / float(screen_h))
         if normalized != self.current_gaze:
             self.current_gaze = normalized
@@ -1982,20 +2037,23 @@ class OverlayWindow(QWidget):
             self.hovered_gaming_toggle = False
             profile = "ESCRITORIO"
             text = f"FREELOOK → {profile} → {action}"
+            hint = "Mira al borde superior o inferior para hacer scroll"
             fm = QFontMetrics(self._font_freelook_hint)
-            width = min(440.0, max(240.0, fm.horizontalAdvance(text) + 28.0))
+            width = min(520.0, max(260.0, max(fm.horizontalAdvance(text), fm.horizontalAdvance(hint)) + 30.0))
             rect = QRectF(
                 self.width() * 0.5 - width * 0.5,
                 self.header_rect.bottom() + 8.0,
                 width,
-                26.0,
+                44.0,
             )
-            painter.setBrush(QColor(11, 15, 25, 215))
+            painter.setBrush(QColor(11, 15, 25, 225))
             painter.setPen(QPen(QColor(244, 63, 94, 180), 1.0))
             painter.drawRoundedRect(rect, 8.0, 8.0)
             painter.setPen(QColor(254, 205, 211))
             painter.setFont(self._font_freelook_hint)
-            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
+            painter.drawText(rect.adjusted(0.0, 5.0, 0.0, -20.0), Qt.AlignmentFlag.AlignCenter, text)
+            painter.setPen(QColor(148, 163, 184))
+            painter.drawText(rect.adjusted(0.0, 21.0, 0.0, -4.0), Qt.AlignmentFlag.AlignCenter, hint)
             painter.restore()
             return
 

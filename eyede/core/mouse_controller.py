@@ -71,6 +71,10 @@ class OSMouseController:
         time.sleep(self._MOVE_CLICK_PAUSE)
         self._controller.click(Button.left, 2)
 
+    def scroll(self, dy: int) -> None:
+        """Scroll at the current pointer position without moving it."""
+        self._controller.scroll(0, int(dy))
+
     def scroll_at(self, x: int, y: int, dy: int) -> None:
         """Move to coordinates and scroll vertically by dy lines."""
         self.move_to(x, y)

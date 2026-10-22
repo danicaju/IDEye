@@ -94,9 +94,17 @@ class DataMathMode(BaseMode):
             _act("4", "D_CUR_DOWN", "Abajo", None, key_name="DOWN"),
             _act("6", "D_CUR_HOME", "Inicio", None, key_name="HOME"),
             _act("8", "D_CUR_END", "Fin", None, key_name="END"),
-            _act("9", "D_CUR_TAB", "Tab", None, key_name="TAB"),
+            MenuAction("DATA_CLIPBOARD", "9: PORTAPAPELES", "Historial de copias", "SUBMENU", submenu_id="CLIPBOARD_HISTORY", icon="edit"),
         ]
         tree["DATA_CURSOR"] = make_submenu("DATA_CURSOR", "CURSOR", cursor)
+        try:
+            from eyede.actions.clipboard_history import get_clipboard_history_manager
+
+            tree["CLIPBOARD_HISTORY"] = get_clipboard_history_manager().get_clipboard_menu_node(
+                parent_id="DATA_CURSOR"
+            )
+        except Exception:
+            pass
 
         delete = [
             _act("1", "D_DEL_BACK", "Backspace", None, key_name="BACKSPACE"),

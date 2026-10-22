@@ -38,6 +38,9 @@ try:
     from eyede.core.settings_manager import SettingsManager
     from eyede.core.macro_manager import MacroManager
     from eyede.core.screen_manager import ScreenManager
+    from eyede.core.window_watcher import WindowWatcher
+    from eyede.core.telemetry_manager import TelemetryManager
+    from eyede.actions.clipboard_history import get_clipboard_history_manager
     from eyede.ui.macro_editor_dialog import CustomMacroDialog
     from eyede.ui.overlay_window import OverlayWindow
     from eyede.ui.debug_widget import DebugWidget
@@ -58,6 +61,9 @@ except ImportError:
     from core.settings_manager import SettingsManager
     from core.macro_manager import MacroManager
     from core.screen_manager import ScreenManager
+    from core.window_watcher import WindowWatcher
+    from core.telemetry_manager import TelemetryManager
+    from actions.clipboard_history import get_clipboard_history_manager
     from ui.macro_editor_dialog import CustomMacroDialog
     from ui.overlay_window import OverlayWindow
     from ui.debug_widget import DebugWidget
@@ -695,6 +701,8 @@ class EyeDEApplication(QObject):
         self.settings_manager = SettingsManager()
         self._settings = self.settings_manager.as_dict()
         self.macro_manager = MacroManager()
+        self.clipboard_history = get_clipboard_history_manager()
+        self.telemetry_manager = TelemetryManager(parent=self)
 
         # Core subsystems
         self.tracker = CameraTracker(camera_index=self.camera_index, threaded=self.threaded)
@@ -723,6 +731,7 @@ class EyeDEApplication(QObject):
         self.overlay.set_sound_feedback(self.sound_feedback)
         self.mouse_controller = OSMouseController()
         self.overlay.set_mouse_controller(self.mouse_controller)
+        self.overlay.set_clipboard_manager(self.clipboard_history)
         self.overlay.set_vscode_connected(False)
         self.screen_manager = ScreenManager(
             overlay=self.overlay,
@@ -751,6 +760,16 @@ class EyeDEApplication(QObject):
             if hasattr(self.overlay, "code_injector") and self.overlay.code_injector is not None:
                 self.overlay.code_injector.set_websocket_bridge(self.ws_bridge)
 
+        self.window_watcher = WindowWatcher(
+            mode_manager=self.mode_manager,
+            websocket_connected=(
+                (lambda: bool(self.ws_bridge and self.ws_bridge.is_connected))
+                if self.ws_bridge is not None
+                else None
+            ),
+            parent=self,
+        )
+
         # Global Hotkey Manager for Emergency Exit & Reset
         self.hotkey_manager = GlobalHotkeyManager()
         self.hotkey_manager.emergency_exit_requested.connect(self.shutdown)
@@ -772,6 +791,10 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
         self.hotkey_manager.center_calibration_requested.connect(self._on_center_calibration_shortcut)
         self.hotkey_manager.pause_toggle_requested.connect(self.overlay.toggle_pause)
+        self.hotkey_manager.clipboard_history_requested.connect(self._on_clipboard_shortcut)
+        self.hotkey_manager.clipboard_history_anywhere_requested.connect(
+            self._on_clipboard_shortcut_anywhere
+        )
 
         self._setup_connections()
         self._configure_geometry()
@@ -846,6 +869,15 @@ class EyeDEApplication(QObject):
         """Ctrl+Alt+G (or a validated plain G) toggles the gaming profile."""
         if self.overlay.current_context_mode_id == "sniper":
             self.overlay.toggle_gaming_mode()
+
+    def _on_clipboard_shortcut(self) -> None:
+        """B while gazing at the command bar opens clipboard history."""
+        if self.overlay.is_mode_shortcut_targeted():
+            self._on_clipboard_shortcut_anywhere()
+
+    def _on_clipboard_shortcut_anywhere(self) -> None:
+        """Ctrl+Alt+B opens the six-slot clipboard history from any window."""
+        self.overlay.open_clipboard_history()
 
     def _on_center_calibration_shortcut(self) -> None:
         """Ctrl+Alt+C: anchors the current face position as screen center."""
@@ -1024,6 +1056,19 @@ class EyeDEApplication(QObject):
         self.debug_widget.exit_requested.connect(self.shutdown)
         self.overlay.exit_requested.connect(self.shutdown)
 
+        # Phase 9: clipboard, foreground watcher and telemetry
+        self.overlay.text_injected.connect(self.telemetry_manager.record_injection)
+        self.overlay.mouth_clicked.connect(self.telemetry_manager.record_mouth_click)
+        self.telemetry_manager.stats_changed.connect(self.debug_widget.update_telemetry)
+        self.debug_widget.telemetry_reset_requested.connect(self.telemetry_manager.reset)
+        self.window_watcher.foreground_changed.connect(self.debug_widget.set_foreground_window)
+        self.window_watcher.mode_requested.connect(self._on_window_mode_requested)
+        self.mode_manager.mode_changed.connect(
+            lambda mode_id, *_: self.telemetry_manager.set_current_mode(mode_id)
+        )
+        self.telemetry_manager.set_current_mode(self.mode_manager.current_mode_id)
+        self.debug_widget.update_telemetry(self.telemetry_manager.stats())
+
         # Qt application about-to-quit hook
         self.qapp.aboutToQuit.connect(self.shutdown)
 
@@ -1091,6 +1136,13 @@ class EyeDEApplication(QObject):
         if self.overlay is not None:
             self.overlay.last_action_desc = f"Umbral MAR: {mar:.2f}"
             self.overlay.update()
+
+    def _on_window_mode_requested(self, mode_id: str, subprofile: str) -> None:
+        """Applies the FreeLook gaming/desktop sub-profile from the watcher."""
+        if mode_id == "sniper" and hasattr(self.overlay, "set_gaming_profile"):
+            if self.overlay.current_context_mode_id != "sniper":
+                self.overlay._sniper_previous_mode = self.overlay.current_context_mode_id
+            self.overlay.set_gaming_profile(subprofile == "gaming")
 
     def _on_block_activated(self, block_idx: int, action: str) -> None:
         """Handles actions triggered from macro blocks."""
@@ -1353,6 +1405,10 @@ class EyeDEApplication(QObject):
         # Start global emergency hotkey listener
         if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
             self.hotkey_manager.start()
+        if getattr(self, "clipboard_history", None) is not None:
+            self.clipboard_history.start()
+        if getattr(self, "window_watcher", None) is not None:
+            self.window_watcher.start()
 
         # Start WebSocket Bridge (Phase 5)
         if self.ws_bridge is not None:
@@ -1396,6 +1452,12 @@ class EyeDEApplication(QObject):
 
         if hasattr(self, "hotkey_manager") and self.hotkey_manager is not None:
             self.hotkey_manager.stop()
+        if getattr(self, "window_watcher", None) is not None:
+            self.window_watcher.stop()
+        if getattr(self, "clipboard_history", None) is not None:
+            self.clipboard_history.stop()
+        if getattr(self, "telemetry_manager", None) is not None:
+            self.telemetry_manager.stop()
 
         if hasattr(self, "tray_icon") and self.tray_icon is not None:
             self.tray_icon.hide()

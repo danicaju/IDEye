@@ -20,3 +20,5 @@ custom_macros.json.tmp
 !eyede/assets/defaults/user_settings.json
 !eyede/assets/defaults/custom_macros.json
 calibration_profiles/
+telemetry_stats.json
+telemetry_stats.json.tmp

@@ -327,7 +327,7 @@ def populate_help_items(parent_id: str = "ROOT") -> List[MenuAction]:
         MenuAction(
             id="HELP_SHORTCUTS_3",
             label="8: Ctrl+Alt+P PAUSA | Ctrl+Alt+S SONIDO | Ctrl+Alt+F FREELOOK",
-            hint="Ctrl+Alt+P: Pausa | Ctrl+Alt+S: Sonido | Ctrl+Alt+F: FreeLook | Ctrl+Alt+G: Gaming | Ctrl+Alt+Q: Emergencia",
+            hint="Ctrl+Alt+P: Pausa | Ctrl+Alt+B: Portapapeles | Ctrl+Alt+S: Sonido | Ctrl+Alt+F: FreeLook | Ctrl+Alt+G: Gaming | Ctrl+Alt+Q: Emergencia",
             action_type="INFO",
             icon="",
         ),
@@ -1460,7 +1460,7 @@ def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
         create_pause_action("5"),
         MenuAction(id="EDIT_REDO", label="6: Rehacer", hint="Ctrl + Y", action_type="KEY", key_name="REDO", sticky=True, icon="edit"),
         create_back_action("ROOT", "7"),
-        MenuAction(id="EDIT_COMMENT", label="8: Comentar", hint="Ctrl + /", action_type="KEY", key_name="COMMENT", sticky=True, icon="edit"),
+        MenuAction(id="EDIT_CLIPBOARD", label="8: PORTAPAPELES", hint="Historial de copias (6)", action_type="SUBMENU", submenu_id="CLIPBOARD_HISTORY", sticky=True, icon="edit"),
         MenuAction(id="ACTION_EXIT_MENU", label="9: SALIR", hint="Cerrar IDEye (Confirmación)", action_type="SUBMENU", submenu_id="EXIT_CONFIRM", icon="exit"),
     ]
 
@@ -1472,6 +1472,14 @@ def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
         parent_id="ROOT",
         sticky=True,
     )
+    try:
+        from eyede.actions.clipboard_history import get_clipboard_history_manager
+
+        tree["CLIPBOARD_HISTORY"] = get_clipboard_history_manager().get_clipboard_menu_node(
+            parent_id="EDIT"
+        )
+    except Exception:
+        pass
 
     # =========================================================================
     # 7. SPACE / FORMATTING (STICKY SUBMENU)

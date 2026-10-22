@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QSlider,
     QComboBox,
+    QScrollArea,
 )
 
 try:
@@ -88,6 +89,7 @@ class DebugWidget(QWidget):
     language_changed = pyqtSignal(str)
     mar_threshold_changed = pyqtSignal(float)
     macro_editor_requested = pyqtSignal()
+    telemetry_reset_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -425,6 +427,7 @@ class DebugWidget(QWidget):
         slider_layout.addWidget(self.slider_damping)
 
         content_layout.addWidget(slider_frame)
+        content_layout.addWidget(self._build_telemetry_card())
 
         # Dedicated In-App Gesture & Shortcut Reference Card
         guide_frame = QFrame(self)
@@ -450,7 +453,7 @@ class DebugWidget(QWidget):
             "<div>• <b>[Ctrl+Alt+A]</b> Menús inteligentes &nbsp;|&nbsp; <b>[Ctrl+Alt+L]</b> Cambiar Lenguaje</div>"
             "<div>• <b>[Ctrl+Alt+T]</b> Modo Tracking &nbsp;|&nbsp; <b>[Ctrl+Alt+M]</b> Colapsar monitor</div>"
             "<div>• <b>[Ctrl+Alt+S]</b> Sonido &nbsp;|&nbsp; <b>[Ctrl+Alt+F]</b> FreeLook &nbsp;|&nbsp; <b>[Ctrl+Alt+G]</b> Gaming</div>"
-            "<div>• <b>[Ctrl+Alt+P]</b> Pausa Lectura &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
+            "<div>• <b>[Ctrl+Alt+B]</b> Portapapeles &nbsp;|&nbsp; <b>[Ctrl+Alt+P]</b> Pausa &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
             "</div>"
         )
         guide_layout.addWidget(guide_content)
@@ -614,7 +617,12 @@ class DebugWidget(QWidget):
         self.lbl_emergency_hint.setStyleSheet("font-size: 10px; font-weight: bold; color: #f87171; padding: 2px;")
         content_layout.addWidget(self.lbl_emergency_hint)
 
-        main_layout.addWidget(self.content_container)
+        self.content_scroll = QScrollArea(self)
+        self.content_scroll.setWidgetResizable(True)
+        self.content_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.content_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content_scroll.setWidget(self.content_container)
+        main_layout.addWidget(self.content_scroll)
 
         self._update_mode_ui("PURE_IRIS")
         self._update_adaptive_ui()
@@ -624,11 +632,13 @@ class DebugWidget(QWidget):
         self.is_collapsed = not getattr(self, "is_collapsed", False)
         if self.is_collapsed:
             self.content_container.hide()
+            self.content_scroll.hide()
             self.setFixedHeight(48)
             self.btn_collapse.setText("▼ Expandir")
             self.btn_collapse.setToolTip("Expandir monitor de depuración")
         else:
             self.content_container.show()
+            self.content_scroll.show()
             self.setFixedSize(config.DEBUG_WINDOW_WIDTH, config.DEBUG_WINDOW_HEIGHT)
             self.btn_collapse.setText("▲ Colapsar")
             self.btn_collapse.setToolTip("Colapsar a mini-barra")
@@ -727,6 +737,54 @@ class DebugWidget(QWidget):
                     background-color: #38bdf8;
                 }
             """)
+
+    def _build_telemetry_card(self) -> QFrame:
+        frame = QFrame(self)
+        frame.setObjectName("cardFrame")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(3)
+
+        title = QLabel("MÉTRICAS DE EFICIENCIA (LOOK-TO-CODE)", frame)
+        title.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
+        layout.addWidget(title)
+
+        self.lbl_telemetry_saved = QLabel("Ahorro Físico: 0 teclas (0% menos esfuerzo)", frame)
+        self.lbl_telemetry_saved.setStyleSheet("font-size: 10px; color: #d1fae5;")
+        self.lbl_telemetry_saved.setWordWrap(True)
+        layout.addWidget(self.lbl_telemetry_saved)
+
+        self.lbl_telemetry_injected = QLabel("Inyectado: 0 chars en 0 clics", frame)
+        self.lbl_telemetry_injected.setStyleSheet("font-size: 10px; color: #bae6fd;")
+        self.lbl_telemetry_injected.setWordWrap(True)
+        layout.addWidget(self.lbl_telemetry_injected)
+
+        self.lbl_foreground = QLabel("Ventana activa: —", frame)
+        self.lbl_foreground.setStyleSheet("font-size: 9px; color: #94a3b8;")
+        self.lbl_foreground.setWordWrap(True)
+        layout.addWidget(self.lbl_foreground)
+
+        reset = QPushButton("Reset métricas", frame)
+        reset.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        reset.clicked.connect(self.telemetry_reset_requested.emit)
+        layout.addWidget(reset)
+        return frame
+
+    def update_telemetry(self, stats: dict) -> None:
+        saved = int(stats.get("keystrokes_saved", 0))
+        ratio = float(stats.get("efficiency_ratio_pct", 0.0))
+        chars = int(stats.get("total_chars_injected", 0))
+        clicks = int(stats.get("total_mouth_clicks", 0))
+        self.lbl_telemetry_saved.setText(
+            f"Ahorro Físico: {saved} teclas ({ratio:.0f}% menos esfuerzo)"
+        )
+        self.lbl_telemetry_injected.setText(
+            f"Inyectado: {chars} chars en {clicks} clics"
+        )
+
+    def set_foreground_window(self, title: str, process_name: str) -> None:
+        label = str(process_name or title or "—")
+        self.lbl_foreground.setText(f"Ventana activa: {label}")
 
     @pyqtSlot(object, float)
     def on_frame_ready(self, frame_or_qimage: Any, current_mar: float) -> None:

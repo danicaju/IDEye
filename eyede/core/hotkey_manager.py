@@ -31,11 +31,13 @@ HOTKEY_ACTIONS = {
     "f": "_on_sniper_toggle",
     "g": "_on_gaming_toggle",
     "m": "_on_monitor_toggle",
+    "b": "_on_clipboard_history",
     "<ctrl>+<alt>+s": "_on_sound_toggle_anywhere",
     "<ctrl>+<alt>+f": "_on_sniper_toggle_anywhere",
     "<ctrl>+<alt>+g": "_on_gaming_toggle_anywhere",
     "<ctrl>+<alt>+m": "_on_monitor_toggle_anywhere",
     "<ctrl>+<alt>+a": "_on_adaptive_ast_toggle_anywhere",
+    "<ctrl>+<alt>+b": "_on_clipboard_history_anywhere",
     "<ctrl>+<alt>+t": "_on_tracking_mode_cycle_anywhere",
     "<ctrl>+<alt>+c": "_on_center_calibration_anywhere",
     "<ctrl>+<alt>+p": "_on_pause_toggle_anywhere",
@@ -72,6 +74,8 @@ class GlobalHotkeyManager(QObject):
     tracking_mode_cycle_requested = pyqtSignal()
     center_calibration_requested = pyqtSignal()
     pause_toggle_requested = pyqtSignal()
+    clipboard_history_requested = pyqtSignal()
+    clipboard_history_anywhere_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -199,3 +203,11 @@ class GlobalHotkeyManager(QObject):
     def _on_pause_toggle_anywhere(self) -> None:
         """Callback for Ctrl+Alt+P pause/reading mode."""
         self.pause_toggle_requested.emit()
+
+    def _on_clipboard_history(self) -> None:
+        """Callback for the gaze-gated B clipboard shortcut."""
+        self.clipboard_history_requested.emit()
+
+    def _on_clipboard_history_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+B clipboard history."""
+        self.clipboard_history_anywhere_requested.emit()

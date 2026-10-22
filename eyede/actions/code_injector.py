@@ -18,7 +18,7 @@ import time
 import logging
 import threading
 import queue
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from typing import Optional, Dict, Any, Callable, List, Tuple, Union
 
 try:
@@ -80,6 +80,7 @@ class CodeInjector:
         keyboard_controller: Optional[Any] = None,
         clipboard_module: Optional[Any] = None,
         websocket_bridge: Optional[Any] = None,
+        clipboard_history: Optional[Any] = None,
     ):
         """
         Initializes the CodeInjector.
@@ -94,6 +95,7 @@ class CodeInjector:
         self.async_mode = async_mode
         self.paste_delay = paste_delay
         self.websocket_bridge = websocket_bridge
+        self.clipboard_history = clipboard_history
 
         # OS Platform detection
         self.is_macos: bool = (sys.platform == "darwin")
@@ -353,7 +355,35 @@ class CodeInjector:
                 backspaces,
             )
 
+    def set_clipboard_history(self, manager: Optional[Any]) -> None:
+        self.clipboard_history = manager
+
     def _do_insert_snippet(
+        self,
+        snippet: str,
+        cursor_offset_left: int,
+        cursor_offset_up: int,
+        restore_clipboard: bool,
+        delay: float,
+        backspaces: int = 0,
+    ) -> bool:
+        """Runs insertion inside the clipboard-history internal-write lock."""
+        guard = (
+            self.clipboard_history.ignore_internal_writes()
+            if self.clipboard_history is not None
+            else nullcontext()
+        )
+        with guard:
+            return self._do_insert_snippet_locked(
+                snippet,
+                cursor_offset_left,
+                cursor_offset_up,
+                restore_clipboard,
+                delay,
+                backspaces,
+            )
+
+    def _do_insert_snippet_locked(
         self,
         snippet: str,
         cursor_offset_left: int,

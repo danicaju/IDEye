@@ -224,13 +224,21 @@ class WritingMode(BaseMode):
             _act("4", "W_CUR_4", "Inicio", None, key_name="HOME"),
             _act("6", "W_CUR_5", "Fin", None, key_name="END"),
             _act("8", "W_CUR_6", "Sel. todo", None, key_name="SELECT_ALL"),
-            _act("9", "W_CUR_7", "Buscar", None, key_name="FIND"),
+            MenuAction("WRITING_CLIPBOARD", "9: PORTAPAPELES", "Historial de copias", "SUBMENU", submenu_id="CLIPBOARD_HISTORY", icon="edit"),
         ]
         for a in cursor:
             if a.key_name:
                 a.action_type = "KEY"
                 a.snippet = None
         tree["WRITING_CURSOR"] = make_submenu("WRITING_CURSOR", "CURSOR / SELECCIÓN", cursor)
+        try:
+            from eyede.actions.clipboard_history import get_clipboard_history_manager
+
+            tree["CLIPBOARD_HISTORY"] = get_clipboard_history_manager().get_clipboard_menu_node(
+                parent_id="WRITING_CURSOR"
+            )
+        except Exception:
+            pass
 
         delete = [
             _act("1", "W_DEL_1", "Borrar palabra", None, key_name="DELETE_WORD"),

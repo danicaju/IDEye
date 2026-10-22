@@ -171,6 +171,7 @@ HELP_GESTURES = (
 
 HELP_SHORTCUTS = (
     ("[Ctrl+Alt+A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
+    ("[Ctrl+Alt+B]", "Portapapeles", "Abre las últimas 6 copias del sistema en cuadrícula 3x3."),
     ("[Ctrl+Alt+V/K]", "Elegir modo / Auto-switch", "Abre el selector de modos o alterna el cambio automático desde cualquier ventana."),
     ("[Ctrl+Alt+T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
     ("[Ctrl+Alt+M]", "Colapsar Monitor", "Colapsa o expande el monitor de depuración desde cualquier ventana."),
@@ -204,6 +205,8 @@ class OverlayWindow(QWidget):
     sound_enabled_changed = pyqtSignal(bool)
     auto_switch_changed = pyqtSignal(bool)
     screen_cycle_requested = pyqtSignal()
+    text_injected = pyqtSignal(int)  # characters inserted into the active editor
+    mouth_clicked = pyqtSignal(int)  # hovered block index, or -1 for header/other
     mode_changed = context_mode_changed
 
     def __init__(
@@ -241,6 +244,7 @@ class OverlayWindow(QWidget):
         # 2. Code Injection & Menu Tree Subsystems
         self.current_language: str = getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", "PYTHON")
         self.code_injector = code_injector if code_injector is not None else CodeInjector(async_mode=True)
+        self.clipboard_manager: Optional[Any] = None
         self.menu_tree: Dict[str, MenuNode] = menu_tree if menu_tree is not None else build_menu_tree(self.current_language)
         self.context_reader: ContextReader = context_reader if context_reader is not None else ContextReader()
         self.mode_manager = mode_manager if mode_manager is not None else ModeManager(
@@ -950,6 +954,45 @@ class OverlayWindow(QWidget):
             self._last_ast_eval_time = now
             return node
         return self.menu_tree.get(self.current_node_id, self.menu_tree.get("ROOT"))
+
+    def set_clipboard_manager(self, manager: Optional[Any]) -> None:
+        """Connects the Phase 9 clipboard history manager and injector lock."""
+        self.clipboard_manager = manager
+        if hasattr(self.code_injector, "set_clipboard_history"):
+            self.code_injector.set_clipboard_history(manager)
+        if manager is not None and hasattr(manager, "history_changed"):
+            try:
+                manager.history_changed.connect(self.refresh_clipboard_menu)
+            except (TypeError, RuntimeError):
+                pass
+        self.refresh_clipboard_menu()
+
+    def refresh_clipboard_menu(self) -> None:
+        if self.clipboard_manager is None:
+            return
+        node = self.menu_tree.get("CLIPBOARD_HISTORY")
+        parent_id = node.parent_id if node is not None and node.parent_id else "ROOT"
+        try:
+            self.menu_tree["CLIPBOARD_HISTORY"] = (
+                self.clipboard_manager.get_clipboard_menu_node(parent_id=parent_id)
+            )
+            if self.current_node_id == "CLIPBOARD_HISTORY":
+                self.update()
+        except Exception as exc:
+            logger.warning("Could not refresh clipboard menu: %s", exc)
+
+    def open_clipboard_history(self) -> bool:
+        if self.clipboard_manager is None:
+            return False
+        current = self.current_node_id if self.current_node_id != "CLIPBOARD_HISTORY" else "ROOT"
+        try:
+            self.menu_tree["CLIPBOARD_HISTORY"] = (
+                self.clipboard_manager.get_clipboard_menu_node(parent_id=current)
+            )
+        except Exception as exc:
+            logger.warning("Could not open clipboard history: %s", exc)
+            return False
+        return self.navigate_to("CLIPBOARD_HISTORY")
 
     def set_screen_info(self, index: int, count: int) -> None:
         """Updates the compact multi-monitor selector in the command bar."""
@@ -1734,6 +1777,17 @@ class OverlayWindow(QWidget):
             self._hold_started = False
             self.update()
 
+    def set_gaming_profile(self, enabled: bool) -> None:
+        """Applies the watcher's gaming/desktop FreeLook sub-profile."""
+        enabled = bool(enabled)
+        if enabled == self._gaming_mode:
+            return
+        if self._gaming_mode:
+            self.release_freelook_controls()
+        self._gaming_mode = enabled
+        self.last_action_desc = f"FreeLook: {'GAMING' if enabled else 'ESCRITORIO'}"
+        self.update()
+
     def toggle_gaming_mode(self) -> bool:
         if self._gaming_mode:
             self.release_freelook_controls()
@@ -1870,6 +1924,8 @@ class OverlayWindow(QWidget):
 
         if gesture_name != "MOUTH_CLICK":
             return
+
+        self.mouth_clicked.emit(self.hovered_block if self.hovered_block is not None else -1)
 
         # Dismiss cheat sheet modal if open
         if self.show_help_modal:
@@ -2113,6 +2169,7 @@ class OverlayWindow(QWidget):
             text = mode.record_letter(item.snippet or "")
             if text:
                 self.code_injector.insert_snippet(text)
+                self.text_injected.emit(len(text))
             self._refresh_writing_predictions()
             self.last_action_desc = f"Letra: {text}" if text else "Letra"
             self.action_executed.emit(item.id, self.last_action_desc)
@@ -2124,6 +2181,7 @@ class OverlayWindow(QWidget):
             word = mode.apply_case_to_word(item.snippet or "")
             if word:
                 self.code_injector.insert_snippet(word + " ")
+                self.text_injected.emit(len(word) + 1)
             mode.reset_prefix()
             self._refresh_writing_predictions()
             self.navigate_to("WRITING_T9")
@@ -2134,6 +2192,7 @@ class OverlayWindow(QWidget):
 
         if action_type == "WRITING_SPACE":
             self.code_injector.insert_snippet(" ")
+            self.text_injected.emit(1)
             mode.record_space()
             self._refresh_writing_predictions()
             self.last_action_desc = "Espacio"
@@ -2210,8 +2269,28 @@ class OverlayWindow(QWidget):
             self.block_activated.emit(target_block, item.id)
             return
 
+        if item.action_type == "CLIPBOARD":
+            text = item.snippet or ""
+            if text:
+                self.code_injector.insert_snippet(text)
+                self.text_injected.emit(len(text))
+            self.last_action_desc = f"Pegado: {len(text)} chars"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type == "CLIPBOARD_COPY":
+            if self.clipboard_manager is not None:
+                self.clipboard_manager.copy_selection()
+            self.last_action_desc = "Copiando selección..."
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
         if item.action_type in ("SNIPPET", "KEY"):
             self.code_injector.execute_action(item)
+            if item.action_type == "SNIPPET":
+                self.text_injected.emit(len(item.snippet or ""))
             self.last_action_desc = _clean_action_label(item.label)
             self.action_executed.emit(item.id, self.last_action_desc)
             self.block_activated.emit(target_block, item.id)
@@ -2282,6 +2361,9 @@ class OverlayWindow(QWidget):
             event.accept()
         elif event.key() == Qt.Key.Key_A:
             self.toggle_adaptive_ast()
+            event.accept()
+        elif event.key() == Qt.Key.Key_B:
+            self.open_clipboard_history()
             event.accept()
         elif event.key() == Qt.Key.Key_L:
             self.cycle_language()

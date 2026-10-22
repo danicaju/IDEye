@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QImage, QPixmap, QKeySequence, QShortcut
+from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -117,10 +117,7 @@ class DebugWidget(QWidget):
         self.is_vscode_connected: bool = False
         self._setup_ui()
 
-        # Keyboard shortcuts [T], [A], and [L] active application-wide
-        self.shortcut_t = QShortcut(QKeySequence(Qt.Key.Key_T), self, self.cycle_tracking_mode, context=Qt.ShortcutContext.ApplicationShortcut)
-        self.shortcut_a = QShortcut(QKeySequence(Qt.Key.Key_A), self, self.toggle_adaptive_ast, context=Qt.ShortcutContext.ApplicationShortcut)
-        self.shortcut_l = QShortcut(QKeySequence(Qt.Key.Key_L), self, self.cycle_language, context=Qt.ShortcutContext.ApplicationShortcut)
+        # Global Ctrl+Alt+T/A/L bindings live in GlobalHotkeyManager.
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -451,7 +448,7 @@ class DebugWidget(QWidget):
             "<div>• <b style='color: #93c5fd;'>Guiño Ojo Izquierdo:</b> Volver atrás / Deshacer</div>"
             "<div style='color: #7dd3fc; font-weight: bold; margin-top: 5px; margin-bottom: 2px;'>ATAJOS DE TECLADO:</div>"
             "<div>• <b>[Ctrl+Alt+A]</b> Menús inteligentes &nbsp;|&nbsp; <b>[Ctrl+Alt+L]</b> Cambiar Lenguaje</div>"
-            "<div>• <b>[Ctrl+Alt+T]</b> Modo Tracking &nbsp;|&nbsp; <b>[Ctrl+Alt+M]</b> Colapsar monitor</div>"
+            "<div>• <b>[Ctrl+Alt+T]</b> Modo Tracking &nbsp;|&nbsp; <b>[Ctrl+Alt+M]</b> Monitor &nbsp;|&nbsp; <b>[Ctrl+Alt+N]</b> Pantalla</div>"
             "<div>• <b>[Ctrl+Alt+S]</b> Sonido &nbsp;|&nbsp; <b>[Ctrl+Alt+F]</b> FreeLook &nbsp;|&nbsp; <b>[Ctrl+Alt+G]</b> Gaming</div>"
             "<div>• <b>[Ctrl+Alt+B]</b> Portapapeles &nbsp;|&nbsp; <b>[Ctrl+Alt+P]</b> Pausa &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
             "</div>"
@@ -466,7 +463,7 @@ class DebugWidget(QWidget):
         lang_bridge_layout.setContentsMargins(6, 6, 6, 6)
         lang_bridge_layout.setSpacing(4)
 
-        lbl_lang_section = QLabel("LENGUAJE ACTIVO Y PUENTE VS CODE (Tecla [L])", lang_bridge_frame)
+        lbl_lang_section = QLabel("LENGUAJE ACTIVO Y PUENTE VS CODE (Ctrl+Alt+L)", lang_bridge_frame)
         lbl_lang_section.setStyleSheet("font-size: 10px; font-weight: bold; color: #38bdf8;")
         lang_bridge_layout.addWidget(lbl_lang_section)
 

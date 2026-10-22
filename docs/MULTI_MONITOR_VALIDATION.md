@@ -15,7 +15,7 @@
 Use two displays with different resolutions or physical sizes.
 
 1. Start IDEye and confirm the header shows `MON 1/2`.
-2. Press `Ctrl+Shift+M`; the HUD and debug panel must move to the other display.
+2. Press `Ctrl+Alt+N`; the HUD and debug panel must move to the other display.
 3. Look at the top-right exit button in FreeLook; two mouth clicks must exit.
 4. Calibrate the first monitor with the normal 5-point wizard.
 5. Switch to the second monitor and run the wizard again from the debug panel.

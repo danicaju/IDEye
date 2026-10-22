@@ -172,6 +172,8 @@ HELP_GESTURES = (
 HELP_SHORTCUTS = (
     ("[Ctrl+Alt+A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
     ("[Ctrl+Alt+B]", "Portapapeles", "Abre las últimas 6 copias del sistema en cuadrícula 3x3."),
+    ("[Ctrl+Alt+L]", "Cambiar lenguaje", "Cicla el lenguaje activo (Python, TypeScript, Rust, C++, Go)."),
+    ("[Ctrl+Alt+H]", "Ayuda", "Abre o cierra la gu?a de gestos y atajos."),
     ("[Ctrl+Alt+V/K]", "Elegir modo / Auto-switch", "Abre el selector de modos o alterna el cambio automático desde cualquier ventana."),
     ("[Ctrl+Alt+T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
     ("[Ctrl+Alt+M]", "Colapsar Monitor", "Colapsa o expande el monitor de depuración desde cualquier ventana."),
@@ -180,7 +182,7 @@ HELP_SHORTCUTS = (
     ("[Ctrl+Alt+S]", "Sonido", "Silencia o activa el feedback acústico desde cualquier ventana."),
     ("[Ctrl+Alt+F]", "FreeLook", "Activa el ratón directo por mirada desde cualquier ventana."),
     ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming dentro de FreeLook desde cualquier ventana."),
-    ("[Ctrl+Shift+M]", "Cambiar pantalla", "Mueve el HUD y el mapeo al siguiente monitor; también cruza automáticamente mirando hacia el borde ~0.4 s."),
+    ("[Ctrl+Alt+N]", "Cambiar pantalla", "Mueve el HUD y el mapeo al siguiente monitor; también cruza automáticamente mirando hacia el borde ~0.4 s."),
     ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
 )
 

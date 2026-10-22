@@ -173,7 +173,7 @@ class TestSniperMouseMode(unittest.TestCase):
     def test_hotkeys_include_sound_and_sniper(self):
         from pynput import keyboard
 
-        for spec in ("s", "f", "g", "m", "<ctrl>+<alt>+s", "<ctrl>+<alt>+f", "<ctrl>+<alt>+g", "<ctrl>+<alt>+m"):
+        for spec in ("<ctrl>+<alt>+s", "<ctrl>+<alt>+f", "<ctrl>+<alt>+g", "<ctrl>+<alt>+m"):
             with self.subTest(spec=spec):
                 self.assertIn(spec, HOTKEY_ACTIONS)
                 keyboard.HotKey.parse(spec)

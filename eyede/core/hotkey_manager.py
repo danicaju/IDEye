@@ -1,6 +1,6 @@
 """
 Global Hotkey Manager Module for IDEye (Emergency Killswitch & Reset)
-Listens for OS-level global keyboard shortcuts (e.g. Ctrl+Alt+Q, F12, Ctrl+Alt+R)
+Listens for OS-level global keyboard shortcuts in the Ctrl+Alt+<letter> form.
 even when the transparent overlay or IDE window has focus.
 """
 
@@ -16,22 +16,14 @@ except ImportError:
     _PYNPUT_AVAILABLE = False
 
 
-# pynput hotkey syntax: single characters must NOT be wrapped in angle
-# brackets ("v", not "<v>"). Wrapping them raises ValueError inside
-# GlobalHotKeys and prevents the entire listener (including F12) from starting.
+# All global shortcuts intentionally use Ctrl+Alt+<letter> to avoid
+# colliding with normal typing and with single-key editor bindings.
 HOTKEY_ACTIONS = {
+    # Every OS-global IDEye shortcut is Ctrl+Alt+<letter>.
     "<ctrl>+<alt>+q": "_on_emergency_exit",
-    "<f12>": "_on_emergency_exit",
     "<ctrl>+<alt>+r": "_on_emergency_reset",
-    "v": "_on_mode_cycle",
-    "k": "_on_auto_switch",
     "<ctrl>+<alt>+v": "_on_mode_cycle_anywhere",
     "<ctrl>+<alt>+k": "_on_auto_switch_anywhere",
-    "s": "_on_sound_toggle",
-    "f": "_on_sniper_toggle",
-    "g": "_on_gaming_toggle",
-    "m": "_on_monitor_toggle",
-    "b": "_on_clipboard_history",
     "<ctrl>+<alt>+s": "_on_sound_toggle_anywhere",
     "<ctrl>+<alt>+f": "_on_sniper_toggle_anywhere",
     "<ctrl>+<alt>+g": "_on_gaming_toggle_anywhere",
@@ -41,7 +33,9 @@ HOTKEY_ACTIONS = {
     "<ctrl>+<alt>+t": "_on_tracking_mode_cycle_anywhere",
     "<ctrl>+<alt>+c": "_on_center_calibration_anywhere",
     "<ctrl>+<alt>+p": "_on_pause_toggle_anywhere",
-    "<ctrl>+<shift>+m": "_on_screen_cycle",
+    "<ctrl>+<alt>+l": "_on_language_cycle_anywhere",
+    "<ctrl>+<alt>+h": "_on_help_toggle_anywhere",
+    "<ctrl>+<alt>+n": "_on_screen_cycle",
 }
 
 
@@ -76,6 +70,8 @@ class GlobalHotkeyManager(QObject):
     pause_toggle_requested = pyqtSignal()
     clipboard_history_requested = pyqtSignal()
     clipboard_history_anywhere_requested = pyqtSignal()
+    language_cycle_requested = pyqtSignal()
+    help_toggle_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -105,7 +101,7 @@ class GlobalHotkeyManager(QObject):
                 self._listener.daemon = True
                 self._listener.start()
                 self._is_running = True
-                logger.info("[HotkeyManager] Global hotkeys active (Ctrl+Alt+Q/F12: Salida | Ctrl+Alt+R: Reset | Ctrl+Alt+A/T/C/P: AST, Tracking, Centro, Pausa | Ctrl+Alt+V/K/S/F/G/M: modos y paneles).")
+                logger.info("[HotkeyManager] Global hotkeys active: Ctrl+Alt+Q/R/V/K/S/F/G/M/A/B/T/C/P/L/N (all Ctrl+Alt+letter).")
                 return True
             except Exception as e:
                 logger.warning(f"[HotkeyManager] Warning: Failed to start global hotkey listener: {e}")
@@ -128,7 +124,7 @@ class GlobalHotkeyManager(QObject):
 
     def _on_emergency_exit(self) -> None:
         """Callback from pynput thread when emergency exit shortcut is pressed."""
-        logger.warning("\n[HotkeyManager] EMERGENCY EXIT TRIGGERED (Ctrl+Alt+Q / F12)")
+        logger.warning("\n[HotkeyManager] EMERGENCY EXIT TRIGGERED (Ctrl+Alt+Q)")
         self.emergency_exit_requested.emit()
 
     def _on_emergency_reset(self) -> None:
@@ -185,8 +181,16 @@ class GlobalHotkeyManager(QObject):
         self.monitor_toggle_anywhere_requested.emit()
 
     def _on_screen_cycle(self) -> None:
-        """Callback for Ctrl+Shift+M multi-monitor handover."""
+        """Callback for Ctrl+Alt+N multi-monitor handover."""
         self.screen_cycle_requested.emit()
+
+    def _on_language_cycle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+L language cycling."""
+        self.language_cycle_requested.emit()
+
+    def _on_help_toggle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+H help cheat sheet."""
+        self.help_toggle_requested.emit()
 
     def _on_adaptive_ast_toggle_anywhere(self) -> None:
         """Callback for Ctrl+Alt+A adaptive AST menus."""

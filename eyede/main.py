@@ -186,7 +186,7 @@ class EyeDEMainApp:
         self._click_anchor_gaze: Optional[Tuple[float, float]] = None
 
     def _on_emergency_exit(self) -> None:
-        """Triggered via global emergency hotkey (Ctrl+Alt+Q / F12)."""
+        """Triggered via global emergency hotkey (Ctrl+Alt+Q)."""
         self._emergency_exit_requested = True
 
     def _on_emergency_reset(self) -> None:
@@ -499,7 +499,7 @@ class EyeDEMainApp:
 
         logger.info("[OK] Camara activa. Presiona [C] mirando al centro para calibrar.")
         logger.info("[OK] Abre ligeramente la boca durante 150ms para disparar CLICK.")
-        logger.info("[OK] Presiona [Ctrl+Alt+Q] o [F12] o [Q/ESC] para salir limpiamente.\n")
+        logger.info("[OK] Presiona [Ctrl+Alt+Q] para salir limpiamente.\n")
 
         self.hotkey_manager.start()
         processed_frames = 0
@@ -507,7 +507,7 @@ class EyeDEMainApp:
         try:
             while True:
                 if self._emergency_exit_requested:
-                    logger.info("\n[INFO] Salida de emergencia solicitada via global hotkey (Ctrl+Alt+Q / F12).")
+                    logger.info("\n[INFO] Salida de emergencia solicitada via global hotkey (Ctrl+Alt+Q).")
                     break
 
                 now = time.time()
@@ -791,6 +791,8 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
         self.hotkey_manager.center_calibration_requested.connect(self._on_center_calibration_shortcut)
         self.hotkey_manager.pause_toggle_requested.connect(self.overlay.toggle_pause)
+        self.hotkey_manager.language_cycle_requested.connect(self.overlay.cycle_language)
+        self.hotkey_manager.help_toggle_requested.connect(self.overlay.toggle_help_modal)
         self.hotkey_manager.clipboard_history_requested.connect(self._on_clipboard_shortcut)
         self.hotkey_manager.clipboard_history_anywhere_requested.connect(
             self._on_clipboard_shortcut_anywhere

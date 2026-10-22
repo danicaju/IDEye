@@ -305,7 +305,7 @@ class TestCalibrationStability(unittest.TestCase):
 class TestEmergencyKillswitchAndSafety(unittest.TestCase):
     """
     Problem 2 Verification:
-    Tests the global keyboard hotkey listener (Ctrl+Alt+Q / F12 / Ctrl+Alt+R),
+    Tests the global keyboard hotkey listener (all Ctrl+Alt+letter),
     prominent Emergency Exit and Reset buttons in DebugWidget,
     and on-screen emergency exit documentation.
     """
@@ -318,11 +318,26 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
             with self.subTest(spec=spec):
                 keyboard.HotKey.parse(spec)
 
+    def test_all_global_hotkeys_are_ctrl_alt_letter(self):
+        """No F-keys, Shift combinations, or bare letters in global bindings."""
+        import re
+
+        pattern = re.compile(r"<ctrl>\+<alt>\+[a-z]")
+        for spec in HOTKEY_ACTIONS:
+            with self.subTest(spec=spec):
+                self.assertRegex(spec, pattern)
+        expected = {
+            "q", "r", "v", "k", "s", "f", "g", "m",
+            "a", "b", "t", "c", "p", "l", "h", "n",
+        }
+        actual = {spec.rsplit("+", 1)[-1] for spec in HOTKEY_ACTIONS}
+        self.assertEqual(actual, expected)
+
     def test_hotkey_manager_start_and_stop_lifecycle(self):
         """Tests that GlobalHotkeyManager starts and stops without thread leaks or exceptions."""
         manager = GlobalHotkeyManager()
         started = manager.start()
-        # A False return means the listener never started, so F12/killswitch is dead.
+        # A False return means the listener never started, so the killswitch is dead.
         self.assertTrue(started, "Global hotkey listener failed to start; check HOTKEY_ACTIONS")
         self.assertTrue(manager.is_running)
         manager.stop()

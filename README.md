@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-465%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-468%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -273,7 +273,7 @@ IDEye/
 │       ├── data/
 │       │   └── es_common_words.txt # Spanish T9/common-word dictionary
 │       └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 465 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
+└── tests/ # 468 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
     ├── test_phase1.py # Core computer vision & MAR state machine tests
     ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
     ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -306,11 +306,11 @@ pytest -q
 ```
 
 ```text
-465 passed, 62 subtests, 13.82s
+468 passed, 62 subtests, 12.07s
 ```
 
 > [!NOTE]
-> All 465 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 468 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 
@@ -334,6 +334,8 @@ pytest -q
 - [x] **Phase 8.3:** Multi-monitor gaze handover, bezel crossing, per-screen calibration bounds, and cross-platform PyInstaller packaging.
 - [x] **Phase 8.4:** True per-monitor calibration profiles, extracted `BezelCrossingDetector`/`HeaderLayout`, structured logging, configurable handover thresholds, and a Windows/macOS/Linux CI build matrix.
 - [x] **Phase 9:** Clipboard Time-Machine (6-slot 3x3 history), OS foreground window auto-switch, and Look-To-Code telemetry with persisted effort savings.
+
+> Gaming auto-profile is not limited to Roblox: it recognizes a broad built-in game list, generic Unreal `-Win64-Shipping.exe` processes, and configurable title keywords. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS` or `GAMING_PROCESS_SUFFIXES` in `eyede/config.py` for any other game.
 - [ ] **Phase 8:** Multi-monitor gaze handover, custom macro builder, and Linux/macOS packaging.
 
 ---

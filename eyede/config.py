@@ -176,6 +176,70 @@ BEZEL_YAW_THRESHOLD_DEG: float = 21.0
 BEZEL_HOLD_SEC: float = 0.40
 BEZEL_COOLDOWN_SEC: float = 1.0
 
+# Phase 9: foreground-window gaming detection. Extend these tuples for games
+# that are not covered by the generic Unreal/Shipping process suffixes.
+GAMING_PROCESSES: tuple[str, ...] = (
+    "robloxplayerbeta.exe",
+    "isaac-ng.exe",
+    "fortniteclient-win64-shipping.exe",
+    "gta5.exe",
+    "rdr2.exe",
+    "cs2.exe",
+    "valorant.exe",
+    "league of legends.exe",
+    "dota2.exe",
+    "overwatch.exe",
+    "destiny2.exe",
+    "eldenring.exe",
+    "bg3.exe",
+    "witcher3.exe",
+    "rocketleague.exe",
+    "amongus.exe",
+    "terraria.exe",
+    "factorio.exe",
+    "rimworldwin64.exe",
+    "stardew valley.exe",
+    "hollow_knight.exe",
+    "celeste.exe",
+    "cuphead.exe",
+    "hades.exe",
+    "deadcells.exe",
+)
+GAMING_TITLE_KEYWORDS: tuple[str, ...] = (
+    "roblox",
+    "minecraft",
+    "isaac",
+    "fortnite",
+    "grand theft auto",
+    "gta",
+    "red dead",
+    "counter-strike",
+    "valorant",
+    "league of legends",
+    "dota",
+    "overwatch",
+    "destiny",
+    "elden ring",
+    "baldur's gate",
+    "witcher",
+    "rocket league",
+    "among us",
+    "terraria",
+    "factorio",
+    "rimworld",
+    "stardew",
+    "hollow knight",
+    "celeste",
+    "cuphead",
+    "hades",
+    "dead cells",
+)
+GAMING_PROCESS_SUFFIXES: tuple[str, ...] = (
+    "-win64-shipping.exe",
+    "-shipping.exe",
+    "-win64.exe",
+)
+
 # ==============================================================================
 # Visual Theme & Colors (BGR for OpenCV)
 # ==============================================================================

@@ -14,17 +14,15 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from eyede.core.logging_config import get_logger
 
+try:
+    import eyede.config as config
+except ImportError:  # pragma: no cover
+    import config  # type: ignore
+
 logger = get_logger(__name__)
 
 ForegroundProvider = Callable[[], Tuple[str, str]]
 
-GAME_PROCESSES = {
-    "robloxplayerbeta.exe",
-    "javaw.exe",
-    "isaac-ng.exe",
-    "steam.exe",
-    "steam",
-}
 TERMINAL_PROCESSES = {
     "windowsterminal.exe",
     "powershell.exe",
@@ -55,20 +53,50 @@ IDE_PROCESSES = {
 }
 
 
+def _gaming_processes() -> set:
+    return {str(item).lower() for item in getattr(config, "GAMING_PROCESSES", ())}
+
+
+def _gaming_suffixes() -> tuple:
+    return tuple(str(item).lower() for item in getattr(config, "GAMING_PROCESS_SUFFIXES", ()))
+
+
+def _gaming_keywords() -> tuple:
+    return tuple(str(item).lower() for item in getattr(config, "GAMING_TITLE_KEYWORDS", ()))
+
+
+def is_game_process(process_name: str) -> bool:
+    """Known game executable or generic Unreal/Shipping process name."""
+    process = os.path.basename(str(process_name or "")).lower()
+    if not process:
+        return False
+    if process in _gaming_processes():
+        return True
+    return any(process.endswith(suffix) for suffix in _gaming_suffixes())
+
+
+def is_game_window(title: str, process_name: str) -> bool:
+    """True for a known game process, a generic game suffix, or a game title."""
+    title_l = str(title or "").lower()
+    process = os.path.basename(str(process_name or "")).lower()
+    if is_game_process(process):
+        return True
+    if process == "javaw.exe" and "minecraft" in title_l:
+        return True
+    return any(keyword in title_l for keyword in _gaming_keywords())
+
+
 def resolve_mode_for_window(title: str, process_name: str) -> Tuple[str, Optional[str]]:
     """Maps a foreground window to (mode_id, subprofile).
 
     subprofile is "gaming" or "desktop" for FreeLook, otherwise None.
+    Known non-game applications win over title-only matches so a browser tab
+    named after a game does not activate the gaming profile.
     """
     title_l = str(title or "").lower()
     process = os.path.basename(str(process_name or "")).lower()
 
-    if (
-        process in GAME_PROCESSES
-        or "minecraft" in title_l
-        or "roblox" in title_l
-        or "isaac" in title_l
-    ):
+    if is_game_process(process) or (process == "javaw.exe" and "minecraft" in title_l):
         return "sniper", "gaming"
     if process in TERMINAL_PROCESSES:
         return "terminal", None
@@ -78,6 +106,8 @@ def resolve_mode_for_window(title: str, process_name: str) -> Tuple[str, Optiona
         return "sniper", "desktop"
     if process in IDE_PROCESSES:
         return "coding", None
+    if any(keyword in title_l for keyword in _gaming_keywords()):
+        return "sniper", "gaming"
     return "", None
 
 

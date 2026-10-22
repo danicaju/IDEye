@@ -14,7 +14,11 @@ from eyede.actions.clipboard_history import ClipboardHistoryManager, HISTORY_SLO
 from eyede.actions.code_injector import CodeInjector, DummyKeyboard
 from eyede.actions.menu_trees import build_menu_tree
 from eyede.core.telemetry_manager import TelemetryManager
-from eyede.core.window_watcher import WindowWatcher, resolve_mode_for_window
+from eyede.core.window_watcher import (
+    WindowWatcher,
+    is_game_process,
+    resolve_mode_for_window,
+)
 from eyede.modes.data_math_mode import DataMathMode
 from eyede.modes.writing_mode import WritingMode
 from eyede.ui.debug_widget import DebugWidget
@@ -160,6 +164,41 @@ class TestWindowWatcher(unittest.TestCase):
             resolve_mode_for_window("YouTube", "chrome.exe"), ("sniper", "desktop")
         )
         self.assertEqual(resolve_mode_for_window("Unknown", "unknown.exe"), ("", None))
+
+    def test_gaming_detection_is_not_limited_to_roblox(self):
+        self.assertEqual(
+            resolve_mode_for_window(
+                "Fortnite", "FortniteClient-Win64-Shipping.exe"
+            ),
+            ("sniper", "gaming"),
+        )
+        self.assertEqual(
+            resolve_mode_for_window("The Witcher 3", "witcher3.exe"),
+            ("sniper", "gaming"),
+        )
+        self.assertEqual(
+            resolve_mode_for_window("Elden Ring", "custom-game.exe"),
+            ("sniper", "gaming"),
+        )
+        self.assertTrue(is_game_process("SomeGame-Win64-Shipping.exe"))
+        self.assertFalse(is_game_process("chrome.exe"))
+
+    def test_game_title_in_browser_does_not_activate_gaming(self):
+        self.assertEqual(
+            resolve_mode_for_window("Fortnite - YouTube", "chrome.exe"),
+            ("sniper", "desktop"),
+        )
+        self.assertEqual(resolve_mode_for_window("Steam", "steam.exe"), ("", None))
+
+    def test_gaming_lists_are_configurable(self):
+        import eyede.config as config
+
+        original = config.GAMING_PROCESSES
+        try:
+            config.GAMING_PROCESSES = tuple(original) + ("mygame.exe",)
+            self.assertTrue(is_game_process("mygame.exe"))
+        finally:
+            config.GAMING_PROCESSES = original
 
     def test_debounce_requires_two_reads_and_emits_subprofile(self):
         mode = FakeModeManager()

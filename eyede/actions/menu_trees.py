@@ -1465,15 +1465,15 @@ def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
     # 9. LANGUAGE KEYWORDS (complete words, no letter-by-letter submenu)
     # =========================================================================
     keyword_items = [
-        MenuAction(id="KW_DEF", label="1: def", hint="Definir funci?n", action_type="SNIPPET", snippet="def ", icon="function"),
+        MenuAction(id="KW_DEF", label="1: def", hint="Definir función", action_type="SNIPPET", snippet="def ", icon="function"),
         MenuAction(id="KW_CLASS", label="2: class", hint="Definir clase", action_type="SNIPPET", snippet="class ", icon="struct"),
         MenuAction(id="KW_RETURN", label="3: return", hint="Devolver valor", action_type="SNIPPET", snippet="return ", icon="flow"),
-        MenuAction(id="KW_IF", label="4: if", hint="Condici?n", action_type="SNIPPET", snippet="if ", icon="flow"),
+        MenuAction(id="KW_IF", label="4: if", hint="Condición", action_type="SNIPPET", snippet="if ", icon="flow"),
         create_pause_action("5"),
         MenuAction(id="KW_FOR", label="6: for", hint="Bucle for", action_type="SNIPPET", snippet="for ", icon="flow"),
         create_back_action("ROOT", "7"),
         MenuAction(id="KW_WHILE", label="8: while", hint="Bucle while", action_type="SNIPPET", snippet="while ", icon="flow"),
-        MenuAction(id="KW_IMPORT", label="9: import", hint="Importar m?dulo", action_type="SNIPPET", snippet="import ", icon="struct"),
+        MenuAction(id="KW_IMPORT", label="9: import", hint="Importar módulo", action_type="SNIPPET", snippet="import ", icon="struct"),
     ]
     tree["KEYWORDS"] = MenuNode(
         id="KEYWORDS",

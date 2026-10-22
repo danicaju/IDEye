@@ -97,6 +97,15 @@ class TestDebugGuideWrapping(unittest.TestCase):
         self.assertEqual(len(emitted), 1)
         widget.close()
 
+    def test_guide_uses_unicode_bullets_and_spanish_accents(self):
+        widget = DebugWidget()
+        text = widget.guide_content.text()
+        self.assertIn("•", text)
+        self.assertIn("Guiño", text)
+        self.assertIn("menús", text)
+        self.assertNotIn("<div>? ", text)
+        widget.close()
+
 
 class TestHeadJoystick(unittest.TestCase):
     def setUp(self):

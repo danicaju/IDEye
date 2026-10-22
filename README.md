@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-480%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-487%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -63,7 +63,7 @@ For sub-pixel stability, IDEye computes a cranial centroid from MediaPipe FaceMe
 Navigation and activation are fully decoupled: looking only highlights, never clicks. A short mouth opening performs an instant click/inject, while a held open mouth at **55% MAR** enters **Jaw-Lock** drag mode. No dwell timers means no accidental Midas clicks while reading.
 
 ### 3. 6-Mode Strategy Engine + WebSocket Auto-Switch
-The `ModeManager` hosts six specialized modes - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE`, and `FREELOOK_GAMING_MODE` - and can switch automatically based on VS Code context received over the bidirectional WebSocket bridge. FreeLook delivers smooth 60 Hz camera/look control; Gaming uses a **head-joystick with a central deadzone** for WASD movement, while a right wink toggles a menu cursor for in-game buttons. Writing uses a **Predictive Word & Phrase Engine** with whole words/phrases, not letter-only submenus.
+The `ModeManager` hosts six specialized modes - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE`, and `FREELOOK_GAMING_MODE` - and can switch automatically based on VS Code context received over the bidirectional WebSocket bridge. FreeLook delivers smooth 60 Hz camera/look control; Gaming uses a **head-joystick with a central deadzone** for WASD movement, while a right wink toggles a menu cursor for in-game buttons. Writing combines a gaze-friendly **letter keyboard** with a **Predictive Word & Phrase Engine** that suggests whole words and phrases as you type.
 
 ### 4. Smart Prefix Deduplication
 The writing pipeline deduplicates repeated prefix strokes: `h+hola` becomes `ola`, and `h+Hola` becomes a backspace followed by `Hola`. It tracks spaces, punctuation, arrow keys, and backspace state, and works identically over the VS Code WebSocket bridge.
@@ -258,7 +258,7 @@ IDEye/
 │   │   ├── base_mode.py # Abstract mode interface
 │   │   ├── mode_manager.py # 6-mode strategy engine and auto-context switching
 │   │   ├── coding_mode.py # Coding menu trees and snippet injection
-│   │   ├── writing_mode.py # Predictive Word & Phrase Engine blocks
+│   │   ├── writing_mode.py # Letter keyboard, word/phrase predictions and Markdown
 │   │   ├── terminal_git_mode.py # Terminal / Git command palette
 │   │   ├── data_math_mode.py # Data/math symbol entry
 │   │   ├── ide_nav_mode.py # IDE navigation and file explorer
@@ -283,7 +283,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Spanish common-word dictionary
 │   │   ├── defaults/ # user_settings.json and custom_macros.json templates
 │   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 480 automated unit & integration tests
+└── tests/ # 487 automated unit & integration tests
     ├── test_phase1.py # Core CV and MAR state machine
     ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py # Syntax tree validation and code injection
@@ -299,7 +299,7 @@ IDEye/
     ├── test_phase8_4_refactor.py # Bezel detector, header layout and logging
     ├── test_phase9_os_intelligence.py # Clipboard, window routing and telemetry
     ├── test_hotfix_ui_and_gaming.py # Head-joystick, audio cache and help layout
-    ├── test_writing_words_no_letters.py # Word/phrase writing menus
+    ├── test_writing_words_and_letters.py # Letter keyboard, predictions and word/phrase menus
     ├── test_glass_focus_ui.py # Glass/Focus HUD widgets
     ├── test_help_ui_and_card_layout.py # Help card and gesture guide layout
     ├── test_menu_integrity.py # Recursive 9-cell tree verification
@@ -323,11 +323,11 @@ pytest -q
 ```
 
 ```text
-480 passed, 70 subtests, 17.51s
+487 passed, 70 subtests, 19.88s
 ```
 
 > [!NOTE]
-> All 480 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 487 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 
@@ -351,7 +351,7 @@ pytest -q
 - [x] **Phase 8.3:** Multi-monitor gaze handover, bezel crossing, per-screen calibration bounds, and cross-platform PyInstaller packaging.
 - [x] **Phase 8.4:** True per-monitor calibration profiles, extracted `BezelCrossingDetector`/`HeaderLayout`, structured logging, configurable handover thresholds, and a Windows/macOS/Linux CI build matrix.
 - [x] **Phase 9:** Clipboard Time-Machine (6-slot 3x3 history), OS foreground window auto-switch, and Look-To-Code telemetry with persisted effort savings.
-- [x] **Phase 9.5:** Stability hotfix: no letter-only submenus, wrapped help modal, cached-file audio, and head-joystick Gaming with joystick/cursor switching.
+- [x] **Phase 9.5:** Stability hotfix: letter keyboard with word predictions, wrapped help modal, cached-file audio, and head-joystick Gaming with joystick/cursor switching.
 
 > Window routing is not limited to Roblox or a few editors: it recognizes broad built-in lists for games, terminals, writing/communication apps, browsers and IDEs. Generic Unreal `-Win64-Shipping.exe` games and configurable title keywords are also supported. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` or `IDE_PROCESSES` in `eyede/config.py` for any other application.
 

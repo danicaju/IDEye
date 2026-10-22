@@ -1950,7 +1950,7 @@ class OverlayWindow(QWidget):
         if self._gaming_control_state == "JOYSTICK":
             self.release_all_game_keys()
             self._gaming_control_state = "MENU_CURSOR"
-            self.last_action_desc = "Gaming: Cursor de men?"
+            self.last_action_desc = "Gaming: Cursor de menú"
         else:
             self._gaming_control_state = "JOYSTICK"
             self.release_all_game_keys()
@@ -1967,7 +1967,7 @@ class OverlayWindow(QWidget):
             self._gaming_toggle_rect = QRectF()
             self.hovered_gaming_toggle = False
             profile = "ESCRITORIO"
-            text = f"FREELOOK ? {profile} ? {action}"
+            text = f"FREELOOK → {profile} → {action}"
             fm = QFontMetrics(self._font_freelook_hint)
             width = min(440.0, max(240.0, fm.horizontalAdvance(text) + 28.0))
             rect = QRectF(
@@ -1986,7 +1986,7 @@ class OverlayWindow(QWidget):
             return
 
         state_label = "JOYSTICK" if self._gaming_control_state == "JOYSTICK" else "CURSOR"
-        button_text = f"MODO JUEGO: {state_label} ? {'CURSOR' if state_label == 'JOYSTICK' else 'JOYSTICK'}"
+        button_text = f"MODO JUEGO: {state_label} → {'CURSOR' if state_label == 'JOYSTICK' else 'JOYSTICK'}"
         fm = QFontMetrics(self._font_freelook_hint)
         width = min(520.0, max(320.0, fm.horizontalAdvance(button_text) + 34.0))
         self._gaming_toggle_rect = QRectF(
@@ -2025,7 +2025,7 @@ class OverlayWindow(QWidget):
             painter.drawText(
                 QRectF(center.x() - 90.0, center.y() + 54.0, 180.0, 18.0),
                 Qt.AlignmentFlag.AlignCenter,
-                "mueve la cabeza ? boca = clic ? gui?o der = cursor",
+                "mueve la cabeza → boca = clic → guiño der = cursor",
             )
         painter.restore()
 
@@ -2339,23 +2339,94 @@ class OverlayWindow(QWidget):
         except Exception:
             return None
 
+    def _refresh_writing_predictions(self) -> None:
+        """Refreshes the prediction panel after a T9 letter or word change."""
+        mode = self._writing_mode()
+        node = self.menu_tree.get("WRITING_PREDICT")
+        if mode is None or node is None or not hasattr(mode, "build_prediction_items"):
+            return
+        try:
+            node.items = mode.build_prediction_items()
+        except Exception:
+            pass
+
     def _handle_writing_action(self, item: MenuAction, target_block: int = 0) -> bool:
-        """Injects complete writing words/phrases; never single letters."""
-        if getattr(item, "action_type", "") != "WRITING_WORD":
+        """Executes T9/writing actions and returns True when handled."""
+        action_type = getattr(item, "action_type", "")
+        if action_type not in {
+            "WRITING_LETTER",
+            "WRITING_WORD",
+            "WRITING_SPACE",
+            "WRITING_BACKSPACE",
+            "WRITING_CASE",
+        }:
+            # Selecting a whole phrase also starts a new word context.
+            if self.current_node_id == "WRITING_WORDS" and action_type == "SNIPPET":
+                mode = self._writing_mode()
+                if mode is not None:
+                    mode.reset_prefix()
+                    self._refresh_writing_predictions()
             return False
+
         mode = self._writing_mode()
         if mode is None:
             return False
-        word = str(item.snippet or "").strip()
-        if word:
-            self.code_injector.insert_snippet(word + ("" if word.endswith((".", ":", ",")) else " "))
-            self.text_injected.emit(len(word) + 1)
-        self.last_action_desc = f"Texto: {word}" if word else "Texto"
-        self.action_executed.emit(item.id, self.last_action_desc)
-        self.block_activated.emit(target_block, item.id)
-        self.navigate_to("WRITING_WORDS")
-        self.update()
-        return True
+
+        if action_type == "WRITING_LETTER":
+            text = mode.record_letter(item.snippet or "")
+            if text:
+                self.code_injector.insert_snippet(text)
+                self.text_injected.emit(len(text))
+            self._refresh_writing_predictions()
+            self.last_action_desc = f"Letra: {text}" if text else "Letra"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return True
+
+        if action_type == "WRITING_WORD":
+            word = mode.apply_case_to_word(item.snippet or "")
+            if word:
+                self.code_injector.insert_snippet(word + " ")
+                self.text_injected.emit(len(word) + 1)
+            mode.reset_prefix()
+            self._refresh_writing_predictions()
+            self.navigate_to("WRITING_T9")
+            self.last_action_desc = f"Palabra: {word}" if word else "Palabra"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return True
+
+        if action_type == "WRITING_SPACE":
+            self.code_injector.insert_snippet(" ")
+            self.text_injected.emit(1)
+            mode.record_space()
+            self._refresh_writing_predictions()
+            self.last_action_desc = "Espacio"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return True
+
+        if action_type == "WRITING_BACKSPACE":
+            self.code_injector.send_key("BACKSPACE")
+            mode.record_backspace()
+            self._refresh_writing_predictions()
+            self.last_action_desc = "Borrar carácter"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return True
+
+        if action_type == "WRITING_CASE":
+            enabled = mode.toggle_uppercase()
+            self.last_action_desc = f"Mayúsculas: {'ON' if enabled else 'OFF'}"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return True
+
+        return False
 
     def execute_action(self, item: MenuAction, target_block: int = 0) -> None:
         """Programmatically executes a MenuAction directly on the overlay."""
@@ -3477,7 +3548,7 @@ class OverlayWindow(QWidget):
             QRectF(card.x() + 60.0, card.y() + 12.0, card.width() - 84.0, 32.0),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
             | Qt.TextFlag.TextWordWrap,
-            "GU?A R?PIDA DE GESTOS Y ATAJOS",
+            "GUÍA RÁPIDA DE GESTOS Y ATAJOS",
         )
         painter.setFont(self._font_modal_subtitle)
         painter.setPen(QColor(148, 163, 184))
@@ -3514,7 +3585,7 @@ class OverlayWindow(QWidget):
             painter.setPen(QColor(52, 211, 153))
             painter.drawText(
                 QRectF(gesture_col.x() + 14.0, y + title_h, col_w - 28.0, action_h),
-                Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, f"? {action}")
+                Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, f"• {action}")
             painter.setPen(QColor(148, 163, 184))
             painter.drawText(
                 QRectF(gesture_col.x() + 14.0, y + title_h + action_h,
@@ -3523,7 +3594,7 @@ class OverlayWindow(QWidget):
             y += row_h
 
         # Columns 2-3: shortcuts split evenly, each row wrapped.
-        shortcut_titles = ("ATAJOS DE TECLADO", "M?S ATAJOS")
+        shortcut_titles = ("ATAJOS DE TECLADO", "MÁS ATAJOS")
         for col_index, (rows, _total) in enumerate(layout["shortcut_columns"], start=1):
             column = columns[col_index]
             painter.setBrush(QBrush(QColor(30, 41, 59, 140)))
@@ -3588,7 +3659,7 @@ class OverlayWindow(QWidget):
         painter.drawText(
             self.help_modal_close_rect,
             Qt.AlignmentFlag.AlignCenter,
-            "CERRAR GU?A (Mire aqu? o abra la boca)",
+            "CERRAR GUÍA (Mire aquí o abra la boca)",
         )
 
     def closeEvent(self, event) -> None:

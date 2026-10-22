@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-480%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-487%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -63,7 +63,7 @@ Para estabilidad subpíxel, IDEye calcula un centroide craneal a partir de los l
 La navegación y la activación están totalmente desacopladas: mirar solo ilumina, nunca clica. Una breve apertura de boca realiza un clic/inyección instantáneo, mientras mantener la boca abierta al **55% MAR** activa el modo de arrastre **Jaw-Lock**. Sin temporizadores de fijación no hay clics Midas accidentales mientras se lee.
 
 ### 3. Motor de Estrategia de 6 Modos + Cambio Automático por WebSocket
-El `ModeManager` alberga seis modos especializados - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` - y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; Gaming usa un **joystick de cabeza con zona muerta central** para moverte con WASD, y un guiño derecho alterna el cursor de menú para botones del juego. El modo Redacción usa un **Motor Predictivo de Palabras y Frases** con palabras/frases completas, sin submenús de letras sueltas.
+El `ModeManager` alberga seis modos especializados - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` - y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; Gaming usa un **joystick de cabeza con zona muerta central** para moverte con WASD, y un guiño derecho alterna el cursor de menú para botones del juego. El modo Redacción combina un **teclado de letras** accesible por mirada con un **Motor Predictivo de Palabras y Frases** que sugiere palabras y frases completas mientras escribes.
 
 ### 4. Desduplicación Inteligente de Prefijos
 La tubería de escritura desduplica pulsaciones de prefijo repetidas: `h+hola` se convierte en `ola`, y `h+Hola` en retroceso seguido de `Hola`. Rastrea espacios, puntuación, flechas y estado de retroceso, y funciona de forma idéntica a través del puente WebSocket de VS Code.
@@ -258,7 +258,7 @@ IDEye/
 │   │   ├── base_mode.py # Interfaz abstracta de modo
 │   │   ├── mode_manager.py # Motor de 6 modos y cambio automático
 │   │   ├── coding_mode.py # Árboles de código e inyección de snippets
-│   │   ├── writing_mode.py # Bloques del Motor Predictivo de Palabras y Frases
+│   │   ├── writing_mode.py # Teclado de letras, predicción de palabras/frases y Markdown
 │   │   ├── terminal_git_mode.py # Paleta Terminal / Git
 │   │   ├── data_math_mode.py # Entrada de símbolos datos/mates
 │   │   ├── ide_nav_mode.py # Navegación IDE y explorador
@@ -283,7 +283,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 480 pruebas de unidad e integración
+└── tests/ # 487 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -299,7 +299,7 @@ IDEye/
     ├── test_phase8_4_refactor.py # Bisel, layout y logging
     ├── test_phase9_os_intelligence.py # Portapapeles, rutas y telemetría
     ├── test_hotfix_ui_and_gaming.py # Joystick, audio y ayuda
-    ├── test_writing_words_no_letters.py # Menús de palabras/frases
+    ├── test_writing_words_and_letters.py # Teclado de letras, predicciones y frases
     ├── test_glass_focus_ui.py # Widgets Glass/Focus
     ├── test_help_ui_and_card_layout.py # Ayuda y guía de gestos
     ├── test_menu_integrity.py # Integridad de árboles 3x3
@@ -323,11 +323,11 @@ pytest -q
 ```
 
 ```text
-480 pruebas superadas, 70 subtests, 17.51s
+487 pruebas superadas, 70 subtests, 19.88s
 ```
 
 > [!NOTE]
-> Todos los 480 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 487 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 
@@ -351,7 +351,7 @@ pytest -q
 - [x] **Fase 8.3:** Handover de mirada multi-monitor, cruce de bisel, límites de calibración por pantalla y empaquetado PyInstaller multiplataforma.
 - [x] **Fase 8.4:** Perfiles de calibración por monitor, `BezelCrossingDetector`/`HeaderLayout` extraídos, logging estructurado, umbrales de handover configurables y matriz CI Windows/macOS/Linux.
 - [x] **Fase 9:** Máquina del tiempo del portapapeles (6 ranuras 3x3), auto-cambio por ventana activa del SO y telemetría Look-To-Code con ahorro de esfuerzo persistido.
-- [x] **Fase 9.5:** Hotfix de estabilidad: sin submenús de letras, modal de ayuda con wrap, audio en archivos cacheados y Gaming con joystick de cabeza y cambio a cursor.
+- [x] **Fase 9.5:** Hotfix de estabilidad: teclado de letras con predicción, modal de ayuda con wrap, audio en archivos cacheados y Gaming con joystick de cabeza y cambio a cursor.
 
 > El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `eyede/config.py` para cualquier otra aplicación.
 

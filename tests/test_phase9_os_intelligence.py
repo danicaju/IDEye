@@ -183,6 +183,29 @@ class TestWindowWatcher(unittest.TestCase):
         self.assertTrue(is_game_process("SomeGame-Win64-Shipping.exe"))
         self.assertFalse(is_game_process("chrome.exe"))
 
+    def test_other_routes_cover_common_apps(self):
+        self.assertEqual(resolve_mode_for_window("Alacritty", "alacritty.exe"), ("terminal", None))
+        self.assertEqual(resolve_mode_for_window("WezTerm", "wezterm-gui.exe"), ("terminal", None))
+        self.assertEqual(resolve_mode_for_window("Slack", "slack.exe"), ("writing", None))
+        self.assertEqual(resolve_mode_for_window("Teams", "ms-teams.exe"), ("writing", None))
+        self.assertEqual(resolve_mode_for_window("Vivaldi", "vivaldi.exe"), ("sniper", "desktop"))
+        self.assertEqual(resolve_mode_for_window("Opera GX", "opera_gx.exe"), ("sniper", "desktop"))
+        self.assertEqual(resolve_mode_for_window("Cursor", "cursor.exe"), ("coding", None))
+        self.assertEqual(resolve_mode_for_window("Notepad++", "notepad++.exe"), ("coding", None))
+        self.assertEqual(
+            resolve_mode_for_window("Android Studio", "android-studio64.exe"), ("coding", None)
+        )
+
+    def test_route_process_lists_are_configurable(self):
+        import eyede.config as config
+
+        original = config.TERMINAL_PROCESSES
+        try:
+            config.TERMINAL_PROCESSES = tuple(original) + ("myterm.exe",)
+            self.assertEqual(resolve_mode_for_window("My Term", "myterm.exe"), ("terminal", None))
+        finally:
+            config.TERMINAL_PROCESSES = original
+
     def test_game_title_in_browser_does_not_activate_gaming(self):
         self.assertEqual(
             resolve_mode_for_window("Fortnite - YouTube", "chrome.exe"),

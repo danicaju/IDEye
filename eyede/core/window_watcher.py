@@ -23,34 +23,8 @@ logger = get_logger(__name__)
 
 ForegroundProvider = Callable[[], Tuple[str, str]]
 
-TERMINAL_PROCESSES = {
-    "windowsterminal.exe",
-    "powershell.exe",
-    "pwsh.exe",
-    "cmd.exe",
-    "git-bash.exe",
-    "bash.exe",
-    "wsl.exe",
-}
-WRITING_PROCESSES = {
-    "discord.exe",
-    "notion.exe",
-    "obsidian.exe",
-    "winword.exe",
-    "notepad.exe",
-}
-BROWSER_PROCESSES = {
-    "chrome.exe",
-    "msedge.exe",
-    "firefox.exe",
-    "brave.exe",
-}
-IDE_PROCESSES = {
-    "code.exe",
-    "pycharm64.exe",
-    "idea64.exe",
-    "devenv.exe",
-}
+def _processes(attr: str) -> set:
+    return {str(item).lower() for item in getattr(config, attr, ())}
 
 
 def _gaming_processes() -> set:
@@ -98,13 +72,13 @@ def resolve_mode_for_window(title: str, process_name: str) -> Tuple[str, Optiona
 
     if is_game_process(process) or (process == "javaw.exe" and "minecraft" in title_l):
         return "sniper", "gaming"
-    if process in TERMINAL_PROCESSES:
+    if process in _processes("TERMINAL_PROCESSES"):
         return "terminal", None
-    if process in WRITING_PROCESSES:
+    if process in _processes("WRITING_PROCESSES"):
         return "writing", None
-    if process in BROWSER_PROCESSES:
+    if process in _processes("BROWSER_PROCESSES"):
         return "sniper", "desktop"
-    if process in IDE_PROCESSES:
+    if process in _processes("IDE_PROCESSES"):
         return "coding", None
     if any(keyword in title_l for keyword in _gaming_keywords()):
         return "sniper", "gaming"

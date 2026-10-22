@@ -39,6 +39,9 @@ class SniperMouseMode(BaseMode):
     ACTION_RIGHT = "RIGHT_CLICK"
     ACTION_SCROLL_UP = "SCROLL_UP"
     ACTION_SCROLL_DOWN = "SCROLL_DOWN"
+    CONTROL_JOYSTICK = "JOYSTICK"
+    CONTROL_MENU_CURSOR = "MENU_CURSOR"
+    GAMING_DEADZONE = 0.14
     SNIPER_ACTIONS = (
         ACTION_LEFT,
         ACTION_DOUBLE,
@@ -62,6 +65,7 @@ class SniperMouseMode(BaseMode):
     def __init__(self, language: str = "PYTHON") -> None:
         super().__init__(language)
         self.current_action: str = self.ACTION_LEFT
+        self.gaming_control_state: str = self.CONTROL_JOYSTICK
 
     # ------------------------------------------------------------------ #
     # Mouse action selector
@@ -85,6 +89,22 @@ class SniperMouseMode(BaseMode):
 
     def get_action(self) -> str:
         return self.current_action
+
+    def set_gaming_control_state(self, state: str) -> str:
+        self.gaming_control_state = (
+            self.CONTROL_MENU_CURSOR
+            if str(state).upper() == self.CONTROL_MENU_CURSOR
+            else self.CONTROL_JOYSTICK
+        )
+        return self.gaming_control_state
+
+    def toggle_gaming_control_state(self) -> str:
+        state = (
+            self.CONTROL_MENU_CURSOR
+            if self.gaming_control_state == self.CONTROL_JOYSTICK
+            else self.CONTROL_JOYSTICK
+        )
+        return self.set_gaming_control_state(state)
 
     def cycle_action(self) -> str:
         try:

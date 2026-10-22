@@ -3,7 +3,7 @@ Local word prediction for IDEye's Writing mode.
 
 The predictor is deliberately offline and dependency-free: it loads a compact
 Spanish frequency list bundled with the app and filters it by the prefix typed
-through the T9 keyboard. No network or LLM is required for basic writing.
+through complete word suggestions. No network or LLM is required for basic writing.
 """
 
 from __future__ import annotations

@@ -40,9 +40,9 @@ class TestHelpContent(unittest.TestCase):
 
     def test_help_gestures_include_left_wink_undo(self):
         titles = [title for title, _, _ in HELP_GESTURES]
-        self.assertIn("Guiño Ojo Izquierdo", titles)
-        left_wink = next((a for t, a, _ in HELP_GESTURES if t == "Guiño Ojo Izquierdo"), "")
-        self.assertIn("Volver atrás / Deshacer", left_wink)
+        self.assertIn("Guiño ojo izquierdo", titles)
+        left_wink = next((a for t, a, _ in HELP_GESTURES if t == "Guiño ojo izquierdo"), "")
+        self.assertIn("Volver / deshacer", left_wink)
 
     def test_help_shortcuts_have_no_emojis(self):
         for key, name, desc in HELP_SHORTCUTS:

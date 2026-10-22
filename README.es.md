@@ -7,9 +7,9 @@
 [![Español](https://img.shields.io/badge/Idioma-Español-red?style=flat-square)](README.es.md)
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
+[![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-471%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-480%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -63,7 +63,7 @@ Para estabilidad subpíxel, IDEye calcula un centroide craneal a partir de los l
 La navegación y la activación están totalmente desacopladas: mirar solo ilumina, nunca clica. Una breve apertura de boca realiza un clic/inyección instantáneo, mientras mantener la boca abierta al **55% MAR** activa el modo de arrastre **Jaw-Lock**. Sin temporizadores de fijación no hay clics Midas accidentales mientras se lee.
 
 ### 3. Motor de Estrategia de 6 Modos + Cambio Automático por WebSocket
-El `ModeManager` alberga seis modos especializados — `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` — y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; el modo Gaming asigna la mirada a un ratón del SO más pulsaciones mantenidas (p. ej., Roblox: mantener `W`, guiño izquierdo para saltar, guiño derecho para cámara 360°).
+El `ModeManager` alberga seis modos especializados - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` - y puede cambiar autom?ticamente seg?n el contexto de VS Code recibido a trav?s del puente WebSocket bidireccional. FreeLook ofrece control suave de c?mara/mirada a 60 Hz; Gaming usa un **joystick de cabeza con zona muerta central** para moverte con WASD, y un gui?o derecho alterna el cursor de men? para botones del juego.
 
 ### 4. Desduplicación Inteligente de Prefijos
 La tubería de escritura desduplica pulsaciones de prefijo repetidas: `h+hola` se convierte en `ola`, y `h+Hola` en retroceso seguido de `Hola`. Rastrea espacios, puntuación, flechas y estado de retroceso, y funciona de forma idéntica a través del puente WebSocket de VS Code.
@@ -78,7 +78,7 @@ El código a medio escribir rara vez compila. `ContextReader` combina el módulo
 Construido con `PyQt6`, el overlay transparente se sitúa sobre VS Code, PyCharm o cualquier IDE usando `Qt.WindowType.WindowDoesNotAcceptFocus` y el estilo Win32 nativo `WS_EX_TRANSPARENT`. Tu editor nunca pierde el foco del teclado ni el parpadeo del cursor, y los clics de ratón físicos atraviesan la cuadrícula transparente hacia el código subyacente. El asistente de calibración visual de 5 puntos guarda el mapeo en `calibration_profile.json`.
 
 ### 8. Puente Bidireccional con VS Code + Menús Multilingües
-El `WebSocketBridge` intercambia estado del editor, diagnósticos e información de selección con la extensión de VS Code en tiempo real, permitiendo el cambio automático de modo contextual y la inyección de snippets. Los árboles sintácticos están disponibles en varios idiomas, incluyendo un diccionario T9/palabras comunes en español y etiquetas de menú localizadas.
+El `WebSocketBridge` intercambia estado del editor, diagnósticos e información de selección con la extensión de VS Code en tiempo real, permitiendo el cambio automático de modo contextual y la inyección de snippets. Los árboles sintácticos están disponibles en varios idiomas, incluyendo un diccionario de palabras comunes en español y etiquetas de menú localizadas.
 
 ---
 
@@ -87,14 +87,14 @@ El `WebSocketBridge` intercambia estado del editor, diagnósticos e información
 ```text
 +-------------------------------------------------------------------------+
 | TRACKER DE CÁMARA (QThread)                                             |
-| Captura OpenCV -> MediaPipe FaceMesh (478 pts) -> Iris + Centroide Craneal Rígido |
+| Captura OpenCV -> MediaPipe FaceMesh (468 pts) -> Iris + Centroide Craneal Rígido |
 +------------------------------------+------------------------------------+
  | pyqtSignal(x, y)                  | pyqtSignal("GESTURE")
  v                                   v
 +-------------------------------------------------------------------------+
 | HUD TRANSPARENTE PYQT6 NO-FOCUS (GUI Principal)                         |
 | [0: FLUJO] [1: FUNC/CLASE] [2: OPERADORES]                             |
-| [3: CURSOR] [4: PAUSA] [5: VARS LOCALES / T9]                          |
+| [3: CURSOR] [4: PAUSA] [5: PALABRAS CLAVE]                          |
 | [6: EDIT/UNDO] [7: ENTER/TAB] [8: PREDICTOR IA]                         |
 +------------------------------------+------------------------------------+
  |                                   |
@@ -198,13 +198,13 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+V`** | **Abrir Selector de Modo** | Abre el selector de 6 modos; pulsa `Ctrl+Alt+V` desde cualquier sitio |
 | **`Ctrl+Alt+K`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor vía WebSocket. Usa `Ctrl+Alt+K` desde cualquier sitio |
 | **`Ctrl+Alt+F`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz. Usa `Ctrl+Alt+F` desde cualquier sitio |
-| **`Ctrl+Alt+G`** | **Modo Gaming** | Overlay de ratón + controlador para juegos (Roblox: mantener `W`, guiño izquierdo para saltar, guiño derecho para cámara 360°). Usa `Ctrl+Alt+G` desde cualquier sitio |
+| **`Ctrl+Alt+G`** | **Modo Gaming** | Joystick de cabeza para WASD; gui?o derecho alterna cursor de men?; gui?o izquierdo salta. Usa `Ctrl+Alt+G` desde cualquier sitio |
 | **`Ctrl+Alt+S`** | **Alternar Retroalimentaci?n Sonora** | Pulsa `Ctrl+Alt+S` desde cualquier sitio |
 | **`Ctrl+Alt+H`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
 | **Clic de Boca** | **Inyectar / Clic** | Una breve apertura de boca (MAR) dispara un clic sin tiempo de espera o una inyección de snippet |
 | **Boca Mantenida** | **Arrastrar / Jaw-Lock** | Mantener la boca abierta al 55% MAR habilita arrastrar/bloquear sin botones de mano |
-| **Guiño Derecho** | **Pausar / Cámara 360°** | Pausa/oculta el HUD en modos normales; rota la cámara 360° en modo Gaming |
-| **Guiño Izquierdo** | **Volver Atrás / Deshacer / Saltar** | Regresa al menú anterior o ejecuta Deshacer; hace saltar al personaje en modo Gaming |
+| **Gui?o Derecho** | **Pausar / Gaming: joystick ? cursor** | Pausa/oculta el HUD en modos normales; en Gaming alterna joystick de cabeza y cursor de men? |
+| **Gui?o Izquierdo** | **Volver / Deshacer / Saltar** | Regresa al men? anterior o ejecuta Deshacer; hace saltar al personaje en modo Gaming |
 | **`Ctrl+Alt+T`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`HEAD_PRIMARY`**, **`PURE_IRIS`** y **`HYBRID`** |
 | **`Ctrl+Alt+C`** | **Recalibrar Centro** | Mira al centro de la pantalla y pulsa `Ctrl+Alt+C` para fijar tu ancla neutra |
 | **`Ctrl+Alt+P`** | **Pausa / Modo Lectura** | Oculta el HUD por completo para leer código sin clics involuntarios; usa el mismo atajo o un guiño derecho para restaurarlo |
@@ -233,7 +233,7 @@ IDEye/
 │   ├── config.py # Pesos de tracking, umbrales MAR, estilos y ajustes de IA
 │   ├── main.py # Ciclo de vida de PyQt6 y enrutador de señales
 │   ├── core/
-│   │   ├── camera_tracker.py # Pipeline QThread OpenCV + MediaPipe FaceMesh (478 pts)
+│   │   ├── camera_tracker.py # Pipeline QThread OpenCV + MediaPipe FaceMesh (468 pts)
 │   │   ├── gaze_estimator.py # Matemáticas híbridas, calibración y fusión de modos
 │   │   ├── gesture_detector.py # Cálculo MAR, detección de guiños y máquina de estados
 │   │   ├── hotkey_manager.py # Atajos globales del SO (killswitch, reset, modos)
@@ -249,7 +249,7 @@ IDEye/
 │   │   ├── base_mode.py # Interfaz abstracta de modo
 │   │   ├── mode_manager.py # Motor de 6 modos y cambio automático por contexto
 │   │   ├── coding_mode.py # Árboles de menú de código e inyección de snippets
-│   │   ├── writing_mode.py # Predicciones T9/redacción de texto
+│   │   ├── writing_mode.py # Bloques de palabras y redacción de texto
 │   │   ├── terminal_git_mode.py # Paleta de comandos Terminal / Git
 │   │   ├── data_math_mode.py # Entrada de símbolos datos/matemáticas
 │   │   ├── ide_nav_mode.py # Navegación IDE y explorador de archivos
@@ -267,12 +267,12 @@ IDEye/
 │   │   ├── code_injector.py # Inyección atómica con offsets de cursor
 │   │   ├── clipboard_history.py # Historial MTF de 6 copias y nodo 3x3
 │   │   ├── language_support.py # Definiciones sintácticas multi-lenguaje
-│   │   └── text_predictor.py # Motor local de predicción prefijo/T9
+│   │   └── text_predictor.py # Motor local de predicción de palabras
 │   └── assets/
 │       ├── data/
-│       │   └── es_common_words.txt # Diccionario T9/palabras comunes en español
+│       │   └── es_common_words.txt # Diccionario de palabras comunes en español
 │       └── icons/ # Suite de iconos SVG/Lucide neón de alta definición
-└── tests/ # 471 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
+└── tests/ # 480 pruebas automatizadas de unidad e integración (eyede/tests/ son forwarders legacy no recolectados)
     ├── test_phase1.py # Tests de visión artificial y máquina de estados MAR
     ├── test_phase2.py # Tests de QThread, banderas de ventana no-focus y calibración
     ├── test_phase3.py # Validación de árboles sintácticos e inyección de código
@@ -284,7 +284,7 @@ IDEye/
     ├── test_phase7_6_gaze_stability.py # Estabilidad subpíxel, histéresis y fusión de sácadas
     ├── test_glass_focus_ui.py # Tests del HUD Glass/Focus
     ├── test_help_ui_and_card_layout.py # Layout de tarjetas de ayuda y UI de gestos
-    ├── test_writing_t9_predictions.py # Tests de predicciones T9/prefijo del modo escritura
+    ├── test_writing_words_no_letters.py # Tests de palabras/frases del modo escritura
     ├── test_vision_math.py # Acotación matemática de mirada y auditorías de división por cero
     ├── test_menu_integrity.py # Verificación recursiva de las 9 casillas en todo el árbol
     ├── test_code_injector.py # Seguridad de teclas modificadoras y portapapeles
@@ -305,11 +305,11 @@ pytest -q
 ```
 
 ```text
-471 pruebas superadas, 62 subtests, 16.75s
+480 pruebas superadas, 70 subtests, 14.66s
 ```
 
 > [!NOTE]
-> Todos los 471 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 480 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 
@@ -333,6 +333,7 @@ pytest -q
 - [x] **Fase 8.3:** Handover de mirada multi-monitor, cruce de bisel, límites de calibración por pantalla y empaquetado PyInstaller multiplataforma.
 - [x] **Fase 8.4:** Perfiles de calibración por monitor, `BezelCrossingDetector`/`HeaderLayout` extraídos, logging estructurado, umbrales de handover configurables y matriz CI Windows/macOS/Linux.
 - [x] **Fase 9:** Máquina del tiempo del portapapeles (6 ranuras 3x3), auto-cambio por ventana activa del SO y telemetría Look-To-Code con ahorro de esfuerzo persistido.
+- [x] **Fase 9.5:** Hotfix de estabilidad: sin submen?s de letras, modal de ayuda con wrap, audio en archivos cacheados y Gaming con joystick de cabeza y cambio a cursor.
 
 > El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `eyede/config.py` para cualquier otra aplicación.
 - [ ] **Fase 8:** Traspaso de mirada entre monitores, constructor de macros personalizadas y empaquetado para Linux/macOS.

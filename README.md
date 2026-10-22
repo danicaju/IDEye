@@ -7,9 +7,9 @@
 [![Español](https://img.shields.io/badge/Idioma-Español-red?style=flat-square)](README.es.md)
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
+[![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-471%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-480%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -63,7 +63,7 @@ For sub-pixel stability, IDEye computes a cranial centroid from MediaPipe FaceMe
 Navigation and activation are fully decoupled: looking only highlights, never clicks. A short mouth opening performs an instant click/inject, while a held open mouth at **55% MAR** enters **Jaw-Lock** drag mode. No dwell timers means no accidental Midas clicks while reading.
 
 ### 3. 6-Mode Strategy Engine + WebSocket Auto-Switch
-The `ModeManager` hosts six specialized modes — `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE`, and `FREELOOK_GAMING_MODE` — and can switch automatically based on VS Code context received over the bidirectional WebSocket bridge. FreeLook delivers smooth 60 Hz camera/look control; Gaming mode maps gaze to an OS mouse plus keyboard holds (e.g., Roblox: `W` hold, left-wink jump, right-wink 360° camera).
+The `ModeManager` hosts six specialized modes - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE`, and `FREELOOK_GAMING_MODE` - and can switch automatically based on VS Code context received over the bidirectional WebSocket bridge. FreeLook delivers smooth 60 Hz camera/look control; Gaming uses a **head-joystick with a central deadzone** for WASD movement, while a right wink toggles a menu cursor for in-game buttons.
 
 ### 4. Smart Prefix Deduplication
 The writing pipeline deduplicates repeated prefix strokes: `h+hola` becomes `ola`, and `h+Hola` becomes a backspace followed by `Hola`. It tracks spaces, punctuation, arrow keys, and backspace state, and works identically over the VS Code WebSocket bridge.
@@ -78,7 +78,7 @@ Half-written code rarely compiles. `ContextReader` combines Python's native `ast
 Built with `PyQt6`, the transparent overlay stays on top of VS Code, PyCharm, or any IDE using `Qt.WindowType.WindowDoesNotAcceptFocus` and native `WS_EX_TRANSPARENT`. Your editor never loses keyboard focus or cursor blinking, and physical mouse clicks pass seamlessly through the transparent grid to the code beneath. The 5-point visual calibration wizard stores the mapping in `calibration_profile.json`.
 
 ### 8. Bidirectional VS Code Bridge + Multilingual Menus
-The `WebSocketBridge` exchanges editor state, diagnostics, and selection info with the VS Code extension in real time, enabling context-aware mode switching and snippet injection. Syntax trees are available in multiple languages, including a Spanish T9/common-word dictionary and localized menu labels.
+The `WebSocketBridge` exchanges editor state, diagnostics, and selection info with the VS Code extension in real time, enabling context-aware mode switching and snippet injection. Syntax trees are available in multiple languages, including a Spanish common-word dictionary and localized menu labels.
 
 ---
 
@@ -87,14 +87,14 @@ The `WebSocketBridge` exchanges editor state, diagnostics, and selection info wi
 ```text
 +-------------------------------------------------------------------------+
 | CAMERA TRACKER (QThread)                                                |
-| OpenCV Capture -> MediaPipe FaceMesh (478 pts) -> Iris + Rigid Cranial Centroid |
+| OpenCV Capture -> MediaPipe FaceMesh (468 pts) -> Iris + Rigid Cranial Centroid |
 +------------------------------------+------------------------------------+
  | pyqtSignal(x, y)                  | pyqtSignal("GESTURE")
  v                                   v
 +-------------------------------------------------------------------------+
 | PYQT6 NO-FOCUS OVERLAY (Main GUI)                                       |
 | [0: FLOW] [1: FUNC/CLASS] [2: OPERATORS]                                |
-| [3: CURSOR] [4: PAUSE] [5: LOCAL VARS / T9]                            |
+| [3: CURSOR] [4: PAUSE] [5: KEYWORDS]                            |
 | [6: EDIT/UNDO] [7: ENTER/TAB] [8: AI PREDICTOR]                         |
 +------------------------------------+------------------------------------+
  |                                   |
@@ -198,12 +198,12 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`Ctrl+Alt+V`** | **Open Mode Selector** | Opens the 6-mode selector; press `Ctrl+Alt+V` anywhere |
 | **`Ctrl+Alt+K`** | **Toggle Auto Mode Switching** | Enables/disables automatic mode changes based on editor context via WebSocket. Use `Ctrl+Alt+K` anywhere |
 | **`Ctrl+Alt+F`** | **FreeLook Mode** | Press `Ctrl+Alt+F` anywhere |
-| **`Ctrl+Alt+G`** | **Gaming Mode** | Gaming mouse + controller overlay (Roblox: `W` hold, left-wink jump, right-wink 360° camera). Use `Ctrl+Alt+G` anywhere |
+| **`Ctrl+Alt+G`** | **Gaming Mode** | Head-joystick for WASD; right wink toggles menu cursor; left wink jumps. Use `Ctrl+Alt+G` anywhere |
 | **`Ctrl+Alt+S`** | **Toggle Sound Feedback** | Press `Ctrl+Alt+S` anywhere |
 | **`Ctrl+Alt+H`** | **Help & Gesture Guide** | Open/close the in-app gesture and shortcut cheat sheet modal |
 | **Mouth Click** | **Inject / Click** | Short mouth opening (MAR) triggers a zero-dwell click or snippet injection |
 | **Held Mouth** | **Drag / Jaw-Lock** | Holding the mouth open at 55% MAR enables drag/lock without hand buttons |
-| **Right Wink** | **Pause / 360° Camera** | Pauses/hides HUD in normal modes; rotates camera 360° in Gaming mode |
+| **Right Wink** | **Pause / Gaming Joystick ? Cursor** | Pauses/hides HUD in normal modes; in Gaming switches between head-joystick and menu cursor |
 | **Left Wink** | **Back / Undo / Jump** | Navigates back in menus or triggers Undo; makes the character jump in Gaming mode |
 | **`Ctrl+Alt+T`** | **Cycle Tracking Mode** | Switch between **`HEAD_PRIMARY`**, **`PURE_IRIS`**, and **`HYBRID`** |
 | **`Ctrl+Alt+C`** | **Center Recalibration** | Look at the screen center and press `Ctrl+Alt+C` to reset your neutral anchor |
@@ -233,7 +233,7 @@ IDEye/
 │   ├── config.py # Tracking weights, MAR thresholds, HUD styles, LLM settings
 │   ├── main.py # PyQt6 application lifecycle & signal dispatcher
 │   ├── core/
-│   │   ├── camera_tracker.py # QThread OpenCV + MediaPipe FaceMesh (478 pts) pipeline
+│   │   ├── camera_tracker.py # QThread OpenCV + MediaPipe FaceMesh (468 pts) pipeline
 │   │   ├── gaze_estimator.py # Hybrid gaze math, calibration & tracking-mode fusion
 │   │   ├── gesture_detector.py # MAR calculation, wink detection & debounced state machine
 │   │   ├── hotkey_manager.py # Global OS hotkeys (killswitch, reset, mode toggles)
@@ -249,7 +249,7 @@ IDEye/
 │   │   ├── base_mode.py # Abstract mode interface
 │   │   ├── mode_manager.py # 6-mode strategy engine & auto-context switching
 │   │   ├── coding_mode.py # Coding menu trees and snippet injection
-│   │   ├── writing_mode.py # T9/dictation text predictions
+│   │   ├── writing_mode.py # word and phrase blocks
 │   │   ├── terminal_git_mode.py # Terminal / Git command palette
 │   │   ├── data_math_mode.py # Data/math symbol entry
 │   │   ├── ide_nav_mode.py # IDE navigation & file explorer
@@ -267,12 +267,12 @@ IDEye/
 │   │   ├── code_injector.py # Atomic clipboard snippet injection & cursor offsets
 │   │   ├── clipboard_history.py # 6-slot MTF clipboard time-machine & 3x3 node
 │   │   ├── language_support.py # Multi-language syntax definitions
-│   │   └── text_predictor.py # Local prefix/T9 prediction engine
+│   │   └── text_predictor.py # Local word prediction engine
 │   └── assets/
 │       ├── data/
-│       │   └── es_common_words.txt # Spanish T9/common-word dictionary
+│       │   └── es_common_words.txt # Spanish common-word dictionary
 │       └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 471 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
+└── tests/ # 480 automated unit & integration tests (eyede/tests/ are legacy forwarders not collected)
     ├── test_phase1.py # Core computer vision & MAR state machine tests
     ├── test_phase2.py # PyQt6 QThread, non-focus window flags & calibration math
     ├── test_phase3.py # Syntax tree validation & code injection tests
@@ -284,7 +284,7 @@ IDEye/
     ├── test_phase7_6_gaze_stability.py # Sub-pixel stability, hysteresis & saccade fusion
     ├── test_glass_focus_ui.py # Glass/Focus HUD widget tests
     ├── test_help_ui_and_card_layout.py # Help card layout & gesture guide UI
-    ├── test_writing_t9_predictions.py # Writing mode T9/prefix prediction tests
+    ├── test_writing_words_no_letters.py # Writing menu word/phrase tests
     ├── test_vision_math.py # GazeEstimator boundary clipping & zero-division audits
     ├── test_menu_integrity.py # Recursive 9-cell tree verification
     ├── test_code_injector.py # Modifier key recovery & clipboard safety tests
@@ -305,11 +305,11 @@ pytest -q
 ```
 
 ```text
-471 passed, 62 subtests, 16.75s
+480 passed, 70 subtests, 14.66s
 ```
 
 > [!NOTE]
-> All 471 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 480 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 
@@ -333,6 +333,7 @@ pytest -q
 - [x] **Phase 8.3:** Multi-monitor gaze handover, bezel crossing, per-screen calibration bounds, and cross-platform PyInstaller packaging.
 - [x] **Phase 8.4:** True per-monitor calibration profiles, extracted `BezelCrossingDetector`/`HeaderLayout`, structured logging, configurable handover thresholds, and a Windows/macOS/Linux CI build matrix.
 - [x] **Phase 9:** Clipboard Time-Machine (6-slot 3x3 history), OS foreground window auto-switch, and Look-To-Code telemetry with persisted effort savings.
+- [x] **Phase 9.5:** Stability hotfix: no letter-only submenus, wrapped help modal, cached-file audio, and head-joystick Gaming with joystick/cursor switching.
 
 > Window routing is not limited to Roblox or a few editors: it recognizes broad built-in lists for games, terminals, writing/communication apps, browsers and IDEs. Generic Unreal `-Win64-Shipping.exe` games and configurable title keywords are also supported. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` or `IDE_PROCESSES` in `eyede/config.py` for any other application.
 - [ ] **Phase 8:** Multi-monitor gaze handover, custom macro builder, and Linux/macOS packaging.

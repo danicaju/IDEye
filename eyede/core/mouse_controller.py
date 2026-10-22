@@ -77,6 +77,27 @@ class OSMouseController:
         time.sleep(self._MOVE_CLICK_PAUSE)
         self._controller.scroll(0, int(dy))
 
+    def left_click_current(self) -> None:
+        """Click at the current pointer position without moving it."""
+        self._controller.click(Button.left)
+
+    def release_all_game_keys(self, keys: tuple = ("w", "a", "s", "d", " ")) -> None:
+        """Best-effort release of movement keys after leaving gameplay."""
+        if self._keyboard is None:
+            return
+        for key in keys:
+            try:
+                self._keyboard.release(key)
+            except Exception:
+                pass
+
+    def release_all_buttons(self) -> None:
+        for button in (Button.left, Button.right):
+            try:
+                self._controller.release(button)
+            except Exception:
+                pass
+
     def mouse_down(self, button: str = "left") -> None:
         self._controller.press(Button.left if button == "left" else Button.right)
 

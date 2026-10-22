@@ -1063,6 +1063,7 @@ class EyeDEApplication(QObject):
         self.overlay.mouth_clicked.connect(self.telemetry_manager.record_mouth_click)
         self.telemetry_manager.stats_changed.connect(self.debug_widget.update_telemetry)
         self.debug_widget.telemetry_reset_requested.connect(self.telemetry_manager.reset)
+        self.debug_widget.test_sound_requested.connect(self.sound_feedback.test_play)
         self.window_watcher.foreground_changed.connect(self.debug_widget.set_foreground_window)
         self.window_watcher.mode_requested.connect(self._on_window_mode_requested)
         self.mode_manager.mode_changed.connect(

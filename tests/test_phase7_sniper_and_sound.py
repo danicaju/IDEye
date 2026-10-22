@@ -40,6 +40,43 @@ class TestSoundFeedback(unittest.TestCase):
                 self.assertIn(b"WAVE", buf)
                 self.assertGreater(len(buf), 44)
 
+    def test_sound_files_are_written_to_cache(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = SoundFeedbackManager(enabled=True, volume=0.5, cache_dir=Path(tmp))
+            for name in ("click", "back", "mode", "pause"):
+                path = Path(tmp) / f"{name}.wav"
+                self.assertTrue(path.is_file())
+                self.assertGreater(path.stat().st_size, 44)
+                self.assertTrue(path.read_bytes().startswith(b"RIFF"))
+                self.assertEqual(mgr.wav_path(name), path)
+
+    def test_cached_wav_is_audible(self):
+        import tempfile
+        import wave
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = SoundFeedbackManager(enabled=True, volume=0.5, cache_dir=Path(tmp))
+            with wave.open(str(mgr.wav_path("click")), "rb") as wav:
+                frames = wav.readframes(wav.getnframes())
+            peak = max(abs(int.from_bytes(frames[i:i+2], "little", signed=True))
+                       for i in range(0, len(frames), 2))
+            self.assertGreater(peak, 18000)
+
+    def test_windows_uses_filename_async_flags(self):
+        mgr = SoundFeedbackManager(enabled=True, volume=0.5)
+        with patch("eyede.core.sound_feedback.winsound.PlaySound") as mock_play:
+            mgr.play("click")
+        mock_play.assert_called_once()
+        path, flags = mock_play.call_args[0]
+        self.assertTrue(str(path).endswith("click.wav"))
+        self.assertTrue(flags & 0x00020000)  # SND_FILENAME
+        self.assertTrue(flags & 0x0001)      # SND_ASYNC
+        self.assertTrue(flags & 0x00000002)  # SND_NODEFAULT
+
     def test_mute_prevents_backend_call(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
         mgr.set_enabled(False)
@@ -266,25 +303,23 @@ class TestSniperOverlayCoordinates(unittest.TestCase):
         self.overlay._update_freelook_mouth(0.0)
         self.overlay.mouse_controller.left_click.assert_called_once_with(300, 400)
 
-    def test_gaming_hold_mouth_walks_with_w(self):
+    def test_gaming_head_tilt_walks_without_moving_cursor(self):
         self.overlay.toggle_sniper_mode()
         self.overlay.toggle_gaming_mode()
-        self.overlay._freelook_last_pos = (300, 400)
-        self.overlay.mar_threshold = 0.45
-        self.overlay._update_freelook_mouth(0.50)
-        self.overlay._mouth_start = time.time() - 0.5
-        self.overlay._update_freelook_mouth(0.50)
+        self.overlay.on_gaze_updated(0.5, 0.20)
         self.overlay.mouse_controller.key_down.assert_called_with("w")
-        self.overlay._update_freelook_mouth(0.0)
+        self.overlay.mouse_controller.move_direct.assert_not_called()
+        self.overlay.on_gaze_updated(0.5, 0.50)
         self.overlay.mouse_controller.key_up.assert_called_with("w")
 
-    def test_gaming_right_wink_holds_right_button(self):
+    def test_gaming_right_wink_switches_to_menu_cursor(self):
         self.overlay.toggle_sniper_mode()
         self.overlay.toggle_gaming_mode()
         self.overlay.on_gesture_triggered("WINK_RIGHT")
-        self.overlay.mouse_controller.mouse_down.assert_called_with("right")
+        self.assertEqual(self.overlay._gaming_control_state, "MENU_CURSOR")
+        self.overlay.mouse_controller.mouse_down.assert_not_called()
         self.overlay.on_gesture_triggered("WINK_RIGHT")
-        self.overlay.mouse_controller.mouse_up.assert_called_with("right")
+        self.assertEqual(self.overlay._gaming_control_state, "JOYSTICK")
 
     def test_freelook_bottom_reaches_taskbar_below_available_geometry(self):
         # Simulated monitor: geometry 1920x1080, availableGeometry 1920x1032.

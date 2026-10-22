@@ -202,10 +202,10 @@ def populate_ai_prediction_items(
 
 def populate_local_symbol_items(
     symbols: Optional[List[str]] = None,
-    parent_id: str = "T9",
+    parent_id: str = "ROOT",
 ) -> List[MenuAction]:
     """
-    Constructs exactly 9 MenuAction items for local symbols (T9_LOCAL_VARS).
+    Constructs exactly 9 MenuAction items for local symbols.
     Slots 0, 1, 2, 3, 5, 7, 8: up to 7 distinct user variables/functions
     Slot 4: Center Pause action
     Slot 6: Back action (to parent_id)
@@ -1194,66 +1194,6 @@ def _build_op_punct_items(lang: str) -> List[MenuAction]:
     return [p0, p1, p2, p3, pause_slot, p5, back_slot, p7, p8]
 
 
-def _build_t9_vars_items(lang: str) -> List[MenuAction]:
-    """Builds the 9 items for the T9_VARS submenu for the specified language."""
-    pause_slot = create_pause_action("5")
-    back_slot = create_back_action("T9", "7")
-
-    p0 = MenuAction("VAR_I", "1: i", "Variable contador i", "SNIPPET", snippet="i", icon="variables")
-    p1 = MenuAction("VAR_J", "2: j", "Variable contador j", "SNIPPET", snippet="j", icon="variables")
-    p2 = MenuAction("VAR_X", "3: x", "Variable x", "SNIPPET", snippet="x", icon="variables")
-
-    if lang in (LANG_TYPESCRIPT, LANG_CPP):
-        p3 = MenuAction("VAR_THIS", "4: this", "Referencia de instancia", "SNIPPET", snippet="this", icon="variables")
-    elif lang == LANG_GO:
-        p3 = MenuAction("VAR_ERR", "4: err", "Variable canónica error", "SNIPPET", snippet="err", icon="variables")
-    else:
-        p3 = MenuAction("VAR_SELF", "4: self", "Referencia de instancia", "SNIPPET", snippet="self", icon="variables")
-
-    p5 = MenuAction("VAR_DATA", "6: data", "Identificador data", "SNIPPET", snippet="data", icon="variables")
-    p7 = MenuAction("VAR_RESULT", "8: result", "Identificador result", "SNIPPET", snippet="result", icon="variables")
-    p8 = MenuAction("VAR_ITEM", "9: item", "Identificador item", "SNIPPET", snippet="item", icon="variables")
-
-    return [p0, p1, p2, p3, pause_slot, p5, back_slot, p7, p8]
-
-
-def _build_t9_vals_items(lang: str) -> List[MenuAction]:
-    """Builds the 9 items for the T9_VALS submenu for the specified language."""
-    pause_slot = create_pause_action("5")
-    back_slot = create_back_action("T9", "7")
-
-    if lang == LANG_PYTHON:
-        p0 = MenuAction("VAL_TRUE", "1: True", "Booleano True", "SNIPPET", snippet="True", icon="variables")
-        p1 = MenuAction("VAL_FALSE", "2: False", "Booleano False", "SNIPPET", snippet="False", icon="variables")
-        p2 = MenuAction("VAL_NONE", "3: None", "Valor None", "SNIPPET", snippet="None", icon="variables")
-    else:
-        p0 = MenuAction("VAL_TRUE", "1: true", "Booleano true", "SNIPPET", snippet="true", icon="variables")
-        p1 = MenuAction("VAL_FALSE", "2: false", "Booleano false", "SNIPPET", snippet="false", icon="variables")
-        if lang == LANG_TYPESCRIPT:
-            p2 = MenuAction("VAL_NULL", "3: null", "Valor null", "SNIPPET", snippet="null", icon="variables")
-        elif lang == LANG_CPP:
-            p2 = MenuAction("VAL_NULLPTR", "3: nullptr", "Puntero nulo", "SNIPPET", snippet="nullptr", icon="variables")
-        elif lang == LANG_GO:
-            p2 = MenuAction("VAL_NIL", "3: nil", "Valor nil", "SNIPPET", snippet="nil", icon="variables")
-        else:
-            p2 = MenuAction("VAL_NONE", "3: None", "Valor None", "SNIPPET", snippet="None", icon="variables")
-
-    p3 = MenuAction("VAL_ZERO", "4: 0", "Entero cero", "SNIPPET", snippet="0", icon="variables")
-    p5 = MenuAction("VAL_ONE", "6: 1", "Entero uno", "SNIPPET", snippet="1", icon="variables")
-
-    if lang == LANG_RUST:
-        p7 = MenuAction("VAL_VEC", "8: vec![]", "Vector vacío", "SNIPPET", snippet="vec![]", cursor_offset_left=1, icon="variables")
-        p8 = MenuAction("VAL_SOME", "9: Some()", "Constructor Some", "SNIPPET", snippet="Some()", cursor_offset_left=1, icon="variables")
-    elif lang == LANG_GO:
-        p7 = MenuAction("VAL_SLICE", "8: []T{}", "Slice vacío", "SNIPPET", snippet="[]string{}", cursor_offset_left=1, icon="variables")
-        p8 = MenuAction("VAL_MAP", "9: map[k]v{}", "Mapa vacío", "SNIPPET", snippet="map[string]any{}", cursor_offset_left=1, icon="variables")
-    else:
-        p7 = MenuAction("VAL_EMPTY_LIST", "8: []", "Lista vacía", "SNIPPET", snippet="[]", cursor_offset_left=1, icon="variables")
-        p8 = MenuAction("VAL_EMPTY_DICT", "9: {}", "Diccionario o bloque vacío", "SNIPPET", snippet="{}", cursor_offset_left=1, icon="variables")
-
-    return [p0, p1, p2, p3, pause_slot, p5, back_slot, p7, p8]
-
-
 def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
     """
     Constructs and returns the full hierarchical menu tree for IDEye Phase 5.
@@ -1302,11 +1242,11 @@ def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
         ),
         create_pause_action("5"),
         MenuAction(
-            id="ACTION_T9",
-            label="6: Escribir nombres",
-            hint="Letras, variables y valores",
+            id="ACTION_KEYWORDS",
+            label="6: Palabras clave",
+            hint="Estructuras y palabras clave completas",
             action_type="SUBMENU",
-            submenu_id="T9",
+            submenu_id="KEYWORDS",
             icon="variables",
         ),
         MenuAction(
@@ -1522,154 +1462,26 @@ def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
     tree["AI_PREDICT"] = tree["SNIPPETS"]
 
     # =========================================================================
-    # 9. T9 KEYBOARD & IDENTIFIERS (2-HOP HIERARCHY)
+    # 9. LANGUAGE KEYWORDS (complete words, no letter-by-letter submenu)
     # =========================================================================
-    t9_root_items = [
-        MenuAction(id="T9_GRP_AE", label="1: a - e", hint="Letras a, b, c, d, e", action_type="SUBMENU", submenu_id="T9_AE", icon="variables"),
-        MenuAction(id="T9_GRP_FJ", label="2: f - j", hint="Letras f, g, h, i, j", action_type="SUBMENU", submenu_id="T9_FJ", icon="variables"),
-        MenuAction(id="T9_GRP_KO", label="3: k - o", hint="Letras k, l, m, n, o", action_type="SUBMENU", submenu_id="T9_KO", icon="variables"),
-        MenuAction(id="T9_GRP_PT", label="4: p - t", hint="Letras p, q, r, s, t", action_type="SUBMENU", submenu_id="T9_PT", icon="variables"),
+    keyword_items = [
+        MenuAction(id="KW_DEF", label="1: def", hint="Definir funci?n", action_type="SNIPPET", snippet="def ", icon="function"),
+        MenuAction(id="KW_CLASS", label="2: class", hint="Definir clase", action_type="SNIPPET", snippet="class ", icon="struct"),
+        MenuAction(id="KW_RETURN", label="3: return", hint="Devolver valor", action_type="SNIPPET", snippet="return ", icon="flow"),
+        MenuAction(id="KW_IF", label="4: if", hint="Condici?n", action_type="SNIPPET", snippet="if ", icon="flow"),
         create_pause_action("5"),
-        MenuAction(id="T9_GRP_UZ", label="6: u - z", hint="Letras u, v, w, x, y, z", action_type="SUBMENU", submenu_id="T9_UZ", icon="variables"),
+        MenuAction(id="KW_FOR", label="6: for", hint="Bucle for", action_type="SNIPPET", snippet="for ", icon="flow"),
         create_back_action("ROOT", "7"),
-        MenuAction(id="T9_GRP_LOCAL_VARS", label="8: VARIABLES ARCHIVO", hint="Símbolos del archivo actual", action_type="SUBMENU", submenu_id="T9_LOCAL_VARS", icon="variables"),
-        MenuAction(id="T9_GRP_VARS", label="9: VARS: i, x, self", hint="Variables habituales", action_type="SUBMENU", submenu_id="T9_VARS", icon="variables"),
+        MenuAction(id="KW_WHILE", label="8: while", hint="Bucle while", action_type="SNIPPET", snippet="while ", icon="flow"),
+        MenuAction(id="KW_IMPORT", label="9: import", hint="Importar m?dulo", action_type="SNIPPET", snippet="import ", icon="struct"),
     ]
-
-    tree["T9"] = MenuNode(
-        id="T9",
-        title="TECLADO T9 / IDENTIFICADORES",
-        breadcrumb_label="T9",
-        items=t9_root_items,
+    tree["KEYWORDS"] = MenuNode(
+        id="KEYWORDS",
+        title="PALABRAS CLAVE",
+        breadcrumb_label="PALABRAS",
+        items=keyword_items,
         parent_id="ROOT",
-        sticky=False,
-    )
-
-    tree["T9_LOCAL_VARS"] = MenuNode(
-        id="T9_LOCAL_VARS",
-        title="VARIABLES DEL ARCHIVO",
-        breadcrumb_label="LOCALES",
-        items=populate_local_symbol_items(None, parent_id="T9"),
-        parent_id="T9",
-        sticky=False,
-    )
-
-    tree["T9_VARS"] = MenuNode(
-        id="T9_VARS",
-        title="VARIABLES FRECUENTES",
-        breadcrumb_label="VARS",
-        items=_build_t9_vars_items(lang),
-        parent_id="T9",
-        sticky=False,
-    )
-
-    tree["T9_VALS"] = MenuNode(
-        id="T9_VALS",
-        title="VALORES Y CONSTANTES",
-        breadcrumb_label="VALORES",
-        items=_build_t9_vals_items(lang),
-        parent_id="T9",
-        sticky=False,
-    )
-
-    # T9 Letters A-E
-    tree["T9_AE"] = MenuNode(
-        id="T9_AE",
-        title="LETRAS: A - E",
-        breadcrumb_label="a-e",
-        items=[
-            MenuAction(id="CH_A", label="1: a", action_type="SNIPPET", snippet="a", icon="variables"),
-            MenuAction(id="CH_B", label="2: b", action_type="SNIPPET", snippet="b", icon="variables"),
-            MenuAction(id="CH_C", label="3: c", action_type="SNIPPET", snippet="c", icon="variables"),
-            MenuAction(id="CH_D", label="4: d", action_type="SNIPPET", snippet="d", icon="variables"),
-            create_pause_action("5"),
-            MenuAction(id="CH_E", label="6: e", action_type="SNIPPET", snippet="e", icon="variables"),
-            create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_AE", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="variables"),
-            MenuAction(id="CH_SP_AE", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
-        ],
-        parent_id="T9",
-        sticky=False,
-    )
-
-    # T9 Letters F-J
-    tree["T9_FJ"] = MenuNode(
-        id="T9_FJ",
-        title="LETRAS: F - J",
-        breadcrumb_label="f-j",
-        items=[
-            MenuAction(id="CH_F", label="1: f", action_type="SNIPPET", snippet="f", icon="variables"),
-            MenuAction(id="CH_G", label="2: g", action_type="SNIPPET", snippet="g", icon="variables"),
-            MenuAction(id="CH_H", label="3: h", action_type="SNIPPET", snippet="h", icon="variables"),
-            MenuAction(id="CH_I", label="4: i", action_type="SNIPPET", snippet="i", icon="variables"),
-            create_pause_action("5"),
-            MenuAction(id="CH_J", label="6: j", action_type="SNIPPET", snippet="j", icon="variables"),
-            create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_FJ", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="variables"),
-            MenuAction(id="CH_SP_FJ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
-        ],
-        parent_id="T9",
-        sticky=False,
-    )
-
-    # T9 Letters K-O
-    tree["T9_KO"] = MenuNode(
-        id="T9_KO",
-        title="LETRAS: K - O",
-        breadcrumb_label="k-o",
-        items=[
-            MenuAction(id="CH_K", label="1: k", action_type="SNIPPET", snippet="k", icon="variables"),
-            MenuAction(id="CH_L", label="2: l", action_type="SNIPPET", snippet="l", icon="variables"),
-            MenuAction(id="CH_M", label="3: m", action_type="SNIPPET", snippet="m", icon="variables"),
-            MenuAction(id="CH_N", label="4: n", action_type="SNIPPET", snippet="n", icon="variables"),
-            create_pause_action("5"),
-            MenuAction(id="CH_O", label="6: o", action_type="SNIPPET", snippet="o", icon="variables"),
-            create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_KO", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="variables"),
-            MenuAction(id="CH_SP_KO", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
-        ],
-        parent_id="T9",
-        sticky=False,
-    )
-
-    # T9 Letters P-T
-    tree["T9_PT"] = MenuNode(
-        id="T9_PT",
-        title="LETRAS: P - T",
-        breadcrumb_label="p-t",
-        items=[
-            MenuAction(id="CH_P", label="1: p", action_type="SNIPPET", snippet="p", icon="variables"),
-            MenuAction(id="CH_Q", label="2: q", action_type="SNIPPET", snippet="q", icon="variables"),
-            MenuAction(id="CH_R", label="3: r", action_type="SNIPPET", snippet="r", icon="variables"),
-            MenuAction(id="CH_S", label="4: s", action_type="SNIPPET", snippet="s", icon="variables"),
-            create_pause_action("5"),
-            MenuAction(id="CH_T", label="6: t", action_type="SNIPPET", snippet="t", icon="variables"),
-            create_back_action("T9", "7"),
-            MenuAction(id="CH_UND_PT", label="8: _", hint="Guion bajo", action_type="SNIPPET", snippet="_", icon="variables"),
-            MenuAction(id="CH_SP_PT", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
-        ],
-        parent_id="T9",
-        sticky=False,
-    )
-
-    # T9 Letters U-Z
-    tree["T9_UZ"] = MenuNode(
-        id="T9_UZ",
-        title="LETRAS: U - Z",
-        breadcrumb_label="u-z",
-        items=[
-            MenuAction(id="CH_U", label="1: u", action_type="SNIPPET", snippet="u", icon="variables"),
-            MenuAction(id="CH_V", label="2: v", action_type="SNIPPET", snippet="v", icon="variables"),
-            MenuAction(id="CH_W", label="3: w", action_type="SNIPPET", snippet="w", icon="variables"),
-            MenuAction(id="CH_X", label="4: x", action_type="SNIPPET", snippet="x", icon="variables"),
-            create_pause_action("5"),
-            MenuAction(id="CH_Y", label="6: y", action_type="SNIPPET", snippet="y", icon="variables"),
-            create_back_action("T9", "7"),
-            MenuAction(id="CH_Z", label="8: z", action_type="SNIPPET", snippet="z", icon="variables"),
-            MenuAction(id="CH_SP_UZ", label="9: ESPACIO", hint="Espacio", action_type="KEY", key_name="SPACE", icon="format"),
-        ],
-        parent_id="T9",
-        sticky=False,
+        sticky=True,
     )
 
     # =========================================================================

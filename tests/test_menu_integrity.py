@@ -109,7 +109,7 @@ class TestMenuIntegrity(unittest.TestCase):
         _traverse("ROOT")
         self.assertGreater(len(visited), 10, "Tree has too few reachable nodes.")
         # All standard nodes in the tree should be reachable from ROOT (except aliases/aux nodes)
-        expected_aux_or_alias = {"AI_PREDICT", "T9_VALS", "HELP", "LANG_SELECT"}
+        expected_aux_or_alias = {"AI_PREDICT", "HELP", "LANG_SELECT"}
         unreachable = set(self.tree.keys()) - visited
         self.assertEqual(unreachable - expected_aux_or_alias, set(), f"Unexpected unreachable nodes: {unreachable}")
 
@@ -152,11 +152,11 @@ class TestMenuIntegrity(unittest.TestCase):
     def test_dynamic_local_symbols_items_integrity(self):
         """populate_local_symbol_items() must always construct exactly 9 items meeting golden rules."""
         symbols = ["counter", "user_id", "items_list", "total"]
-        items = populate_local_symbol_items(symbols, parent_id="T9")
+        items = populate_local_symbol_items(symbols, parent_id="ROOT")
         self.assertEqual(len(items), 9)
         self.assertEqual(items[4].action_type, "PAUSE")
         self.assertEqual(items[6].action_type, "BACK")
-        self.assertEqual(items[6].submenu_id, "T9")
+        self.assertEqual(items[6].submenu_id, "ROOT")
 
     def test_breadcrumb_trail_generation(self):
         """get_breadcrumb_path() must generate correct directional path strings."""

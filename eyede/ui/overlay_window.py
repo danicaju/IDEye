@@ -8,7 +8,7 @@ Features:
   WindowStaysOnTopHint, Tool, and WA_TranslucentBackground.
 - Ensures external IDEs (e.g. VS Code, PyCharm) NEVER lose keyboard focus or cursor blink.
 - Renders hierarchical 3x3 Menu Trees (build_menu_tree):
-    * Root Menu (Flow, Struct, Operators, Nav, Pause, T9, Edit, Format, Snippets).
+    * Root Menu (Flow, Struct, Operators, Nav, Pause, Keywords, Edit, Format, Snippets).
     * Submenus with visual indicators ('SUBMENU', 'ACCION', 'PAUSA', 'VOLVER').
 - Top Breadcrumb Bar displaying current navigation path (e.g. 'RAIZ > FLUJO') and last executed action.
 - Sticky submenu mode for repetitive actions (Nav, Edit, Format).
@@ -28,6 +28,7 @@ from PyQt6.QtCore import (
     QEasingCurve,
     pyqtSignal,
     pyqtSlot,
+    QRect,
     QRectF,
     QPointF,
 )
@@ -57,7 +58,6 @@ try:
         build_menu_tree,
         get_breadcrumb_path,
         populate_ai_prediction_items,
-        populate_local_symbol_items,
         populate_exit_confirm_items,
         populate_help_items,
         populate_lang_select_items,
@@ -92,7 +92,6 @@ except ImportError:
         build_menu_tree,
         get_breadcrumb_path,
         populate_ai_prediction_items,
-        populate_local_symbol_items,
         populate_exit_confirm_items,
         populate_help_items,
         populate_lang_select_items,
@@ -153,37 +152,38 @@ MODE_SELECTOR_ENTRIES = (
 # rendered content can be verified without instantiating a QPainter.
 HELP_GESTURES = (
     (
-        "Apertura de Boca (MAR)",
-        "Clic / Inyectar código o navegar",
-        "Abra la boca ligeramente para activar la casilla enfocada.",
+        "Apertura de boca (MAR)",
+        "Clic / inyectar / navegar",
+        "Abre la boca brevemente para activar la casilla enfocada.",
     ),
     (
-        "Guiño Ojo Derecho",
-        "Pausar / Despertar HUD",
-        "Cierre el ojo derecho ~200ms para ocultar totalmente el HUD y descansar.",
+        "Guiño ojo derecho",
+        "Pausa / Gaming: joystick ⇄ cursor",
+        "Cierra el ojo derecho ~200 ms para ocultar el HUD o cambiar el control de juego.",
     ),
     (
-        "Guiño Ojo Izquierdo",
-        "Volver atrás / Deshacer (Ctrl+Z)",
-        "Cierre el ojo izquierdo ~200ms para retroceder menú o deshacer cambios.",
+        "Guiño ojo izquierdo",
+        "Volver / deshacer",
+        "Cierra el ojo izquierdo ~200 ms para retroceder o deshacer.",
     ),
 )
 
 HELP_SHORTCUTS = (
     ("[Ctrl+Alt+A]", "Menús inteligentes", "Adapta las opciones al código bajo el cursor."),
-    ("[Ctrl+Alt+B]", "Portapapeles", "Abre las últimas 6 copias del sistema en cuadrícula 3x3."),
-    ("[Ctrl+Alt+L]", "Cambiar lenguaje", "Cicla el lenguaje activo (Python, TypeScript, Rust, C++, Go)."),
-    ("[Ctrl+Alt+H]", "Ayuda", "Abre o cierra la gu?a de gestos y atajos."),
-    ("[Ctrl+Alt+V/K]", "Elegir modo / Auto-switch", "Abre el selector de modos o alterna el cambio automático desde cualquier ventana."),
-    ("[Ctrl+Alt+T]", "Modo Tracking", "Cicla entre Cabeza (Recomendado), Híbrido e Iris."),
-    ("[Ctrl+Alt+M]", "Colapsar Monitor", "Colapsa o expande el monitor de depuración desde cualquier ventana."),
-    ("[Ctrl+Alt+C]", "Calibrar Centro", "Fija la posición actual como centro neutro de pantalla."),
-    ("[Ctrl+Alt+P]", "Pausa / Lectura", "Pone el HUD en reposo para descansar la vista."),
-    ("[Ctrl+Alt+S]", "Sonido", "Silencia o activa el feedback acústico desde cualquier ventana."),
-    ("[Ctrl+Alt+F]", "FreeLook", "Activa el ratón directo por mirada desde cualquier ventana."),
-    ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming dentro de FreeLook desde cualquier ventana."),
-    ("[Ctrl+Alt+N]", "Cambiar pantalla", "Mueve el HUD y el mapeo al siguiente monitor; también cruza automáticamente mirando hacia el borde ~0.4 s."),
-    ("[Ctrl+Alt+Q]", "Salida Emergencia", "Cierre inmediato del programa en cualquier momento."),
+    ("[Ctrl+Alt+B]", "Portapapeles", "Abre las últimas 6 copias en cuadrícula 3x3."),
+    ("[Ctrl+Alt+L]", "Cambiar lenguaje", "Cicla Python, TypeScript, Rust, C++ y Go."),
+    ("[Ctrl+Alt+H]", "Ayuda", "Abre o cierra esta guía."),
+    ("[Ctrl+Alt+V]", "Elegir modo", "Abre el selector de modos."),
+    ("[Ctrl+Alt+K]", "Auto-switch", "Activa o desactiva el cambio automático."),
+    ("[Ctrl+Alt+T]", "Modo tracking", "Cicla Cabeza, Híbrido e Iris."),
+    ("[Ctrl+Alt+M]", "Monitor", "Colapsa o expande el panel de depuración."),
+    ("[Ctrl+Alt+C]", "Calibrar centro", "Fija la posición actual como centro neutro."),
+    ("[Ctrl+Alt+P]", "Pausa / lectura", "Oculta el HUD para descansar la vista."),
+    ("[Ctrl+Alt+S]", "Sonido", "Activa o silencia el audio."),
+    ("[Ctrl+Alt+F]", "FreeLook", "Activa el ratón por mirada."),
+    ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming."),
+    ("[Ctrl+Alt+N]", "Cambiar pantalla", "Mueve HUD y mirada al siguiente monitor."),
+    ("[Ctrl+Alt+Q]", "Salida de emergencia", "Cierra IDEye de inmediato."),
 )
 
 
@@ -300,6 +300,10 @@ class OverlayWindow(QWidget):
         self._hold_started: bool = False
         self._gaming_mode: bool = False
         self._gaming_right_held: bool = False
+        self._gaming_control_state: str = "JOYSTICK"
+        self._game_keys_down: set = set()
+        self._gaming_toggle_rect: QRectF = QRectF()
+        self.hovered_gaming_toggle: bool = False
         self._font_freelook_hint = QFont("Segoe UI", 10, QFont.Weight.Bold)
         self._gravity_block: Optional[int] = None
         self._gravity_since: float = 0.0
@@ -401,6 +405,7 @@ class OverlayWindow(QWidget):
         self._font_modal_section = QFont("Segoe UI", 11, QFont.Weight.Bold)
         self._font_modal_item_title = QFont("Segoe UI", 10, QFont.Weight.Bold)
         self._font_modal_item_desc = QFont("Segoe UI", 8)
+        self._font_modal_close = QFont("Segoe UI", 10, QFont.Weight.Bold)
 
         # Header / command bar styles
         self._brush_header_bg = QBrush(QColor(11, 15, 25, 235))
@@ -733,20 +738,79 @@ class OverlayWindow(QWidget):
             cell_h,
         )
 
-    def _update_help_modal_rect(self) -> None:
-        """Computes the interactive bounding boxes of the acrylic cheat sheet modal and its close button."""
-        w = float(self.width()) if self.width() > 0 else 1920.0
-        h = float(self.height()) if self.height() > 0 else 1080.0
-        card_w = min(880.0, max(400.0, w - 80.0))
-        card_h = min(560.0, max(380.0, h - 80.0))
+    @staticmethod
+    def _wrapped_text_height(font: QFont, text: str, width: float) -> int:
+        fm = QFontMetrics(font)
+        rect = fm.boundingRect(
+            QRect(0, 0, max(20, int(width)), 0),
+            Qt.TextFlag.TextWordWrap,
+            str(text),
+        )
+        return max(fm.height(), int(rect.height()))
+
+    def _help_modal_layout(self, w: float, h: float) -> Dict[str, Any]:
+        """Computes a height that fits every wrapped row inside the modal."""
+        card_w = min(1180.0, max(720.0, w - 60.0))
+        margin = 24.0
+        gap = 14.0
+        col_w = max(160.0, (card_w - 2.0 * margin - 2.0 * gap) / 3.0)
+
+        gesture_rows = []
+        for title, action, desc in HELP_GESTURES:
+            title_h = QFontMetrics(self._font_modal_item_title).height()
+            action_h = QFontMetrics(self._font_modal_item_desc).height()
+            desc_h = self._wrapped_text_height(self._font_modal_item_desc, desc, col_w - 28.0)
+            gesture_rows.append((title, action, desc, title_h, action_h, desc_h,
+                                 title_h + action_h + desc_h + 12.0))
+
+        half = (len(HELP_SHORTCUTS) + 1) // 2
+        shortcut_cols = [list(HELP_SHORTCUTS[:half]), list(HELP_SHORTCUTS[half:])]
+        shortcut_heights = []
+        for column in shortcut_cols:
+            total = 0.0
+            heights = []
+            for key, name, desc in column:
+                desc_h = self._wrapped_text_height(self._font_modal_item_desc, desc, col_w - 28.0)
+                row_h = 16.0 + 16.0 + desc_h + 6.0
+                heights.append((key, name, desc, desc_h, row_h))
+                total += row_h
+            shortcut_heights.append((heights, total))
+
+        content_h = max(
+            sum(row[6] for row in gesture_rows),
+            max((total for _, total in shortcut_heights), default=0.0),
+        )
+        card_h = min(max(420.0, h - 24.0), max(440.0, content_h + 190.0))
         card_x = (w - card_w) * 0.5
         card_y = (h - card_h) * 0.5
-        self.help_modal_rect = QRectF(card_x, card_y, card_w, card_h)
-        close_btn_w = min(380.0, card_w - 40.0)
+        card_rect = QRectF(card_x, card_y, card_w, card_h)
+        col_y = card_y + 80.0
+        col_content_h = max(80.0, card_h - 80.0 - 66.0)
+        columns = [
+            QRectF(card_x + margin, col_y, col_w, col_content_h),
+            QRectF(card_x + margin + col_w + gap, col_y, col_w, col_content_h),
+            QRectF(card_x + margin + 2.0 * (col_w + gap), col_y, col_w, col_content_h),
+        ]
+        return {
+            "card": card_rect,
+            "columns": columns,
+            "gesture_rows": gesture_rows,
+            "shortcut_columns": shortcut_heights,
+            "col_w": col_w,
+        }
+
+    def _update_help_modal_rect(self) -> None:
+        """Computes the modal card, its columns and the close-button target."""
+        w = float(self.width()) if self.width() > 0 else 1920.0
+        h = float(self.height()) if self.height() > 0 else 1080.0
+        layout = self._help_modal_layout(w, h)
+        card = layout["card"]
+        self.help_modal_rect = card
+        close_btn_w = min(380.0, card.width() - 40.0)
         close_btn_h = 42.0
         self.help_modal_close_rect = QRectF(
-            card_x + (card_w - close_btn_w) * 0.5,
-            card_y + card_h - close_btn_h - 14.0,
+            card.x() + (card.width() - close_btn_w) * 0.5,
+            card.y() + card.height() - close_btn_h - 14.0,
             close_btn_w,
             close_btn_h,
         )
@@ -900,16 +964,18 @@ class OverlayWindow(QWidget):
 
         painter.setFont(self._font_card_subtitle)
         for label in chip_labels:
-            text_w = fm.horizontalAdvance(label)
-            chip_w = float(text_w) + 10.0
-            if start_x + chip_w > max_right:
+            available = max_right - start_x - 10.0
+            if available < 18.0:
                 break
+            text = fm.elidedText(str(label), Qt.TextElideMode.ElideRight, int(available))
+            text_w = fm.horizontalAdvance(text)
+            chip_w = float(text_w) + 10.0
             chip_rect = QRectF(start_x, y, chip_w, chip_h)
             painter.setBrush(QColor(255, 255, 255, 12))
             painter.setPen(QPen(QColor(255, 255, 255, 28), 1.0))
             painter.drawRoundedRect(chip_rect, radius, radius)
             painter.setPen(QColor(203, 213, 225))
-            painter.drawText(chip_rect, Qt.AlignmentFlag.AlignCenter, label)
+            painter.drawText(chip_rect, Qt.AlignmentFlag.AlignCenter, text)
             start_x += chip_w + gap
 
     def _apply_win32_no_activate(self) -> None:
@@ -1043,18 +1109,7 @@ class OverlayWindow(QWidget):
         if self.context_reader:
             self.context_reader.set_active_file(file_path)
             self.last_action_desc = f"Vinculado: {os.path.basename(file_path)}"
-            if self.current_node_id == "T9_LOCAL_VARS":
-                self._refresh_local_symbols()
             self.update()
-
-    def _refresh_local_symbols(self) -> None:
-        """Refreshes local variables from active file via ContextReader."""
-        if not self.context_reader:
-            return
-        symbols = self.context_reader.extract_local_symbols(getattr(config, "MAX_LOCAL_SYMBOLS", 12))
-        new_items = populate_local_symbol_items(symbols, parent_id="T9")
-        if "T9_LOCAL_VARS" in self.menu_tree:
-            self.menu_tree["T9_LOCAL_VARS"].items = new_items
 
     def _trigger_ai_prediction(self) -> None:
         """
@@ -1148,9 +1203,7 @@ class OverlayWindow(QWidget):
             self.current_node_id = node_id
             self._cached_adaptive_node = None
             self._last_ast_eval_time = 0.0
-            if node_id == "T9_LOCAL_VARS":
-                self._refresh_local_symbols()
-            elif node_id in ("SNIPPETS", "AI_PREDICT"):
+            if node_id in ("SNIPPETS", "AI_PREDICT"):
                 self._trigger_ai_prediction()
             self.menu_navigated.emit(node_id)
             self.update()
@@ -1183,6 +1236,7 @@ class OverlayWindow(QWidget):
                 ("hovered_header_lang", self.header_lang_rect),
                 ("hovered_header_screen", self.header_screen_rect),
                 ("hovered_sniper_action", self._sniper_action_pill_rect),
+                ("hovered_gaming_toggle", self._gaming_toggle_rect),
             )
             for attr, rect in header_targets:
                 if rect.isValid() and rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
@@ -1399,6 +1453,7 @@ class OverlayWindow(QWidget):
         self._mouth_active = False
         self._jaw_locked = False
         self._jaw_lock_pos = None
+        self.release_all_game_keys()
 
     def _clear_header_help_flash(self) -> None:
         """Clears active click visual pulse on header help button."""
@@ -1694,6 +1749,9 @@ class OverlayWindow(QWidget):
         )
 
     def _handle_freelook_gaze(self, gx: float, gy: float) -> None:
+        if self._gaming_mode and self._gaming_control_state == "JOYSTICK":
+            self._update_gameplay_joystick(gx, gy)
+            return
         screen_w, screen_h = self._get_screen_size()
         x, y = self._freelook_screen_coords(gx, gy, screen_w, screen_h)
         pre = self._freelook_prethreshold()
@@ -1720,6 +1778,60 @@ class OverlayWindow(QWidget):
             self.current_gaze = normalized
             self.update()
 
+    def _update_gameplay_joystick(self, gx: float, gy: float) -> None:
+        """Maps head position to WASD with a comfortable central deadzone."""
+        dx = float(gx) - 0.5
+        dy = float(gy) - 0.5
+        deadzone = float(getattr(config, "GAMING_DEADZONE", 0.14))
+        desired = set()
+        if dy < -deadzone:
+            desired.add("w")
+        elif dy > deadzone:
+            desired.add("s")
+        if dx < -deadzone:
+            desired.add("a")
+        elif dx > deadzone:
+            desired.add("d")
+
+        controller = self.mouse_controller
+        if controller is None:
+            controller = OSMouseController()
+            self.mouse_controller = controller
+        had_keys = bool(self._game_keys_down)
+        for key in ("w", "a", "s", "d"):
+            if key in desired and key not in self._game_keys_down:
+                try:
+                    controller.key_down(key)
+                except Exception:
+                    pass
+                self._game_keys_down.add(key)
+            elif key not in desired and key in self._game_keys_down:
+                try:
+                    controller.key_up(key)
+                except Exception:
+                    pass
+                self._game_keys_down.discard(key)
+        if had_keys and not desired:
+            self.release_all_game_keys()
+        self.current_gaze = (float(gx), float(gy))
+        self.update()
+
+    def release_all_game_keys(self) -> None:
+        """Guarantees that movement keys and mouse buttons are released."""
+        controller = self.mouse_controller
+        if controller is not None:
+            try:
+                controller.release_all_game_keys(tuple(self._game_keys_down) + ("w", "a", "s", "d", " "))
+            except Exception:
+                pass
+            try:
+                controller.release_all_buttons()
+            except Exception:
+                pass
+        self._game_keys_down.clear()
+        self._gaming_right_held = False
+        self._hold_started = False
+
     def _freelook_click(self) -> None:
         mode = self._sniper_mode()
         action = getattr(mode, "get_action", lambda: "LEFT_CLICK")() if mode else "LEFT_CLICK"
@@ -1740,11 +1852,39 @@ class OverlayWindow(QWidget):
             controller.left_click(x, y)
         self._play_sound("click")
         self.last_action_desc = f"FreeLook: {getattr(mode, 'action_label', 'Clic Izq')}"
+        if (
+            self._gaming_mode
+            and self._gaming_control_state == "MENU_CURSOR"
+            and getattr(config, "GAMING_AUTO_RETURN_AFTER_CLICK", False)
+        ):
+            self._gaming_control_state = "JOYSTICK"
+            self.release_all_game_keys()
 
     def _update_freelook_mouth(self, mar: float) -> None:
         pre = self._freelook_prethreshold()
         trigger = max(pre + 0.01, float(getattr(self, "mar_threshold", 0.45)))
         now = time.time()
+
+        # In gameplay, mouth = click at the current pointer; never move it.
+        if self._gaming_mode and self._gaming_control_state == "JOYSTICK":
+            controller = self.mouse_controller
+            if mar >= trigger and not self._mouth_active:
+                self._mouth_active = True
+                self._mouth_start = now
+                self.update()
+                return
+            if self._mouth_active and mar < pre:
+                self._mouth_active = False
+                self._hold_started = False
+                if controller is not None:
+                    try:
+                        controller.left_click_current()
+                    except Exception:
+                        pass
+                self._play_sound("click")
+                self.last_action_desc = "Gaming: clic"
+                self.update()
+            return
 
         if mar >= trigger and not self._mouth_active:
             self._mouth_active = True
@@ -1787,6 +1927,8 @@ class OverlayWindow(QWidget):
         if self._gaming_mode:
             self.release_freelook_controls()
         self._gaming_mode = enabled
+        self._gaming_control_state = "JOYSTICK"
+        self._game_keys_down.clear()
         self.last_action_desc = f"FreeLook: {'GAMING' if enabled else 'ESCRITORIO'}"
         self.update()
 
@@ -1794,45 +1936,97 @@ class OverlayWindow(QWidget):
         if self._gaming_mode:
             self.release_freelook_controls()
         self._gaming_mode = not self._gaming_mode
+        self._gaming_control_state = "JOYSTICK"
+        self._game_keys_down.clear()
         self.last_action_desc = f"FreeLook: {'GAMING' if self._gaming_mode else 'ESCRITORIO'}"
         self._play_sound("mode")
         self.update()
         return self._gaming_mode
 
     def _toggle_gaming_right(self) -> None:
-        controller = self.mouse_controller
-        if controller is None:
+        """Right wink switches between head-joystick and menu cursor."""
+        if not self._gaming_mode:
             return
-        if self._gaming_right_held:
-            controller.mouse_up("right")
+        if self._gaming_control_state == "JOYSTICK":
+            self.release_all_game_keys()
+            self._gaming_control_state = "MENU_CURSOR"
+            self.last_action_desc = "Gaming: Cursor de men?"
         else:
-            controller.mouse_down("right")
-        self._gaming_right_held = not self._gaming_right_held
-        self.last_action_desc = "Gaming: Clic Der mantenido" if self._gaming_right_held else "Gaming: Clic Der liberado"
+            self._gaming_control_state = "JOYSTICK"
+            self.release_all_game_keys()
+            self.last_action_desc = "Gaming: Joystick de cabeza"
         self._play_sound("mode")
         self.update()
 
     def _paint_freelook_overlay(self, painter: QPainter) -> None:
-        """Draws only a compact status pill below the command bar."""
+        """Draws the compact FreeLook status, gaming crosshair and mode switch."""
         mode = self._sniper_mode()
         action = getattr(mode, "action_label", "Clic Izq") if mode else "Clic Izq"
-        profile = "GAMING" if self._gaming_mode else "ESCRITORIO"
-        text = f"FREELOOK · {profile} · {action}"
         painter.save()
+        if not self._gaming_mode:
+            self._gaming_toggle_rect = QRectF()
+            self.hovered_gaming_toggle = False
+            profile = "ESCRITORIO"
+            text = f"FREELOOK ? {profile} ? {action}"
+            fm = QFontMetrics(self._font_freelook_hint)
+            width = min(440.0, max(240.0, fm.horizontalAdvance(text) + 28.0))
+            rect = QRectF(
+                self.width() * 0.5 - width * 0.5,
+                self.header_rect.bottom() + 8.0,
+                width,
+                26.0,
+            )
+            painter.setBrush(QColor(11, 15, 25, 215))
+            painter.setPen(QPen(QColor(244, 63, 94, 180), 1.0))
+            painter.drawRoundedRect(rect, 8.0, 8.0)
+            painter.setPen(QColor(254, 205, 211))
+            painter.setFont(self._font_freelook_hint)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
+            painter.restore()
+            return
+
+        state_label = "JOYSTICK" if self._gaming_control_state == "JOYSTICK" else "CURSOR"
+        button_text = f"MODO JUEGO: {state_label} ? {'CURSOR' if state_label == 'JOYSTICK' else 'JOYSTICK'}"
         fm = QFontMetrics(self._font_freelook_hint)
-        width = min(440.0, max(240.0, fm.horizontalAdvance(text) + 28.0))
-        rect = QRectF(
+        width = min(520.0, max(320.0, fm.horizontalAdvance(button_text) + 34.0))
+        self._gaming_toggle_rect = QRectF(
             self.width() * 0.5 - width * 0.5,
             self.header_rect.bottom() + 8.0,
             width,
-            26.0,
+            30.0,
         )
-        painter.setBrush(QColor(11, 15, 25, 215))
-        painter.setPen(QPen(QColor(244, 63, 94, 180), 1.0))
-        painter.drawRoundedRect(rect, 8.0, 8.0)
-        painter.setPen(QColor(254, 205, 211))
+        hovered = getattr(self, "hovered_gaming_toggle", False)
+        painter.setBrush(QColor(16, 185, 129, 55) if hovered else QColor(11, 15, 25, 225))
+        painter.setPen(QPen(QColor(52, 211, 153, 230), 1.6))
+        painter.drawRoundedRect(self._gaming_toggle_rect, 9.0, 9.0)
+        painter.setPen(QColor(209, 250, 229))
         painter.setFont(self._font_freelook_hint)
-        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
+        painter.drawText(self._gaming_toggle_rect, Qt.AlignmentFlag.AlignCenter, button_text)
+
+        if self._gaming_control_state == "JOYSTICK":
+            center = QPointF(self.width() * 0.5, self.height() * 0.5)
+            radius = 40.0
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(QColor(52, 211, 153, 80), 1.4))
+            painter.drawEllipse(center, radius + 8.0, radius + 8.0)
+            painter.setPen(QPen(QColor(52, 211, 153, 150), 1.2))
+            painter.drawLine(QPointF(center.x() - 12, center.y()), QPointF(center.x() + 12, center.y()))
+            painter.drawLine(QPointF(center.x(), center.y() - 12), QPointF(center.x(), center.y() + 12))
+            gx, gy = self.current_gaze
+            dot = QPointF(
+                center.x() + max(-1.0, min(1.0, (gx - 0.5) * 3.0)) * radius,
+                center.y() + max(-1.0, min(1.0, (gy - 0.5) * 3.0)) * radius,
+            )
+            painter.setBrush(QColor(52, 211, 153, 230))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(dot, 6.0, 6.0)
+            painter.setPen(QColor(167, 243, 208))
+            painter.setFont(QFont("Segoe UI", 8, QFont.Weight.Bold))
+            painter.drawText(
+                QRectF(center.x() - 90.0, center.y() + 54.0, 180.0, 18.0),
+                Qt.AlignmentFlag.AlignCenter,
+                "mueve la cabeza ? boca = clic ? gui?o der = cursor",
+            )
         painter.restore()
 
     def toggle_help_modal(self) -> None:
@@ -1973,6 +2167,12 @@ class OverlayWindow(QWidget):
             self.screen_cycle_requested.emit()
             return
 
+        # In-game Joystick / Menu-cursor switch.
+        if getattr(self, "hovered_gaming_toggle", False):
+            self.hovered_gaming_toggle = False
+            self._toggle_gaming_right()
+            return
+
         # Sniper action selector (only visible in sniper mode)
         if getattr(self, "hovered_sniper_action", False):
             self.hovered_sniper_action = False
@@ -2014,8 +2214,7 @@ class OverlayWindow(QWidget):
             return
 
         # Do not accumulate facial clicks while an injection is actively running.
-        # Writing mode is the exception: T9 letters should queue naturally so
-        # the user can spell a word without waiting for each clipboard paste.
+        # Writing mode queues full-word insertions without blocking on each paste.
         if self.code_injector.is_busy and target_block != 4 and self.current_context_mode_id != "writing":
             return
 
@@ -2065,7 +2264,7 @@ class OverlayWindow(QWidget):
             self.block_activated.emit(target_block, item.id)
             return
 
-        # 3b. Writing-mode T9 letters, words, spaces and case toggle
+        # 3b. Writing-mode complete words and phrases
         if self._handle_writing_action(item, target_block):
             return
 
@@ -2140,88 +2339,23 @@ class OverlayWindow(QWidget):
         except Exception:
             return None
 
-    def _refresh_writing_predictions(self) -> None:
-        """Refreshes the prediction panel after a T9 letter or word change."""
-        mode = self._writing_mode()
-        node = self.menu_tree.get("WRITING_PREDICT")
-        if mode is None or node is None or not hasattr(mode, "build_prediction_items"):
-            return
-        try:
-            node.items = mode.build_prediction_items()
-        except Exception:
-            pass
-
     def _handle_writing_action(self, item: MenuAction, target_block: int = 0) -> bool:
-        """Executes T9/writing actions and returns True when handled."""
-        action_type = getattr(item, "action_type", "")
-        if action_type not in {
-            "WRITING_LETTER",
-            "WRITING_WORD",
-            "WRITING_SPACE",
-            "WRITING_BACKSPACE",
-            "WRITING_CASE",
-        }:
+        """Injects complete writing words/phrases; never single letters."""
+        if getattr(item, "action_type", "") != "WRITING_WORD":
             return False
-
         mode = self._writing_mode()
         if mode is None:
             return False
-
-        if action_type == "WRITING_LETTER":
-            text = mode.record_letter(item.snippet or "")
-            if text:
-                self.code_injector.insert_snippet(text)
-                self.text_injected.emit(len(text))
-            self._refresh_writing_predictions()
-            self.last_action_desc = f"Letra: {text}" if text else "Letra"
-            self.action_executed.emit(item.id, self.last_action_desc)
-            self.block_activated.emit(target_block, item.id)
-            self.update()
-            return True
-
-        if action_type == "WRITING_WORD":
-            word = mode.apply_case_to_word(item.snippet or "")
-            if word:
-                self.code_injector.insert_snippet(word + " ")
-                self.text_injected.emit(len(word) + 1)
-            mode.reset_prefix()
-            self._refresh_writing_predictions()
-            self.navigate_to("WRITING_T9")
-            self.last_action_desc = f"Palabra: {word}" if word else "Palabra"
-            self.action_executed.emit(item.id, self.last_action_desc)
-            self.block_activated.emit(target_block, item.id)
-            return True
-
-        if action_type == "WRITING_SPACE":
-            self.code_injector.insert_snippet(" ")
-            self.text_injected.emit(1)
-            mode.record_space()
-            self._refresh_writing_predictions()
-            self.last_action_desc = "Espacio"
-            self.action_executed.emit(item.id, self.last_action_desc)
-            self.block_activated.emit(target_block, item.id)
-            self.update()
-            return True
-
-        if action_type == "WRITING_BACKSPACE":
-            self.code_injector.send_key("BACKSPACE")
-            mode.record_backspace()
-            self._refresh_writing_predictions()
-            self.last_action_desc = "Borrar carácter"
-            self.action_executed.emit(item.id, self.last_action_desc)
-            self.block_activated.emit(target_block, item.id)
-            self.update()
-            return True
-
-        if action_type == "WRITING_CASE":
-            enabled = mode.toggle_uppercase()
-            self.last_action_desc = f"Mayúsculas: {'ON' if enabled else 'OFF'}"
-            self.action_executed.emit(item.id, self.last_action_desc)
-            self.block_activated.emit(target_block, item.id)
-            self.update()
-            return True
-
-        return False
+        word = str(item.snippet or "").strip()
+        if word:
+            self.code_injector.insert_snippet(word + ("" if word.endswith((".", ":", ",")) else " "))
+            self.text_injected.emit(len(word) + 1)
+        self.last_action_desc = f"Texto: {word}" if word else "Texto"
+        self.action_executed.emit(item.id, self.last_action_desc)
+        self.block_activated.emit(target_block, item.id)
+        self.navigate_to("WRITING_WORDS")
+        self.update()
+        return True
 
     def execute_action(self, item: MenuAction, target_block: int = 0) -> None:
         """Programmatically executes a MenuAction directly on the overlay."""
@@ -2632,6 +2766,8 @@ class OverlayWindow(QWidget):
         if not mode_id or self.mode_manager is None:
             return
         previous_mode = self.current_context_mode_id
+        if previous_mode == "sniper" and mode_id != "sniper":
+            self.release_freelook_controls()
         if mode_id == "sniper" and previous_mode != "sniper":
             self._sniper_previous_mode = previous_mode
         self._mode_selection_in_progress = True
@@ -2775,7 +2911,7 @@ class OverlayWindow(QWidget):
             or curr_id == "LANG_SELECT"
         ):
             return "LANG"
-        if sub_id == "STRUCT" or "STRUCT" in curr_id or any(k in act_id for k in ("FUNC", "CLASS", "DEF", "STRUCT", "DATA", "LIST", "DICT", "T9", "CTX_FN", "CTX_CLS")):
+        if sub_id == "STRUCT" or "STRUCT" in curr_id or any(k in act_id for k in ("FUNC", "CLASS", "DEF", "STRUCT", "DATA", "LIST", "DICT", "CTX_FN", "CTX_CLS")):
             return "STRUCT"
         if sub_id == "OPERATORS" or "OP" in curr_id or any(k in act_id for k in ("OPERATOR", "OP_", "MATH", "BOOL", "COMPARE", "COMMA")):
             return "OPERATORS"
@@ -3077,7 +3213,6 @@ class OverlayWindow(QWidget):
             "NAV": "navigation",
             "PAUSE": "pause_eye",
             "BACK": "arrow_left",
-            "T9": "variables",
             "EDIT": "edit",
             "FORMAT": "format",
             "AI": "ai_spark",
@@ -3320,150 +3455,140 @@ class OverlayWindow(QWidget):
         painter.end()
 
     def _paint_help_modal(self, painter: QPainter, w: float, h: float) -> None:
-        """Paints a high-contrast acrylic glassmorphic cheat sheet modal card in the center."""
-        # 1. Dim background
-        painter.setOpacity(1.0)
+        """Paints a wrapped, height-fitted gesture and shortcut cheat sheet."""
         painter.fillRect(QRectF(0, 0, w, h), QColor(2, 6, 23, 225))
+        layout = self._help_modal_layout(w, h)
+        card = layout["card"]
+        columns = layout["columns"]
+        col_w = layout["col_w"]
+        self.help_modal_rect = card
 
-        # 2. Centered Modal Card Geometry
-        self._update_help_modal_rect()
-        card_rect = self.help_modal_rect
-        card_w = card_rect.width()
-        card_h = card_rect.height()
-        card_x = card_rect.x()
-        card_y = card_rect.y()
+        painter.setBrush(QBrush(QColor(15, 23, 42, 250)))
+        painter.setPen(QPen(QColor(56, 189, 248, 220), 2.2))
+        painter.drawRoundedRect(card, 14.0, 14.0)
+        painter.save()
+        painter.setClipRect(card.adjusted(2.0, 2.0, -2.0, -2.0))
 
-        # Card body with glowing border
-        card_brush = QBrush(QColor(15, 23, 42, 250))
-        card_pen = QPen(QColor(56, 189, 248, 220), 2.2)
-        painter.setBrush(card_brush)
-        painter.setPen(card_pen)
-        painter.drawRoundedRect(card_rect, 14.0, 14.0)
-
-        # 3. Header
-        icon_size = 28.0
-        icon_rect = QRectF(card_x + 24.0, card_y + 18.0, icon_size, icon_size)
+        icon_rect = QRectF(card.x() + 24.0, card.y() + 18.0, 28.0, 28.0)
         IconManager.instance().render_icon(painter, "help", icon_rect)
-
         painter.setFont(self._font_modal_title)
         painter.setPen(QColor(248, 250, 252))
         painter.drawText(
-            QRectF(card_x + 60.0, card_y + 14.0, card_w - 80.0, 32.0),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            "GUÍA RÁPIDA DE GESTOS Y ATAJOS",
+            QRectF(card.x() + 60.0, card.y() + 12.0, card.width() - 84.0, 32.0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+            | Qt.TextFlag.TextWordWrap,
+            "GU?A R?PIDA DE GESTOS Y ATAJOS",
         )
-
         painter.setFont(self._font_modal_subtitle)
         painter.setPen(QColor(148, 163, 184))
         painter.drawText(
-            QRectF(card_x + 60.0, card_y + 44.0, card_w - 80.0, 18.0),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            QRectF(card.x() + 60.0, card.y() + 44.0, card.width() - 84.0, 30.0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+            | Qt.TextFlag.TextWordWrap,
             "Control asistivo integral manos libres mediante seguimiento ocular y gestos faciales",
         )
-
-        # Divider line
         painter.setPen(QPen(QColor(51, 65, 85, 180), 1.0))
-        painter.drawLine(int(card_x + 24.0), int(card_y + 68.0), int(card_x + card_w - 24.0), int(card_y + 68.0))
+        painter.drawLine(int(card.x() + 24.0), int(card.y() + 76.0),
+                         int(card.right() - 24.0), int(card.y() + 76.0))
 
-        # 4. Two-Column Layout for Gestures and Shortcuts
-        col_gap = 18.0
-        col_w = (card_w - 48.0 - col_gap) * 0.5
-        col_y = card_y + 78.0
-        content_h = card_h - 150.0
-
-        # Column A: GESTOS FACIALES Y OCULARES
-        col_a_rect = QRectF(card_x + 24.0, col_y, col_w, content_h)
+        # Column 1: gestures.
+        gesture_col = columns[0]
         painter.setBrush(QBrush(QColor(30, 41, 59, 140)))
         painter.setPen(QPen(QColor(56, 189, 248, 90), 1.0))
-        painter.drawRoundedRect(col_a_rect, 10.0, 10.0)
-
+        painter.drawRoundedRect(gesture_col, 10.0, 10.0)
         painter.setFont(self._font_modal_section)
         painter.setPen(QColor(56, 189, 248))
         painter.drawText(
-            QRectF(col_a_rect.x() + 14.0, col_a_rect.y() + 8.0, col_w - 28.0, 22.0),
+            QRectF(gesture_col.x() + 14.0, gesture_col.y() + 8.0, col_w - 28.0, 22.0),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             "GESTOS FACIALES Y OCULARES",
         )
-
-        item_y = col_a_rect.y() + 36.0
-        for title, action, desc in HELP_GESTURES:
+        y = gesture_col.y() + 36.0
+        for title, action, desc, title_h, action_h, desc_h, row_h in layout["gesture_rows"]:
             painter.setFont(self._font_modal_item_title)
-            painter.setPen(QColor(253, 224, 71))  # amber-300
-            painter.drawText(QRectF(col_a_rect.x() + 14.0, item_y, col_w - 28.0, 18.0), Qt.AlignmentFlag.AlignLeft, title)
-
+            painter.setPen(QColor(253, 224, 71))
+            painter.drawText(
+                QRectF(gesture_col.x() + 14.0, y, col_w - 28.0, title_h),
+                Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, title)
             painter.setFont(self._font_modal_item_desc)
-            painter.setPen(QColor(52, 211, 153))  # emerald-400
-            painter.drawText(QRectF(col_a_rect.x() + 14.0, item_y + 18.0, col_w - 28.0, 16.0), Qt.AlignmentFlag.AlignLeft, f"→ {action}")
-
-            painter.setPen(QColor(148, 163, 184))  # slate-400
-            painter.drawText(QRectF(col_a_rect.x() + 14.0, item_y + 36.0, col_w - 28.0, 30.0), Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, desc)
-
-            item_y += 72.0
-
-        # Column B: ATAJOS DE TECLADO RÁPIDOS
-        col_b_rect = QRectF(col_a_rect.right() + col_gap, col_y, col_w, content_h)
-        painter.setBrush(QBrush(QColor(30, 41, 59, 140)))
-        painter.setPen(QPen(QColor(251, 191, 36, 90), 1.0))
-        painter.drawRoundedRect(col_b_rect, 10.0, 10.0)
-
-        painter.setFont(self._font_modal_section)
-        painter.setPen(QColor(251, 191, 36))
-        painter.drawText(
-            QRectF(col_b_rect.x() + 14.0, col_b_rect.y() + 8.0, col_w - 28.0, 22.0),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            "ATAJOS DE TECLADO RÁPIDOS",
-        )
-
-        item_y = col_b_rect.y() + 34.0
-        for key, name, desc in HELP_SHORTCUTS:
-            painter.setFont(self._font_modal_item_title)
-            painter.setPen(QColor(248, 113, 113) if "Ctrl" in key else QColor(125, 211, 252))
-            painter.drawText(QRectF(col_b_rect.x() + 14.0, item_y, 118.0, 16.0), Qt.AlignmentFlag.AlignLeft, key)
-
-            painter.setPen(QColor(241, 245, 249))
-            painter.drawText(QRectF(col_b_rect.x() + 134.0, item_y, col_w - 148.0, 16.0), Qt.AlignmentFlag.AlignLeft, name)
-
-            painter.setFont(self._font_modal_item_desc)
+            painter.setPen(QColor(52, 211, 153))
+            painter.drawText(
+                QRectF(gesture_col.x() + 14.0, y + title_h, col_w - 28.0, action_h),
+                Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, f"? {action}")
             painter.setPen(QColor(148, 163, 184))
-            painter.drawText(QRectF(col_b_rect.x() + 14.0, item_y + 16.0, col_w - 28.0, 14.0), Qt.AlignmentFlag.AlignLeft, desc)
+            painter.drawText(
+                QRectF(gesture_col.x() + 14.0, y + title_h + action_h,
+                       col_w - 28.0, max(14.0, desc_h)),
+                Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, desc)
+            y += row_h
 
-            item_y += 34.0
+        # Columns 2-3: shortcuts split evenly, each row wrapped.
+        shortcut_titles = ("ATAJOS DE TECLADO", "M?S ATAJOS")
+        for col_index, (rows, _total) in enumerate(layout["shortcut_columns"], start=1):
+            column = columns[col_index]
+            painter.setBrush(QBrush(QColor(30, 41, 59, 140)))
+            painter.setPen(QPen(QColor(251, 191, 36, 90), 1.0))
+            painter.drawRoundedRect(column, 10.0, 10.0)
+            painter.setFont(self._font_modal_section)
+            painter.setPen(QColor(251, 191, 36))
+            painter.drawText(
+                QRectF(column.x() + 14.0, column.y() + 8.0, col_w - 28.0, 22.0),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                shortcut_titles[col_index - 1],
+            )
+            row_y = column.y() + 36.0
+            for key, name, desc, desc_h, row_h in rows:
+                painter.setFont(self._font_modal_item_title)
+                painter.setPen(QColor(248, 113, 113))
+                painter.drawText(
+                    QRectF(column.x() + 14.0, row_y, col_w - 28.0, 16.0),
+                    Qt.AlignmentFlag.AlignLeft,
+                    QFontMetrics(self._font_modal_item_title).elidedText(
+                        key, Qt.TextElideMode.ElideRight, int(col_w - 28.0)),
+                )
+                painter.setPen(QColor(241, 245, 249))
+                painter.drawText(
+                    QRectF(column.x() + 14.0, row_y + 16.0, col_w - 28.0, 16.0),
+                    Qt.AlignmentFlag.AlignLeft,
+                    QFontMetrics(self._font_modal_item_title).elidedText(
+                        name, Qt.TextElideMode.ElideRight, int(col_w - 28.0)),
+                )
+                painter.setFont(self._font_modal_item_desc)
+                painter.setPen(QColor(148, 163, 184))
+                painter.drawText(
+                    QRectF(column.x() + 14.0, row_y + 32.0,
+                           col_w - 28.0, max(14.0, desc_h)),
+                    Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap, desc)
+                row_y += row_h
 
-        # 5. Gaze-Selectable Close Button at Bottom
-        close_btn_w = 380.0
+        painter.restore()
+
+        close_btn_w = min(380.0, card.width() - 40.0)
         close_btn_h = 42.0
         self.help_modal_close_rect = QRectF(
-            card_x + (card_w - close_btn_w) * 0.5,
-            card_y + card_h - close_btn_h - 14.0,
+            card.x() + (card.width() - close_btn_w) * 0.5,
+            card.y() + card.height() - close_btn_h - 14.0,
             close_btn_w,
             close_btn_h,
         )
-
         if getattr(self, "hovered_help_modal_close", False):
-            # Outer neon emerald glow aura
-            glow_close_rect = self.help_modal_close_rect.adjusted(-4.0, -4.0, 4.0, 4.0)
             painter.setBrush(QBrush(QColor(16, 185, 129, 70)))
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(glow_close_rect, 10.0, 10.0)
-
+            painter.drawRoundedRect(self.help_modal_close_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
             close_brush = QBrush(QColor(16, 185, 129, 245))
             close_pen = QPen(QColor(209, 250, 229), 2.8)
-            close_text_color = QColor(255, 255, 255)
         else:
-            close_brush = QBrush(QColor(6, 78, 59, 160))
-            close_pen = QPen(QColor(16, 185, 129, 180), 1.5)
-            close_text_color = QColor(167, 243, 208)
-
+            close_brush = QBrush(QColor(6, 78, 59, 230))
+            close_pen = QPen(QColor(52, 211, 153, 210), 1.6)
         painter.setBrush(close_brush)
         painter.setPen(close_pen)
         painter.drawRoundedRect(self.help_modal_close_rect, 8.0, 8.0)
-
-        painter.setFont(self._font_header_bold_btn)
-        painter.setPen(close_text_color)
+        painter.setFont(self._font_modal_close)
+        painter.setPen(QColor(236, 253, 245))
         painter.drawText(
             self.help_modal_close_rect,
             Qt.AlignmentFlag.AlignCenter,
-            "CERRAR GUÍA (Mire aquí o abra la boca / [ESC])",
+            "CERRAR GU?A (Mire aqu? o abra la boca)",
         )
 
     def closeEvent(self, event) -> None:

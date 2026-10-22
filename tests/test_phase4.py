@@ -593,7 +593,7 @@ class TestContextReader(unittest.TestCase):
 class TestMenuTreesPhase4Integration(unittest.TestCase):
     """
     Tests MenuTree layout with Phase 4 additions:
-    T9_LOCAL_VARS, SNIPPETS AI integration, and mathematical validation.
+    KEYWORDS, SNIPPETS AI integration, and mathematical validation.
     """
 
     def setUp(self):
@@ -605,15 +605,15 @@ class TestMenuTreesPhase4Integration(unittest.TestCase):
         self.assertTrue(is_valid, f"Validation failed with errors: {errors}")
         self.assertEqual(len(errors), 0)
 
-    def test_t9_local_vars_node_integrity(self):
-        """Verifies T9_LOCAL_VARS node has 9 items, Pause at index 4, Back at index 6."""
-        self.assertIn("T9_LOCAL_VARS", self.tree)
-        node = self.tree["T9_LOCAL_VARS"]
+    def test_keywords_node_integrity(self):
+        """Verifies the keyword block has 9 items, Pause at index 4, Back at index 6."""
+        self.assertIn("KEYWORDS", self.tree)
+        node = self.tree["KEYWORDS"]
         self.assertEqual(len(node.items), 9)
         self.assertEqual(node.items[4].action_type, "PAUSE")
         self.assertEqual(node.items[6].action_type, "BACK")
-        self.assertEqual(node.items[6].submenu_id, "T9")
-        self.assertEqual(node.parent_id, "T9")
+        self.assertEqual(node.items[6].submenu_id, "ROOT")
+        self.assertEqual(node.parent_id, "ROOT")
 
     def test_populate_ai_prediction_items_layout(self):
         """Verifies populate_ai_prediction_items sets 6 predictions into slots 0, 1, 2, 3, 5, 7."""
@@ -642,7 +642,7 @@ class TestMenuTreesPhase4Integration(unittest.TestCase):
     def test_populate_local_symbol_items_layout(self):
         """Verifies populate_local_symbol_items populates items into slots."""
         syms = ["var_a", "var_b", "var_c", "var_d", "var_e", "var_f", "var_g"]
-        items = populate_local_symbol_items(syms, parent_id="T9")
+        items = populate_local_symbol_items(syms, parent_id="ROOT")
 
         self.assertEqual(len(items), 9)
         self.assertEqual(items[0].snippet, "var_a")
@@ -652,14 +652,14 @@ class TestMenuTreesPhase4Integration(unittest.TestCase):
         self.assertEqual(items[4].action_type, "PAUSE")
         self.assertEqual(items[5].snippet, "var_e")
         self.assertEqual(items[6].action_type, "BACK")
-        self.assertEqual(items[6].submenu_id, "T9")
+        self.assertEqual(items[6].submenu_id, "ROOT")
         self.assertEqual(items[7].snippet, "var_f")
         self.assertEqual(items[8].snippet, "var_g")
 
     def test_breadcrumbs_for_phase4_nodes(self):
         """Verifies breadcrumb trails for new and updated nodes."""
-        bc_t9_local = get_breadcrumb_path(self.tree, "T9_LOCAL_VARS")
-        self.assertEqual(bc_t9_local, "RAÍZ > T9 > LOCALES")
+        bc_keywords = get_breadcrumb_path(self.tree, "KEYWORDS")
+        self.assertTrue(bc_keywords.endswith("> PALABRAS"))
 
         bc_snippets = get_breadcrumb_path(self.tree, "SNIPPETS")
         self.assertEqual(bc_snippets, "RAÍZ > SUGERENCIAS")
@@ -699,16 +699,13 @@ class TestOverlayWindowPhase4(unittest.TestCase):
         self.injector.stop()
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
-    def test_navigate_to_local_vars_refreshes_symbols(self):
-        """Verifies navigating to T9_LOCAL_VARS populates extracted symbols."""
-        self.overlay.navigate_to("T9_LOCAL_VARS")
-        self.assertEqual(self.overlay.current_node_id, "T9_LOCAL_VARS")
-
-        items = self.overlay.current_node.items
-        snippets = [it.snippet for it in items if it.snippet]
-        self.assertIn("user_score", snippets)
-        self.assertIn("player_name", snippets)
-        self.assertIn("status", snippets)
+    def test_navigate_to_keywords_shows_complete_words(self):
+        """Verifies navigating to KEYWORDS shows full language keywords."""
+        self.overlay.navigate_to("KEYWORDS")
+        self.assertEqual(self.overlay.current_node_id, "KEYWORDS")
+        labels = [item.label for item in self.overlay.current_node.items]
+        self.assertIn("1: def", labels)
+        self.assertIn("2: class", labels)
 
     def test_thread_deduplication(self):
         """
@@ -794,17 +791,16 @@ class TestOverlayWindowPhase4(unittest.TestCase):
         self.overlay.close()
         self.assertFalse(worker.isRunning())
 
-    def test_on_file_linked_refreshes_t9_local_vars_if_active(self):
-        """Verifies linking a new file immediately refreshes T9_LOCAL_VARS if currently open."""
-        self.overlay.navigate_to("T9_LOCAL_VARS")
+    def test_on_file_linked_does_not_break_keyword_menu(self):
+        """Linking a file while KEYWORDS is open keeps the menu usable."""
+        self.overlay.navigate_to("KEYWORDS")
         new_file = os.path.join(self.test_dir, "new_linked.py")
         with open(new_file, "w", encoding="utf-8") as f:
             f.write("newly_linked_var = 42\n")
 
         self.overlay.on_file_linked(new_file)
-        items = self.overlay.current_node.items
-        snippets = [it.snippet for it in items if it.snippet]
-        self.assertIn("newly_linked_var", snippets)
+        self.assertEqual(self.overlay.current_node_id, "KEYWORDS")
+        self.assertGreaterEqual(len(self.overlay.current_node.items), 7)
 
 
 class TestDebugWidgetPhase4(unittest.TestCase):

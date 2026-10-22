@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QComboBox,
     QScrollArea,
+    QSizePolicy,
 )
 
 try:
@@ -90,6 +91,7 @@ class DebugWidget(QWidget):
     mar_threshold_changed = pyqtSignal(float)
     macro_editor_requested = pyqtSignal()
     telemetry_reset_requested = pyqtSignal()
+    test_sound_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -435,25 +437,38 @@ class DebugWidget(QWidget):
 
         lbl_guide_title = QLabel("GUÍA DE GESTOS Y ATAJOS", guide_frame)
         lbl_guide_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #38bdf8;")
+        lbl_guide_title.setWordWrap(True)
+        lbl_guide_title.setMinimumWidth(0)
         guide_layout.addWidget(lbl_guide_title)
 
         guide_content = QLabel(guide_frame)
         guide_content.setTextFormat(Qt.TextFormat.RichText)
         guide_content.setStyleSheet("font-size: 10px; color: #cbd5e1;")
+        guide_content.setWordWrap(True)
+        guide_content.setMinimumWidth(0)
+        guide_content.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
         guide_content.setText(
-            "<div style='line-height: 140%;'>"
-            "<div style='color: #7dd3fc; font-weight: bold; margin-bottom: 2px;'>GESTOS FACIALES Y OCULARES:</div>"
-            "<div>• <b style='color: #fcd34d;'>Apertura de Boca (MAR):</b> Clic / Inyectar código</div>"
-            "<div>• <b style='color: #6ee7b7;'>Guiño Ojo Derecho:</b> Pausar (Ocultar HUD) / Despertar</div>"
-            "<div>• <b style='color: #93c5fd;'>Guiño Ojo Izquierdo:</b> Volver atrás / Deshacer</div>"
-            "<div style='color: #7dd3fc; font-weight: bold; margin-top: 5px; margin-bottom: 2px;'>ATAJOS DE TECLADO:</div>"
-            "<div>• <b>[Ctrl+Alt+A]</b> Menús inteligentes &nbsp;|&nbsp; <b>[Ctrl+Alt+L]</b> Cambiar Lenguaje</div>"
-            "<div>• <b>[Ctrl+Alt+T]</b> Modo Tracking &nbsp;|&nbsp; <b>[Ctrl+Alt+M]</b> Monitor &nbsp;|&nbsp; <b>[Ctrl+Alt+N]</b> Pantalla</div>"
-            "<div>• <b>[Ctrl+Alt+S]</b> Sonido &nbsp;|&nbsp; <b>[Ctrl+Alt+F]</b> FreeLook &nbsp;|&nbsp; <b>[Ctrl+Alt+G]</b> Gaming</div>"
-            "<div>• <b>[Ctrl+Alt+B]</b> Portapapeles &nbsp;|&nbsp; <b>[Ctrl+Alt+P]</b> Pausa &nbsp;|&nbsp; <b style='color: #f87171;'>[Ctrl+Alt+Q]</b> Salida</div>"
+            "<div style='line-height: 145%;'>"
+            "<div style='color: #7dd3fc; font-weight: bold;'>GESTOS:</div>"
+            "<div>? <b>Abrir boca:</b> clic o inyectar.</div>"
+            "<div>? <b>Gui?o derecho:</b> pausar o despertar.</div>"
+            "<div>? <b>Gui?o izquierdo:</b> volver o deshacer.</div>"
+            "<div style='color: #7dd3fc; font-weight: bold; margin-top: 4px;'>ATAJOS:</div>"
+            "<div>? Ctrl+Alt+A men?s ? Ctrl+Alt+T tracking</div>"
+            "<div>? Ctrl+Alt+V modos ? Ctrl+Alt+K auto</div>"
+            "<div>? Ctrl+Alt+S sonido ? Ctrl+Alt+F FreeLook</div>"
+            "<div>? Ctrl+Alt+G gaming ? Ctrl+Alt+B portapapeles</div>"
+            "<div>? Ctrl+Alt+M monitor ? Ctrl+Alt+N pantalla</div>"
+            "<div>? Ctrl+Alt+L lenguaje ? Ctrl+Alt+H ayuda</div>"
+            "<div>? Ctrl+Alt+P pausa ? Ctrl+Alt+Q salir</div>"
             "</div>"
         )
+        self.guide_content = guide_content
         guide_layout.addWidget(guide_content)
+        for label in guide_frame.findChildren(QLabel):
+            label.setWordWrap(True)
+            label.setMinimumWidth(0)
+            label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         content_layout.addWidget(guide_frame)
 
         # 7. Language Selector & VS Code WebSocket Bridge Status
@@ -608,6 +623,18 @@ class DebugWidget(QWidget):
         if not macro_icon.isNull():
             self.btn_macro_editor.setIcon(macro_icon)
 
+        # 9b. Audio verification button.
+        self.btn_test_sound = QPushButton("🔊 Probar sonido", self)
+        self.btn_test_sound.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_test_sound.setToolTip("Reproduce un clic de prueba con el motor de audio actual")
+        self.btn_test_sound.setStyleSheet(
+            "QPushButton { background-color: #0e7490; color: #ecfeff; border: 1px solid #22d3ee; "
+            "border-radius: 6px; padding: 6px 10px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #0891b2; }"
+        )
+        self.btn_test_sound.clicked.connect(self.test_sound_requested.emit)
+        content_layout.addWidget(self.btn_test_sound)
+
         # 10. Emergency Hotkey Documentation Label
         self.lbl_emergency_hint = QLabel("Emergencia: Ctrl+Alt+Q para salir", self)
         self.lbl_emergency_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -749,16 +776,22 @@ class DebugWidget(QWidget):
         self.lbl_telemetry_saved = QLabel("Ahorro Físico: 0 teclas (0% menos esfuerzo)", frame)
         self.lbl_telemetry_saved.setStyleSheet("font-size: 10px; color: #d1fae5;")
         self.lbl_telemetry_saved.setWordWrap(True)
+        self.lbl_telemetry_saved.setMinimumWidth(0)
+        self.lbl_telemetry_saved.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         layout.addWidget(self.lbl_telemetry_saved)
 
         self.lbl_telemetry_injected = QLabel("Inyectado: 0 chars en 0 clics", frame)
         self.lbl_telemetry_injected.setStyleSheet("font-size: 10px; color: #bae6fd;")
         self.lbl_telemetry_injected.setWordWrap(True)
+        self.lbl_telemetry_injected.setMinimumWidth(0)
+        self.lbl_telemetry_injected.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         layout.addWidget(self.lbl_telemetry_injected)
 
         self.lbl_foreground = QLabel("Ventana activa: —", frame)
         self.lbl_foreground.setStyleSheet("font-size: 9px; color: #94a3b8;")
         self.lbl_foreground.setWordWrap(True)
+        self.lbl_foreground.setMinimumWidth(0)
+        self.lbl_foreground.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         layout.addWidget(self.lbl_foreground)
 
         reset = QPushButton("Reset métricas", frame)

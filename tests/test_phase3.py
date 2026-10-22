@@ -690,11 +690,8 @@ class TestOverlayWindowPhase3Navigation(unittest.TestCase):
         path_root = get_breadcrumb_path(self.overlay.menu_tree, "ROOT")
         self.assertEqual(path_root, "RAÍZ")
 
-        path_t9 = get_breadcrumb_path(self.overlay.menu_tree, "T9")
-        self.assertEqual(path_t9, "RAÍZ > T9")
-
-        path_t9_vars = get_breadcrumb_path(self.overlay.menu_tree, "T9_VARS")
-        self.assertEqual(path_t9_vars, "RAÍZ > T9 > VARS")
+        path_keywords = get_breadcrumb_path(self.overlay.menu_tree, "KEYWORDS")
+        self.assertTrue(path_keywords.endswith("> PALABRAS"))
 
         path_flow_try = get_breadcrumb_path(self.overlay.menu_tree, "FLOW_TRY_RET")
         self.assertEqual(path_flow_try, "RAÍZ > FLUJO > TRY/RET")

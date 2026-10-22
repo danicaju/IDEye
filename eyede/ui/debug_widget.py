@@ -92,6 +92,7 @@ class DebugWidget(QWidget):
     macro_editor_requested = pyqtSignal()
     telemetry_reset_requested = pyqtSignal()
     test_sound_requested = pyqtSignal()
+    open_guide_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -471,6 +472,17 @@ class DebugWidget(QWidget):
             label.setMinimumWidth(0)
             label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         content_layout.addWidget(guide_frame)
+
+        self.btn_open_guide = QPushButton("📖 Abrir Manual Interactivo", self)
+        self.btn_open_guide.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_open_guide.setToolTip("Abre la gu?a visual interactiva completa en el navegador")
+        self.btn_open_guide.setStyleSheet(
+            "QPushButton { background-color: #4c1d95; color: #f5f3ff; border: 1px solid #a78bfa; "
+            "border-radius: 7px; padding: 8px 10px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #6d28d9; }"
+        )
+        self.btn_open_guide.clicked.connect(self.open_guide_requested.emit)
+        content_layout.addWidget(self.btn_open_guide)
 
         # 7. Language Selector & VS Code WebSocket Bridge Status
         lang_bridge_frame = QFrame(self)

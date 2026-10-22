@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-487%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-492%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -85,6 +85,10 @@ The `WebSocketBridge` exchanges editor state, diagnostics, and selection info wi
 
 ### 10. Multi-Monitor Handover & Per-Monitor Calibration
 `ScreenManager` moves the HUD and debug panel between displays, rebinds normalized gaze bounds per monitor, and supports manual `Ctrl+Alt+N` handover plus automatic bezel crossing after a sustained head-yaw gesture. Calibration profiles store the screen aspect ratio and a per-monitor key under `calibration_profiles/`, so 1080p, 4K and ultrawide layouts keep their own mapping.
+
+### 11. Interactive Game Manual (Living Documentation)
+
+`docs/guia_interactiva.html` is a self-contained, offline "Nintendo Game Manual meets Cyber-Glass" guide: five tabbed pages, illustrated action cards with inline SVG, a live 3x3 mode simulator, a shortcut cheatsheet and A4 landscape PDF export. Open it from the **📖 Abrir Manual Interactivo** button in the debug panel or the help modal. Its single source of truth is `eyede/core/guide_catalog.py`, regenerated with `generate_interactive_guide()`.
 
 ---
 
@@ -234,6 +238,7 @@ IDEye/
 ├── eyede.ico # Application icon
 ├── .github/workflows/build.yml # Windows/macOS/Linux CI matrix
 ├── docs/MULTI_MONITOR_VALIDATION.md # Multi-monitor validation guide
+?   ??? guia_interactiva.html # Interactive Game Manual
 ├── tools/ideye-mcp/ # MCP development tools server
 ├── vscode-extension/ # VS Code WebSocket bridge extension
 ├── eyede/
@@ -253,6 +258,8 @@ IDEye/
 │   │   ├── macro_manager.py # Custom macro persistence and HUD overrides
 │   │   ├── logging_config.py # Structured logging bootstrap
 │   │   ├── sound_feedback.py # numpy WAV synthesis + temp cache playback
+?   ?   ??? guide_catalog.py # Interactive guide single source of truth
+?   ?   ??? guide_builder.py # Self-contained offline HTML renderer
 │   │   └── websocket_bridge.py # Bidirectional VS Code WebSocket bridge
 │   ├── modes/
 │   │   ├── base_mode.py # Abstract mode interface
@@ -283,7 +290,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Spanish common-word dictionary
 │   │   ├── defaults/ # user_settings.json and custom_macros.json templates
 │   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 487 automated unit & integration tests
+└── tests/ # 492 automated unit & integration tests
     ├── test_phase1.py # Core CV and MAR state machine
     ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py # Syntax tree validation and code injection
@@ -300,6 +307,7 @@ IDEye/
     ├── test_phase9_os_intelligence.py # Clipboard, window routing and telemetry
     ├── test_hotfix_ui_and_gaming.py # Head-joystick, audio cache and help layout
     ├── test_writing_words_and_letters.py # Letter keyboard, predictions and word/phrase menus
+    ??? test_interactive_guide.py # Guide catalog, generation and entry points
     ├── test_glass_focus_ui.py # Glass/Focus HUD widgets
     ├── test_help_ui_and_card_layout.py # Help card and gesture guide layout
     ├── test_menu_integrity.py # Recursive 9-cell tree verification
@@ -323,11 +331,11 @@ pytest -q
 ```
 
 ```text
-487 passed, 70 subtests, 19.88s
+492 passed, 70 subtests, 21.94s
 ```
 
 > [!NOTE]
-> All 487 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 492 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 

@@ -207,6 +207,7 @@ class OverlayWindow(QWidget):
     sound_enabled_changed = pyqtSignal(bool)
     auto_switch_changed = pyqtSignal(bool)
     screen_cycle_requested = pyqtSignal()
+    interactive_guide_requested = pyqtSignal()
     text_injected = pyqtSignal(int)  # characters inserted into the active editor
     mouth_clicked = pyqtSignal(int)  # hovered block index, or -1 for header/other
     mode_changed = context_mode_changed
@@ -356,7 +357,9 @@ class OverlayWindow(QWidget):
         self.show_help_modal: bool = False
         self.help_modal_rect: QRectF = QRectF()
         self.help_modal_close_rect: QRectF = QRectF()
+        self.help_modal_guide_rect: QRectF = QRectF()
         self.hovered_help_modal_close: bool = False
+        self.hovered_help_modal_guide: bool = False
 
         # Hands-free header language button state
         self.hovered_header_lang: bool = False
@@ -806,13 +809,18 @@ class OverlayWindow(QWidget):
         layout = self._help_modal_layout(w, h)
         card = layout["card"]
         self.help_modal_rect = card
-        close_btn_w = min(380.0, card.width() - 40.0)
         close_btn_h = 42.0
+        button_gap = 12.0
+        row_margin = 24.0
+        available = max(200.0, card.width() - row_margin * 2.0 - button_gap)
+        guide_btn_w = min(330.0, available * 0.52)
+        close_btn_w = min(300.0, available - guide_btn_w)
+        row_y = card.y() + card.height() - close_btn_h - 14.0
+        self.help_modal_guide_rect = QRectF(
+            card.x() + row_margin, row_y, guide_btn_w, close_btn_h
+        )
         self.help_modal_close_rect = QRectF(
-            card.x() + (card.width() - close_btn_w) * 0.5,
-            card.y() + card.height() - close_btn_h - 14.0,
-            close_btn_w,
-            close_btn_h,
+            card.right() - row_margin - close_btn_w, row_y, close_btn_w, close_btn_h
         )
 
     def _should_show_last_action(self) -> bool:
@@ -1264,10 +1272,16 @@ class OverlayWindow(QWidget):
 
         # If cheat sheet modal is open, hit test its close button
         if self.show_help_modal:
-            if self.help_modal_close_rect.isValid() and self.help_modal_close_rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
-                self.hovered_help_modal_close = True
-            else:
-                self.hovered_help_modal_close = False
+            guide_hit = (
+                self.help_modal_guide_rect.isValid()
+                and self.help_modal_guide_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
+            )
+            close_hit = (
+                self.help_modal_close_rect.isValid()
+                and self.help_modal_close_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
+            )
+            self.hovered_help_modal_guide = bool(guide_hit)
+            self.hovered_help_modal_close = bool(close_hit and not guide_hit)
             self.hovered_header_exit = False
             self.hovered_header_help = False
             self.hovered_block = None
@@ -2062,6 +2076,20 @@ class OverlayWindow(QWidget):
         - 'WINK_RIGHT': Toggles Option B pause mode (hides/restores HUD completely).
         - 'WINK_LEFT': Submenu 'Volver atrás' (parent menu node), or Undo 'Ctrl+Z' at ROOT.
         """
+        if self.show_help_modal and gesture_name == "MOUTH_CLICK":
+            self.mouth_clicked.emit(self.hovered_block if self.hovered_block is not None else -1)
+            open_guide = bool(getattr(self, "hovered_help_modal_guide", False))
+            self.show_help_modal = False
+            self.hovered_help_modal_guide = False
+            self.hovered_help_modal_close = False
+            if open_guide:
+                self.last_action_desc = "Abriendo Manual Interactivo"
+                self.interactive_guide_requested.emit()
+            else:
+                self.last_action_desc = "Cerrar Ayuda"
+            self.update()
+            return
+
         if gesture_name == "WINK_RIGHT":
             if self.current_context_mode_id == "sniper" and self._gaming_mode:
                 self._toggle_gaming_right()
@@ -2513,9 +2541,18 @@ class OverlayWindow(QWidget):
         pos = event.position() if hasattr(event, "position") else event.pos()
         px, py = float(pos.x()), float(pos.y())
 
-        # Check help modal close button if open
+        # Check the help modal actions if open.
         if self.show_help_modal:
+            open_guide = (
+                self.help_modal_guide_rect.isValid()
+                and self.help_modal_guide_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
+            )
             self.show_help_modal = False
+            self.hovered_help_modal_guide = False
+            self.hovered_help_modal_close = False
+            if open_guide:
+                self.last_action_desc = "Abriendo Manual Interactivo"
+                self.interactive_guide_requested.emit()
             self.update()
             event.accept()
             return
@@ -3634,14 +3671,39 @@ class OverlayWindow(QWidget):
 
         painter.restore()
 
-        close_btn_w = min(380.0, card.width() - 40.0)
         close_btn_h = 42.0
-        self.help_modal_close_rect = QRectF(
-            card.x() + (card.width() - close_btn_w) * 0.5,
-            card.y() + card.height() - close_btn_h - 14.0,
-            close_btn_w,
-            close_btn_h,
+        button_gap = 12.0
+        row_margin = 24.0
+        available = max(200.0, card.width() - row_margin * 2.0 - button_gap)
+        guide_btn_w = min(330.0, available * 0.52)
+        close_btn_w = min(300.0, available - guide_btn_w)
+        row_y = card.y() + card.height() - close_btn_h - 14.0
+        self.help_modal_guide_rect = QRectF(
+            card.x() + row_margin, row_y, guide_btn_w, close_btn_h
         )
+        self.help_modal_close_rect = QRectF(
+            card.right() - row_margin - close_btn_w, row_y, close_btn_w, close_btn_h
+        )
+        if getattr(self, "hovered_help_modal_guide", False):
+            painter.setBrush(QBrush(QColor(124, 58, 237, 90)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(self.help_modal_guide_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
+            guide_brush = QBrush(QColor(109, 40, 217, 245))
+            guide_pen = QPen(QColor(237, 233, 254), 2.8)
+        else:
+            guide_brush = QBrush(QColor(49, 46, 129, 230))
+            guide_pen = QPen(QColor(167, 139, 250, 210), 1.6)
+        painter.setBrush(guide_brush)
+        painter.setPen(guide_pen)
+        painter.drawRoundedRect(self.help_modal_guide_rect, 8.0, 8.0)
+        painter.setFont(self._font_modal_close)
+        painter.setPen(QColor(245, 243, 255))
+        painter.drawText(
+            self.help_modal_guide_rect,
+            Qt.AlignmentFlag.AlignCenter,
+            "📖 ABRIR MANUAL INTERACTIVO",
+        )
+
         if getattr(self, "hovered_help_modal_close", False):
             painter.setBrush(QBrush(QColor(16, 185, 129, 70)))
             painter.setPen(Qt.PenStyle.NoPen)

@@ -94,6 +94,8 @@ def build_command() -> list:
         "--hidden-import=eyede.core.settings_manager",
         "--hidden-import=eyede.core.macro_manager",
         "--hidden-import=eyede.core.screen_manager",
+        "--hidden-import=eyede.core.guide_catalog",
+        "--hidden-import=eyede.core.guide_builder",
         "--hidden-import=eyede.core.bezel_crossing",
         "--hidden-import=eyede.core.logging_config",
         "--hidden-import=eyede.core.window_watcher",

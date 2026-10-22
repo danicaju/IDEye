@@ -76,8 +76,8 @@ except ImportError:
 import threading
 
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
-from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QBrush
-from PyQt6.QtCore import Qt, QObject, QTimer, pyqtSlot
+from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QBrush, QDesktopServices
+from PyQt6.QtCore import Qt, QObject, QTimer, QUrl, pyqtSlot
 
 
 from eyede.core.logging_config import get_logger
@@ -872,6 +872,17 @@ class EyeDEApplication(QObject):
         if self.overlay.current_context_mode_id == "sniper":
             self.overlay.toggle_gaming_mode()
 
+    def _open_interactive_guide(self) -> None:
+        """Regenerates and opens the offline Game Manual in the default browser."""
+        try:
+            from eyede.core.guide_catalog import generate_interactive_guide
+
+            path = generate_interactive_guide()
+            if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path))):
+                logger.warning("Could not open interactive guide at %s", path)
+        except Exception as exc:
+            logger.warning("Interactive guide unavailable: %s", exc)
+
     def _on_clipboard_shortcut(self) -> None:
         """B while gazing at the command bar opens clipboard history."""
         if self.overlay.is_mode_shortcut_targeted():
@@ -1064,6 +1075,8 @@ class EyeDEApplication(QObject):
         self.telemetry_manager.stats_changed.connect(self.debug_widget.update_telemetry)
         self.debug_widget.telemetry_reset_requested.connect(self.telemetry_manager.reset)
         self.debug_widget.test_sound_requested.connect(self.sound_feedback.test_play)
+        self.debug_widget.open_guide_requested.connect(self._open_interactive_guide)
+        self.overlay.interactive_guide_requested.connect(self._open_interactive_guide)
         self.window_watcher.foreground_changed.connect(self.debug_widget.set_foreground_window)
         self.window_watcher.mode_requested.connect(self._on_window_mode_requested)
         self.mode_manager.mode_changed.connect(

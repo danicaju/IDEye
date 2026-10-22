@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-487%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-492%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -85,6 +85,10 @@ El `WebSocketBridge` intercambia estado del editor, diagnósticos e información
 
 ### 10. Handover Multi-Monitor y Calibración por Monitor
 `ScreenManager` mueve el HUD y el panel de depuración entre pantallas, reancla los límites normalizados de mirada por monitor y permite handover manual con `Ctrl+Alt+N` o automático por cruce de bisel tras un gesto sostenido de yaw. Los perfiles de calibración guardan la relación de aspecto y una clave por monitor en `calibration_profiles/`, de modo que 1080p, 4K y ultrawide mantienen su propio mapeo.
+
+### 11. Manual Interactivo Game Manual (Documentación Viva)
+
+`docs/guia_interactiva.html` es una guía autocontenida y offline con estética "Nintendo Game Manual meets Cyber-Glass": cinco páginas con pestañas, tarjetas ilustradas con SVG inline, simulador 3x3 en vivo, chuleta de atajos y exportación A4 apaisada a PDF. Se abre desde el botón **📖 Abrir Manual Interactivo** del panel de depuración o desde el modal de ayuda. Su fuente única de verdad es `eyede/core/guide_catalog.py` y se regenera con `generate_interactive_guide()`.
 
 ---
 
@@ -234,6 +238,7 @@ IDEye/
 ├── eyede.ico # Icono de la aplicación
 ├── .github/workflows/build.yml # Matriz CI Windows/macOS/Linux
 ├── docs/MULTI_MONITOR_VALIDATION.md # Guía de validación multi-monitor
+?   ??? guia_interactiva.html # Manual visual interactivo Game Manual
 ├── tools/ideye-mcp/ # Servidor MCP de desarrollo
 ├── vscode-extension/ # Extensión VS Code del puente WebSocket
 ├── eyede/
@@ -253,6 +258,8 @@ IDEye/
 │   │   ├── macro_manager.py # Persistencia de macros y overrides del HUD
 │   │   ├── logging_config.py # Logging estructurado
 │   │   ├── sound_feedback.py # Síntesis numpy WAV + caché temporal
+?   ?   ??? guide_catalog.py # Fuente única de verdad del manual interactivo
+?   ?   ??? guide_builder.py # Render HTML autocontenido y offline
 │   │   └── websocket_bridge.py # Puente WebSocket bidireccional VS Code
 │   ├── modes/
 │   │   ├── base_mode.py # Interfaz abstracta de modo
@@ -283,7 +290,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 487 pruebas de unidad e integración
+└── tests/ # 492 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -300,6 +307,7 @@ IDEye/
     ├── test_phase9_os_intelligence.py # Portapapeles, rutas y telemetría
     ├── test_hotfix_ui_and_gaming.py # Joystick, audio y ayuda
     ├── test_writing_words_and_letters.py # Teclado de letras, predicciones y frases
+    ??? test_interactive_guide.py # Generación, catálogo y accesos al manual
     ├── test_glass_focus_ui.py # Widgets Glass/Focus
     ├── test_help_ui_and_card_layout.py # Ayuda y guía de gestos
     ├── test_menu_integrity.py # Integridad de árboles 3x3
@@ -323,11 +331,11 @@ pytest -q
 ```
 
 ```text
-487 pruebas superadas, 70 subtests, 19.88s
+492 pruebas superadas, 70 subtests, 21.94s
 ```
 
 > [!NOTE]
-> Todos los 487 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 492 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 

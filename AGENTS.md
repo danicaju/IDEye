@@ -102,3 +102,21 @@ Reglas específicas:
 - **T9/redacción y el hub de modos son M**: no se implementan con `build`/flash.
 - **F12/killswitch**: investigación y fix pequeño pueden ser S, pero si el root cause no aparece en 2 intentos, escala a `@scalpel`.
 - No mezclar modelos dentro del mismo commit: primero se implementa con el agente correcto, luego se revisa con `@reviewer` si aplica.
+
+---
+
+## 📖 REGLA OBLIGATORIA DE DOCUMENTACIÓN VIVA (INTERACTIVE GUIDE SYNC)
+
+1. Cada vez que añadas, modifiques o elimines una funcionalidad, modo, gesto facial, atajo de teclado o comportamiento de UI en IDEye:
+   - DEBES actualizar obligatoriamente `eyede/core/guide_catalog.py` y regenerar `docs/guia_interactiva.html` ejecutando el generador de la guía.
+   - Toda nueva función debe documentarse siguiendo el estilo visual "Game Manual" (título llamativo en cinta, badge visual, icono SVG y explicación clara de 3-4 líneas orientada al usuario final).
+   - Ninguna tarea o Fase se considerará completada si `docs/guia_interactiva.html`, `README.md` y `README.es.md` no reflejan los cambios realizados.
+
+### Generación y verificación
+
+```bash
+python -c "from eyede.core.guide_catalog import generate_interactive_guide; print(generate_interactive_guide())"
+pytest -q tests/test_interactive_guide.py
+```
+
+La guía debe seguir siendo 100% autocontenida (CSS, SVG y JavaScript inline, sin CDN ni recursos externos) y abrirse offline.

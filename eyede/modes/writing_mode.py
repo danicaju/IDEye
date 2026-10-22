@@ -371,7 +371,7 @@ class WritingMode(BaseMode):
             MenuAction("WRITING_PUNCTUATION", "3: PUNTUACIÓN", "Signos de puntuación", "SUBMENU", submenu_id="WRITING_PUNCTUATION", icon="operators"),
             MenuAction("WRITING_CURSOR", "4: CURSOR / SELECCIÓN", "Movimiento y selección", "SUBMENU", submenu_id="WRITING_CURSOR", icon="navigation"),
             None,  # pause placeholder
-            MenuAction("WRITING_T9", "6: Escribir palabras", "T9 completo y predicción", "SUBMENU", submenu_id="WRITING_T9", icon="variables"),
+            MenuAction("WRITING_T9", "6: Escribir letras", "Teclado de letras, acentos y predicción", "SUBMENU", submenu_id="WRITING_T9", icon="variables"),
             MenuAction("WRITING_DELETE", "7: Borrar y deshacer", "Borrado y deshacer", "SUBMENU", submenu_id="WRITING_DELETE", icon="edit"),
             MenuAction("WRITING_JUMP", "8: Saltos y párrafos", "Saltos y párrafos", "SUBMENU", submenu_id="WRITING_JUMP", icon="navigation"),
             MenuAction("WRITING_AI", "9: Sugerencias", "Ideas para seguir escribiendo", "SUBMENU", submenu_id="WRITING_AI", icon="ai_spark"),

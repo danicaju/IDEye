@@ -88,7 +88,7 @@ The `WebSocketBridge` exchanges editor state, diagnostics, and selection info wi
 
 ### 11. Interactive Game Manual (Living Documentation)
 
-`docs/guia_interactiva.html` is a self-contained, offline "Nintendo Game Manual meets Cyber-Glass" guide: five tabbed pages, illustrated action cards with inline SVG, a live 3x3 mode simulator, a shortcut cheatsheet and A4 landscape PDF export. Open it from the **📖 Abrir Manual Interactivo** button in the debug panel or the help modal. Its single source of truth is `eyede/core/guide_catalog.py`, regenerated with `generate_interactive_guide()`.
+`docs/guia_interactiva.html` is a self-contained, offline "Nintendo Game Manual meets Cyber-Glass" guide: five tabbed pages, illustrated action cards with inline SVG, a live 3x3 mode simulator, a shortcut cheatsheet and A4 landscape PDF export. Open it from the **📖 Abrir Manual Interactivo** button in the debug panel or the help modal. Its single source of truth is `eyede/core/guide_catalog.py`, regenerated with `generate_interactive_guide()`. The header and favicon embed the official app icon as a base64 data URI.
 
 ---
 
@@ -331,7 +331,7 @@ pytest -q
 ```
 
 ```text
-492 passed, 70 subtests, 21.94s
+492 passed, 70 subtests, 20.41s
 ```
 
 > [!NOTE]

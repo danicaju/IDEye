@@ -2,11 +2,32 @@
 
 from __future__ import annotations
 
+import base64
 import html
 import json
+from pathlib import Path
 from typing import Any, Dict, List
 
 _ACCENTS = ("#fb7185", "#22d3ee", "#fbbf24", "#a78bfa", "#34d399")
+
+
+def _app_icon_data_uri() -> str:
+    """Returns the official app icon as a self-contained data URI."""
+    candidates = (
+        Path(__file__).resolve().parent.parent / "assets" / "icons" / "app_icon_256.png",
+        Path(__file__).resolve().parent.parent / "assets" / "icons" / "app_icon.png",
+        Path(__file__).resolve().parent.parent / "assets" / "icons" / "app_icon_rounded.png",
+        Path(__file__).resolve().parent.parent.parent / "eyede.ico",
+    )
+    for path in candidates:
+        try:
+            if path.is_file():
+                encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+                mime = "image/png" if path.suffix.lower() == ".png" else "image/x-icon"
+                return f"data:{mime};base64,{encoded}"
+        except OSError:
+            continue
+    return ""
 
 
 def _esc(value: Any) -> str:
@@ -125,6 +146,11 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
     pages = catalog.get("pages", [])
     simulator = catalog.get("simulator", {})
     data_json = json.dumps(catalog, ensure_ascii=False).replace("</", "<\\/")
+    app_icon = _app_icon_data_uri()
+    logo_markup = (
+        f'<img src="{app_icon}" alt="IDEye" class="logo-img">'
+        if app_icon else _icon("eye")
+    )
 
     tabs = []
     sections = []
@@ -166,6 +192,7 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#070b16">
 <title>IDEye — Manual Interactivo</title>
+<link rel="icon" href="{app_icon}">
 <style>
 :root {{
   --bg:#070b16; --paper:#0f172a; --paper-2:#111c33; --line:#26364f;
@@ -187,6 +214,7 @@ button {{ font:inherit; cursor:pointer; }}
 .brand {{ display:flex; align-items:center; gap:14px; }}
 .logo {{ width:54px; height:54px; display:grid; place-items:center; border-radius:16px; background:linear-gradient(135deg,var(--cyan),#6366f1); color:#06111f; box-shadow:0 0 0 4px rgba(34,211,238,.14); }}
 .logo .icon {{ width:32px; height:32px; }}
+.logo-img {{ width:100%; height:100%; object-fit:contain; border-radius:16px; display:block; }}
 .brand h1 {{ margin:0; font-size:clamp(20px,3vw,32px); letter-spacing:-.03em; }}
 .brand p {{ margin:2px 0 0; color:var(--muted); font-size:13px; }}
 .hero-actions {{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }}
@@ -273,7 +301,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
 <div class="app">
   <header class="hero">
     <div class="brand">
-      <div class="logo">{_icon("eye")}</div>
+      <div class="logo">{logo_markup}</div>
       <div><h1>IDEye — Manual Interactivo</h1><p>Game Manual Edition · Vistax L2C Engine</p></div>
     </div>
     <div class="hero-actions">

@@ -101,6 +101,7 @@ class CalibrationUI(QWidget):
         self.is_sampling: bool = False
         self.samples_buffer: List[Tuple[float, float]] = []
         self.latest_raw_gaze: Tuple[float, float] = (0.5, 0.5)
+        self.latest_raw_components: Tuple[float, float, float, float] = (0.5, 0.5, 0.5, 0.5)
         self.is_completed: bool = False
         self._finished_emitted: bool = False
         self.status_message: str = "Mire al punto central y abra la boca para registrar"
@@ -129,6 +130,7 @@ class CalibrationUI(QWidget):
         self._finish_success: bool = True
         self._completion_started: bool = False
         self._auto_mar_done: bool = False
+        self._completed_reps: int = 0
 
         # UI configuration
         self.setWindowTitle("IDEye - Calibración Visual de 5 Puntos")
@@ -146,10 +148,18 @@ class CalibrationUI(QWidget):
         self._pulse_phase = (self._pulse_phase + 0.08) % (2 * np.pi)
         self.update()
 
+    @property
+    def completed_reps(self) -> int:
+        return int(self._completed_reps)
+
     def on_raw_gaze_updated(self, rx: float, ry: float) -> None:
         """Slot for uncalibrated raw gaze coordinates from tracker."""
         self._has_raw_signal = True
         self.latest_raw_gaze = (rx, ry)
+
+    def on_raw_components_updated(self, hx: float, hy: float, ix: float, iy: float) -> None:
+        """Captures head and iris raw vectors from the same calibration frame."""
+        self.latest_raw_components = (float(hx), float(hy), float(ix), float(iy))
 
     def on_gaze_updated(self, gx: float, gy: float) -> None:
         """Slot for incoming gaze coordinates from tracker."""
@@ -192,8 +202,8 @@ class CalibrationUI(QWidget):
         if self._mar_phase != "peaks":
             return
 
-        open_threshold = self._rest_mar + 0.12
-        close_threshold = self._rest_mar + 0.06
+        open_threshold = max(0.22, self._rest_mar + 0.10)
+        close_threshold = self._rest_mar + 0.05
         if not self._mouth_open and self._last_mar > open_threshold:
             self._mouth_open = True
             self._current_peak = self._last_mar
@@ -202,19 +212,30 @@ class CalibrationUI(QWidget):
             if self._last_mar < close_threshold:
                 self._mouth_open = False
                 self._peak_mar_samples.append(self._current_peak)
+                self._completed_reps = len(self._peak_mar_samples)
                 if self.sound_feedback is not None:
                     try:
                         self.sound_feedback.play("click")
                     except Exception:
                         pass
-                count = len(self._peak_mar_samples)
+                count = self._completed_reps
                 if count < 3:
                     self.status_message = (
-                        f"Abre la boca cómodamente 3 veces como para hacer clic ({count + 1}/3)"
+                        f"Abre la boca c\u00f3modamente 3 veces como para hacer clic ({count + 1}/3)"
                     )
-                self.update()
-                if count >= 3:
-                    self._finish_auto_mar_calibration()
+                    self.update()
+                    QApplication.processEvents()
+                else:
+                    self._mar_phase = "complete"
+                    self.status_message = "\u00a13/3 Completado! Umbral calibrado correctamente"
+                    self.update()
+                    QApplication.processEvents()
+                    if self.sound_feedback is not None:
+                        try:
+                            self.sound_feedback.play("mode")
+                        except Exception:
+                            pass
+                    QTimer.singleShot(650, self._finish_step6)
 
     def _start_auto_mar_calibration(self) -> None:
         self._calibration_step = 6
@@ -226,32 +247,20 @@ class CalibrationUI(QWidget):
         self._last_mar = 0.0
         self._completion_started = False
         self._auto_mar_done = False
+        self._completed_reps = 0
         self._completion_timer.stop()
         self._finish_timer.stop()
-        self._mar_timeout_timer.start(6000)
+        self._mar_timeout_timer.stop()
         self.status_message = "Mantén la boca cerrada y relajada..."
         self.update()
 
     def _on_mar_timeout(self) -> None:
-        """Prevents an indefinite Step 6 if the camera stops sending MAR frames."""
-        if self._finished_emitted or self._completion_started:
-            return
-        if self._mar_phase == "rest":
-            if len(self._rest_mar_samples) >= 5:
-                self._rest_mar = float(np.median(self._rest_mar_samples))
-                self._mar_phase = "peaks"
-                self.status_message = "Abre la boca cómodamente 3 veces como para hacer clic (1/3)"
-                self._mar_timeout_timer.start(6000)
-                self.update()
-            else:
-                self._skip_auto_mar()
-        elif self._mar_phase == "peaks" and self._peak_mar_samples:
-            self._finish_auto_mar_calibration()
-        else:
-            self._skip_auto_mar()
+        """Step 6 never advances by timeout; ESC/Space is the only manual skip."""
+        return
 
-    def _finish_auto_mar_calibration(self) -> None:
-        if self._auto_mar_done or self._completion_started:
+    def _finish_step6(self) -> None:
+        """Commits the calibrated MAR threshold after the 3/3 confirmation delay."""
+        if self._auto_mar_done or self._completion_started or self._finished_emitted:
             return
         self._auto_mar_done = True
         self._mar_timeout_timer.stop()
@@ -265,10 +274,14 @@ class CalibrationUI(QWidget):
                 self.settings_manager.set("mar_threshold", threshold)
             except Exception:
                 pass
-        self.status_message = f"Umbral MAR personalizado: {threshold:.2f}. Guardando..."
-        self.update()
         self._mar_phase = "done"
-        self._completion_timer.start(500)
+        self.status_message = "¡3/3 Completado! Umbral calibrado correctamente"
+        self.update()
+        QApplication.processEvents()
+        self._complete_calibration()
+
+    def _finish_auto_mar_calibration(self) -> None:
+        self._finish_step6()
 
     def _skip_auto_mar(self) -> None:
         if self._completion_started or self._finished_emitted:
@@ -311,7 +324,9 @@ class CalibrationUI(QWidget):
         """Timer callback that captures one sample into buffer."""
         if self.is_completed or self._finished_emitted:
             return
-        self.samples_buffer.append(self.latest_raw_gaze)
+        raw_x, raw_y = self.latest_raw_gaze
+        hx, hy, ix, iy = self.latest_raw_components
+        self.samples_buffer.append((raw_x, raw_y, hx, hy, ix, iy))
         self.status_message = f"Registrando muestras... ({len(self.samples_buffer)}/{self.samples_per_point})"
 
         if len(self.samples_buffer) >= self.samples_per_point:
@@ -350,13 +365,29 @@ class CalibrationUI(QWidget):
                 avg_x = med_x
                 avg_y = med_y
 
+        valid_for_components = self.samples_buffer[2:] if len(self.samples_buffer) >= 6 else self.samples_buffer
+        raw_head = raw_iris = None
+        if valid_for_components and len(valid_for_components[0]) >= 6:
+            raw_head = (
+                float(np.median([s[2] for s in valid_for_components])),
+                float(np.median([s[3] for s in valid_for_components])),
+            )
+            raw_iris = (
+                float(np.median([s[4] for s in valid_for_components])),
+                float(np.median([s[5] for s in valid_for_components])),
+            )
+
         current_pt = self.points[self.current_pt_idx]
-        self.collected_data.append({
+        point_data = {
             "id": current_pt["id"],
             "name": current_pt["name"],
             "screen": current_pt["screen"],
             "raw": (avg_x, avg_y),
-        })
+        }
+        if raw_head is not None and raw_iris is not None:
+            point_data["raw_head"] = raw_head
+            point_data["raw_iris"] = raw_iris
+        self.collected_data.append(point_data)
 
 
         self.current_pt_idx += 1

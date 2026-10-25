@@ -450,11 +450,13 @@ class DebugWidget(QWidget):
         guide_content.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
         guide_content.setText(
             "<div style='line-height: 145%;'>"
-            "<div style='color: #7dd3fc; font-weight: bold;'>GESTOS:</div>"
+            "<div style='color: #7dd3fc; font-weight: bold; margin-bottom: 3px;'>GESTOS FACIALES Y OCULARES</div>"
             "<div>• <b>Abrir boca:</b> clic o inyectar.</div>"
-            "<div>• <b>Guiño derecho:</b> pausar o despertar.</div>"
+            "<div>• <b>Boca mantenida (Jaw-Lock):</b> arrastrar o seleccionar.</div>"
             "<div>• <b>Guiño izquierdo:</b> volver o deshacer.</div>"
-            "<div>&nbsp;</div>"
+            "<div>• <b>Guiño derecho:</b> pausar o despertar.</div>"
+            "<div style='height: 7px;'></div>"
+            "<div style='color: #7dd3fc; font-weight: bold; margin-bottom: 3px;'>ATAJOS DE TECLADO</div>"
             "<div>• Ctrl+Alt+A menús &nbsp;·&nbsp; Ctrl+Alt+T tracking</div>"
             "<div>• Ctrl+Alt+V modos &nbsp;·&nbsp; Ctrl+Alt+K auto</div>"
             "<div>• Ctrl+Alt+S sonido &nbsp;·&nbsp; Ctrl+Alt+F FreeLook</div>"
@@ -462,7 +464,6 @@ class DebugWidget(QWidget):
             "<div>• Ctrl+Alt+M monitor &nbsp;·&nbsp; Ctrl+Alt+N pantalla</div>"
             "<div>• Ctrl+Alt+L lenguaje &nbsp;·&nbsp; Ctrl+Alt+H ayuda</div>"
             "<div>• Ctrl+Alt+P pausa &nbsp;·&nbsp; Ctrl+Alt+Q salir</div>"
-            "<div style='color: #7dd3fc; font-weight: bold; margin-top: 4px;'>ATAJOS:</div>"
             "</div>"
         )
         self.guide_content = guide_content

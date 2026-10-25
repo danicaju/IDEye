@@ -151,9 +151,44 @@ class TestStep6AndMarSlider(unittest.TestCase):
         for peak in (0.55, 0.58, 0.56):
             ui.on_mar_updated(peak)
             ui.on_mar_updated(0.05)
+        self.assertEqual(ui.completed_reps, 3)
+        self.assertEqual(ui._mar_phase, "complete")
+        ui._finish_step6()
         self.assertAlmostEqual(ui._auto_mar_threshold, 0.356, places=3)
         self.assertEqual(len(captured), 1)
         self.assertAlmostEqual(captured[0], 0.356, places=3)
+        ui.close()
+
+    def test_step6_closed_mouth_500_frames_does_not_advance(self):
+        ui = CalibrationUI(gaze_estimator=GazeEstimator(), auto_mar_enabled=True)
+        ui._start_auto_mar_calibration()
+        for _ in range(500):
+            ui.on_mar_updated(0.03)
+        self.assertEqual(ui.completed_reps, 0)
+        self.assertNotEqual(ui._mar_phase, "complete")
+        self.assertIsNone(ui._auto_mar_threshold)
+        self.assertFalse(ui._completion_started)
+        ui.close()
+
+    def test_step6_requires_three_open_close_cycles_and_keeps_third_green(self):
+        ui = CalibrationUI(gaze_estimator=GazeEstimator(), auto_mar_enabled=True)
+        ui.collected_data = [
+            {"id": str(i), "name": str(i), "screen": (0.5, 0.5), "raw": (0.5, 0.5)}
+            for i in range(5)
+        ]
+        ui._start_auto_mar_calibration()
+        for _ in range(45):
+            ui.on_mar_updated(0.03)
+        for _ in range(3):
+            ui.on_mar_updated(0.50)
+            ui.on_mar_updated(0.03)
+        self.assertEqual(ui.completed_reps, 3)
+        self.assertEqual(ui._mar_phase, "complete")
+        self.assertIn("3/3", ui.status_message)
+        self.assertFalse(ui._finished_emitted)
+        ui._finish_step6()
+        self.assertEqual(ui._mar_phase, "done")
+        self.assertIsNotNone(ui._auto_mar_threshold)
         ui.close()
 
     def test_step6_skip_cancels_pending_completion(self):

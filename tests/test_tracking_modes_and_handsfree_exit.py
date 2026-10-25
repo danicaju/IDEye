@@ -209,6 +209,50 @@ class TestTrackingModes(unittest.TestCase):
         # Should fallback to safe default HYBRID
         self.assertEqual(self.estimator.tracking_mode, TRACKING_MODE_HYBRID)
 
+    def test_dual_calibration_captures_head_and_iris_bounds(self):
+        points = []
+        screens = [(0.5, 0.5), (0.1, 0.1), (0.9, 0.1), (0.1, 0.9), (0.9, 0.9)]
+        heads = [(0.50, 0.50), (0.30, 0.30), (0.70, 0.30), (0.30, 0.70), (0.70, 0.70)]
+        irises = [(0.50, 0.50), (0.40, 0.40), (0.60, 0.40), (0.40, 0.60), (0.60, 0.60)]
+        for idx, (screen, head, iris) in enumerate(zip(screens, heads, irises)):
+            points.append({
+                "id": "CENTER" if idx == 0 else str(idx),
+                "screen": screen,
+                "raw": head,
+                "raw_head": head,
+                "raw_iris": iris,
+            })
+        est = GazeEstimator()
+        self.assertTrue(est.calibrate_5_points(points))
+        self.assertTrue(est.has_dual_calibration)
+        self.assertIsNotNone(est.head_bounds)
+        self.assertIsNotNone(est.iris_bounds)
+        center_head = est._map_dual_source(0.50, 0.50, est.head_bounds, est.calib_head_linear_x, est.calib_head_linear_y)
+        center_iris = est._map_dual_source(0.50, 0.50, est.iris_bounds, est.calib_iris_linear_x, est.calib_iris_linear_y)
+        self.assertAlmostEqual(center_head[0], 0.5, delta=0.02)
+        self.assertAlmostEqual(center_head[1], 0.5, delta=0.02)
+        self.assertAlmostEqual(center_iris[0], 0.5, delta=0.02)
+        self.assertAlmostEqual(center_iris[1], 0.5, delta=0.02)
+
+    def test_mode_switch_keeps_dual_calibrated_center_stable(self):
+        est = GazeEstimator()
+        est.has_dual_calibration = True
+        est.head_bounds = (0.40, 0.60, 0.40, 0.60)
+        est.iris_bounds = (0.45, 0.55, 0.45, 0.55)
+        est.calib_head_linear_x = (0.0, 1.0)
+        est.calib_head_linear_y = (0.0, 1.0)
+        est.calib_iris_linear_x = (0.0, 1.0)
+        est.calib_iris_linear_y = (0.0, 1.0)
+        face = create_neutral_face()
+        for mode in (TRACKING_MODE_HEAD_PRIMARY, TRACKING_MODE_HYBRID, TRACKING_MODE_PURE_IRIS):
+            est.set_tracking_mode(mode)
+            self.assertFalse(est._is_pinned)
+            self.assertEqual(len(est._iris_history), 0)
+            gx, gy, detected, _ = est.estimate(face)
+            self.assertTrue(detected)
+            self.assertAlmostEqual(gx, 0.5, delta=0.06)
+            self.assertAlmostEqual(gy, 0.5, delta=0.06)
+
     def test_calibration_profile_tracking_mode_persistence(self):
         """Calibration profiles save and restore tracking_mode."""
         self.estimator.set_tracking_mode(TRACKING_MODE_PURE_IRIS)

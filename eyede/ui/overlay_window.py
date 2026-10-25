@@ -157,14 +157,19 @@ HELP_GESTURES = (
         "Abre la boca brevemente para activar la casilla enfocada.",
     ),
     (
-        "Guiño ojo derecho",
-        "Pausa / Gaming: joystick ⇄ cursor",
-        "Cierra el ojo derecho ~200 ms para ocultar el HUD o cambiar el control de juego.",
+        "Boca mantenida (Jaw-Lock)",
+        "Arrastrar / seleccionar",
+        "Mantén la boca abierta para arrastrar sin botones.",
     ),
     (
         "Guiño ojo izquierdo",
         "Volver / deshacer",
         "Cierra el ojo izquierdo ~200 ms para retroceder o deshacer.",
+    ),
+    (
+        "Guiño ojo derecho",
+        "Pausa / Gaming: joystick ⇄ cursor",
+        "Cierra el ojo derecho ~200 ms para ocultar el HUD o cambiar el control de juego.",
     ),
 )
 

@@ -973,6 +973,7 @@ class EyeDEApplication(QObject):
         self.tracker.gaze_updated.connect(self.overlay.on_gaze_updated)
         self.tracker.gaze_updated.connect(self._on_gaze_for_screen_handover)
         self.tracker.gesture_triggered.connect(self.overlay.on_gesture_triggered)
+        self.tracker.face_lost.connect(self.overlay.release_all_game_keys)
 
         # Tracker signals to DebugWidget
         self.tracker.frame_ready.connect(self.debug_widget.on_frame_ready)
@@ -1220,6 +1221,7 @@ class EyeDEApplication(QObject):
             sound_feedback=self.sound_feedback,
         )
         self.tracker.raw_gaze_updated.connect(self.calibration_ui.on_raw_gaze_updated)
+        self.tracker.raw_components_updated.connect(self.calibration_ui.on_raw_components_updated)
         self.tracker.gaze_updated.connect(self.calibration_ui.on_gaze_updated)
         self.tracker.gesture_triggered.connect(self.calibration_ui.on_gesture_triggered)
         self.tracker.frame_ready.connect(self._on_calibration_frame)
@@ -1295,6 +1297,7 @@ class EyeDEApplication(QObject):
         if self.calibration_ui is not None:
             try:
                 self.tracker.raw_gaze_updated.disconnect(self.calibration_ui.on_raw_gaze_updated)
+                self.tracker.raw_components_updated.disconnect(self.calibration_ui.on_raw_components_updated)
             except Exception:
                 pass
             try:

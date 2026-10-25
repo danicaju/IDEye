@@ -104,6 +104,9 @@ class TestDebugGuideWrapping(unittest.TestCase):
         self.assertIn("Guiño", text)
         self.assertIn("menús", text)
         self.assertNotIn("<div>? ", text)
+        self.assertLess(text.index("GESTOS FACIALES Y OCULARES"), text.index("Abrir boca"))
+        self.assertLess(text.index("Abrir boca"), text.index("ATAJOS DE TECLADO"))
+        self.assertLess(text.index("ATAJOS DE TECLADO"), text.index("Ctrl+Alt+A"))
         widget.close()
 
 

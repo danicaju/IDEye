@@ -264,6 +264,17 @@ class GazeEstimator:
         self.calibration_points_data: Optional[List[Dict[str, Any]]] = None
         self.calibration_rmse: float = 0.0
         self.calibration_screen_aspect: Optional[float] = None
+        # Phase 8.5: simultaneous head/iris references captured during the
+        # 5-point calibration so all tracking modes share the same geometry.
+        self.head_bounds: Optional[Tuple[float, float, float, float]] = None
+        self.iris_bounds: Optional[Tuple[float, float, float, float]] = None
+        self.head_center: Tuple[float, float] = (0.5, 0.5)
+        self.iris_center: Tuple[float, float] = (0.5, 0.5)
+        self.calib_head_linear_x: Optional[Tuple[float, float]] = None
+        self.calib_head_linear_y: Optional[Tuple[float, float]] = None
+        self.calib_iris_linear_x: Optional[Tuple[float, float]] = None
+        self.calib_iris_linear_y: Optional[Tuple[float, float]] = None
+        self.has_dual_calibration: bool = False
         self._lock = threading.RLock()
 
     @staticmethod
@@ -739,10 +750,33 @@ class GazeEstimator:
         - 'HEAD_PRIMARY': 95% head pose, 5% iris for users with ocular mobility restrictions.
         """
         mode_upper = str(mode).upper()
+        previous = getattr(self, "tracking_mode", None)
         if mode_upper in ("PURE_IRIS", "HYBRID", "HEAD_PRIMARY"):
             self.tracking_mode = mode_upper
         else:
             self.tracking_mode = "HYBRID"
+
+        # A hot mode change must not inherit filter history from another
+        # biological source. Reset the 1-Euro filters, iris median queue and
+        # hysteresis pin, then continue from the last stable position.
+        try:
+            now = time.perf_counter()
+            self.one_euro_x.reset(now, self.smoothed_x)
+            self.one_euro_y.reset(now, self.smoothed_y)
+            self._iris_history.clear()
+            self._last_filtered_iris = None
+            self._effective_iris_weight = self.iris_weight
+            self._iris_velocity = 0.0
+            self._is_pinned = False
+            self._pinned_pos = None
+            self._static_target = None
+            self._static_last_filtered = None
+            self._static_quiet_frames = 0
+            self._pin_release_ramp = 1.0
+            self.fixation_anchor_x = self.smoothed_x
+            self.fixation_anchor_y = self.smoothed_y
+        except Exception:
+            pass
 
     def _apply_static_pinning(self, x: float, y: float) -> Tuple[float, float]:
         """Schmitt-trigger static pinning: exact zero drift while at rest."""
@@ -930,6 +964,12 @@ class GazeEstimator:
             self.neutral_head_y = head_y
             self.neutral_iris_x = iris_x
             self.neutral_iris_y = iris_y
+            self.head_center = (float(head_x), float(head_y))
+            self.iris_center = (float(iris_x), float(iris_y))
+            if self.head_bounds is None:
+                self.head_bounds = (head_x - 0.12, head_x + 0.12, head_y - 0.12, head_y + 0.12)
+            if self.iris_bounds is None:
+                self.iris_bounds = (iris_x - 0.12, iris_x + 0.12, iris_y - 0.12, iris_y + 0.12)
             self.is_calibrated = True
 
             # Snap smoothed pointer straight to center and reset filters
@@ -1018,28 +1058,62 @@ class GazeEstimator:
             delta_iris_x = (iris_x - self.neutral_iris_x) * self.iris_sensitivity_x
             delta_iris_y = (iris_y - self.neutral_iris_y) * self.iris_sensitivity_y
 
-            # 4. Mode-based delta computation (PURE_IRIS, HYBRID, HEAD_PRIMARY)
-            self._dynamic_fusion_active = self.tracking_mode == "HYBRID"
-            if self._dynamic_fusion_active:
-                self._compute_effective_iris_weight(iris_x, iris_y)
-            try:
-                expanded_delta_x, expanded_delta_y = self._compute_combined_deltas(
-                    delta_head_x, delta_head_y, delta_iris_x, delta_iris_y
+            # 4/5. Normalize each biological source independently when the
+            # profile captured both head and iris references. This keeps the
+            # three tracking modes centered on the same calibration geometry.
+            if self.has_dual_calibration:
+                head_screen_x, head_screen_y = self._map_dual_source(
+                    head_x, head_y,
+                    self.head_bounds,
+                    self.calib_head_linear_x,
+                    self.calib_head_linear_y,
                 )
-            finally:
-                self._dynamic_fusion_active = False
-
-            # 5. Screen coordinate mapping centered at (0.5, 0.5)
-            raw_target_x = 0.5 + expanded_delta_x
-            raw_target_y = 0.5 + expanded_delta_y
-
-            if self.has_5_point_calibration:
-                mapped_x, mapped_y = self.apply_5_point_mapping(raw_target_x, raw_target_y)
-                target_x = float(np.clip(mapped_x, 0.0, 1.0))
-                target_y = float(np.clip(mapped_y, 0.0, 1.0))
+                iris_screen_x, iris_screen_y = self._map_dual_source(
+                    iris_x, iris_y,
+                    self.iris_bounds,
+                    self.calib_iris_linear_x,
+                    self.calib_iris_linear_y,
+                )
+                if self.tracking_mode == "HEAD_PRIMARY":
+                    target_x, target_y = head_screen_x, head_screen_y
+                elif self.tracking_mode == "PURE_IRIS":
+                    target_x, target_y = iris_screen_x, iris_screen_y
+                else:
+                    self._dynamic_fusion_active = True
+                    iris_w = max(0.0, min(1.0, self._compute_effective_iris_weight(iris_x, iris_y)))
+                    self._dynamic_fusion_active = False
+                    head_w = 1.0 - iris_w
+                    target_x = head_w * head_screen_x + iris_w * iris_screen_x
+                    target_y = head_w * head_screen_y + iris_w * iris_screen_y
+                raw_target_x, raw_target_y = target_x, target_y
+                target_x = float(np.clip(target_x, 0.0, 1.0))
+                target_y = float(np.clip(target_y, 0.0, 1.0))
             else:
-                target_x = float(np.clip(raw_target_x, 0.0, 1.0))
-                target_y = float(np.clip(raw_target_y, 0.0, 1.0))
+                delta_head_x = (head_x - self.neutral_head_x) * self.head_sensitivity_x
+                delta_head_y = (head_y - self.neutral_head_y) * self.head_sensitivity_y
+                delta_iris_x = (iris_x - self.neutral_iris_x) * self.iris_sensitivity_x
+                delta_iris_y = (iris_y - self.neutral_iris_y) * self.iris_sensitivity_y
+
+                self._dynamic_fusion_active = self.tracking_mode == "HYBRID"
+                if self._dynamic_fusion_active:
+                    self._compute_effective_iris_weight(iris_x, iris_y)
+                try:
+                    expanded_delta_x, expanded_delta_y = self._compute_combined_deltas(
+                        delta_head_x, delta_head_y, delta_iris_x, delta_iris_y
+                    )
+                finally:
+                    self._dynamic_fusion_active = False
+
+                raw_target_x = 0.5 + expanded_delta_x
+                raw_target_y = 0.5 + expanded_delta_y
+
+                if self.has_5_point_calibration:
+                    mapped_x, mapped_y = self.apply_5_point_mapping(raw_target_x, raw_target_y)
+                    target_x = float(np.clip(mapped_x, 0.0, 1.0))
+                    target_y = float(np.clip(mapped_y, 0.0, 1.0))
+                else:
+                    target_x = float(np.clip(raw_target_x, 0.0, 1.0))
+                    target_y = float(np.clip(raw_target_y, 0.0, 1.0))
 
             # 6. Adaptive Fixation Deadzone (I-VT velocity/distance filtering with sliding leash)
             dist_to_anchor = math.hypot(target_x - self.fixation_anchor_x, target_y - self.fixation_anchor_y)
@@ -1183,6 +1257,92 @@ class GazeEstimator:
                 return float(mx), float(my)
             except Exception:
                 return u, v
+
+    @staticmethod
+    def _source_geometry(
+        points_data: List[Dict[str, Any]], key: str
+    ) -> Tuple[Optional[Tuple[float, float, float, float]], Tuple[float, float]]:
+        values = []
+        for pt in points_data:
+            raw = pt.get(key)
+            if raw is not None and len(raw) >= 2:
+                values.append((float(raw[0]), float(raw[1])))
+        if not values:
+            return None, (0.5, 0.5)
+        xs = [v[0] for v in values]
+        ys = [v[1] for v in values]
+        center_candidates = [
+            pt.get(key) for pt in points_data
+            if pt.get("id") == "CENTER" or tuple(pt.get("screen", ())) == (0.5, 0.5)
+        ]
+        if center_candidates:
+            center = (float(center_candidates[0][0]), float(center_candidates[0][1]))
+        else:
+            center = (float(np.mean(xs)), float(np.mean(ys)))
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        if max_x - min_x < 1e-4:
+            min_x, max_x = center[0] - 0.05, center[0] + 0.05
+        if max_y - min_y < 1e-4:
+            min_y, max_y = center[1] - 0.05, center[1] + 0.05
+        return (min_x, max_x, min_y, max_y), center
+
+    @staticmethod
+    def _fit_linear_mapping(
+        points_data: List[Dict[str, Any]],
+        key: str,
+        bounds: Tuple[float, float, float, float],
+    ) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        min_x, max_x, min_y, max_y = bounds
+        span_x = max(max_x - min_x, 1e-4)
+        span_y = max(max_y - min_y, 1e-4)
+        us, vs, sx, sy = [], [], [], []
+        for pt in points_data:
+            raw = pt.get(key)
+            if raw is None or len(raw) < 2:
+                continue
+            screen = pt.get("screen", (0.5, 0.5))
+            us.append((float(raw[0]) - min_x) / span_x)
+            vs.append((float(raw[1]) - min_y) / span_y)
+            sx.append(float(screen[0]))
+            sy.append(float(screen[1]))
+        if len(us) < 3:
+            return (0.0, 1.0), (0.0, 1.0)
+        try:
+            ax = np.linalg.lstsq(
+                np.column_stack([np.ones(len(us)), us]), np.array(sx), rcond=None
+            )[0]
+            ay = np.linalg.lstsq(
+                np.column_stack([np.ones(len(vs)), vs]), np.array(sy), rcond=None
+            )[0]
+            return (
+                (float(ax[0]), float(ax[1])),
+                (float(ay[0]), float(ay[1])),
+            )
+        except np.linalg.LinAlgError:
+            return (0.0, 1.0), (0.0, 1.0)
+
+    @staticmethod
+    def _map_dual_source(
+        x: float,
+        y: float,
+        bounds: Optional[Tuple[float, float, float, float]],
+        linear_x: Optional[Tuple[float, float]],
+        linear_y: Optional[Tuple[float, float]],
+    ) -> Tuple[float, float]:
+        if bounds is None:
+            return 0.5, 0.5
+        min_x, max_x, min_y, max_y = bounds
+        u = (float(x) - min_x) / max(max_x - min_x, 1e-4)
+        v = (float(y) - min_y) / max(max_y - min_y, 1e-4)
+        u = max(0.0, min(1.0, u))
+        v = max(0.0, min(1.0, v))
+        ax = linear_x or (0.0, 1.0)
+        ay = linear_y or (0.0, 1.0)
+        return (
+            float(np.clip(ax[0] + ax[1] * u, 0.0, 1.0)),
+            float(np.clip(ay[0] + ay[1] * v, 0.0, 1.0)),
+        )
 
     def calibrate_5_points(self, points_data: List[Dict[str, Any]]) -> bool:
         """
@@ -1330,6 +1490,19 @@ class GazeEstimator:
             pred_y = phi_mat @ weights_y
             rmse = float(np.sqrt(np.mean((pred_x - tx_mat) ** 2 + (pred_y - ty_mat) ** 2)))
 
+            head_bounds, head_center = self._source_geometry(points_data, "raw_head")
+            iris_bounds, iris_center = self._source_geometry(points_data, "raw_iris")
+            head_linear_x = head_linear_y = None
+            iris_linear_x = iris_linear_y = None
+            if head_bounds is not None:
+                head_linear_x, head_linear_y = self._fit_linear_mapping(
+                    points_data, "raw_head", head_bounds
+                )
+            if iris_bounds is not None:
+                iris_linear_x, iris_linear_y = self._fit_linear_mapping(
+                    points_data, "raw_iris", iris_bounds
+                )
+
             with self._lock:
                 self.calib_weights_x = weights_x.tolist()
                 self.calib_weights_y = weights_y.tolist()
@@ -1339,6 +1512,15 @@ class GazeEstimator:
                 self.calibration_points_data = points_data
                 self.calibration_screen_aspect = self.target_screen_aspect
                 self.active_monitor_calibrated = True
+                self.head_bounds = head_bounds
+                self.iris_bounds = iris_bounds
+                self.head_center = head_center
+                self.iris_center = iris_center
+                self.calib_head_linear_x = head_linear_x
+                self.calib_head_linear_y = head_linear_y
+                self.calib_iris_linear_x = iris_linear_x
+                self.calib_iris_linear_y = iris_linear_y
+                self.has_dual_calibration = bool(head_bounds is not None and iris_bounds is not None)
             return True
         except Exception:
             return False
@@ -1364,6 +1546,15 @@ class GazeEstimator:
                 "tracking_mode": self.tracking_mode,
                 "screen_aspect": self.calibration_screen_aspect,
                 "screen_size": self.target_screen_size,
+                "head_bounds": list(self.head_bounds) if self.head_bounds else None,
+                "iris_bounds": list(self.iris_bounds) if self.iris_bounds else None,
+                "head_center": list(self.head_center),
+                "iris_center": list(self.iris_center),
+                "calib_head_linear_x": list(self.calib_head_linear_x) if self.calib_head_linear_x else None,
+                "calib_head_linear_y": list(self.calib_head_linear_y) if self.calib_head_linear_y else None,
+                "calib_iris_linear_x": list(self.calib_iris_linear_x) if self.calib_iris_linear_x else None,
+                "calib_iris_linear_y": list(self.calib_iris_linear_y) if self.calib_iris_linear_y else None,
+                "has_dual_calibration": self.has_dual_calibration,
                 "monitor_key": self.active_monitor_key,
                 "monitor_physical_mm": list(self.active_monitor_physical_mm),
                 "monitor_dpi": self.active_monitor_dpi,
@@ -1499,6 +1690,19 @@ class GazeEstimator:
                     self.calibration_screen_aspect = (
                         float(profile["screen_aspect"]) if profile["screen_aspect"] is not None else None
                     )
+                if profile.get("head_bounds"):
+                    self.head_bounds = tuple(float(v) for v in profile["head_bounds"])
+                if profile.get("iris_bounds"):
+                    self.iris_bounds = tuple(float(v) for v in profile["iris_bounds"])
+                if profile.get("head_center"):
+                    self.head_center = tuple(float(v) for v in profile["head_center"])
+                if profile.get("iris_center"):
+                    self.iris_center = tuple(float(v) for v in profile["iris_center"])
+                for attr in ("calib_head_linear_x", "calib_head_linear_y", "calib_iris_linear_x", "calib_iris_linear_y"):
+                    value = profile.get(attr)
+                    if value:
+                        setattr(self, attr, tuple(float(v) for v in value))
+                self.has_dual_calibration = bool(profile.get("has_dual_calibration", False))
 
             return True
         except Exception as e:
@@ -1537,5 +1741,14 @@ class GazeEstimator:
             self.calibration_points_data = None
             self.calibration_rmse = 0.0
             self.calibration_screen_aspect = None
+            self.head_bounds = None
+            self.iris_bounds = None
+            self.head_center = (0.5, 0.5)
+            self.iris_center = (0.5, 0.5)
+            self.calib_head_linear_x = None
+            self.calib_head_linear_y = None
+            self.calib_iris_linear_x = None
+            self.calib_iris_linear_y = None
+            self.has_dual_calibration = False
             self.last_head_yaw = 0.0
             self.active_monitor_calibrated = False

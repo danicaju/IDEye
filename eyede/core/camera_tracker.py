@@ -54,6 +54,8 @@ class CameraTracker(QThread):
 
     gaze_updated = pyqtSignal(float, float)
     raw_gaze_updated = pyqtSignal(float, float)
+    raw_components_updated = pyqtSignal(float, float, float, float)
+    face_lost = pyqtSignal()
     gesture_triggered = pyqtSignal(str)
     frame_ready = pyqtSignal(object, float)
 
@@ -367,6 +369,15 @@ class CameraTracker(QThread):
             # Thread-safe signal dispatching
             self.gaze_updated.emit(emit_gx, emit_gy)
             self.raw_gaze_updated.emit(emit_raw_x, emit_raw_y)
+            if detected:
+                self.raw_components_updated.emit(
+                    float(self.gaze_estimator.last_raw_head_x),
+                    float(self.gaze_estimator.last_raw_head_y),
+                    float(self.gaze_estimator.last_raw_iris_x),
+                    float(self.gaze_estimator.last_raw_iris_y),
+                )
+            else:
+                self.face_lost.emit()
 
             # Emit all triggered gestures (MOUTH_CLICK, WINK_LEFT, WINK_RIGHT)
             gestures = getattr(self.gesture_detector, "triggered_gestures", [])

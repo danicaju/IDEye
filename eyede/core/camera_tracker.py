@@ -29,11 +29,13 @@ try:
     from eyede.core.gaze_estimator import GazeEstimator
     from eyede.core.gesture_detector import GestureDetector
     from eyede.core.health_guard import HealthGuard
+    from eyede.core.lighting_compensator import LightingCompensator
 except ImportError:
     import config
     from core.gaze_estimator import GazeEstimator
     from core.gesture_detector import GestureDetector
     from core.health_guard import HealthGuard
+    from core.lighting_compensator import LightingCompensator
 
 
 def _ensure_qt_app():
@@ -122,6 +124,9 @@ class CameraTracker(QThread):
 
         self.health_guard = HealthGuard(
             enabled=bool(getattr(config, "HEALTH_GUARD_ENABLED", True))
+        )
+        self.lighting = LightingCompensator(
+            enabled=bool(getattr(config, "AUTO_LOW_LIGHT_CLAHE", True))
         )
 
         # MediaPipe FaceMesh initialization
@@ -309,6 +314,8 @@ class CameraTracker(QThread):
 
         if self.mirror:
             frame = cv2.flip(frame, 1)
+        if self.lighting is not None:
+            frame = self.lighting.process(frame)
 
         landmarks = None
         if self.face_mesh is not None:

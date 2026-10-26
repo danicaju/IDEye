@@ -33,6 +33,7 @@ _FACTORY_DEFAULTS: Dict[str, Any] = {
     "debug_panel_collapsed": False,
     "health_guard_enabled": bool(getattr(config, "HEALTH_GUARD_ENABLED", True)),
     "micro_gestures_enabled": bool(getattr(config, "MICRO_GESTURES_ENABLED", True)),
+    "auto_low_light_clahe": bool(getattr(config, "AUTO_LOW_LIGHT_CLAHE", True)),
 }
 
 

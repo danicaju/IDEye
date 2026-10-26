@@ -32,7 +32,7 @@ from PyQt6.QtCore import (
     QRectF,
     QPointF,
 )
-from PyQt6.QtGui import QPainter, QColor, QFont, QFontMetrics, QPen, QBrush, QPainterPath, QLinearGradient
+from PyQt6.QtGui import QGuiApplication, QPainter, QColor, QFont, QFontMetrics, QPen, QBrush, QPainterPath, QLinearGradient
 from PyQt6.QtWidgets import QWidget, QApplication
 
 try:
@@ -69,6 +69,7 @@ try:
     from eyede.actions.context_reader import ContextReader, detect_syntactic_context
     from eyede.actions.ai_predictor import AIPredictorWorker
     from eyede.actions.diagnostics_fixer import DiagnosticsFixer
+    from eyede.ui.sniper_lens import SniperLens
     from eyede.modes.mode_manager import ModeManager
 except ImportError:
     import config
@@ -104,6 +105,7 @@ except ImportError:
     from actions.context_reader import ContextReader, detect_syntactic_context
     from actions.ai_predictor import AIPredictorWorker
     from actions.diagnostics_fixer import DiagnosticsFixer
+    from ui.sniper_lens import SniperLens
     from modes.mode_manager import ModeManager
 
 
@@ -190,6 +192,7 @@ HELP_SHORTCUTS = (
     ("[Ctrl+Alt+F]", "FreeLook", "Activa el ratón por mirada."),
     ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming."),
     ("[Ctrl+Alt+N]", "Cambiar pantalla", "Mueve HUD y mirada al siguiente monitor."),
+    ("[Ctrl+Alt+Z]", "Lupa Sniper", "Activa la lupa x3.5 y el modo slow-mo en FreeLook."),
     ("[Ctrl+Alt+Q]", "Salida de emergencia", "Cierra IDEye de inmediato."),
 )
 
@@ -262,6 +265,12 @@ class OverlayWindow(QWidget):
         self._active_diagnostics: List[Dict[str, Any]] = []
         self._autofix_slot8_saved: Optional[tuple] = None
         self.autofix_badge_rect: QRectF = QRectF()
+        self.sniper_lens = SniperLens(
+            zoom=float(getattr(config, "SNIPER_LENS_ZOOM", 3.5)),
+            slowmo_factor=float(getattr(config, "SNIPER_LENS_SLOWMO", 0.28)),
+        )
+        self._lens_pixmap = None
+        self._lens_capture_target: Optional[tuple] = None
         self.mode_manager = mode_manager if mode_manager is not None else ModeManager(
             initial_mode="coding", language=self.current_language
         )
@@ -1856,6 +1865,12 @@ class OverlayWindow(QWidget):
                 except Exception:
                     pass
 
+        self.sniper_lens.update_gaze(x, y)
+        if self.sniper_lens.active:
+            px, py = self._freelook_last_pos
+            x = int(round(px + (x - px) * self.sniper_lens.movement_multiplier))
+            y = int(round(py + (y - py) * self.sniper_lens.movement_multiplier))
+            self._capture_sniper_lens()
         self._update_freelook_edge_scroll(gy)
         normalized = (x / float(screen_w), y / float(screen_h))
         if normalized != self.current_gaze:
@@ -1936,6 +1951,7 @@ class OverlayWindow(QWidget):
             controller.left_click(x, y)
         self._play_sound("click")
         self.last_action_desc = f"FreeLook: {getattr(mode, 'action_label', 'Clic Izq')}"
+        self.sniper_lens.deactivate()
         if (
             self._gaming_mode
             and self._gaming_control_state == "MENU_CURSOR"
@@ -2041,6 +2057,72 @@ class OverlayWindow(QWidget):
             self.last_action_desc = "Gaming: Joystick de cabeza"
         self._play_sound("mode")
         self.update()
+
+    def _capture_sniper_lens(self) -> None:
+        if not self.sniper_lens.active or self.sniper_lens.target is None:
+            return
+        target = self.sniper_lens.target
+        if self._lens_capture_target is not None:
+            if ((target[0] - self._lens_capture_target[0]) ** 2 + (target[1] - self._lens_capture_target[1]) ** 2) < 225:
+                return
+        screen = QGuiApplication.primaryScreen()
+        if screen is None:
+            return
+        try:
+            old_opacity = self.windowOpacity()
+            self.setWindowOpacity(0.0)
+            QApplication.processEvents()
+            self._lens_pixmap = screen.grabWindow(0, int(target[0]) - 40, int(target[1]) - 40, 80, 80)
+            self._lens_capture_target = (target[0], target[1])
+            self.setWindowOpacity(old_opacity)
+        except Exception:
+            try:
+                self.setWindowOpacity(1.0)
+            except Exception:
+                pass
+
+    def activate_sniper_lens(self) -> None:
+        if self.current_context_mode_id != "sniper":
+            return
+        target = self._freelook_last_pos
+        self.sniper_lens.activate(float(target[0]), float(target[1]))
+        self._capture_sniper_lens()
+        self.last_action_desc = "Lupa Sniper: ON"
+        self.update()
+
+    def toggle_sniper_lens(self) -> None:
+        if self.current_context_mode_id != "sniper":
+            return
+        target = self._freelook_last_pos
+        active = self.sniper_lens.toggle(float(target[0]), float(target[1]))
+        self.last_action_desc = "Lupa Sniper: ON" if active else "Lupa Sniper: OFF"
+        if active:
+            self._capture_sniper_lens()
+        self.update()
+
+    def _paint_sniper_lens(self, painter: QPainter) -> None:
+        if not self.sniper_lens.active or self.sniper_lens.target is None:
+            return
+        tx, ty = self.sniper_lens.target
+        cx = tx - float(self.x())
+        cy = ty - float(self.y())
+        radius = 110.0
+        center = QPointF(cx, cy)
+        painter.save()
+        path = QPainterPath()
+        path.addEllipse(center, radius, radius)
+        painter.setClipPath(path)
+        if self._lens_pixmap is not None and not self._lens_pixmap.isNull():
+            size = 80.0 * self.sniper_lens.zoom
+            painter.drawPixmap(QRectF(cx - size / 2, cy - size / 2, size, size), self._lens_pixmap, QRectF(self._lens_pixmap.rect()))
+        painter.setClipping(False)
+        painter.setBrush(QColor(2, 6, 23, 25))
+        painter.setPen(QPen(QColor(34, 211, 238, 230), 3.0))
+        painter.drawEllipse(center, radius, radius)
+        painter.setPen(QPen(QColor(226, 232, 240, 210), 1.0))
+        painter.drawLine(QPointF(cx - 12, cy), QPointF(cx + 12, cy))
+        painter.drawLine(QPointF(cx, cy - 12), QPointF(cx, cy + 12))
+        painter.restore()
 
     def _paint_freelook_overlay(self, painter: QPainter) -> None:
         """Draws the compact FreeLook status, gaming crosshair and mode switch."""
@@ -2175,6 +2257,11 @@ class OverlayWindow(QWidget):
             return
 
         if gesture_name == "BROW_RAISE":
+            if self.current_context_mode_id == "sniper" and (
+                not self._gaming_mode or self._gaming_control_state == "MENU_CURSOR"
+            ):
+                self.activate_sniper_lens()
+                return
             if self._active_diagnostics and "AUTO_FIX" in self.menu_tree:
                 self.navigate_to("AUTO_FIX")
                 self.last_action_desc = "Auto-Fix: elige reparaci?n"
@@ -2210,6 +2297,11 @@ class OverlayWindow(QWidget):
             return
 
         if gesture_name == "WINK_LEFT":
+            if self.sniper_lens.active:
+                self.sniper_lens.deactivate()
+                self.last_action_desc = "Lupa Sniper: OFF"
+                self.update()
+                return
             if self.current_context_mode_id == "sniper":
                 if self._gaming_mode and self.mouse_controller is not None:
                     self.mouse_controller.tap_key(" ")
@@ -3695,6 +3787,7 @@ class OverlayWindow(QWidget):
         # =====================================================================
         if self.current_context_mode_id == "sniper" and self.current_node_id != "MODE_SELECT":
             self._paint_freelook_overlay(painter)
+            self._paint_sniper_lens(painter)
 
         # =====================================================================
         # 4. Refined High-Visibility Dual-Ring Reticle with Glow Aura

@@ -296,6 +296,20 @@ PAGES: List[Dict[str, Any]] = [
                 "text": "Avisa si pasas 28 s sin parpadear o si te acercas demasiado al monitor. Cuida ojos y cuello sin interrumpir tu flujo.",
                 "chip": "Bienestar",
             },
+            {
+                "icon": "eye",
+                "badge": "CLAHE",
+                "title": "Visi?n Nocturna Adaptativa",
+                "text": "Si la luz baja de 85 de luminancia, aplica CLAHE al canal L y una gamma suave. En buena luz no toca ni un p?xel.",
+                "chip": "Bajo consumo",
+            },
+            {
+                "icon": "cursor",
+                "badge": "3.5x",
+                "title": "Lupa Sniper Zoom",
+                "text": "Levanta las cejas o pulsa Ctrl+Alt+Z para ampliar 3.5x y reducir el cursor al 28% de velocidad. Se cierra con boca o gui?o izquierdo.",
+                "chip": "Precisi?n subp?xel",
+            },
         ],
     },
 ]

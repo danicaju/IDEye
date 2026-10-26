@@ -36,6 +36,7 @@ HOTKEY_ACTIONS = {
     "<ctrl>+<alt>+l": "_on_language_cycle_anywhere",
     "<ctrl>+<alt>+h": "_on_help_toggle_anywhere",
     "<ctrl>+<alt>+n": "_on_screen_cycle",
+    "<ctrl>+<alt>+z": "_on_sniper_lens_toggle",
 }
 
 
@@ -64,6 +65,7 @@ class GlobalHotkeyManager(QObject):
     monitor_toggle_requested = pyqtSignal()
     monitor_toggle_anywhere_requested = pyqtSignal()
     screen_cycle_requested = pyqtSignal()
+    sniper_lens_toggle_requested = pyqtSignal()
     adaptive_ast_toggle_requested = pyqtSignal()
     tracking_mode_cycle_requested = pyqtSignal()
     center_calibration_requested = pyqtSignal()
@@ -179,6 +181,10 @@ class GlobalHotkeyManager(QObject):
     def _on_monitor_toggle_anywhere(self) -> None:
         """Callback for Ctrl+Alt+M monitor toggle from any window."""
         self.monitor_toggle_anywhere_requested.emit()
+
+    def _on_sniper_lens_toggle(self) -> None:
+        """Callback for Ctrl+Alt+Z Sniper Zoom Lens."""
+        self.sniper_lens_toggle_requested.emit()
 
     def _on_screen_cycle(self) -> None:
         """Callback for Ctrl+Alt+N multi-monitor handover."""

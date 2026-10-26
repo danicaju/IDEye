@@ -787,6 +787,7 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.monitor_toggle_requested.connect(self._on_monitor_shortcut)
         self.hotkey_manager.monitor_toggle_anywhere_requested.connect(self._on_monitor_shortcut_anywhere)
         self.hotkey_manager.screen_cycle_requested.connect(self.screen_manager.cycle_next_screen)
+        self.hotkey_manager.sniper_lens_toggle_requested.connect(self.overlay.toggle_sniper_lens)
         self.hotkey_manager.adaptive_ast_toggle_requested.connect(self.overlay.toggle_adaptive_ast)
         self.hotkey_manager.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
         self.hotkey_manager.center_calibration_requested.connect(self._on_center_calibration_shortcut)
@@ -928,6 +929,7 @@ class EyeDEApplication(QObject):
         collapsed = bool(values.get("debug_panel_collapsed", False))
         health_enabled = bool(values.get("health_guard_enabled", True))
         micro_enabled = bool(values.get("micro_gestures_enabled", True))
+        low_light_enabled = bool(values.get("auto_low_light_clahe", True))
 
         if estimator is not None:
             estimator.set_tracking_mode(mode)
@@ -944,6 +946,8 @@ class EyeDEApplication(QObject):
             detector.micro_gestures_enabled = micro_enabled
         if hasattr(self.tracker, "health_guard"):
             self.tracker.health_guard.enabled = health_enabled
+        if hasattr(self.tracker, "lighting"):
+            self.tracker.lighting.enabled = low_light_enabled
         config.MAR_THRESHOLD = mar
 
         self.sound_feedback.set_enabled(sound_enabled)
@@ -956,6 +960,7 @@ class EyeDEApplication(QObject):
         self.debug_widget.set_mar_threshold(mar, emit=False)
         self.debug_widget.set_health_guard_enabled(health_enabled)
         self.debug_widget.set_micro_gestures_enabled(micro_enabled)
+        self.debug_widget.set_low_light_enabled(low_light_enabled)
         if hasattr(self.mode_manager, "set_language"):
             self.mode_manager.set_language(lang)
         if hasattr(self.context_reader, "set_active_language"):
@@ -1093,6 +1098,8 @@ class EyeDEApplication(QObject):
         self.debug_widget.open_guide_requested.connect(self._open_interactive_guide)
         self.debug_widget.health_guard_toggled.connect(self._on_health_guard_toggled)
         self.debug_widget.micro_gestures_toggled.connect(self._on_micro_gestures_toggled)
+        self.debug_widget.low_light_toggled.connect(self._on_low_light_toggled)
+        self.tracker.frame_ready.connect(self._on_lighting_frame)
         self.overlay.interactive_guide_requested.connect(self._open_interactive_guide)
         self.window_watcher.foreground_changed.connect(self.debug_widget.set_foreground_window)
         self.window_watcher.mode_requested.connect(self._on_window_mode_requested)
@@ -1148,6 +1155,18 @@ class EyeDEApplication(QObject):
             f"Auto-Fix aplicado: {fix.get('label', '')}" if ok else "Auto-Fix no disponible"
         )
         self.overlay.update()
+
+    def _on_low_light_toggled(self, enabled: bool) -> None:
+        if hasattr(self.tracker, "lighting"):
+            self.tracker.lighting.enabled = bool(enabled)
+        self.settings_manager.set("auto_low_light_clahe", bool(enabled))
+
+    def _on_lighting_frame(self, _frame: Any, _mar: float) -> None:
+        lighting = getattr(self.tracker, "lighting", None)
+        if lighting is not None:
+            self.debug_widget.set_lighting_status(
+                bool(lighting.is_low_light_active), float(lighting.current_luma)
+            )
 
     def _on_health_guard_toggled(self, enabled: bool) -> None:
         if hasattr(self.tracker, "health_guard"):

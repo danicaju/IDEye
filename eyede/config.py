@@ -244,6 +244,9 @@ GAMING_TITLE_KEYWORDS: tuple[str, ...] = (
 GAMING_DEADZONE: float = 0.14
 HEALTH_GUARD_ENABLED: bool = True
 MICRO_GESTURES_ENABLED: bool = True
+AUTO_LOW_LIGHT_CLAHE: bool = True
+SNIPER_LENS_ZOOM: float = 3.5
+SNIPER_LENS_SLOWMO: float = 0.28
 GAMING_AUTO_RETURN_AFTER_CLICK: bool = False
 GAMING_PROCESS_SUFFIXES: tuple[str, ...] = (
     "-win64-shipping.exe",

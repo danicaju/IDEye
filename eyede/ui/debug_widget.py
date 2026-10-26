@@ -96,6 +96,7 @@ class DebugWidget(QWidget):
     open_guide_requested = pyqtSignal()
     health_guard_toggled = pyqtSignal(bool)
     micro_gestures_toggled = pyqtSignal(bool)
+    low_light_toggled = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -254,6 +255,10 @@ class DebugWidget(QWidget):
         self.lbl_stability = QLabel("100% Fijación", self)
         self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
         stats_layout.addWidget(self.lbl_stability, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        self.lbl_lighting = QLabel("Luz: OK", self)
+        self.lbl_lighting.setStyleSheet("font-size: 10px; font-weight: bold; color: #fbbf24;")
+        stats_layout.addWidget(self.lbl_lighting, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         self.btn_collapse = QPushButton("▲ Colapsar", self)
         self.btn_collapse.setObjectName("btnCollapse")
@@ -499,6 +504,12 @@ class DebugWidget(QWidget):
         self.chk_micro_gestures.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.chk_micro_gestures.toggled.connect(self.micro_gestures_toggled.emit)
         content_layout.addWidget(self.chk_micro_gestures)
+
+        self.chk_low_light = QCheckBox("Visi?n nocturna CLAHE", self)
+        self.chk_low_light.setChecked(bool(getattr(config, "AUTO_LOW_LIGHT_CLAHE", True)))
+        self.chk_low_light.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_low_light.toggled.connect(self.low_light_toggled.emit)
+        content_layout.addWidget(self.chk_low_light)
 
         # 7. Language Selector & VS Code WebSocket Bridge Status
         lang_bridge_frame = QFrame(self)
@@ -767,6 +778,19 @@ class DebugWidget(QWidget):
             self.chk_micro_gestures.blockSignals(True)
             self.chk_micro_gestures.setChecked(bool(enabled))
             self.chk_micro_gestures.blockSignals(False)
+
+    def set_low_light_enabled(self, enabled: bool) -> None:
+        if hasattr(self, "chk_low_light"):
+            self.chk_low_light.blockSignals(True)
+            self.chk_low_light.setChecked(bool(enabled))
+            self.chk_low_light.blockSignals(False)
+
+    def set_lighting_status(self, active: bool, luma: float) -> None:
+        if hasattr(self, "lbl_lighting"):
+            self.lbl_lighting.setText("Visi?n nocturna: ON" if active else f"Luz: {float(luma):.0f}")
+            self.lbl_lighting.setStyleSheet(
+                "font-size: 10px; font-weight: bold; color: %s;" % ("#fbbf24" if active else "#34d399")
+            )
 
     def set_linked_file(self, file_path: str) -> None:
         """Updates the active file label."""

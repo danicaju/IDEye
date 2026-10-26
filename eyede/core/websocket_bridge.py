@@ -301,6 +301,17 @@ class WebSocketBridge(QObject):
         }
         return self.broadcast_message(payload)
 
+    def send_apply_line_fix(self, line: int, replacement: str, insert: bool = False) -> bool:
+        """Asks the VS Code extension to replace/insert one line atomically."""
+        if not self.is_connected:
+            return False
+        return self.broadcast_message({
+            "type": "apply_line_fix",
+            "line": max(1, int(line)),
+            "replacement": str(replacement),
+            "insert": bool(insert),
+        })
+
     def send_execute_command(self, command: str, args: Optional[List[Any]] = None) -> bool:
         """
         Sends an EXECUTE_COMMAND payload to connected VS Code client(s).

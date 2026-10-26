@@ -31,6 +31,8 @@ _FACTORY_DEFAULTS: Dict[str, Any] = {
     "adaptive_ast_enabled": bool(getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)),
     "active_language": "python",
     "debug_panel_collapsed": False,
+    "health_guard_enabled": bool(getattr(config, "HEALTH_GUARD_ENABLED", True)),
+    "micro_gestures_enabled": bool(getattr(config, "MICRO_GESTURES_ENABLED", True)),
 }
 
 

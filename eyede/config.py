@@ -242,6 +242,8 @@ GAMING_TITLE_KEYWORDS: tuple[str, ...] = (
     "dead cells",
 )
 GAMING_DEADZONE: float = 0.14
+HEALTH_GUARD_ENABLED: bool = True
+MICRO_GESTURES_ENABLED: bool = True
 GAMING_AUTO_RETURN_AFTER_CLICK: bool = False
 GAMING_PROCESS_SUFFIXES: tuple[str, ...] = (
     "-win64-shipping.exe",

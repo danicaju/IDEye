@@ -902,6 +902,11 @@ class EyeDEApplication(QObject):
             ok = bool(estimator is not None and landmarks is not None and estimator.calibrate_center(landmarks))
         except Exception:
             ok = False
+        if ok and landmarks is not None and hasattr(self.tracker, "health_guard"):
+            try:
+                self.tracker.health_guard.set_baseline(landmarks)
+            except Exception:
+                pass
         self.overlay.last_action_desc = "Centro calibrado" if ok else "Sin rostro: mira al centro"
         self.overlay.update()
 
@@ -921,6 +926,8 @@ class EyeDEApplication(QObject):
         auto_switch = bool(values.get("auto_switch_enabled", False))
         sound_enabled = bool(values.get("sound_enabled", True))
         collapsed = bool(values.get("debug_panel_collapsed", False))
+        health_enabled = bool(values.get("health_guard_enabled", True))
+        micro_enabled = bool(values.get("micro_gestures_enabled", True))
 
         if estimator is not None:
             estimator.set_tracking_mode(mode)
@@ -934,6 +941,9 @@ class EyeDEApplication(QObject):
         if detector is not None:
             detector.mar_threshold = mar
             detector.release_threshold = max(0.20, mar - 0.10)
+            detector.micro_gestures_enabled = micro_enabled
+        if hasattr(self.tracker, "health_guard"):
+            self.tracker.health_guard.enabled = health_enabled
         config.MAR_THRESHOLD = mar
 
         self.sound_feedback.set_enabled(sound_enabled)
@@ -944,6 +954,8 @@ class EyeDEApplication(QObject):
         self.debug_widget.set_tracking_mode_by_name(mode)
         self.debug_widget.set_adaptive_ast_enabled(ast_enabled)
         self.debug_widget.set_mar_threshold(mar, emit=False)
+        self.debug_widget.set_health_guard_enabled(health_enabled)
+        self.debug_widget.set_micro_gestures_enabled(micro_enabled)
         if hasattr(self.mode_manager, "set_language"):
             self.mode_manager.set_language(lang)
         if hasattr(self.context_reader, "set_active_language"):
@@ -974,6 +986,7 @@ class EyeDEApplication(QObject):
         self.tracker.gaze_updated.connect(self._on_gaze_for_screen_handover)
         self.tracker.gesture_triggered.connect(self.overlay.on_gesture_triggered)
         self.tracker.face_lost.connect(self.overlay.release_all_game_keys)
+        self.tracker.health_alert.connect(self.overlay.show_health_alert)
 
         # Tracker signals to DebugWidget
         self.tracker.frame_ready.connect(self.debug_widget.on_frame_ready)
@@ -1042,6 +1055,7 @@ class EyeDEApplication(QObject):
         # Overlay actions
         self.overlay.block_activated.connect(self._on_block_activated)
         self.overlay.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
+        self.overlay.autofix_requested.connect(self._apply_autofix)
 
         # Context reader & AI status connections
         self.debug_widget.file_linked.connect(self.context_reader.set_active_file)
@@ -1077,6 +1091,8 @@ class EyeDEApplication(QObject):
         self.debug_widget.telemetry_reset_requested.connect(self.telemetry_manager.reset)
         self.debug_widget.test_sound_requested.connect(self.sound_feedback.test_play)
         self.debug_widget.open_guide_requested.connect(self._open_interactive_guide)
+        self.debug_widget.health_guard_toggled.connect(self._on_health_guard_toggled)
+        self.debug_widget.micro_gestures_toggled.connect(self._on_micro_gestures_toggled)
         self.overlay.interactive_guide_requested.connect(self._open_interactive_guide)
         self.window_watcher.foreground_changed.connect(self.debug_widget.set_foreground_window)
         self.window_watcher.mode_requested.connect(self._on_window_mode_requested)
@@ -1110,9 +1126,38 @@ class EyeDEApplication(QObject):
             if hasattr(self, "mode_manager") and self.mode_manager is not None:
                 self.mode_manager.set_language(normalized_lang)
 
+        diagnostics = state.get("diagnostics") or []
+        if diagnostics:
+            self.overlay.set_diagnostics(diagnostics)
+        elif not (getattr(self, "ws_bridge", None) and self.ws_bridge.is_connected):
+            self.overlay.set_diagnostics(self.overlay.diagnostics_fixer.collect_local())
+        else:
+            self.overlay.set_diagnostics([])
+
         # Auto-switch context mode from the full editor state (file path, context, language)
         if hasattr(self, "mode_manager") and self.mode_manager is not None:
             self.mode_manager.handle_editor_state(state)
+
+    def _apply_autofix(self, fix: Dict[str, Any]) -> None:
+        """Applies a selected Auto-Fix locally or through the VS Code bridge."""
+        bridge = getattr(self, "ws_bridge", None)
+        ok = self.overlay.diagnostics_fixer.apply_fix(
+            fix, bridge=bridge, code_injector=self.overlay.code_injector
+        )
+        self.overlay.last_action_desc = (
+            f"Auto-Fix aplicado: {fix.get('label', '')}" if ok else "Auto-Fix no disponible"
+        )
+        self.overlay.update()
+
+    def _on_health_guard_toggled(self, enabled: bool) -> None:
+        if hasattr(self.tracker, "health_guard"):
+            self.tracker.health_guard.enabled = bool(enabled)
+        self.settings_manager.set("health_guard_enabled", bool(enabled))
+
+    def _on_micro_gestures_toggled(self, enabled: bool) -> None:
+        if hasattr(self.tracker, "gesture_detector"):
+            self.tracker.gesture_detector.micro_gestures_enabled = bool(enabled)
+        self.settings_manager.set("micro_gestures_enabled", bool(enabled))
 
     def _on_tracking_mode_changed(self, mode: str) -> None:
         """Called when user changes tracking mode in DebugWidget or shortcut."""

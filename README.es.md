@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-504%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-514%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -81,7 +81,7 @@ Construido con `PyQt6`, el overlay transparente se sitúa sobre VS Code, PyCharm
 El `WebSocketBridge` intercambia estado del editor, diagnósticos e información de selección con la extensión de VS Code en tiempo real, permitiendo el cambio automático de modo contextual y la inyección de snippets. Los árboles sintácticos están disponibles en varios idiomas, incluyendo un diccionario de palabras comunes en español y etiquetas de menú localizadas.
 
 ### 9. Máquina del Tiempo del Portapapeles e Inteligencia de Ventana Activa
-`ClipboardHistory` conserva las seis copias más recientes del usuario en una cuadrícula 3x3 y excluye las escrituras atómicas internas de IDEye, evitando contaminar el historial. `WindowWatcher` sondea la ventana activa cada 504 ms, aplica debounce a cambios transitorios y enruta juegos, terminales, apps de redacción, navegadores e IDEs mediante listas configurables de procesos/títulos. `TelemetryManager` registra clics de boca, caracteres inyectados, pulsaciones ahorradas, ratio de eficiencia y mapas de calor por celda en `telemetry_stats.json`.
+`ClipboardHistory` conserva las seis copias más recientes del usuario en una cuadrícula 3x3 y excluye las escrituras atómicas internas de IDEye, evitando contaminar el historial. `WindowWatcher` sondea la ventana activa cada 500 ms, aplica debounce a cambios transitorios y enruta juegos, terminales, apps de redacción, navegadores e IDEs mediante listas configurables de procesos/títulos. `TelemetryManager` registra clics de boca, caracteres inyectados, pulsaciones ahorradas, ratio de eficiencia y mapas de calor por celda en `telemetry_stats.json`.
 
 ### 10. Handover Multi-Monitor y Calibración por Monitor
 `ScreenManager` mueve el HUD y el panel de depuración entre pantallas, reancla los límites normalizados de mirada por monitor y permite handover manual con `Ctrl+Alt+N` o automático por cruce de bisel tras un gesto sostenido de yaw. Los perfiles de calibración guardan la relación de aspecto y una clave por monitor en `calibration_profiles/`, de modo que 1080p, 4K y ultrawide mantienen su propio mapeo.
@@ -89,6 +89,10 @@ El `WebSocketBridge` intercambia estado del editor, diagnósticos e información
 ### 11. Manual Interactivo Game Manual (Documentación Viva)
 
 `docs/guia_interactiva.html` es una guía autocontenida y offline con estética "Nintendo Game Manual meets Cyber-Glass": cinco páginas con pestañas, tarjetas ilustradas con SVG inline, simulador 3x3 en vivo, chuleta de atajos y exportación A4 apaisada a PDF. Se abre desde el botón **📖 Abrir Manual Interactivo** del panel de depuración o desde el modal de ayuda. Su fuente única de verdad es `eyede/core/guide_catalog.py` y se regenera con `generate_interactive_guide()`.
+
+### 12. Diagnósticos en Vivo, Health Guard y Micro-Gestos
+
+La extensión de VS Code envía errores y warnings de la línea activa por WebSocket. `DiagnosticsFixer` genera imports, dos puntos, cierres de paréntesis, sangrías y sugerencias de IA, y los expone en un menú 3x3 de Auto-Fix. `HealthGuard` avisa tras 28 s sin parpadear o si la distancia ocular supera el 138% de la base. Los micro-gestos opcionales permiten abrir Auto-Fix con las cejas e indentar/des-indentar inclinando la cabeza.
 
 ---
 
@@ -259,6 +263,8 @@ IDEye/
 │   │   ├── macro_manager.py # Persistencia de macros y overrides del HUD
 │   │   ├── logging_config.py # Logging estructurado
 │   │   ├── sound_feedback.py # Síntesis numpy WAV + caché temporal
+?   ?   ??? health_guard.py # Parpadeo, distancia y postura cervical
+?   ?   ??? diagnostics_fixer.py # Auto-Fix de diagn?sticos en vivo
 ?   ?   ??? guide_catalog.py # Fuente única de verdad del manual interactivo
 ?   ?   ??? guide_builder.py # Render HTML autocontenido y offline
 │   │   └── websocket_bridge.py # Puente WebSocket bidireccional VS Code
@@ -291,7 +297,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 504 pruebas de unidad e integración
+└── tests/ # 514 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -306,6 +312,7 @@ IDEye/
     ├── test_phase8_3_multimonitor.py # Handover, límites y build
     ├── test_phase8_4_refactor.py # Bisel, layout y logging
     ├── test_phase9_os_intelligence.py # Portapapeles, rutas y telemetría
+    ??? test_phase9_5_biometrics_and_autofix.py # Auto-Fix, Health Guard y micro-gestos
     ├── test_hotfix_ui_and_gaming.py # Joystick, audio y ayuda
     ├── test_writing_words_and_letters.py # Teclado de letras, predicciones y frases
     ??? test_interactive_guide.py # Generación, catálogo y accesos al manual
@@ -334,11 +341,11 @@ pytest -q
 ```
 
 ```text
-504 pruebas superadas, 70 subtests, 13.16s
+514 pruebas superadas, 70 subtests, 14.11s
 ```
 
 > [!NOTE]
-> Todos los 504 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 514 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 
@@ -363,6 +370,7 @@ pytest -q
 - [x] **Fase 8.4:** Perfiles de calibración por monitor, `BezelCrossingDetector`/`HeaderLayout` extraídos, logging estructurado, umbrales de handover configurables y matriz CI Windows/macOS/Linux.
 - [x] **Fase 9:** Máquina del tiempo del portapapeles (6 ranuras 3x3), auto-cambio por ventana activa del SO y telemetría Look-To-Code con ahorro de esfuerzo persistido.
 - [x] **Fase 9.5:** Hotfix de estabilidad: teclado de letras con predicción, modal de ayuda con wrap, audio en archivos cacheados y Gaming con joystick de cabeza y cambio a cursor.
+- [x] **Fase 9.6:** Auto-Fix de diagn?sticos en vivo de VS Code, Health Guard biom?trico y micro-gestos opcionales de cejas/tilt.
 
 > El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `eyede/config.py` para cualquier otra aplicación.
 

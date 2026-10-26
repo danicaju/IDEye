@@ -88,6 +88,13 @@ class GestureDetector:
         wink_trigger_on_release: bool = True,
         left_eye_indices: Tuple[int, ...] = (33, 160, 158, 133, 153, 144),
         right_eye_indices: Tuple[int, ...] = (362, 385, 387, 263, 373, 380),
+        micro_gestures_enabled: bool = True,
+        brow_raise_ratio: float = 1.28,
+        brow_hold_sec: float = 0.20,
+        brow_cooldown_sec: float = 1.20,
+        head_tilt_deg: float = 18.0,
+        head_tilt_hold_sec: float = 0.30,
+        head_tilt_cooldown_sec: float = 0.90,
     ):
         self.mar_threshold = float(mar_threshold)
         self.release_threshold = float(release_threshold)
@@ -134,6 +141,19 @@ class GestureDetector:
         self.last_wink_time: float = 0.0
         self.triggered_gestures: List[str] = []
         self.last_gesture: Optional[str] = None
+        self.micro_gestures_enabled = bool(micro_gestures_enabled)
+        self.brow_raise_ratio = float(brow_raise_ratio)
+        self.brow_hold_sec = float(brow_hold_sec)
+        self.brow_cooldown_sec = float(brow_cooldown_sec)
+        self.head_tilt_deg = float(head_tilt_deg)
+        self.head_tilt_hold_sec = float(head_tilt_hold_sec)
+        self.head_tilt_cooldown_sec = float(head_tilt_cooldown_sec)
+        self.brow_baseline: Optional[float] = None
+        self.brow_start_time: Optional[float] = None
+        self.last_brow_time: float = 0.0
+        self.tilt_start_time: Optional[float] = None
+        self.tilt_direction: int = 0
+        self.last_tilt_time: float = 0.0
 
     @staticmethod
     def _euclidean_distance_2d(p1: Any, p2: Any) -> float:
@@ -252,6 +272,33 @@ class GestureDetector:
         """Returns scale-invariant Eye Aspect Ratio (EAR) for the right eye."""
         return self.compute_ear(face_landmarks)[1]
 
+    def compute_brow_raise(self, face_landmarks: Any) -> float:
+        """Scale-invariant eyebrow height relative to the eye line."""
+        if face_landmarks is None:
+            return 0.0
+        try:
+            landmarks = getattr(face_landmarks, "landmark", face_landmarks)
+            eye_span = self._euclidean_distance_2d(landmarks[33], landmarks[263])
+            if eye_span < 1e-4:
+                return 0.0
+            brow_y = sum(float(landmarks[i].y) for i in (65, 105, 295, 334)) / 4.0
+            eye_y = sum(float(landmarks[i].y) for i in (33, 133, 362, 263)) / 4.0
+            return abs(eye_y - brow_y) / eye_span
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return 0.0
+
+    def compute_head_roll(self, face_landmarks: Any) -> float:
+        """Interocular roll in degrees (positive = right side lower)."""
+        if face_landmarks is None:
+            return 0.0
+        try:
+            landmarks = getattr(face_landmarks, "landmark", face_landmarks)
+            left = landmarks[33]
+            right = landmarks[263]
+            return float(math.degrees(math.atan2(float(right.y) - float(left.y), float(right.x) - float(left.x))))
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return 0.0
+
     def process(
         self,
         face_landmarks: Any,
@@ -288,6 +335,8 @@ class GestureDetector:
             self.right_wink_start_time = None
             self.right_wink_invalid = False
             self.right_wink_triggered = False
+            self.brow_start_time = None
+            self.tilt_start_time = None
             return GestureResult(False, self.current_mar, self.hold_progress, [], self.last_gesture)
 
         # ----------------------------------------------------------------------
@@ -441,6 +490,51 @@ class GestureDetector:
             elif not right_closed:
                 self.right_wink_invalid = False
 
+        # ------------------------------------------------------------------
+        # 3. Optional expressive micro-gestures (brow raise + head tilt)
+        # ------------------------------------------------------------------
+        if self.micro_gestures_enabled and self.current_mar < self.release_threshold:
+            brow = self.compute_brow_raise(face_landmarks)
+            if brow > 0.0:
+                if self.brow_baseline is None:
+                    self.brow_baseline = brow
+                elif brow > self.brow_baseline * self.brow_raise_ratio:
+                    if self.brow_start_time is None:
+                        self.brow_start_time = now
+                    elif (
+                        now - self.brow_start_time >= self.brow_hold_sec
+                        and now - self.last_brow_time >= self.brow_cooldown_sec
+                    ):
+                        self.triggered_gestures.append("BROW_RAISE")
+                        self.last_gesture = "BROW_RAISE"
+                        self.last_brow_time = now
+                        self.brow_start_time = None
+                else:
+                    self.brow_start_time = None
+                    self.brow_baseline = 0.98 * self.brow_baseline + 0.02 * brow
+
+            roll = self.compute_head_roll(face_landmarks)
+            direction = 1 if roll > self.head_tilt_deg else -1 if roll < -self.head_tilt_deg else 0
+            if direction == 0:
+                self.tilt_start_time = None
+                self.tilt_direction = 0
+            elif direction != self.tilt_direction:
+                self.tilt_direction = direction
+                self.tilt_start_time = now
+            elif (
+                self.tilt_start_time is not None
+                and now - self.tilt_start_time >= self.head_tilt_hold_sec
+                and now - self.last_tilt_time >= self.head_tilt_cooldown_sec
+            ):
+                gesture = "HEAD_TILT_RIGHT" if direction > 0 else "HEAD_TILT_LEFT"
+                self.triggered_gestures.append(gesture)
+                self.last_gesture = gesture
+                self.last_tilt_time = now
+                self.tilt_start_time = None
+        else:
+            self.brow_start_time = None
+            self.tilt_start_time = None
+
         return GestureResult(
             click_event,
             self.current_mar,
@@ -468,3 +562,9 @@ class GestureDetector:
         self.last_wink_time = 0.0
         self.triggered_gestures = []
         self.last_gesture = None
+        self.brow_baseline = None
+        self.brow_start_time = None
+        self.last_brow_time = 0.0
+        self.tilt_start_time = None
+        self.tilt_direction = 0
+        self.last_tilt_time = 0.0

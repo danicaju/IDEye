@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QScrollArea,
     QSizePolicy,
+    QCheckBox,
 )
 
 try:
@@ -93,6 +94,8 @@ class DebugWidget(QWidget):
     telemetry_reset_requested = pyqtSignal()
     test_sound_requested = pyqtSignal()
     open_guide_requested = pyqtSignal()
+    health_guard_toggled = pyqtSignal(bool)
+    micro_gestures_toggled = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -485,6 +488,18 @@ class DebugWidget(QWidget):
         self.btn_open_guide.clicked.connect(self.open_guide_requested.emit)
         content_layout.addWidget(self.btn_open_guide)
 
+        self.chk_health_guard = QCheckBox("Health Guard: parpadeo y postura", self)
+        self.chk_health_guard.setChecked(bool(getattr(config, "HEALTH_GUARD_ENABLED", True)))
+        self.chk_health_guard.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_health_guard.toggled.connect(self.health_guard_toggled.emit)
+        content_layout.addWidget(self.chk_health_guard)
+
+        self.chk_micro_gestures = QCheckBox("Micro-gestos: cejas e inclinaci?n", self)
+        self.chk_micro_gestures.setChecked(bool(getattr(config, "MICRO_GESTURES_ENABLED", True)))
+        self.chk_micro_gestures.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_micro_gestures.toggled.connect(self.micro_gestures_toggled.emit)
+        content_layout.addWidget(self.chk_micro_gestures)
+
         # 7. Language Selector & VS Code WebSocket Bridge Status
         lang_bridge_frame = QFrame(self)
         lang_bridge_frame.setObjectName("cardFrame")
@@ -741,6 +756,18 @@ class DebugWidget(QWidget):
             self.file_linked.emit(file_path)
 
     @pyqtSlot(str)
+    def set_health_guard_enabled(self, enabled: bool) -> None:
+        if hasattr(self, "chk_health_guard"):
+            self.chk_health_guard.blockSignals(True)
+            self.chk_health_guard.setChecked(bool(enabled))
+            self.chk_health_guard.blockSignals(False)
+
+    def set_micro_gestures_enabled(self, enabled: bool) -> None:
+        if hasattr(self, "chk_micro_gestures"):
+            self.chk_micro_gestures.blockSignals(True)
+            self.chk_micro_gestures.setChecked(bool(enabled))
+            self.chk_micro_gestures.blockSignals(False)
+
     def set_linked_file(self, file_path: str) -> None:
         """Updates the active file label."""
         if file_path:

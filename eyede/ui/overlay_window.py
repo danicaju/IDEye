@@ -68,6 +68,7 @@ try:
     )
     from eyede.actions.context_reader import ContextReader, detect_syntactic_context
     from eyede.actions.ai_predictor import AIPredictorWorker
+    from eyede.actions.diagnostics_fixer import DiagnosticsFixer
     from eyede.modes.mode_manager import ModeManager
 except ImportError:
     import config
@@ -102,6 +103,7 @@ except ImportError:
     )
     from actions.context_reader import ContextReader, detect_syntactic_context
     from actions.ai_predictor import AIPredictorWorker
+    from actions.diagnostics_fixer import DiagnosticsFixer
     from modes.mode_manager import ModeManager
 
 
@@ -215,6 +217,7 @@ class OverlayWindow(QWidget):
     interactive_guide_requested = pyqtSignal()
     text_injected = pyqtSignal(int)  # characters inserted into the active editor
     mouth_clicked = pyqtSignal(int)  # hovered block index, or -1 for header/other
+    autofix_requested = pyqtSignal(object)
     mode_changed = context_mode_changed
 
     def __init__(
@@ -255,6 +258,10 @@ class OverlayWindow(QWidget):
         self.clipboard_manager: Optional[Any] = None
         self.menu_tree: Dict[str, MenuNode] = menu_tree if menu_tree is not None else build_menu_tree(self.current_language)
         self.context_reader: ContextReader = context_reader if context_reader is not None else ContextReader()
+        self.diagnostics_fixer = DiagnosticsFixer(self.context_reader)
+        self._active_diagnostics: List[Dict[str, Any]] = []
+        self._autofix_slot8_saved: Optional[tuple] = None
+        self.autofix_badge_rect: QRectF = QRectF()
         self.mode_manager = mode_manager if mode_manager is not None else ModeManager(
             initial_mode="coding", language=self.current_language
         )
@@ -1190,6 +1197,9 @@ class OverlayWindow(QWidget):
         """Called when AIPredictorWorker finishes with 6 suggestions."""
         if "SNIPPETS" in self.menu_tree:
             self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(predictions, parent_id="ROOT")
+        self.diagnostics_fixer.set_ai_suggestions(predictions)
+        if self._active_diagnostics:
+            self.set_diagnostics(self._active_diagnostics)
         self.is_ai_predicting = False
         self.last_action_desc = "6 sugerencias listas"
         self.ai_status_updated.emit("Listo (6 sugerencias)")
@@ -2106,6 +2116,17 @@ class OverlayWindow(QWidget):
             )
         painter.restore()
 
+    def show_health_alert(self, message: str) -> None:
+        """Shows a non-intrusive 4-second health reminder in the command bar."""
+        self.last_action_desc = str(message)
+        self.update()
+        QTimer.singleShot(4000, self._clear_health_alert)
+
+    def _clear_health_alert(self) -> None:
+        if str(self.last_action_desc).startswith(("??", "??")):
+            self.last_action_desc = "Listo"
+            self.update()
+
     def toggle_help_modal(self) -> None:
         """Toggles the in-app gesture and shortcut cheat sheet modal."""
         self.show_help_modal = not getattr(self, "show_help_modal", False)
@@ -2151,6 +2172,28 @@ class OverlayWindow(QWidget):
             else:
                 self.last_action_desc = "Cerrar Ayuda"
             self.update()
+            return
+
+        if gesture_name == "BROW_RAISE":
+            if self._active_diagnostics and "AUTO_FIX" in self.menu_tree:
+                self.navigate_to("AUTO_FIX")
+                self.last_action_desc = "Auto-Fix: elige reparaci?n"
+            else:
+                self._trigger_ai_prediction()
+                self.last_action_desc = "Sugerencias de contexto"
+            self.update()
+            return
+
+        if gesture_name in ("HEAD_TILT_RIGHT", "HEAD_TILT_LEFT"):
+            if self.current_context_mode_id in ("coding", "writing", "terminal"):
+                key = "TAB" if gesture_name == "HEAD_TILT_RIGHT" else "SHIFT_TAB"
+                try:
+                    self.code_injector.send_key(key)
+                except Exception:
+                    pass
+                self.last_action_desc = "Indentar" if key == "TAB" else "Des-indentar"
+                self._play_sound("click")
+                self.update()
             return
 
         if gesture_name == "WINK_RIGHT":
@@ -2519,8 +2562,59 @@ class OverlayWindow(QWidget):
 
         return False
 
+    def _restore_autofix_slot(self) -> None:
+        saved = self._autofix_slot8_saved
+        root = self.menu_tree.get("ROOT") if hasattr(self, "menu_tree") else None
+        if saved and root and len(root.items) >= 8:
+            slot = root.items[7]
+            for key, value in saved.items():
+                try:
+                    setattr(slot, key, value)
+                except Exception:
+                    pass
+        self._autofix_slot8_saved = None
+
+    def set_diagnostics(self, diagnostics: List[Dict[str, Any]]) -> None:
+        """Publishes live diagnostics and exposes the one-click Auto-Fix menu."""
+        self._active_diagnostics = [d for d in (diagnostics or []) if isinstance(d, dict)]
+        self.diagnostics_fixer.last_diagnostics = list(self._active_diagnostics)
+        self.diagnostics_fixer.build_fixes(self._active_diagnostics, {
+            "symbols": self.context_reader.extract_local_symbols() if self.context_reader else [],
+            "ai_suggestions": self.diagnostics_fixer.ai_suggestions,
+        })
+        root = self.menu_tree.get("ROOT") if hasattr(self, "menu_tree") else None
+        if self.current_context_mode_id == "coding" and self._active_diagnostics and root and len(root.items) >= 8:
+            if self._autofix_slot8_saved is None:
+                slot = root.items[7]
+                self._autofix_slot8_saved = {
+                    "label": slot.label, "hint": slot.hint, "action_type": slot.action_type,
+                    "snippet": slot.snippet, "key_name": slot.key_name,
+                    "submenu_id": slot.submenu_id, "icon": slot.icon,
+                }
+            slot = root.items[7]
+            slot.label = "8: AUTO-FIX"
+            slot.hint = self.diagnostics_fixer.badge_text(self._active_diagnostics) or "Reparar el error actual"
+            slot.action_type = "SUBMENU"
+            slot.submenu_id = "AUTO_FIX"
+            slot.snippet = None
+            slot.key_name = None
+            slot.icon = "edit"
+            self.menu_tree["AUTO_FIX"] = self.diagnostics_fixer.get_autofix_menu_node(parent_id="ROOT")
+        else:
+            self._restore_autofix_slot()
+        self.update()
+
     def execute_action(self, item: MenuAction, target_block: int = 0) -> None:
         """Programmatically executes a MenuAction directly on the overlay."""
+        if getattr(item, "action_type", "") == "AUTOFIX":
+            fix = self.diagnostics_fixer._fixes_by_id.get(str(item.id))
+            if fix is not None:
+                self.autofix_requested.emit(fix)
+            self.last_action_desc = f"Auto-Fix: {item.label}"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
         if item.action_type == "PAUSE":
             self.toggle_reading_mode()
             self.last_action_desc = "Modo Reposo Activo"
@@ -3375,6 +3469,21 @@ class OverlayWindow(QWidget):
             pass
 
         # =====================================================================
+        # Live diagnostics badge (amber/coral, non-blocking).
+        if self._active_diagnostics and not self.reading_mode:
+            badge = self.diagnostics_fixer.badge_text(self._active_diagnostics)
+            fm = QFontMetrics(self._font_header_bold_btn)
+            bw = min(560.0, max(300.0, fm.horizontalAdvance(badge) + 30.0))
+            self.autofix_badge_rect = QRectF(w * 0.5 - bw * 0.5, header_rect.bottom() + 8.0, bw, 30.0)
+            painter.setBrush(QColor(120, 53, 15, 235))
+            painter.setPen(QPen(QColor(251, 146, 60, 245), 1.6))
+            painter.drawRoundedRect(self.autofix_badge_rect, 8.0, 8.0)
+            painter.setPen(QColor(255, 237, 213))
+            painter.setFont(self._font_header_bold_btn)
+            painter.drawText(self.autofix_badge_rect, Qt.AlignmentFlag.AlignCenter, badge)
+        else:
+            self.autofix_badge_rect = QRectF()
+
         # 2. 3x3 Grid Category Cards
         # =====================================================================
         icon_map = {

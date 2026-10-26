@@ -68,6 +68,9 @@ export function activate(context: vscode.ExtensionContext) {
             if (activeEditor && e.document === activeEditor.document) {
                 triggerEditorStateSync(120);
             }
+        }),
+        vscode.languages.onDidChangeDiagnostics(() => {
+            triggerEditorStateSync(100);
         })
     );
 
@@ -194,6 +197,7 @@ function sendEditorState() {
             cursor: null,
             lineText: '',
             surroundingLines: [],
+            diagnostics: [],
             workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || null
         };
         sendMessage(payload);
@@ -227,6 +231,7 @@ function sendEditorState() {
         selection: selectedText,
         lineText: currentLine,
         surroundingLines: surrounding,
+        diagnostics: collectDiagnostics(doc, pos.line),
         workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || null
     };
 
@@ -252,11 +257,53 @@ async function handleInboundMessage(rawData: any) {
             await handleInsertSnippet(msg);
         } else if (msg.type === 'EXECUTE_COMMAND') {
             await handleExecuteCommand(msg);
+        } else if (msg.type === 'apply_line_fix') {
+            await handleApplyLineFix(msg);
         } else if (msg.type === 'PING') {
             sendMessage({ type: 'PONG', timestamp: Date.now() });
         }
     } catch (err) {
         console.error('[IDEye-Bridge] Error procesando mensaje entrante:', err);
+    }
+}
+
+function collectDiagnostics(doc: vscode.TextDocument, currentLine: number): any[] {
+    const diagnostics = vscode.languages.getDiagnostics(doc.uri)
+        .filter(d => d.severity === vscode.DiagnosticSeverity.Error || d.severity === vscode.DiagnosticSeverity.Warning)
+        .map(d => ({
+            line: d.range.start.line + 1,
+            severity: d.severity === vscode.DiagnosticSeverity.Error ? 'error' : 'warning',
+            message: d.message,
+            source: d.source || 'vscode',
+            code_line: doc.lineAt(Math.min(d.range.start.line, doc.lineCount - 1)).text,
+            distance: Math.abs(d.range.start.line - currentLine)
+        }))
+        .sort((a, b) => (a.distance - b.distance) || (a.line - b.line));
+    return diagnostics.slice(0, 12).map(({ distance, ...rest }) => rest);
+}
+
+async function handleApplyLineFix(msg: any) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        sendMessage({ type: 'ACK', action: 'apply_line_fix', success: false, error: 'No active editor' });
+        return;
+    }
+    try {
+        const doc = editor.document;
+        const line = Math.max(0, Math.min(doc.lineCount - 1, Number(msg.line || 1) - 1));
+        const replacement = String(msg.replacement || '');
+        const edit = new vscode.WorkspaceEdit();
+        if (msg.insert) {
+            edit.insert(doc.uri, new vscode.Position(line, 0), replacement + '\n');
+        } else {
+            const target = doc.lineAt(line).range;
+            edit.replace(doc.uri, target, replacement);
+        }
+        const success = await vscode.workspace.applyEdit(edit);
+        sendMessage({ type: 'ACK', action: 'apply_line_fix', success, line: line + 1 });
+        triggerEditorStateSync(60);
+    } catch (e: any) {
+        sendMessage({ type: 'ACK', action: 'apply_line_fix', success: false, error: e.message || String(e) });
     }
 }
 

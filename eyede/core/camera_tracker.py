@@ -28,10 +28,12 @@ try:
     import eyede.config as config
     from eyede.core.gaze_estimator import GazeEstimator
     from eyede.core.gesture_detector import GestureDetector
+    from eyede.core.health_guard import HealthGuard
 except ImportError:
     import config
     from core.gaze_estimator import GazeEstimator
     from core.gesture_detector import GestureDetector
+    from core.health_guard import HealthGuard
 
 
 def _ensure_qt_app():
@@ -56,6 +58,7 @@ class CameraTracker(QThread):
     raw_gaze_updated = pyqtSignal(float, float)
     raw_components_updated = pyqtSignal(float, float, float, float)
     face_lost = pyqtSignal()
+    health_alert = pyqtSignal(str)
     gesture_triggered = pyqtSignal(str)
     frame_ready = pyqtSignal(object, float)
 
@@ -116,6 +119,10 @@ class CameraTracker(QThread):
                 hold_time_sec=config.CLICK_HOLD_TIME_SEC,
                 cooldown_sec=config.CLICK_COOLDOWN_SEC,
             )
+
+        self.health_guard = HealthGuard(
+            enabled=bool(getattr(config, "HEALTH_GUARD_ENABLED", True))
+        )
 
         # MediaPipe FaceMesh initialization
         self.mp_face_mesh = mp.solutions.face_mesh
@@ -378,6 +385,11 @@ class CameraTracker(QThread):
                 )
             else:
                 self.face_lost.emit()
+
+            if self.health_guard is not None:
+                alert = self.health_guard.process(landmarks, tracking_active=bool(detected))
+                if alert:
+                    self.health_alert.emit(alert)
 
             # Emit all triggered gestures (MOUTH_CLICK, WINK_LEFT, WINK_RIGHT)
             gestures = getattr(self.gesture_detector, "triggered_gestures", [])

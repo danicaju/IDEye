@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-500%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-504%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -81,7 +81,7 @@ Construido con `PyQt6`, el overlay transparente se sitúa sobre VS Code, PyCharm
 El `WebSocketBridge` intercambia estado del editor, diagnósticos e información de selección con la extensión de VS Code en tiempo real, permitiendo el cambio automático de modo contextual y la inyección de snippets. Los árboles sintácticos están disponibles en varios idiomas, incluyendo un diccionario de palabras comunes en español y etiquetas de menú localizadas.
 
 ### 9. Máquina del Tiempo del Portapapeles e Inteligencia de Ventana Activa
-`ClipboardHistory` conserva las seis copias más recientes del usuario en una cuadrícula 3x3 y excluye las escrituras atómicas internas de IDEye, evitando contaminar el historial. `WindowWatcher` sondea la ventana activa cada 500 ms, aplica debounce a cambios transitorios y enruta juegos, terminales, apps de redacción, navegadores e IDEs mediante listas configurables de procesos/títulos. `TelemetryManager` registra clics de boca, caracteres inyectados, pulsaciones ahorradas, ratio de eficiencia y mapas de calor por celda en `telemetry_stats.json`.
+`ClipboardHistory` conserva las seis copias más recientes del usuario en una cuadrícula 3x3 y excluye las escrituras atómicas internas de IDEye, evitando contaminar el historial. `WindowWatcher` sondea la ventana activa cada 504 ms, aplica debounce a cambios transitorios y enruta juegos, terminales, apps de redacción, navegadores e IDEs mediante listas configurables de procesos/títulos. `TelemetryManager` registra clics de boca, caracteres inyectados, pulsaciones ahorradas, ratio de eficiencia y mapas de calor por celda en `telemetry_stats.json`.
 
 ### 10. Handover Multi-Monitor y Calibración por Monitor
 `ScreenManager` mueve el HUD y el panel de depuración entre pantallas, reancla los límites normalizados de mirada por monitor y permite handover manual con `Ctrl+Alt+N` o automático por cruce de bisel tras un gesto sostenido de yaw. Los perfiles de calibración guardan la relación de aspecto y una clave por monitor en `calibration_profiles/`, de modo que 1080p, 4K y ultrawide mantienen su propio mapeo.
@@ -291,7 +291,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 500 pruebas de unidad e integración
+└── tests/ # 504 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -309,6 +309,7 @@ IDEye/
     ├── test_hotfix_ui_and_gaming.py # Joystick, audio y ayuda
     ├── test_writing_words_and_letters.py # Teclado de letras, predicciones y frases
     ??? test_interactive_guide.py # Generación, catálogo y accesos al manual
+    ├── test_interactive_guide_sync.py # Sincronización UTF-8 y tema Nintendo
     ├── test_freelook_edge_scroll.py # Scroll por borde en FreeLook
     ├── test_glass_focus_ui.py # Widgets Glass/Focus
     ├── test_help_ui_and_card_layout.py # Ayuda y guía de gestos
@@ -333,11 +334,11 @@ pytest -q
 ```
 
 ```text
-500 pruebas superadas, 70 subtests, 15.97s
+504 pruebas superadas, 70 subtests, 13.80s
 ```
 
 > [!NOTE]
-> Todos los 500 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 504 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 

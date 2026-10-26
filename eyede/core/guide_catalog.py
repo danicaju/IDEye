@@ -63,7 +63,7 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "calibration",
                 "badge": "02",
                 "title": "Calibración 5 + 1",
-                "text": "Mira al centro y a las cuatro esquinas; el sexto paso mide tu MAR con 3 aperturas y cierres reales de boca, sin atajos autom?ticos.",
+                "text": "Mira al centro y a las cuatro esquinas; el sexto paso mide tu MAR con 3 aperturas y cierres reales de boca, sin atajos automáticos.",
                 "chip": "Perfil por monitor",
             },
             {

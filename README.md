@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-500%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-504%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -81,7 +81,7 @@ Built with `PyQt6`, the transparent overlay stays on top of VS Code, PyCharm, or
 The `WebSocketBridge` exchanges editor state, diagnostics, and selection info with the VS Code extension in real time, enabling context-aware mode switching and snippet injection. Syntax trees are available in multiple languages, including a Spanish common-word dictionary and localized menu labels.
 
 ### 9. Clipboard Time-Machine & OS Foreground Intelligence
-`ClipboardHistory` keeps the six most recent user copies in a 3x3 HUD grid and excludes IDEye's own atomic writes, so re-injection never pollutes the history. `WindowWatcher` polls the foreground window every 500 ms, debounces transient focus changes, and routes games, terminals, writing apps, browsers and IDEs using configurable process/title lists. `TelemetryManager` records mouth clicks, injected characters, keystrokes saved, efficiency ratio and per-cell heatmaps into `telemetry_stats.json`.
+`ClipboardHistory` keeps the six most recent user copies in a 3x3 HUD grid and excludes IDEye's own atomic writes, so re-injection never pollutes the history. `WindowWatcher` polls the foreground window every 504 ms, debounces transient focus changes, and routes games, terminals, writing apps, browsers and IDEs using configurable process/title lists. `TelemetryManager` records mouth clicks, injected characters, keystrokes saved, efficiency ratio and per-cell heatmaps into `telemetry_stats.json`.
 
 ### 10. Multi-Monitor Handover & Per-Monitor Calibration
 `ScreenManager` moves the HUD and debug panel between displays, rebinds normalized gaze bounds per monitor, and supports manual `Ctrl+Alt+N` handover plus automatic bezel crossing after a sustained head-yaw gesture. Calibration profiles store the screen aspect ratio and a per-monitor key under `calibration_profiles/`, so 1080p, 4K and ultrawide layouts keep their own mapping.
@@ -292,7 +292,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Spanish common-word dictionary
 │   │   ├── defaults/ # user_settings.json and custom_macros.json templates
 │   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 500 automated unit & integration tests
+└── tests/ # 504 automated unit & integration tests
     ├── test_phase1.py # Core CV and MAR state machine
     ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py # Syntax tree validation and code injection
@@ -310,6 +310,7 @@ IDEye/
     ├── test_hotfix_ui_and_gaming.py # Head-joystick, audio cache and help layout
     ├── test_writing_words_and_letters.py # Letter keyboard, predictions and word/phrase menus
     ??? test_interactive_guide.py # Guide catalog, generation and entry points
+    ├── test_interactive_guide_sync.py # UTF-8 and Nintendo theme sync
     ├── test_freelook_edge_scroll.py # FreeLook edge-scroll behavior
     ├── test_glass_focus_ui.py # Glass/Focus HUD widgets
     ├── test_help_ui_and_card_layout.py # Help card and gesture guide layout
@@ -334,11 +335,11 @@ pytest -q
 ```
 
 ```text
-500 passed, 70 subtests, 15.97s
+504 passed, 70 subtests, 13.80s
 ```
 
 > [!NOTE]
-> All 500 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 504 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 

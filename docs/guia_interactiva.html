@@ -94,6 +94,306 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
 .legal-item b { display:block; color:#e2e8f0; font-size:12px; margin-bottom:3px; }
 .legal-item p { margin:0; color:var(--muted); font-size:11px; line-height:1.45; }
 
+
+/* ======================================================================
+   NINTENDO BOOKLET THEME ? Paper Mario magazine spread
+   ====================================================================== */
+body[data-theme="nintendo-booklet"] {
+  color: #172033;
+  background-color: #8ed7ff;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255,255,255,.75) 0 2.5px, transparent 3.5px),
+    radial-gradient(circle at 78% 72%, rgba(255,255,255,.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 42% 88%, rgba(255,235,130,.55) 0 3px, transparent 4px),
+    linear-gradient(180deg, #9be7ff 0%, #c7f4ff 42%, #b8f5b1 100%);
+  background-size: 42px 42px, 58px 58px, 76px 76px, 100% 100%;
+}
+body[data-theme="nintendo-booklet"] .app {
+  width: min(1260px, calc(100% - 30px));
+  padding-top: 16px;
+}
+body[data-theme="nintendo-booklet"] .hero {
+  border: 4px solid #111;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fffdf7, #fff1b8);
+  box-shadow: 8px 8px 0 #b91c2c;
+  color: #111;
+}
+body[data-theme="nintendo-booklet"] .brand h1 {
+  color: #b91c2c;
+  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-weight: 900;
+  text-shadow: 2px 2px 0 #facc15, 4px 4px 0 #111;
+}
+body[data-theme="nintendo-booklet"] .brand p { color: #334155; font-weight: 700; }
+body[data-theme="nintendo-booklet"] .logo {
+  background: #22c55e;
+  box-shadow: 4px 4px 0 #111;
+  border: 3px solid #fff;
+}
+body[data-theme="nintendo-booklet"] .btn {
+  border: 3px solid #111;
+  background: #facc15;
+  color: #111;
+  border-radius: 9px;
+  box-shadow: 4px 4px 0 #111;
+  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-weight: 900;
+}
+body[data-theme="nintendo-booklet"] .btn:hover { background: #fde047; transform: translate(-1px,-1px); }
+body[data-theme="nintendo-booklet"] .theme-toggle { background: #22c55e; color: #fff; }
+body[data-theme="nintendo-booklet"] .tabs { gap: 10px; margin-top: 22px; }
+body[data-theme="nintendo-booklet"] .tab {
+  border: 3px solid #111;
+  background: #fffdf7;
+  color: #111;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #111;
+  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-weight: 900;
+  transform: rotate(-.6deg);
+}
+body[data-theme="nintendo-booklet"] .tab:nth-child(even) { transform: rotate(.7deg); }
+body[data-theme="nintendo-booklet"] .tab.active {
+  background: #b91c2c;
+  color: #facc15;
+  border-color: #111;
+  box-shadow: 4px 4px 0 #111;
+}
+body[data-theme="nintendo-booklet"] .page.active {
+  position: relative;
+  padding: 26px 28px 58px;
+  border: 6px solid #fff;
+  border-radius: 6px;
+  outline: 4px solid #111;
+  box-shadow: 10px 10px 0 #111;
+  background:
+    linear-gradient(90deg, transparent 47.8%, rgba(0,0,0,.14) 49.7%, rgba(255,255,255,.65) 50.2%, rgba(0,0,0,.10) 50.7%, transparent 52.2%),
+    radial-gradient(circle at 8% 8%, #fff9d9 0 7%, transparent 8%),
+    radial-gradient(circle at 92% 94%, #e8f7c9 0 8%, transparent 9%),
+    linear-gradient(90deg, #fffdf7 0 49.6%, #fdf6e8 49.6% 50.4%, #fffdf7 50.4% 100%);
+}
+body[data-theme="nintendo-booklet"] .page-numbers span {
+  position: absolute;
+  bottom: 12px;
+  color: #fff;
+  font-family: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  -webkit-text-stroke: 2px #000;
+  text-shadow: 3px 3px 0 #000;
+}
+body[data-theme="nintendo-booklet"] .page-numbers span:first-child { left: 20px; }
+body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 20px; }
+body[data-theme="nintendo-booklet"] .ribbon {
+  position: relative;
+  display: inline-block;
+  margin: 6px 0 18px 6px;
+  padding: 14px 30px 15px 54px;
+  border: 5px solid #facc15;
+  border-radius: 4px;
+  background: #b91c2c;
+  color: #facc15;
+  transform: rotate(-1.5deg);
+  box-shadow: 6px 6px 0 #111;
+  clip-path: polygon(0 4%, 97% 0, 100% 88%, 3% 100%);
+}
+body[data-theme="nintendo-booklet"] .ribbon::before {
+  content: "?";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-12deg);
+  color: #facc15;
+  font-size: 30px;
+  text-shadow: 2px 2px 0 #111;
+}
+body[data-theme="nintendo-booklet"] .kicker {
+  color: #fde68a;
+  opacity: 1;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-shadow: 1px 1px 0 #111;
+}
+body[data-theme="nintendo-booklet"] .ribbon h2 {
+  color: #fbbf24;
+  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-size: clamp(26px, 4.5vw, 48px);
+  font-weight: 900;
+  -webkit-text-stroke: 2px #111;
+  text-shadow: 3px 3px 0 #000;
+}
+body[data-theme="nintendo-booklet"] .intro {
+  color: #1e293b;
+  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  max-width: 900px;
+}
+body[data-theme="nintendo-booklet"] .card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+  gap: 30px 22px;
+  padding-top: 16px;
+}
+body[data-theme="nintendo-booklet"] .card {
+  overflow: visible;
+  min-height: 290px;
+  padding: 68px 16px 17px;
+  border: 3px solid #111;
+  border-radius: 8px;
+  background: #fffdf7;
+  box-shadow: 7px 7px 0 rgba(0,0,0,.75);
+  transform: rotate(-1.2deg);
+  transition: transform .18s cubic-bezier(.2,1.6,.4,1), box-shadow .18s ease;
+}
+body[data-theme="nintendo-booklet"] .card.card-1 { transform: rotate(1.4deg); }
+body[data-theme="nintendo-booklet"] .card:hover {
+  transform: rotate(0deg) scale(1.03);
+  box-shadow: 10px 10px 0 rgba(0,0,0,.8);
+  z-index: 4;
+}
+body[data-theme="nintendo-booklet"] .card::after {
+  display: none;
+}
+body[data-theme="nintendo-booklet"] .card-icon {
+  margin: 0 0 12px;
+}
+body[data-theme="nintendo-booklet"] .illustration {
+  height: 142px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background:
+    radial-gradient(circle at 75% 20%, #fff7a8 0 12%, transparent 13%),
+    linear-gradient(145deg, var(--accent), #38bdf8 62%, #22c55e 100%);
+  border: 5px solid #fff;
+  outline: 3px solid #111;
+  box-shadow: 4px 4px 0 #111;
+  clip-path: polygon(7% 0, 93% 0, 100% 18%, 100% 100%, 0 100%, 0 18%);
+}
+body[data-theme="nintendo-booklet"] .illustration .icon {
+  width: 86px;
+  height: 86px;
+  filter: drop-shadow(3px 3px 0 #111);
+}
+body[data-theme="nintendo-booklet"] .sticker {
+  top: -20px;
+  right: -12px;
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  border: 4px solid #fff;
+  background: #22c55e;
+  color: #fff;
+  font-family: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  text-shadow: 1px 1px 0 #111;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.5);
+  z-index: 5;
+}
+body[data-theme="nintendo-booklet"] .card:nth-child(even) .sticker { background: #facc15; color: #111; }
+body[data-theme="nintendo-booklet"] .brush-title {
+  position: absolute;
+  top: -17px;
+  left: 10px;
+  right: 10px;
+  margin: 0;
+  padding: 9px 13px;
+  background: #e11d48;
+  color: #fff;
+  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.08;
+  text-align: left;
+  -webkit-text-stroke: 1.5px #000;
+  text-shadow: 2px 3px 0 #000;
+  transform: rotate(-2.5deg);
+  clip-path: polygon(2% 0%, 98% 4%, 100% 92%, 0% 100%);
+  box-shadow: 3px 3px 0 #111;
+}
+body[data-theme="nintendo-booklet"] .brush-title span { display: block; }
+body[data-theme="nintendo-booklet"] .card p {
+  color: #1e293b;
+  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+body[data-theme="nintendo-booklet"] .chip {
+  border: 2px solid #111;
+  background: #fef3c7;
+  color: #111;
+  border-radius: 5px;
+  box-shadow: 2px 2px 0 #111;
+  font-family: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
+  font-weight: 900;
+}
+body[data-theme="nintendo-booklet"] .threshold-row span,
+body[data-theme="nintendo-booklet"] .gesture-card,
+body[data-theme="nintendo-booklet"] .shortcut,
+body[data-theme="nintendo-booklet"] .legal-item {
+  border: 3px solid #111;
+  background: #fffdf7;
+  color: #1e293b;
+  box-shadow: 4px 4px 0 #111;
+  border-radius: 7px;
+}
+body[data-theme="nintendo-booklet"] .threshold-row b,
+body[data-theme="nintendo-booklet"] .gesture-card strong { color: #b91c2c; }
+body[data-theme="nintendo-booklet"] .gesture-card p,
+body[data-theme="nintendo-booklet"] .shortcut span,
+body[data-theme="nintendo-booklet"] .legal-item p { color: #334155; }
+body[data-theme="nintendo-booklet"] .gesture-icon,
+body[data-theme="nintendo-booklet"] .legal-icon { color: #b91c2c; }
+body[data-theme="nintendo-booklet"] .simulator {
+  border: 4px solid #111;
+  background: #fffdf7;
+  box-shadow: 7px 7px 0 #111;
+}
+body[data-theme="nintendo-booklet"] .sim-mode {
+  border: 2px solid #111;
+  background: #fef3c7;
+  color: #111;
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 #111;
+  font-weight: 900;
+}
+body[data-theme="nintendo-booklet"] .sim-mode.active { background: #b91c2c; color: #facc15; }
+body[data-theme="nintendo-booklet"] .sim-cell {
+  border: 2px solid #111;
+  background: #fff7d6;
+  color: #111;
+  box-shadow: 3px 3px 0 #111;
+  font-family: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
+}
+body[data-theme="nintendo-booklet"] .sim-cell small { color: #b91c2c; }
+body[data-theme="nintendo-booklet"] .sim-info {
+  border: 3px solid #111;
+  background: #fffdf7;
+  box-shadow: 4px 4px 0 #111;
+}
+body[data-theme="nintendo-booklet"] .sim-info h4 { color: #b91c2c; }
+body[data-theme="nintendo-booklet"] .sim-info p { color: #1e293b; }
+body[data-theme="nintendo-booklet"] .pager .btn,
+body[data-theme="nintendo-booklet"] .page-dot {
+  border: 3px solid #111;
+  background: #fffdf7;
+  color: #111;
+  box-shadow: 3px 3px 0 #111;
+}
+body[data-theme="nintendo-booklet"] .page-dot.active { background: #b91c2c; color: #facc15; }
+body[data-theme="nintendo-booklet"] .page-label { color: #111; font-weight: 900; }
+body[data-theme="nintendo-booklet"] .legal-footer { border-top: 3px dashed #111; }
+body[data-theme="nintendo-booklet"] kbd {
+  border: 2px solid #111;
+  background: #fef3c7;
+  color: #111;
+  border-bottom-width: 4px;
+  box-shadow: 2px 2px 0 #111;
+}
+
 @media (max-width:760px) {
   .hero { align-items:flex-start; flex-direction:column; }
   .sim-body { grid-template-columns:1fr; }
@@ -118,7 +418,7 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
 }
 </style>
 </head>
-<body>
+<body data-theme="nintendo-booklet">
 <div class="app">
   <header class="hero">
     <div class="brand">
@@ -126,6 +426,7 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
       <div><h1>IDEye — Manual Interactivo</h1><p>Game Manual Edition · Vistax L2C Engine</p></div>
     </div>
     <div class="hero-actions">
+      <button class="btn theme-toggle" id="themeToggle" type="button" onclick="toggleTheme()">🎨 Estilo: Nintendo Booklet ⇄ Cyber-Glass</button>
       <button class="btn" onclick="window.print()">🖨️ Guardar como PDF</button>
     </div>
   </header>
@@ -138,46 +439,47 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
               </div>
               <p class="intro">Un IDE asistivo que convierte la mirada en intención y la boca en confirmación. Sin teclado, sin ratón, sin voz obligatoria.</p>
               <div class="card-grid">
-            <article class="card" style="--accent:#fb7185">
-              <div class="badge">01</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M34 41h.1M62 41h.1M35 62c8 6 18 6 26 0"/></svg></div>
-              <h3>Mira para mover</h3>
+            <article class="card card-0" style="--accent:#fb7185">
+              <div class="badge sticker">01</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fb7185"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M34 41h.1M62 41h.1M35 62c8 6 18 6 26 0"/></svg></div></div>
+              <h3 class="brush-title"><span>Mira para mover</span></h3>
               <p>El cursor ocular sigue tu mirada con filtrado One Euro. Mirar solo ilumina: nunca activa una acción por sí solo.</p>
               <span class="chip">Seguimiento &lt; 35 ms</span>
             </article>
 
-            <article class="card" style="--accent:#fb7185">
-              <div class="badge">02</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 16h18M16 16v18M80 16H62M80 16v18M16 80h18M16 80V62M80 80H62M80 80V62"/><circle cx="48" cy="48" r="8"/><circle cx="48" cy="48" r="2" fill="currentColor"/></svg></div>
-              <h3>Calibración 5 + 1</h3>
-              <p>Mira al centro y a las cuatro esquinas; el sexto paso mide tu MAR con 3 aperturas y cierres reales de boca, sin atajos autom?ticos.</p>
+            <article class="card card-1" style="--accent:#fb7185">
+              <div class="badge sticker">02</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fb7185"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 16h18M16 16v18M80 16H62M80 16v18M16 80h18M16 80V62M80 80H62M80 80V62"/><circle cx="48" cy="48" r="8"/><circle cx="48" cy="48" r="2" fill="currentColor"/></svg></div></div>
+              <h3 class="brush-title"><span>Calibración 5 + 1</span></h3>
+              <p>Mira al centro y a las cuatro esquinas; el sexto paso mide tu MAR con 3 aperturas y cierres reales de boca, sin atajos automáticos.</p>
               <span class="chip">Perfil por monitor</span>
             </article>
 
-            <article class="card" style="--accent:#fb7185">
-              <div class="badge">03</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M32 40h.1M64 40h.1"/><ellipse cx="48" cy="62" rx="13" ry="8" fill="currentColor" fill-opacity=".18"/></svg></div>
-              <h3>Abre la boca para confirmar</h3>
+            <article class="card card-0" style="--accent:#fb7185">
+              <div class="badge sticker">03</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fb7185"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M32 40h.1M64 40h.1"/><ellipse cx="48" cy="62" rx="13" ry="8" fill="currentColor" fill-opacity=".18"/></svg></div></div>
+              <h3 class="brush-title"><span>Abre la boca para confirmar</span></h3>
               <p>Una apertura breve equivale a un clic. Mantenerla activa el arrastre Jaw-Lock. Nada de dwell-time accidental.</p>
               <span class="chip">Clic sin manos</span>
             </article>
 
-            <article class="card" style="--accent:#fb7185">
-              <div class="badge">04</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 48c7-10 16-15 30-15s23 5 30 15c-7 10-16 15-30 15S25 58 18 48Z"/><circle cx="48" cy="48" r="7"/><path d="M70 22h12M76 16v12"/></svg></div>
-              <h3>Descansa la vista</h3>
+            <article class="card card-1" style="--accent:#fb7185">
+              <div class="badge sticker">04</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fb7185"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 48c7-10 16-15 30-15s23 5 30 15c-7 10-16 15-30 15S25 58 18 48Z"/><circle cx="48" cy="48" r="7"/><path d="M70 22h12M76 16v12"/></svg></div></div>
+              <h3 class="brush-title"><span>Descansa la vista</span></h3>
               <p>Pausa el HUD con Ctrl+Alt+P o un guiño derecho. Las zonas de reposo evitan el efecto Midas mientras lees.</p>
               <span class="chip">Lectura segura</span>
             </article>
 
-            <article class="card" style="--accent:#fb7185">
-              <div class="badge">↕</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 18v60M32 18l-8 8M32 18l8 8M64 78V18M64 78l-8-8M64 78l8-8"/></svg></div>
-              <h3>Scroll sin manos</h3>
+            <article class="card card-0" style="--accent:#fb7185">
+              <div class="badge sticker">↕</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fb7185"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 18v60M32 18l-8 8M32 18l8 8M64 78V18M64 78l-8-8M64 78l8-8"/></svg></div></div>
+              <h3 class="brush-title"><span>Scroll sin manos</span></h3>
               <p>En FreeLook, deja la mirada en el borde superior o inferior durante ~0.3 s para desplazar la página. Vuelve al centro para parar.</p>
               <span class="chip">Web / documentos</span>
             </article></div>
               
+              <div class="page-numbers"><span>11</span><span>12</span></div>
             </section>
             <section class="page" data-page="1" id="gestures">
               <div class="ribbon" style="--ribbon:#22d3ee">
@@ -186,34 +488,34 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
               </div>
               <p class="intro">Tres canales de entrada, una sola intención. Aprende el timing y el HUD responderá como un gamepad orgánico.</p>
               <div class="card-grid">
-            <article class="card" style="--accent:#22d3ee">
-              <div class="badge">MAR</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M32 40h.1M64 40h.1"/><ellipse cx="48" cy="62" rx="13" ry="8" fill="currentColor" fill-opacity=".18"/></svg></div>
-              <h3>¡Dispara el clic con la boca!</h3>
+            <article class="card card-0" style="--accent:#22d3ee">
+              <div class="badge sticker">MAR</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#22d3ee"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M32 40h.1M64 40h.1"/><ellipse cx="48" cy="62" rx="13" ry="8" fill="currentColor" fill-opacity=".18"/></svg></div></div>
+              <h3 class="brush-title"><span>¡Dispara el clic con la boca!</span></h3>
               <p>Abre la boca por encima del umbral MAR durante un instante: IDEye inyecta el snippet o activa la casilla enfocada.</p>
               <span class="chip">Zero-dwell click</span>
             </article>
 
-            <article class="card" style="--accent:#22d3ee">
-              <div class="badge">55%</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 34c0 24 10 34 24 34s24-10 24-34"/><path d="M38 58h20M48 68v8M40 76h16"/></svg></div>
-              <h3>Jaw-Lock: arrastra sin soltar</h3>
+            <article class="card card-1" style="--accent:#22d3ee">
+              <div class="badge sticker">55%</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#22d3ee"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 34c0 24 10 34 24 34s24-10 24-34"/><path d="M38 58h20M48 68v8M40 76h16"/></svg></div></div>
+              <h3 class="brush-title"><span>Jaw-Lock: arrastra sin soltar</span></h3>
               <p>Mantén la boca abierta para entrar en modo arrastre. Suelta para cerrar el gesto. Ideal para seleccionar bloques.</p>
               <span class="chip">Drag &amp; drop</span>
             </article>
 
-            <article class="card" style="--accent:#22d3ee">
-              <div class="badge">R</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M32 40h.1M60 40c3 3 6 3 9 0M38 62c7 4 13 4 20 0"/></svg></div>
-              <h3>Guiño derecho: pausa</h3>
+            <article class="card card-0" style="--accent:#22d3ee">
+              <div class="badge sticker">R</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#22d3ee"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M32 40h.1M60 40c3 3 6 3 9 0M38 62c7 4 13 4 20 0"/></svg></div></div>
+              <h3 class="brush-title"><span>Guiño derecho: pausa</span></h3>
               <p>Cierra el ojo derecho ~200 ms para ocultar el HUD o despertarlo. En Gaming alterna joystick y cursor de menú.</p>
               <span class="chip">Pausa / Gaming</span>
             </article>
 
-            <article class="card" style="--accent:#22d3ee">
-              <div class="badge">L</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M27 40c3 3 6 3 9 0M64 40h.1M38 62c7 4 13 4 20 0"/></svg></div>
-              <h3>Guiño izquierdo: atrás</h3>
+            <article class="card card-1" style="--accent:#22d3ee">
+              <div class="badge sticker">L</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#22d3ee"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="M27 40c3 3 6 3 9 0M64 40h.1M38 62c7 4 13 4 20 0"/></svg></div></div>
+              <h3 class="brush-title"><span>Guiño izquierdo: atrás</span></h3>
               <p>Un guiño izquierdo vuelve al menú anterior, deshace o hace saltar al personaje según el modo activo.</p>
               <span class="chip">Back / Undo / Jump</span>
             </article></div>
@@ -264,6 +566,7 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
                 <p>Mueve la cabeza fuera de la zona muerta para caminar sin tocar el cursor.</p>
               </div>
             </article></div>
+              <div class="page-numbers"><span>13</span><span>14</span></div>
             </section>
             <section class="page" data-page="2" id="modes">
               <div class="ribbon" style="--ribbon:#fbbf24">
@@ -272,50 +575,50 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
               </div>
               <p class="intro">Cada modo reconfigura las 9 casillas para el contexto correcto. Prueba el simulador y descubre qué hace cada celda.</p>
               <div class="card-grid">
-            <article class="card" style="--accent:#fbbf24">
-              <div class="badge">01</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m36 30-18 18 18 18M60 30l18 18-18 18M54 24 42 72"/></svg></div>
-              <h3>Código</h3>
+            <article class="card card-0" style="--accent:#fbbf24">
+              <div class="badge sticker">01</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fbbf24"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m36 30-18 18 18 18M60 30l18 18-18 18M54 24 42 72"/></svg></div></div>
+              <h3 class="brush-title"><span>Código</span></h3>
               <p>Árboles AST, snippets, operadores, variables locales y predicción IA para programar sin teclear.</p>
               <span class="chip">AST + IA</span>
             </article>
 
-            <article class="card" style="--accent:#fbbf24">
-              <div class="badge">02</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 72l6-20 34-34 14 14-34 34-20 6Z"/><path d="m58 24 14 14M24 72l14-6"/></svg></div>
-              <h3>Redacción</h3>
+            <article class="card card-1" style="--accent:#fbbf24">
+              <div class="badge sticker">02</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fbbf24"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 72l6-20 34-34 14 14-34 34-20 6Z"/><path d="m58 24 14 14M24 72l14-6"/></svg></div></div>
+              <h3 class="brush-title"><span>Redacción</span></h3>
               <p>Teclado de letras con ñ y acentos, predicción de palabras y frases completas para documentar.</p>
               <span class="chip">Letras + palabras</span>
             </article>
 
-            <article class="card" style="--accent:#fbbf24">
-              <div class="badge">03</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="20" width="68" height="56" rx="8"/><path d="m30 40 10 8-10 8M50 60h16"/></svg></div>
-              <h3>Terminal / Git</h3>
+            <article class="card card-0" style="--accent:#fbbf24">
+              <div class="badge sticker">03</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fbbf24"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="20" width="68" height="56" rx="8"/><path d="m30 40 10 8-10 8M50 60h16"/></svg></div></div>
+              <h3 class="brush-title"><span>Terminal / Git</span></h3>
               <p>Comandos, ramas, commits y reparaciones de Git en una cuadrícula táctil ocular.</p>
               <span class="chip">Git sin teclado</span>
             </article>
 
-            <article class="card" style="--accent:#fbbf24">
-              <div class="badge">04</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="48" cy="26" rx="28" ry="10"/><path d="M20 26v22c0 6 12 10 28 10s28-4 28-10V26M20 48v22c0 6 12 10 28 10s28-4 28-10V48"/></svg></div>
-              <h3>Datos / Mates</h3>
+            <article class="card card-1" style="--accent:#fbbf24">
+              <div class="badge sticker">04</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fbbf24"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="48" cy="26" rx="28" ry="10"/><path d="M20 26v22c0 6 12 10 28 10s28-4 28-10V26M20 48v22c0 6 12 10 28 10s28-4 28-10V48"/></svg></div></div>
+              <h3 class="brush-title"><span>Datos / Mates</span></h3>
               <p>SQL, JSON, YAML, fórmulas y operadores matemáticos agrupados por intención.</p>
               <span class="chip">SQL / LaTeX</span>
             </article>
 
-            <article class="card" style="--accent:#fbbf24">
-              <div class="badge">05</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="m60 30-10 28-16 8 10-28 16-8Z"/></svg></div>
-              <h3>Navegación</h3>
+            <article class="card card-0" style="--accent:#fbbf24">
+              <div class="badge sticker">05</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fbbf24"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="30"/><path d="m60 30-10 28-16 8 10-28 16-8Z"/></svg></div></div>
+              <h3 class="brush-title"><span>Navegación</span></h3>
               <p>Salta a definiciones, archivos, símbolos y paneles de VS Code con la mirada.</p>
               <span class="chip">Ir a…</span>
             </article>
 
-            <article class="card" style="--accent:#fbbf24">
-              <div class="badge">06</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="30" y="14" width="36" height="68" rx="18"/><path d="M48 18v20M30 38h36"/></svg></div>
-              <h3>FreeLook</h3>
+            <article class="card card-1" style="--accent:#fbbf24">
+              <div class="badge sticker">06</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#fbbf24"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="30" y="14" width="36" height="68" rx="18"/><path d="M48 18v20M30 38h36"/></svg></div></div>
+              <h3 class="brush-title"><span>FreeLook</span></h3>
               <p>Ratón directo por mirada a 60 Hz, con overscan y carril magnético para la barra de tareas.</p>
               <span class="chip">60 Hz</span>
             </article></div>
@@ -398,6 +701,7 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
               <kbd>Ctrl+Alt+N</kbd>
               <div><b>Siguiente pantalla</b><span>Mueve HUD y mapeo de mirada al siguiente monitor.</span></div>
             </div></div>
+              <div class="page-numbers"><span>15</span><span>16</span></div>
             </section>
             <section class="page" data-page="3" id="gaming">
               <div class="ribbon" style="--ribbon:#a78bfa">
@@ -406,38 +710,39 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
               </div>
               <p class="intro">Sin mareos: la cabeza mueve al personaje y la boca dispara. El cursor de menú queda para los botones del juego.</p>
               <div class="card-grid">
-            <article class="card" style="--accent:#a78bfa">
-              <div class="badge">WASD</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 38h48c10 0 14 10 12 20l-3 12c-2 8-8 10-14 4L56 64H40l-11 10c-6 6-12 4-14-4L12 58c-2-10 2-20 12-20Z"/><path d="M30 52h12M36 46v12M62 50h.1M70 58h.1"/></svg></div>
-              <h3>Head-Joystick</h3>
+            <article class="card card-0" style="--accent:#a78bfa">
+              <div class="badge sticker">WASD</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#a78bfa"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 38h48c10 0 14 10 12 20l-3 12c-2 8-8 10-14 4L56 64H40l-11 10c-6 6-12 4-14-4L12 58c-2-10 2-20 12-20Z"/><path d="M30 52h12M36 46v12M62 50h.1M70 58h.1"/></svg></div></div>
+              <h3 class="brush-title"><span>Head-Joystick</span></h3>
               <p>Mueve la cabeza dentro del área de juego para generar W/A/S/D con zona muerta central. El cursor no se mueve.</p>
               <span class="chip">WASD analógico</span>
             </article>
 
-            <article class="card" style="--accent:#a78bfa">
-              <div class="badge">R</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m30 18 42 32-20 4-8 20-14-56Z"/></svg></div>
-              <h3>Guiño derecho: cambia de control</h3>
+            <article class="card card-1" style="--accent:#a78bfa">
+              <div class="badge sticker">R</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#a78bfa"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m30 18 42 32-20 4-8 20-14-56Z"/></svg></div></div>
+              <h3 class="brush-title"><span>Guiño derecho: cambia de control</span></h3>
               <p>Alterna entre joystick de cabeza y cursor de menú para pulsar botones, tiendas o inventarios.</p>
               <span class="chip">Joystick ⇄ cursor</span>
             </article>
 
-            <article class="card" style="--accent:#a78bfa">
-              <div class="badge">MAR</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="24"/><circle cx="48" cy="48" r="7" fill="currentColor"/><path d="M48 12v12M48 72v12M12 48h12M72 48h12"/></svg></div>
-              <h3>Boca = clic actual</h3>
+            <article class="card card-0" style="--accent:#a78bfa">
+              <div class="badge sticker">MAR</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#a78bfa"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="48" cy="48" r="24"/><circle cx="48" cy="48" r="7" fill="currentColor"/><path d="M48 12v12M48 72v12M12 48h12M72 48h12"/></svg></div></div>
+              <h3 class="brush-title"><span>Boca = clic actual</span></h3>
               <p>En modo joystick, la boca hace clic donde está el cursor del juego sin moverlo. En cursor, apunta y confirma.</p>
               <span class="chip">Clic sin ratón</span>
             </article>
 
-            <article class="card" style="--accent:#a78bfa">
-              <div class="badge">SAFE</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="18" y="34" width="60" height="32" rx="8"/><path d="M30 50h36M38 42v16M58 42v16"/></svg></div>
-              <h3>Salida segura</h3>
+            <article class="card card-1" style="--accent:#a78bfa">
+              <div class="badge sticker">SAFE</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#a78bfa"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="18" y="34" width="60" height="32" rx="8"/><path d="M30 50h36M38 42v16M58 42v16"/></svg></div></div>
+              <h3 class="brush-title"><span>Salida segura</span></h3>
               <p>Al pausar, cambiar de modo o salir de Gaming se liberan todas las teclas y botones para evitar atascos.</p>
               <span class="chip">Release-all</span>
             </article></div>
               
+              <div class="page-numbers"><span>17</span><span>18</span></div>
             </section>
             <section class="page" data-page="4" id="custom">
               <div class="ribbon" style="--ribbon:#34d399">
@@ -446,34 +751,34 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
               </div>
               <p class="intro">IDEye se adapta a tu flujo: macros propias, varios monitores y una máquina del tiempo para el portapapeles.</p>
               <div class="card-grid">
-            <article class="card" style="--accent:#34d399">
-              <div class="badge">3×3</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="16" y="16" width="64" height="64" rx="6"/><path d="M37 16v64M59 16v64M16 37h64M16 59h64"/></svg></div>
-              <h3>Editor de Macros</h3>
+            <article class="card card-0" style="--accent:#34d399">
+              <div class="badge sticker">3×3</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#34d399"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="16" y="16" width="64" height="64" rx="6"/><path d="M37 16v64M59 16v64M16 37h64M16 59h64"/></svg></div></div>
+              <h3 class="brush-title"><span>Editor de Macros</span></h3>
               <p>Asigna snippets, comandos o teclas del sistema a las 9 celdas. Los cambios se guardan en custom_macros.json.</p>
               <span class="chip">Persistente</span>
             </article>
 
-            <article class="card" style="--accent:#34d399">
-              <div class="badge">N</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="18" width="68" height="44" rx="6"/><path d="M34 78h28M48 62v16"/></svg></div>
-              <h3>Multi-Monitor</h3>
+            <article class="card card-1" style="--accent:#34d399">
+              <div class="badge sticker">N</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#34d399"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="18" width="68" height="44" rx="6"/><path d="M34 78h28M48 62v16"/></svg></div></div>
+              <h3 class="brush-title"><span>Multi-Monitor</span></h3>
               <p>Ctrl+Alt+N mueve el HUD y el mapeo al siguiente monitor. Cada pantalla conserva su perfil de calibración.</p>
               <span class="chip">Handover</span>
             </article>
 
-            <article class="card" style="--accent:#34d399">
-              <div class="badge">6</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="24" y="18" width="48" height="64" rx="8"/><path d="M36 18h24v10H36zM36 42h24M36 54h24M36 66h16"/></svg></div>
-              <h3>Máquina del Tiempo</h3>
+            <article class="card card-0" style="--accent:#34d399">
+              <div class="badge sticker">6</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#34d399"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="24" y="18" width="48" height="64" rx="8"/><path d="M36 18h24v10H36zM36 42h24M36 54h24M36 66h16"/></svg></div></div>
+              <h3 class="brush-title"><span>Máquina del Tiempo</span></h3>
               <p>Ctrl+Alt+B abre las últimas seis copias en 3×3. Las escrituras internas de IDEye no contaminan el historial.</p>
               <span class="chip">3×3 history</span>
             </article>
 
-            <article class="card" style="--accent:#34d399">
-              <div class="badge">L2C</div>
-              <div class="card-icon"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 72V48M32 72V36M48 72V54M64 72V28M80 72V42"/><path d="M14 80h70"/></svg></div>
-              <h3>Telemetría Look-To-Code</h3>
+            <article class="card card-1" style="--accent:#34d399">
+              <div class="badge sticker">L2C</div>
+              <div class="card-icon"><div class="illustration" style="--accent:#34d399"><svg class="icon" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 72V48M32 72V36M48 72V54M64 72V28M80 72V42"/><path d="M14 80h70"/></svg></div></div>
+              <h3 class="brush-title"><span>Telemetría Look-To-Code</span></h3>
               <p>Consulta clics de boca, caracteres inyectados, teclas ahorradas y el mapa de calor de tus celdas.</p>
               <span class="chip">Ahorro visible</span>
             </article></div>
@@ -542,6 +847,7 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
               <kbd>Ctrl+Alt+N</kbd>
               <div><b>Siguiente pantalla</b><span>Mueve HUD y mapeo de mirada al siguiente monitor.</span></div>
             </div></div>
+              <div class="page-numbers"><span>19</span><span>20</span></div>
             </section></main>
   <footer class="pager">
     <button class="btn" id="prevPage" aria-label="Página anterior">←</button>
@@ -558,7 +864,25 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
   </section>
 </div>
 <script>
-const GUIDE = {"pages": [{"id": "basics", "tab": "🌟 Explorando IDEye", "title": "¡Bienvenido a IDEye!", "kicker": "TU CENTRO DE MANDO OCULAR", "ribbon": "#fb7185", "intro": "Un IDE asistivo que convierte la mirada en intención y la boca en confirmación. Sin teclado, sin ratón, sin voz obligatoria.", "cards": [{"icon": "face", "badge": "01", "title": "Mira para mover", "text": "El cursor ocular sigue tu mirada con filtrado One Euro. Mirar solo ilumina: nunca activa una acción por sí solo.", "chip": "Seguimiento < 35 ms"}, {"icon": "calibration", "badge": "02", "title": "Calibración 5 + 1", "text": "Mira al centro y a las cuatro esquinas; el sexto paso mide tu MAR con 3 aperturas y cierres reales de boca, sin atajos autom?ticos.", "chip": "Perfil por monitor"}, {"icon": "mouth", "badge": "03", "title": "Abre la boca para confirmar", "text": "Una apertura breve equivale a un clic. Mantenerla activa el arrastre Jaw-Lock. Nada de dwell-time accidental.", "chip": "Clic sin manos"}, {"icon": "rest", "badge": "04", "title": "Descansa la vista", "text": "Pausa el HUD con Ctrl+Alt+P o un guiño derecho. Las zonas de reposo evitan el efecto Midas mientras lees.", "chip": "Lectura segura"}, {"icon": "scroll", "badge": "↕", "title": "Scroll sin manos", "text": "En FreeLook, deja la mirada en el borde superior o inferior durante ~0.3 s para desplazar la página. Vuelve al centro para parar.", "chip": "Web / documentos"}]}, {"id": "gestures", "tab": "👀 Dominando los Gestos", "title": "Tu cara es el mando", "kicker": "BOCA, OJOS Y CABEZA", "ribbon": "#22d3ee", "intro": "Tres canales de entrada, una sola intención. Aprende el timing y el HUD responderá como un gamepad orgánico.", "cards": [{"icon": "mouth", "badge": "MAR", "title": "¡Dispara el clic con la boca!", "text": "Abre la boca por encima del umbral MAR durante un instante: IDEye inyecta el snippet o activa la casilla enfocada.", "chip": "Zero-dwell click"}, {"icon": "jaw", "badge": "55%", "title": "Jaw-Lock: arrastra sin soltar", "text": "Mantén la boca abierta para entrar en modo arrastre. Suelta para cerrar el gesto. Ideal para seleccionar bloques.", "chip": "Drag & drop"}, {"icon": "wink", "badge": "R", "title": "Guiño derecho: pausa", "text": "Cierra el ojo derecho ~200 ms para ocultar el HUD o despertarlo. En Gaming alterna joystick y cursor de menú.", "chip": "Pausa / Gaming"}, {"icon": "wink-left", "badge": "L", "title": "Guiño izquierdo: atrás", "text": "Un guiño izquierdo vuelve al menú anterior, deshace o hace saltar al personaje según el modo activo.", "chip": "Back / Undo / Jump"}]}, {"id": "modes", "tab": "🎛️ Los 6 Modos de Poder", "title": "Seis formas de trabajar", "kicker": "ELIGE TU PODER", "ribbon": "#fbbf24", "intro": "Cada modo reconfigura las 9 casillas para el contexto correcto. Prueba el simulador y descubre qué hace cada celda.", "cards": [{"icon": "code", "badge": "01", "title": "Código", "text": "Árboles AST, snippets, operadores, variables locales y predicción IA para programar sin teclear.", "chip": "AST + IA"}, {"icon": "writing", "badge": "02", "title": "Redacción", "text": "Teclado de letras con ñ y acentos, predicción de palabras y frases completas para documentar.", "chip": "Letras + palabras"}, {"icon": "terminal", "badge": "03", "title": "Terminal / Git", "text": "Comandos, ramas, commits y reparaciones de Git en una cuadrícula táctil ocular.", "chip": "Git sin teclado"}, {"icon": "data", "badge": "04", "title": "Datos / Mates", "text": "SQL, JSON, YAML, fórmulas y operadores matemáticos agrupados por intención.", "chip": "SQL / LaTeX"}, {"icon": "navigation", "badge": "05", "title": "Navegación", "text": "Salta a definiciones, archivos, símbolos y paneles de VS Code con la mirada.", "chip": "Ir a…"}, {"icon": "mouse", "badge": "06", "title": "FreeLook", "text": "Ratón directo por mirada a 60 Hz, con overscan y carril magnético para la barra de tareas.", "chip": "60 Hz"}]}, {"id": "gaming", "tab": "🎮 Modo Gaming & Roblox", "title": "Juega con la cabeza", "kicker": "HEAD-JOYSTICK EDITION", "ribbon": "#a78bfa", "intro": "Sin mareos: la cabeza mueve al personaje y la boca dispara. El cursor de menú queda para los botones del juego.", "cards": [{"icon": "gamepad", "badge": "WASD", "title": "Head-Joystick", "text": "Mueve la cabeza dentro del área de juego para generar W/A/S/D con zona muerta central. El cursor no se mueve.", "chip": "WASD analógico"}, {"icon": "cursor", "badge": "R", "title": "Guiño derecho: cambia de control", "text": "Alterna entre joystick de cabeza y cursor de menú para pulsar botones, tiendas o inventarios.", "chip": "Joystick ⇄ cursor"}, {"icon": "click", "badge": "MAR", "title": "Boca = clic actual", "text": "En modo joystick, la boca hace clic donde está el cursor del juego sin moverlo. En cursor, apunta y confirma.", "chip": "Clic sin ratón"}, {"icon": "release", "badge": "SAFE", "title": "Salida segura", "text": "Al pausar, cambiar de modo o salir de Gaming se liberan todas las teclas y botones para evitar atascos.", "chip": "Release-all"}]}, {"id": "custom", "tab": "🛠️ Personalización", "title": "Hazlo tuyo", "kicker": "MACROS, PANTALLAS Y PORTAPAPELES", "ribbon": "#34d399", "intro": "IDEye se adapta a tu flujo: macros propias, varios monitores y una máquina del tiempo para el portapapeles.", "cards": [{"icon": "grid", "badge": "3×3", "title": "Editor de Macros", "text": "Asigna snippets, comandos o teclas del sistema a las 9 celdas. Los cambios se guardan en custom_macros.json.", "chip": "Persistente"}, {"icon": "monitor", "badge": "N", "title": "Multi-Monitor", "text": "Ctrl+Alt+N mueve el HUD y el mapeo al siguiente monitor. Cada pantalla conserva su perfil de calibración.", "chip": "Handover"}, {"icon": "clipboard", "badge": "6", "title": "Máquina del Tiempo", "text": "Ctrl+Alt+B abre las últimas seis copias en 3×3. Las escrituras internas de IDEye no contaminan el historial.", "chip": "3×3 history"}, {"icon": "telemetry", "badge": "L2C", "title": "Telemetría Look-To-Code", "text": "Consulta clics de boca, caracteres inyectados, teclas ahorradas y el mapa de calor de tus celdas.", "chip": "Ahorro visible"}]}], "gestures": [{"name": "Apertura de boca (MAR)", "action": "Clic / inyectar / navegar", "description": "Abre la boca brevemente para activar la casilla enfocada.", "icon": "mouth"}, {"name": "Jaw-Lock", "action": "Arrastrar / seleccionar", "description": "Mantén la boca abierta para arrastrar sin botones.", "icon": "jaw"}, {"name": "Guiño derecho", "action": "Pausa / Gaming: joystick ⇄ cursor", "description": "Cierra el ojo derecho ~200 ms para ocultar el HUD o cambiar el control de juego.", "icon": "wink"}, {"name": "Guiño izquierdo", "action": "Volver / deshacer / saltar", "description": "Cierra el ojo izquierdo ~200 ms para retroceder o deshacer.", "icon": "wink-left"}, {"name": "Head-Joystick", "action": "WASD en Gaming", "description": "Mueve la cabeza fuera de la zona muerta para caminar sin tocar el cursor.", "icon": "gamepad"}], "legal": [{"icon": "🔒", "title": "100% Privado en RAM Local", "text": "Webcam y landmarks se procesan en memoria volátil; IDEye no graba ni transmite datos biométricos."}, {"icon": "⚕️", "title": "Uso Ergonómico / No Médico", "text": "Herramienta de productividad, no un dispositivo médico. Haz pausas y detén el uso si aparece fatiga mandibular, cervical u ocular."}, {"icon": "🛡️", "title": "Aviso Anti-Cheat en Juegos Competitivos", "text": "Gaming usa entrada sintética del SO; verifica compatibilidad antes de usarlo en multijugador con anti-cheat kernel."}], "gesture_thresholds": {"mar_threshold": 0.45, "ear_close": 0.16, "wink_ms": 150, "wink_max_ms": 450}, "shortcuts": [{"key": "Ctrl+Alt+Q", "label": "Salida de emergencia", "description": "Cierra IDEye de inmediato desde cualquier ventana."}, {"key": "Ctrl+Alt+R", "label": "Reset de calibración", "description": "Limpia la calibración y vuelve a un mapeo neutral seguro."}, {"key": "Ctrl+Alt+V", "label": "Selector de modos", "description": "Abre el hub de 6 modos para elegir el contexto de trabajo."}, {"key": "Ctrl+Alt+K", "label": "Auto-switch", "description": "Activa o desactiva el cambio automático según la ventana activa."}, {"key": "Ctrl+Alt+S", "label": "Sonido", "description": "Activa o silencia la retroalimentación acústica."}, {"key": "Ctrl+Alt+F", "label": "FreeLook", "description": "Activa el ratón directo por mirada."}, {"key": "Ctrl+Alt+G", "label": "Gaming", "description": "Entra en el perfil Gaming con head-joystick."}, {"key": "Ctrl+Alt+M", "label": "Monitor", "description": "Colapsa o expande el panel de depuración."}, {"key": "Ctrl+Alt+A", "label": "Menús inteligentes", "description": "Adapta las casillas al AST y al contexto del editor."}, {"key": "Ctrl+Alt+B", "label": "Portapapeles 3x3", "description": "Abre las últimas 6 copias para reinyectarlas con un gesto."}, {"key": "Ctrl+Alt+T", "label": "Modo de tracking", "description": "Alterna Cabeza, Híbrido e Iris puro."}, {"key": "Ctrl+Alt+C", "label": "Calibrar centro", "description": "Fija la mirada actual como centro neutro."}, {"key": "Ctrl+Alt+P", "label": "Pausa / lectura", "description": "Oculta el HUD para leer o descansar la vista."}, {"key": "Ctrl+Alt+L", "label": "Cambiar lenguaje", "description": "Cicla Python, TypeScript, Rust, C++, Go."}, {"key": "Ctrl+Alt+H", "label": "Ayuda", "description": "Abre o cierra la guía rápida de gestos y atajos."}, {"key": "Ctrl+Alt+N", "label": "Siguiente pantalla", "description": "Mueve HUD y mapeo de mirada al siguiente monitor."}], "modes": [{"id": "coding", "name": "Código", "color": "#00F0FF"}, {"id": "writing", "name": "Redacción", "color": "#10B981"}, {"id": "terminal", "name": "Terminal", "color": "#A855F7"}, {"id": "data_math", "name": "Datos", "color": "#F59E0B"}, {"id": "navigation", "name": "Navegación", "color": "#E2E8F0"}, {"id": "sniper", "name": "FREELOOK (RATÓN)", "color": "#F43F5E"}], "simulator": {"coding": {"name": "Código", "cells": [{"label": "1: Lógica y control", "hint": "Condiciones, bucles y bloques"}, {"label": "2: Funciones y clases", "hint": "Funciones, tipos, clases e imports"}, {"label": "3: Símbolos", "hint": "Operadores, paréntesis y corchetes"}, {"label": "4: Mover el cursor", "hint": "Flechas, Inicio y Fin (fijo)"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)"}, {"label": "6: Palabras clave", "hint": "Estructuras y palabras clave completas"}, {"label": "7: Borrar y deshacer", "hint": "Borrar, deshacer y rehacer (fijo)"}, {"label": "8: Espacios y saltos", "hint": "Enter, Tab y espacios (fijo)"}, {"label": "9: Sugerencias", "hint": "Ideas de código y plantillas"}]}, "writing": {"name": "Redacción", "cells": [{"label": "1: CONECTORES", "hint": "Conectores y transiciones"}, {"label": "2: Formato de texto", "hint": "Títulos, listas y negritas"}, {"label": "3: PUNTUACIÓN", "hint": "Signos de puntuación"}, {"label": "4: CURSOR / SELECCIÓN", "hint": "Movimiento y selección"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)"}, {"label": "6: Escribir letras", "hint": "Teclado de letras, acentos y predicción"}, {"label": "7: Borrar y deshacer", "hint": "Borrado y deshacer"}, {"label": "8: Saltos y párrafos", "hint": "Saltos y párrafos"}, {"label": "9: Sugerencias", "hint": "Ideas para seguir escribiendo"}]}, "terminal": {"name": "Terminal", "cells": [{"label": "1: Git básico", "hint": "Comandos Git básicos"}, {"label": "2: Guardar en Git", "hint": "Commit, pull y push"}, {"label": "3: Python y pruebas", "hint": "Python y tests"}, {"label": "4: Historial", "hint": "Historial de consola"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)"}, {"label": "6: Rutas y archivos", "hint": "Rutas y archivos"}, {"label": "7: Borrar y cancelar", "hint": "Borrado y cancelación"}, {"label": "8: Ejecutar", "hint": "Ejecutar comando"}, {"label": "9: Sugerencias", "hint": "Comandos y commits sugeridos"}]}, "sniper": {"name": "Gaming", "cells": [{"label": "W", "hint": "avanzar"}, {"label": "A", "hint": "izquierda"}, {"label": "S", "hint": "retroceder"}, {"label": "D", "hint": "derecha"}, {"label": "PAUSA", "hint": "descanso visual"}, {"label": "SALTO", "hint": "guiño izquierdo"}, {"label": "CLIC", "hint": "boca / clic actual"}, {"label": "CURSOR", "hint": "guiño derecho"}, {"label": "360°", "hint": "cámara con mirada"}]}}};
+const GUIDE = {"pages": [{"id": "basics", "tab": "🌟 Explorando IDEye", "title": "¡Bienvenido a IDEye!", "kicker": "TU CENTRO DE MANDO OCULAR", "ribbon": "#fb7185", "intro": "Un IDE asistivo que convierte la mirada en intención y la boca en confirmación. Sin teclado, sin ratón, sin voz obligatoria.", "cards": [{"icon": "face", "badge": "01", "title": "Mira para mover", "text": "El cursor ocular sigue tu mirada con filtrado One Euro. Mirar solo ilumina: nunca activa una acción por sí solo.", "chip": "Seguimiento < 35 ms"}, {"icon": "calibration", "badge": "02", "title": "Calibración 5 + 1", "text": "Mira al centro y a las cuatro esquinas; el sexto paso mide tu MAR con 3 aperturas y cierres reales de boca, sin atajos automáticos.", "chip": "Perfil por monitor"}, {"icon": "mouth", "badge": "03", "title": "Abre la boca para confirmar", "text": "Una apertura breve equivale a un clic. Mantenerla activa el arrastre Jaw-Lock. Nada de dwell-time accidental.", "chip": "Clic sin manos"}, {"icon": "rest", "badge": "04", "title": "Descansa la vista", "text": "Pausa el HUD con Ctrl+Alt+P o un guiño derecho. Las zonas de reposo evitan el efecto Midas mientras lees.", "chip": "Lectura segura"}, {"icon": "scroll", "badge": "↕", "title": "Scroll sin manos", "text": "En FreeLook, deja la mirada en el borde superior o inferior durante ~0.3 s para desplazar la página. Vuelve al centro para parar.", "chip": "Web / documentos"}]}, {"id": "gestures", "tab": "👀 Dominando los Gestos", "title": "Tu cara es el mando", "kicker": "BOCA, OJOS Y CABEZA", "ribbon": "#22d3ee", "intro": "Tres canales de entrada, una sola intención. Aprende el timing y el HUD responderá como un gamepad orgánico.", "cards": [{"icon": "mouth", "badge": "MAR", "title": "¡Dispara el clic con la boca!", "text": "Abre la boca por encima del umbral MAR durante un instante: IDEye inyecta el snippet o activa la casilla enfocada.", "chip": "Zero-dwell click"}, {"icon": "jaw", "badge": "55%", "title": "Jaw-Lock: arrastra sin soltar", "text": "Mantén la boca abierta para entrar en modo arrastre. Suelta para cerrar el gesto. Ideal para seleccionar bloques.", "chip": "Drag & drop"}, {"icon": "wink", "badge": "R", "title": "Guiño derecho: pausa", "text": "Cierra el ojo derecho ~200 ms para ocultar el HUD o despertarlo. En Gaming alterna joystick y cursor de menú.", "chip": "Pausa / Gaming"}, {"icon": "wink-left", "badge": "L", "title": "Guiño izquierdo: atrás", "text": "Un guiño izquierdo vuelve al menú anterior, deshace o hace saltar al personaje según el modo activo.", "chip": "Back / Undo / Jump"}]}, {"id": "modes", "tab": "🎛️ Los 6 Modos de Poder", "title": "Seis formas de trabajar", "kicker": "ELIGE TU PODER", "ribbon": "#fbbf24", "intro": "Cada modo reconfigura las 9 casillas para el contexto correcto. Prueba el simulador y descubre qué hace cada celda.", "cards": [{"icon": "code", "badge": "01", "title": "Código", "text": "Árboles AST, snippets, operadores, variables locales y predicción IA para programar sin teclear.", "chip": "AST + IA"}, {"icon": "writing", "badge": "02", "title": "Redacción", "text": "Teclado de letras con ñ y acentos, predicción de palabras y frases completas para documentar.", "chip": "Letras + palabras"}, {"icon": "terminal", "badge": "03", "title": "Terminal / Git", "text": "Comandos, ramas, commits y reparaciones de Git en una cuadrícula táctil ocular.", "chip": "Git sin teclado"}, {"icon": "data", "badge": "04", "title": "Datos / Mates", "text": "SQL, JSON, YAML, fórmulas y operadores matemáticos agrupados por intención.", "chip": "SQL / LaTeX"}, {"icon": "navigation", "badge": "05", "title": "Navegación", "text": "Salta a definiciones, archivos, símbolos y paneles de VS Code con la mirada.", "chip": "Ir a…"}, {"icon": "mouse", "badge": "06", "title": "FreeLook", "text": "Ratón directo por mirada a 60 Hz, con overscan y carril magnético para la barra de tareas.", "chip": "60 Hz"}]}, {"id": "gaming", "tab": "🎮 Modo Gaming & Roblox", "title": "Juega con la cabeza", "kicker": "HEAD-JOYSTICK EDITION", "ribbon": "#a78bfa", "intro": "Sin mareos: la cabeza mueve al personaje y la boca dispara. El cursor de menú queda para los botones del juego.", "cards": [{"icon": "gamepad", "badge": "WASD", "title": "Head-Joystick", "text": "Mueve la cabeza dentro del área de juego para generar W/A/S/D con zona muerta central. El cursor no se mueve.", "chip": "WASD analógico"}, {"icon": "cursor", "badge": "R", "title": "Guiño derecho: cambia de control", "text": "Alterna entre joystick de cabeza y cursor de menú para pulsar botones, tiendas o inventarios.", "chip": "Joystick ⇄ cursor"}, {"icon": "click", "badge": "MAR", "title": "Boca = clic actual", "text": "En modo joystick, la boca hace clic donde está el cursor del juego sin moverlo. En cursor, apunta y confirma.", "chip": "Clic sin ratón"}, {"icon": "release", "badge": "SAFE", "title": "Salida segura", "text": "Al pausar, cambiar de modo o salir de Gaming se liberan todas las teclas y botones para evitar atascos.", "chip": "Release-all"}]}, {"id": "custom", "tab": "🛠️ Personalización", "title": "Hazlo tuyo", "kicker": "MACROS, PANTALLAS Y PORTAPAPELES", "ribbon": "#34d399", "intro": "IDEye se adapta a tu flujo: macros propias, varios monitores y una máquina del tiempo para el portapapeles.", "cards": [{"icon": "grid", "badge": "3×3", "title": "Editor de Macros", "text": "Asigna snippets, comandos o teclas del sistema a las 9 celdas. Los cambios se guardan en custom_macros.json.", "chip": "Persistente"}, {"icon": "monitor", "badge": "N", "title": "Multi-Monitor", "text": "Ctrl+Alt+N mueve el HUD y el mapeo al siguiente monitor. Cada pantalla conserva su perfil de calibración.", "chip": "Handover"}, {"icon": "clipboard", "badge": "6", "title": "Máquina del Tiempo", "text": "Ctrl+Alt+B abre las últimas seis copias en 3×3. Las escrituras internas de IDEye no contaminan el historial.", "chip": "3×3 history"}, {"icon": "telemetry", "badge": "L2C", "title": "Telemetría Look-To-Code", "text": "Consulta clics de boca, caracteres inyectados, teclas ahorradas y el mapa de calor de tus celdas.", "chip": "Ahorro visible"}]}], "gestures": [{"name": "Apertura de boca (MAR)", "action": "Clic / inyectar / navegar", "description": "Abre la boca brevemente para activar la casilla enfocada.", "icon": "mouth"}, {"name": "Jaw-Lock", "action": "Arrastrar / seleccionar", "description": "Mantén la boca abierta para arrastrar sin botones.", "icon": "jaw"}, {"name": "Guiño derecho", "action": "Pausa / Gaming: joystick ⇄ cursor", "description": "Cierra el ojo derecho ~200 ms para ocultar el HUD o cambiar el control de juego.", "icon": "wink"}, {"name": "Guiño izquierdo", "action": "Volver / deshacer / saltar", "description": "Cierra el ojo izquierdo ~200 ms para retroceder o deshacer.", "icon": "wink-left"}, {"name": "Head-Joystick", "action": "WASD en Gaming", "description": "Mueve la cabeza fuera de la zona muerta para caminar sin tocar el cursor.", "icon": "gamepad"}], "legal": [{"icon": "🔒", "title": "100% Privado en RAM Local", "text": "Webcam y landmarks se procesan en memoria volátil; IDEye no graba ni transmite datos biométricos."}, {"icon": "⚕️", "title": "Uso Ergonómico / No Médico", "text": "Herramienta de productividad, no un dispositivo médico. Haz pausas y detén el uso si aparece fatiga mandibular, cervical u ocular."}, {"icon": "🛡️", "title": "Aviso Anti-Cheat en Juegos Competitivos", "text": "Gaming usa entrada sintética del SO; verifica compatibilidad antes de usarlo en multijugador con anti-cheat kernel."}], "gesture_thresholds": {"mar_threshold": 0.45, "ear_close": 0.16, "wink_ms": 150, "wink_max_ms": 450}, "shortcuts": [{"key": "Ctrl+Alt+Q", "label": "Salida de emergencia", "description": "Cierra IDEye de inmediato desde cualquier ventana."}, {"key": "Ctrl+Alt+R", "label": "Reset de calibración", "description": "Limpia la calibración y vuelve a un mapeo neutral seguro."}, {"key": "Ctrl+Alt+V", "label": "Selector de modos", "description": "Abre el hub de 6 modos para elegir el contexto de trabajo."}, {"key": "Ctrl+Alt+K", "label": "Auto-switch", "description": "Activa o desactiva el cambio automático según la ventana activa."}, {"key": "Ctrl+Alt+S", "label": "Sonido", "description": "Activa o silencia la retroalimentación acústica."}, {"key": "Ctrl+Alt+F", "label": "FreeLook", "description": "Activa el ratón directo por mirada."}, {"key": "Ctrl+Alt+G", "label": "Gaming", "description": "Entra en el perfil Gaming con head-joystick."}, {"key": "Ctrl+Alt+M", "label": "Monitor", "description": "Colapsa o expande el panel de depuración."}, {"key": "Ctrl+Alt+A", "label": "Menús inteligentes", "description": "Adapta las casillas al AST y al contexto del editor."}, {"key": "Ctrl+Alt+B", "label": "Portapapeles 3x3", "description": "Abre las últimas 6 copias para reinyectarlas con un gesto."}, {"key": "Ctrl+Alt+T", "label": "Modo de tracking", "description": "Alterna Cabeza, Híbrido e Iris puro."}, {"key": "Ctrl+Alt+C", "label": "Calibrar centro", "description": "Fija la mirada actual como centro neutro."}, {"key": "Ctrl+Alt+P", "label": "Pausa / lectura", "description": "Oculta el HUD para leer o descansar la vista."}, {"key": "Ctrl+Alt+L", "label": "Cambiar lenguaje", "description": "Cicla Python, TypeScript, Rust, C++, Go."}, {"key": "Ctrl+Alt+H", "label": "Ayuda", "description": "Abre o cierra la guía rápida de gestos y atajos."}, {"key": "Ctrl+Alt+N", "label": "Siguiente pantalla", "description": "Mueve HUD y mapeo de mirada al siguiente monitor."}], "modes": [{"id": "coding", "name": "Código", "color": "#00F0FF"}, {"id": "writing", "name": "Redacción", "color": "#10B981"}, {"id": "terminal", "name": "Terminal", "color": "#A855F7"}, {"id": "data_math", "name": "Datos", "color": "#F59E0B"}, {"id": "navigation", "name": "Navegación", "color": "#E2E8F0"}, {"id": "sniper", "name": "FREELOOK (RATÓN)", "color": "#F43F5E"}], "simulator": {"coding": {"name": "Código", "cells": [{"label": "1: Lógica y control", "hint": "Condiciones, bucles y bloques"}, {"label": "2: Funciones y clases", "hint": "Funciones, tipos, clases e imports"}, {"label": "3: Símbolos", "hint": "Operadores, paréntesis y corchetes"}, {"label": "4: Mover el cursor", "hint": "Flechas, Inicio y Fin (fijo)"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)"}, {"label": "6: Palabras clave", "hint": "Estructuras y palabras clave completas"}, {"label": "7: Borrar y deshacer", "hint": "Borrar, deshacer y rehacer (fijo)"}, {"label": "8: Espacios y saltos", "hint": "Enter, Tab y espacios (fijo)"}, {"label": "9: Sugerencias", "hint": "Ideas de código y plantillas"}]}, "writing": {"name": "Redacción", "cells": [{"label": "1: CONECTORES", "hint": "Conectores y transiciones"}, {"label": "2: Formato de texto", "hint": "Títulos, listas y negritas"}, {"label": "3: PUNTUACIÓN", "hint": "Signos de puntuación"}, {"label": "4: CURSOR / SELECCIÓN", "hint": "Movimiento y selección"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)"}, {"label": "6: Escribir letras", "hint": "Teclado de letras, acentos y predicción"}, {"label": "7: Borrar y deshacer", "hint": "Borrado y deshacer"}, {"label": "8: Saltos y párrafos", "hint": "Saltos y párrafos"}, {"label": "9: Sugerencias", "hint": "Ideas para seguir escribiendo"}]}, "terminal": {"name": "Terminal", "cells": [{"label": "1: Git básico", "hint": "Comandos Git básicos"}, {"label": "2: Guardar en Git", "hint": "Commit, pull y push"}, {"label": "3: Python y pruebas", "hint": "Python y tests"}, {"label": "4: Historial", "hint": "Historial de consola"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)"}, {"label": "6: Rutas y archivos", "hint": "Rutas y archivos"}, {"label": "7: Borrar y cancelar", "hint": "Borrado y cancelación"}, {"label": "8: Ejecutar", "hint": "Ejecutar comando"}, {"label": "9: Sugerencias", "hint": "Comandos y commits sugeridos"}]}, "sniper": {"name": "Gaming", "cells": [{"label": "W", "hint": "avanzar"}, {"label": "A", "hint": "izquierda"}, {"label": "S", "hint": "retroceder"}, {"label": "D", "hint": "derecha"}, {"label": "PAUSA", "hint": "descanso visual"}, {"label": "SALTO", "hint": "guiño izquierdo"}, {"label": "CLIC", "hint": "boca / clic actual"}, {"label": "CURSOR", "hint": "guiño derecho"}, {"label": "360°", "hint": "cámara con mirada"}]}}};
+
+const themeButton = document.getElementById("themeToggle");
+const THEME_ICON = String.fromCodePoint(0x1F3A8);
+const THEME_ARROW = String.fromCodePoint(0x21C4);
+function applyTheme(theme) {
+  const selected = theme === "cyber-glass" ? "cyber-glass" : "nintendo-booklet";
+  document.body.dataset.theme = selected;
+  if (themeButton) {
+    themeButton.textContent = selected === "nintendo-booklet"
+      ? THEME_ICON + " Estilo: Nintendo Booklet " + THEME_ARROW + " Cyber-Glass"
+      : THEME_ICON + " Estilo: Cyber-Glass " + THEME_ARROW + " Nintendo Booklet";
+  }
+}
+function toggleTheme() {
+  applyTheme(document.body.dataset.theme === "nintendo-booklet" ? "cyber-glass" : "nintendo-booklet");
+}
+applyTheme("nintendo-booklet");
+
 let currentPage = 0;
 let currentMode = Object.keys(GUIDE.simulator || {})[0] || "coding";
 

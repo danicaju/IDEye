@@ -147,6 +147,12 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
     pages = catalog.get("pages", [])
     simulator = catalog.get("simulator", {})
     data_json = json.dumps(catalog, ensure_ascii=False).replace("</", "<\\/")
+    legal_items = catalog.get("legal", [])
+    legal_html = "".join(
+        f'<div class="legal-item"><span class="legal-icon">{_esc(item.get("icon", ""))}</span>'
+        f'<div><b>{_esc(item.get("title", ""))}</b><p>{_esc(item.get("text", ""))}</p></div></div>'
+        for item in legal_items
+    )
     app_icon = _app_icon_data_uri()
     logo_markup = (
         f'<img src="{app_icon}" alt="IDEye" class="logo-img">'
@@ -275,6 +281,13 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
 .page-dot {{ width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:#0f172a; color:#cbd5e1; font-weight:900; }}
 .page-dot.active {{ background:var(--cyan); border-color:var(--cyan); color:#06111f; box-shadow:3px 3px 0 rgba(0,0,0,.5); }}
 .page-label {{ color:var(--muted); font-size:12px; margin-left:8px; }}
+.legal-footer {{ margin:22px 0 8px; border-top:1px solid var(--line); padding-top:14px; }}
+.legal-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; }}
+.legal-item {{ display:flex; gap:10px; border:1px solid #2b3b52; border-radius:12px; padding:10px 12px; background:rgba(15,23,42,.72); }}
+.legal-icon {{ font-size:20px; line-height:1.2; }}
+.legal-item b {{ display:block; color:#e2e8f0; font-size:12px; margin-bottom:3px; }}
+.legal-item p {{ margin:0; color:var(--muted); font-size:11px; line-height:1.45; }}
+
 @media (max-width:760px) {{
   .hero {{ align-items:flex-start; flex-direction:column; }}
   .sim-body {{ grid-template-columns:1fr; }}
@@ -290,7 +303,8 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
   .page:last-of-type {{ break-after:auto; page-break-after:auto; }}
   .ribbon {{ box-shadow:3px 3px 0 #999; border-color:#777; }}
   .intro, .card p, .gesture-card p, .sim-info p, .shortcut span {{ color:#333; }}
-  .card, .gesture-card, .simulator, .shortcut {{ background:#fff; border-color:#bbb; box-shadow:none; break-inside:avoid; }}
+  .card, .gesture-card, .simulator, .shortcut, .legal-item {{ background:#fff; border-color:#bbb; box-shadow:none; break-inside:avoid; }}
+  .legal-item b, .legal-item p {{ color:#222; }}
   .card h3, .card p, .sim-info h4, .shortcut b {{ color:#111; }}
   .sim-cell {{ background:#f4f4f4; color:#111; border-color:#999; box-shadow:none; }}
   .sim-cell small {{ color:#333; }}
@@ -317,6 +331,9 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
     <button class="btn" id="nextPage" aria-label="Página siguiente">→</button>
     <span class="page-label" id="pageLabel">Página 1</span>
   </footer>
+  <section class="legal-footer" aria-label="Privacidad y avisos legales">
+    <div class="legal-grid">{legal_html}</div>
+  </section>
 </div>
 <script>
 const GUIDE = {data_json};

@@ -333,7 +333,7 @@ pytest -q
 ```
 
 ```text
-500 pruebas superadas, 70 subtests, 19.69s
+500 pruebas superadas, 70 subtests, 15.97s
 ```
 
 > [!NOTE]
@@ -364,6 +364,19 @@ pytest -q
 - [x] **Fase 9.5:** Hotfix de estabilidad: teclado de letras con predicción, modal de ayuda con wrap, audio en archivos cacheados y Gaming con joystick de cabeza y cambio a cursor.
 
 > El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `eyede/config.py` para cualquier otra aplicación.
+
+---
+
+## Privacidad, Seguridad y Avisos Legales
+
+### Procesamiento Biométrico 100% Local (Privacidad Primero)
+Todos los fotogramas de la webcam y los 478 puntos faciales 3D de MediaPipe se procesan estrictamente en la memoria RAM volátil local. IDEye jamás graba, almacena ni transmite vídeo o datos biométricos por la red.
+
+### Aviso Ergonómico y No Médico
+IDEye es una herramienta de productividad y accesibilidad general, no un dispositivo médico certificado. No está diseñada para diagnosticar, tratar, curar ni prevenir afecciones médicas (como RSI o túnel carpiano). Se recomienda realizar pausas frecuentes y detener su uso si se experimenta fatiga mandibular (ATM), cervical u ocular.
+
+### Aviso sobre Juegos Online y Sistemas Anti-Cheat
+El Modo Gaming utiliza inyección de entrada sintética a nivel de sistema operativo (`Win32 API` / `pynput`) con fines de accesibilidad. Aunque es totalmente seguro en juegos para un jugador y sandboxes estándar, se recomienda verificar la compatibilidad antes de usarlo en juegos multijugador competitivos con sistemas anti-cheat de nivel kernel.
 
 ---
 

@@ -290,6 +290,24 @@ GESTURES: List[Dict[str, str]] = [
     },
 ]
 
+LEGAL_NOTICES: List[Dict[str, str]] = [
+    {
+        "icon": chr(0x1F512),
+        "title": "100% Privado en RAM Local",
+        "text": "Webcam y landmarks se procesan en memoria vol\u00e1til; IDEye no graba ni transmite datos biom\u00e9tricos.",
+    },
+    {
+        "icon": chr(0x2695) + "\ufe0f",
+        "title": "Uso Ergon\u00f3mico / No M\u00e9dico",
+        "text": "Herramienta de productividad, no un dispositivo m\u00e9dico. Haz pausas y det\u00e9n el uso si aparece fatiga mandibular, cervical u ocular.",
+    },
+    {
+        "icon": chr(0x1F6E1) + "\ufe0f",
+        "title": "Aviso Anti-Cheat en Juegos Competitivos",
+        "text": "Gaming usa entrada sint\u00e9tica del SO; verifica compatibilidad antes de usarlo en multijugador con anti-cheat kernel.",
+    },
+]
+
 FALLBACK_SIMULATOR: Dict[str, Dict[str, Any]] = {
     "coding": {
         "name": "Código",
@@ -426,6 +444,7 @@ def build_catalog() -> Dict[str, Any]:
     return {
         "pages": PAGES,
         "gestures": GESTURES,
+        "legal": LEGAL_NOTICES,
         "gesture_thresholds": _gesture_thresholds(),
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
@@ -449,4 +468,4 @@ def generate_interactive_guide(path: Optional[os.PathLike | str] = None) -> Path
     return target
 
 
-__all__ = ["GUIDE_PATH", "build_catalog", "generate_interactive_guide"]
+__all__ = ["GUIDE_PATH", "LEGAL_NOTICES", "build_catalog", "generate_interactive_guide"]

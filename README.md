@@ -334,7 +334,7 @@ pytest -q
 ```
 
 ```text
-500 passed, 70 subtests, 19.69s
+500 passed, 70 subtests, 15.97s
 ```
 
 > [!NOTE]
@@ -365,6 +365,19 @@ pytest -q
 - [x] **Phase 9.5:** Stability hotfix: letter keyboard with word predictions, wrapped help modal, cached-file audio, and head-joystick Gaming with joystick/cursor switching.
 
 > Window routing is not limited to Roblox or a few editors: it recognizes broad built-in lists for games, terminals, writing/communication apps, browsers and IDEs. Generic Unreal `-Win64-Shipping.exe` games and configurable title keywords are also supported. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` or `IDE_PROCESSES` in `eyede/config.py` for any other application.
+
+---
+
+## Privacy, Safety & Legal Disclaimers
+
+### 100% Local Biometric Processing (Privacy First)
+All webcam video frames and MediaPipe 3D facial landmarks are processed strictly in volatile local RAM. IDEye never records, stores, or transmits video feeds or biometric data over the network.
+
+### Ergonomic & Non-Medical Notice
+IDEye is an assistive productivity tool, not a certified medical device. It is not intended to diagnose, treat, cure, or prevent any medical condition (such as RSI or carpal tunnel syndrome). Users should take regular breaks and stop use immediately if they experience jaw (TMJ), neck, or ocular fatigue.
+
+### Online Gaming & Anti-Cheat Notice
+Gaming Mode uses OS-level synthetic input injection (`Win32 API` / `pynput`) for accessibility. While safe for single-player titles and standard sandbox games, users should verify compatibility before using synthetic input tools in competitive multiplayer games with strict kernel-level anti-cheat systems.
 
 ---
 

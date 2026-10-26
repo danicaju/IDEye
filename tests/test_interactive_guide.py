@@ -29,6 +29,7 @@ class TestGuideCatalog(unittest.TestCase):
         self.assertEqual(len(catalog["modes"]), 6)
         self.assertTrue(catalog["gestures"])
         self.assertTrue(catalog["shortcuts"])
+        self.assertEqual(len(catalog["legal"]), 3)
         for shortcut in catalog["shortcuts"]:
             self.assertRegex(shortcut["key"], r"^Ctrl\+Alt\+[A-Z]$")
         for mode_id, mode in catalog["simulator"].items():

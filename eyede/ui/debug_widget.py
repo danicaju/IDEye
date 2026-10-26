@@ -477,7 +477,7 @@ class DebugWidget(QWidget):
             label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         content_layout.addWidget(guide_frame)
 
-        self.btn_open_guide = QPushButton("📖 Abrir Manual Interactivo", self)
+        self.btn_open_guide = QPushButton(" Abrir Manual Interactivo", self)
         self.btn_open_guide.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_open_guide.setToolTip("Abre la gu?a visual interactiva completa en el navegador")
         self.btn_open_guide.setStyleSheet(
@@ -653,7 +653,7 @@ class DebugWidget(QWidget):
             self.btn_macro_editor.setIcon(macro_icon)
 
         # 9b. Audio verification button.
-        self.btn_test_sound = QPushButton("🔊 Probar sonido", self)
+        self.btn_test_sound = QPushButton(" Probar sonido", self)
         self.btn_test_sound.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_test_sound.setToolTip("Reproduce un clic de prueba con el motor de audio actual")
         self.btn_test_sound.setStyleSheet(

@@ -68,13 +68,41 @@ def _icon(kind: str) -> str:
     return f'<svg class="icon" {common} aria-hidden="true">{body}</svg>'
 
 
+def _ui_icon(name: str, extra_class: str = "") -> str:
+    try:
+        from eyede.core.guide_catalog import SVG_ICONS
+    except ImportError:  # pragma: no cover
+        from guide_catalog import SVG_ICONS  # type: ignore
+    inner = SVG_ICONS.get(str(name), SVG_ICONS.get("sparkles", ""))
+    classes = "ui-icon" + (f" {extra_class}" if extra_class else "")
+    return (
+        f'<svg class="{classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        f'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{inner}</svg>'
+    )
+
+
+def _brand_logo() -> str:
+    return (
+        '<svg class="brand-icon-svg" viewBox="0 0 64 64" width="100%" height="100%" '
+        'preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" '
+        'stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-label="IDEye">'
+        '<path d="M20 9c-5 0-7 2.5-7 7v6c0 3.5-2 5-5 5 3 0 5 1.5 5 5v6c0 4.5 2 7 7 7"/>'
+        '<path d="M44 9c5 0 7 2.5 7 7v6c0 3.5 2 5 5 5-3 0-5 1.5-5 5v6c0 4.5-2 7-7 7"/>'
+        '<path d="M22 32c4.5-7.5 15.5-7.5 20 0-4.5 7.5-15.5 7.5-20 0Z" fill="currentColor" fill-opacity=".1"/>'
+        '<circle cx="32" cy="32" r="5.2" fill="currentColor" fill-opacity=".18"/>'
+        '<circle cx="32" cy="32" r="1.8" fill="currentColor" stroke="none"/>'
+        '<path d="M32 25.5v2M32 36.5v2M25.5 32h2M36.5 32h2"/>'
+        '</svg>'
+    )
+
+
 def _cards(cards: List[Dict[str, Any]], accent: str) -> str:
     blocks = []
     for index, card in enumerate(cards):
         blocks.append(
             f'''
             <article class="card card-{index % 2}" style="--accent:{accent}">
-              <div class="badge sticker">{_esc(card.get("badge", "★"))}</div>
+<div class="badge sticker">{_ui_icon("star-badge")}<span>{_esc(card.get("badge", "FIX"))}</span></div>
               <div class="card-icon"><div class="illustration" style="--accent:{accent}">{_icon(str(card.get("icon", "grid")))}</div></div>
               <h3 class="brush-title"><span>{_esc(card.get("title", ""))}</span></h3>
               <p>{_esc(card.get("text", ""))}</p>
@@ -146,15 +174,16 @@ def _simulator(simulator: Dict[str, Any]) -> str:
 
 THEME_JS = """
 const themeButton = document.getElementById("themeToggle");
-const THEME_ICON = String.fromCodePoint(0x1F3A8);
-const THEME_ARROW = String.fromCodePoint(0x21C4);
 function applyTheme(theme) {
   const selected = theme === "cyber-glass" ? "cyber-glass" : "nintendo-booklet";
   document.body.dataset.theme = selected;
   if (themeButton) {
-    themeButton.textContent = selected === "nintendo-booklet"
-      ? THEME_ICON + " Estilo: Nintendo Booklet " + THEME_ARROW + " Cyber-Glass"
-      : THEME_ICON + " Estilo: Cyber-Glass " + THEME_ARROW + " Nintendo Booklet";
+    const label = document.getElementById("themeLabel");
+    if (label) {
+      label.textContent = selected === "nintendo-booklet"
+        ? "Estilo: Nintendo Booklet / Cyber-Glass"
+        : "Estilo: Cyber-Glass / Nintendo Booklet";
+    }
   }
 }
 function toggleTheme() {
@@ -195,10 +224,12 @@ body[data-theme="nintendo-booklet"] .brand h1 {
   text-shadow: 2px 2px 0 #facc15, 4px 4px 0 #111;
 }
 body[data-theme="nintendo-booklet"] .brand p { color: #334155; font-weight: 700; }
-body[data-theme="nintendo-booklet"] .logo {
-  background: #22c55e;
+body[data-theme="nintendo-booklet"] .brand-icon-frame {
+  background: #fffdf7;
+  color: #111;
+  border: 2.5px solid #111;
+  border-radius: 14px;
   box-shadow: 4px 4px 0 #111;
-  border: 3px solid #fff;
 }
 body[data-theme="nintendo-booklet"] .btn {
   border: 3px solid #111;
@@ -258,7 +289,7 @@ body[data-theme="nintendo-booklet"] .ribbon {
   position: relative;
   display: inline-block;
   margin: 6px 0 18px 6px;
-  padding: 14px 30px 15px 54px;
+  padding: 14px 30px 15px 56px;
   border: 5px solid #facc15;
   border-radius: 4px;
   background: #b91c2c;
@@ -268,7 +299,7 @@ body[data-theme="nintendo-booklet"] .ribbon {
   clip-path: polygon(0 4%, 97% 0, 100% 88%, 3% 100%);
 }
 body[data-theme="nintendo-booklet"] .ribbon::before {
-  content: "?";
+  content: "";
   position: absolute;
   left: 14px;
   top: 50%;
@@ -277,6 +308,11 @@ body[data-theme="nintendo-booklet"] .ribbon::before {
   font-size: 30px;
   text-shadow: 2px 2px 0 #111;
 }
+body[data-theme="nintendo-booklet"] .ribbon-star {
+  position:absolute; left:14px; top:50%; transform:translateY(-50%) rotate(-8deg);
+  color:#facc15; width:32px; height:32px; filter:drop-shadow(2px 2px 0 #111);
+}
+body[data-theme="nintendo-booklet"] .ribbon-star .ui-icon { width:32px; height:32px; stroke-width:2.2; }
 body[data-theme="nintendo-booklet"] .kicker {
   color: #fde68a;
   opacity: 1;
@@ -346,6 +382,7 @@ body[data-theme="nintendo-booklet"] .illustration .icon {
   filter: drop-shadow(3px 3px 0 #111);
 }
 body[data-theme="nintendo-booklet"] .sticker {
+  display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:0;
   top: -20px;
   right: -12px;
   width: 60px;
@@ -362,6 +399,8 @@ body[data-theme="nintendo-booklet"] .sticker {
   z-index: 5;
 }
 body[data-theme="nintendo-booklet"] .card:nth-child(even) .sticker { background: #facc15; color: #111; }
+body[data-theme="nintendo-booklet"] .sticker .ui-icon { width:16px; height:16px; stroke-width:2.4; }
+body[data-theme="nintendo-booklet"] .sticker span { font-size:10px; line-height:1; }
 body[data-theme="nintendo-booklet"] .brush-title {
   position: absolute;
   top: -17px;
@@ -471,15 +510,12 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
     data_json = json.dumps(catalog, ensure_ascii=False).replace("</", "<\\/")
     legal_items = catalog.get("legal", [])
     legal_html = "".join(
-        f'<div class="legal-item"><span class="legal-icon">{_esc(item.get("icon", ""))}</span>'
+        f'<div class="legal-item"><span class="legal-icon">{_ui_icon(item.get("icon", "sparkles"))}</span>'
         f'<div><b>{_esc(item.get("title", ""))}</b><p>{_esc(item.get("text", ""))}</p></div></div>'
         for item in legal_items
     )
     app_icon = _app_icon_data_uri()
-    logo_markup = (
-        f'<img src="{app_icon}" alt="IDEye" class="logo-img">'
-        if app_icon else _icon("eye")
-    )
+    logo_markup = _brand_logo()
 
     tabs = []
     sections = []
@@ -501,6 +537,7 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
             f'''
             <section class="page{active}" data-page="{index}" id="{_esc(page_id)}">
               <div class="ribbon" style="--ribbon:{accent}">
+                <span class="ribbon-star">{_ui_icon("star-badge")}</span>
                 <span class="kicker">{_esc(page.get("kicker", ""))}</span>
                 <h2>{_esc(page.get("title", ""))}</h2>
               </div>
@@ -548,6 +585,10 @@ button {{ font:inherit; cursor:pointer; }}
 .brand h1 {{ margin:0; font-size:clamp(20px,3vw,32px); letter-spacing:-.03em; }}
 .brand p {{ margin:2px 0 0; color:var(--muted); font-size:13px; }}
 .hero-actions {{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }}
+.ui-icon {{ width:18px; height:18px; flex:0 0 18px; display:inline-block; vertical-align:-3px; }}
+.btn, .tab {{ display:inline-flex; align-items:center; justify-content:center; gap:8px; }}
+.brand-icon-frame {{ width:56px; height:56px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; padding:6px; box-sizing:border-box; overflow:hidden; border-radius:14px; background:linear-gradient(135deg,#22d3ee,#6366f1); color:#06111f; border:1.5px solid rgba(255,255,255,.2); }}
+.brand-icon-svg {{ width:100%; height:100%; display:block; }}
 .btn {{ border:1px solid rgba(34,211,238,.45); background:rgba(34,211,238,.12); color:#cffafe; border-radius:999px; padding:10px 16px; font-weight:700; box-shadow:3px 3px 0 rgba(0,0,0,.45); }}
 .btn:hover {{ background:rgba(34,211,238,.22); transform:translateY(-1px); }}
 .tabs {{ display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 12px; }}
@@ -607,7 +648,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
 .legal-footer {{ margin:22px 0 8px; border-top:1px solid var(--line); padding-top:14px; }}
 .legal-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; }}
 .legal-item {{ display:flex; gap:10px; border:1px solid #2b3b52; border-radius:12px; padding:10px 12px; background:rgba(15,23,42,.72); }}
-.legal-icon {{ font-size:20px; line-height:1.2; }}
+.legal-icon {{ color:#b91c2c; display:inline-flex; width:22px; height:22px; flex:0 0 22px; }} .legal-icon .ui-icon {{ width:22px; height:22px; }}
 .legal-item b {{ display:block; color:#e2e8f0; font-size:12px; margin-bottom:3px; }}
 .legal-item p {{ margin:0; color:var(--muted); font-size:11px; line-height:1.45; }}
 
@@ -640,12 +681,12 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
 <div class="app">
   <header class="hero">
     <div class="brand">
-      <div class="logo">{logo_markup}</div>
+      <div class="brand-icon-frame">{logo_markup}</div>
       <div><h1>IDEye — Manual Interactivo</h1><p>Game Manual Edition · Vistax L2C Engine</p></div>
     </div>
     <div class="hero-actions">
-      <button class="btn theme-toggle" id="themeToggle" type="button" onclick="toggleTheme()">🎨 Estilo: Nintendo Booklet ⇄ Cyber-Glass</button>
-      <button class="btn" onclick="window.print()">🖨️ Guardar como PDF</button>
+<button class="btn theme-toggle" id="themeToggle" type="button" onclick="toggleTheme()">{_ui_icon("palette")}<span id="themeLabel">Estilo: Nintendo Booklet / Cyber-Glass</span></button>
+<button class="btn" onclick="window.print()">{_ui_icon("printer")}<span>Guardar como PDF</span></button>
     </div>
   </header>
   <nav class="tabs" aria-label="Categorías del manual">{''.join(tabs)}</nav>

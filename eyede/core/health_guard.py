@@ -98,7 +98,7 @@ class HealthGuard:
                     if self._near_since is None:
                         self._near_since = timestamp
                     elif timestamp - self._near_since >= self.near_sec:
-                        alert = "\U0001F4CF Demasiado cerca del monitor: Relaja la postura"
+                        alert = "Demasiado cerca del monitor: Relaja la postura"
                         if timestamp - self.last_alert_time >= self.alert_cooldown_sec:
                             self.last_alert_time = timestamp
                             return alert
@@ -117,7 +117,7 @@ class HealthGuard:
             if self.last_blink_time is None:
                 self.last_blink_time = timestamp
             elif timestamp - self.last_blink_time > self.no_blink_sec:
-                alert = "\U0001F4A7 Vista fija detectada: Recuerda parpadear"
+                alert = "Vista fija detectada: Recuerda parpadear"
                 if timestamp - self.last_alert_time >= self.alert_cooldown_sec:
                     self.last_alert_time = timestamp
                     return alert

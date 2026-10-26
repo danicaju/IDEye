@@ -53,6 +53,25 @@ class TestInteractiveGuideSync(unittest.TestCase):
             self.assertIn(required, titles)
         self.assertEqual(len(catalog["pages"]), 5)
 
+    def test_no_unicode_emojis_in_interactive_guide(self):
+        import re
+        from pathlib import Path
+
+        text = Path("docs/guia_interactiva.html").read_text(encoding="utf-8")
+        emoji = re.compile("[\U0001F300-\U0001FAFF\u2600-\u27BF\uFE0F]")
+        self.assertEqual(emoji.findall(text), [])
+        for required in (
+            'class="brand-icon-frame"',
+            'class="brand-icon-svg"',
+            'class="ui-icon"',
+            'class="ribbon-star"',
+            'class="badge sticker"',
+            'id="themeToggle"',
+        ):
+            self.assertIn(required, text)
+        self.assertIn('viewBox="0 0 64 64"', text)
+        self.assertGreaterEqual(text.count("<svg"), 20)
+
     def test_generator_writes_utf8_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "guia.html"

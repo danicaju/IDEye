@@ -2123,7 +2123,7 @@ class OverlayWindow(QWidget):
         QTimer.singleShot(4000, self._clear_health_alert)
 
     def _clear_health_alert(self) -> None:
-        if str(self.last_action_desc).startswith(("??", "??")):
+        if str(self.last_action_desc).startswith(("Vista fija", "Demasiado cerca")):
             self.last_action_desc = "Listo"
             self.update()
 
@@ -3873,7 +3873,7 @@ class OverlayWindow(QWidget):
         painter.drawText(
             self.help_modal_guide_rect,
             Qt.AlignmentFlag.AlignCenter,
-            "📖 ABRIR MANUAL INTERACTIVO",
+            " ABRIR MANUAL INTERACTIVO",
         )
 
         if getattr(self, "hovered_help_modal_close", False):

@@ -237,4 +237,4 @@ class DiagnosticsFixer:
             return ""
         first = items[0]
         message = str(first.get("message", "Error"))
-        return f"\U0001F527 AUTO-FIX DISPONIBLE ? {message[:52]}"
+        return f"AUTO-FIX DISPONIBLE ? {message[:52]}"

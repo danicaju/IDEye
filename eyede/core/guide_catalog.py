@@ -310,6 +310,13 @@ PAGES: List[Dict[str, Any]] = [
                 "text": "Levanta las cejas o pulsa Ctrl+Alt+Z para ampliar 3.5x y reducir el cursor al 28% de velocidad. Se cierra con boca o gui?o izquierdo.",
                 "chip": "Precisi?n subp?xel",
             },
+            {
+                "icon": "navigation",
+                "badge": "AST",
+                "title": "Salto Sem?ntico AST",
+                "text": "Ctrl+Alt+J extrae clases, m?todos y funciones del archivo activo y los reparte en una cuadr?cula 3x3 paginada. Un clic salta a la l?nea exacta.",
+                "chip": "3x3 s?mbolos",
+            },
         ],
     },
 ]

@@ -37,6 +37,7 @@ HOTKEY_ACTIONS = {
     "<ctrl>+<alt>+h": "_on_help_toggle_anywhere",
     "<ctrl>+<alt>+n": "_on_screen_cycle",
     "<ctrl>+<alt>+z": "_on_sniper_lens_toggle",
+    "<ctrl>+<alt>+j": "_on_ast_jump",
 }
 
 
@@ -66,6 +67,7 @@ class GlobalHotkeyManager(QObject):
     monitor_toggle_anywhere_requested = pyqtSignal()
     screen_cycle_requested = pyqtSignal()
     sniper_lens_toggle_requested = pyqtSignal()
+    ast_jump_requested = pyqtSignal()
     adaptive_ast_toggle_requested = pyqtSignal()
     tracking_mode_cycle_requested = pyqtSignal()
     center_calibration_requested = pyqtSignal()
@@ -181,6 +183,10 @@ class GlobalHotkeyManager(QObject):
     def _on_monitor_toggle_anywhere(self) -> None:
         """Callback for Ctrl+Alt+M monitor toggle from any window."""
         self.monitor_toggle_anywhere_requested.emit()
+
+    def _on_ast_jump(self) -> None:
+        """Callback for Ctrl+Alt+J Semantic AST Code Jumper."""
+        self.ast_jump_requested.emit()
 
     def _on_sniper_lens_toggle(self) -> None:
         """Callback for Ctrl+Alt+Z Sniper Zoom Lens."""

@@ -788,6 +788,7 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.monitor_toggle_anywhere_requested.connect(self._on_monitor_shortcut_anywhere)
         self.hotkey_manager.screen_cycle_requested.connect(self.screen_manager.cycle_next_screen)
         self.hotkey_manager.sniper_lens_toggle_requested.connect(self.overlay.toggle_sniper_lens)
+        self.hotkey_manager.ast_jump_requested.connect(self.overlay.open_ast_symbols)
         self.hotkey_manager.adaptive_ast_toggle_requested.connect(self.overlay.toggle_adaptive_ast)
         self.hotkey_manager.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
         self.hotkey_manager.center_calibration_requested.connect(self._on_center_calibration_shortcut)
@@ -1061,6 +1062,7 @@ class EyeDEApplication(QObject):
         self.overlay.block_activated.connect(self._on_block_activated)
         self.overlay.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
         self.overlay.autofix_requested.connect(self._apply_autofix)
+        self.overlay.ast_jump_requested.connect(self._on_ast_jump_requested)
 
         # Context reader & AI status connections
         self.debug_widget.file_linked.connect(self.context_reader.set_active_file)
@@ -1144,6 +1146,19 @@ class EyeDEApplication(QObject):
         # Auto-switch context mode from the full editor state (file path, context, language)
         if hasattr(self, "mode_manager") and self.mode_manager is not None:
             self.mode_manager.handle_editor_state(state)
+
+    def _on_ast_jump_requested(self, line: int) -> None:
+        bridge = getattr(self, "ws_bridge", None)
+        if bridge is not None and bridge.is_connected and hasattr(bridge, "send_jump_to_line"):
+            bridge.send_jump_to_line(int(line))
+            self.overlay.last_action_desc = f"AST: saltando a L{int(line)}"
+        else:
+            try:
+                self.overlay.code_injector.send_key("CTRL+SHIFT+O")
+            except Exception:
+                pass
+            self.overlay.last_action_desc = "AST: abriendo símbolos del editor"
+        self.overlay.update()
 
     def _apply_autofix(self, fix: Dict[str, Any]) -> None:
         """Applies a selected Auto-Fix locally or through the VS Code bridge."""

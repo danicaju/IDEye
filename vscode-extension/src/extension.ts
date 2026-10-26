@@ -259,6 +259,8 @@ async function handleInboundMessage(rawData: any) {
             await handleExecuteCommand(msg);
         } else if (msg.type === 'apply_line_fix') {
             await handleApplyLineFix(msg);
+        } else if (msg.type === 'jump_to_line') {
+            await handleJumpToLine(msg);
         } else if (msg.type === 'PING') {
             sendMessage({ type: 'PONG', timestamp: Date.now() });
         }

@@ -301,6 +301,12 @@ class WebSocketBridge(QObject):
         }
         return self.broadcast_message(payload)
 
+    def send_jump_to_line(self, line: int) -> bool:
+        """Asks VS Code to reveal and place the cursor on a 1-based line."""
+        if not self.is_connected:
+            return False
+        return self.broadcast_message({"type": "jump_to_line", "line": max(1, int(line))})
+
     def send_apply_line_fix(self, line: int, replacement: str, insert: bool = False) -> bool:
         """Asks the VS Code extension to replace/insert one line atomically."""
         if not self.is_connected:

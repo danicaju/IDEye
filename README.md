@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-522%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-526%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -227,6 +227,7 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`Ctrl+Alt+M`** | **Toggle Mini-Feed** | Press `Ctrl+Alt+M` anywhere; toggles the monitor panel |
 | **`Ctrl+Alt+N`** | **Multi-Monitor Handover** | Moves the HUD and gaze mapping to the next connected display |
 | **`Ctrl+Alt+Z`** | **Sniper Lens x3.5** | Activates the precision lens and slow-mo in FreeLook |
+| **`Ctrl+Alt+J`** | **Semantic AST Jump** | Opens the 3x3 symbol map for the active file |
 | **Eye Exit** | **[X EXIT] Hands-Free** | Gaze at the top-right header `[X EXIT]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 
 ---
@@ -268,6 +269,7 @@ IDEye/
 ?   ?   ??? lighting_compensator.py # Low-light CLAHE compensator
 ?   ?   ??? health_guard.py # Blink, distance and cervical posture guard
 ?   ?   ??? diagnostics_fixer.py # Live diagnostics auto-fix
+?   ?   ??? ast_code_jumper.py # 3x3 AST symbol map
 ?   ?   ??? guide_catalog.py # Interactive guide single source of truth
 ?   ?   ??? guide_builder.py # Self-contained offline HTML renderer
 │   │   └── websocket_bridge.py # Bidirectional VS Code WebSocket bridge
@@ -301,7 +303,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Spanish common-word dictionary
 │   │   ├── defaults/ # user_settings.json and custom_macros.json templates
 │   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 522 automated unit & integration tests
+└── tests/ # 526 automated unit & integration tests
     ├── test_phase1.py # Core CV and MAR state machine
     ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py # Syntax tree validation and code injection
@@ -318,6 +320,7 @@ IDEye/
     ├── test_phase9_os_intelligence.py # Clipboard, window routing and telemetry
     ??? test_phase9_5_biometrics_and_autofix.py # Auto-Fix, Health Guard and micro-gestures
     ├── test_phase10_1_lighting_and_sniper_lens.py # CLAHE and Sniper Lens
+    ??? test_phase10_2_ast_code_jumper.py # AST extraction and symbol menu
     ├── test_hotfix_ui_and_gaming.py # Head-joystick, audio cache and help layout
     ├── test_writing_words_and_letters.py # Letter keyboard, predictions and word/phrase menus
     ??? test_interactive_guide.py # Guide catalog, generation and entry points
@@ -346,11 +349,11 @@ pytest -q
 ```
 
 ```text
-522 passed, 72 subtests, 19.91s
+526 passed, 74 subtests, 19.24s
 ```
 
 > [!NOTE]
-> All 522 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 526 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 
@@ -377,6 +380,7 @@ pytest -q
 - [x] **Phase 9.5:** Stability hotfix: letter keyboard with word predictions, wrapped help modal, cached-file audio, and head-joystick Gaming with joystick/cursor switching.
 - [x] **Phase 9.6:** Live VS Code diagnostics Auto-Fix, biometric Health Guard, and optional brow/tilt micro-gestures.
 - [x] **Phase 10.1:** Adaptive low-light CLAHE and Sniper Lens x3.5 with slow-mo.
+- [x] **Phase 10.2:** Semantic AST Jump with 3x3 symbol map and VS Code cursor teleport.
 
 > Window routing is not limited to Roblox or a few editors: it recognizes broad built-in lists for games, terminals, writing/communication apps, browsers and IDEs. Generic Unreal `-Win64-Shipping.exe` games and configurable title keywords are also supported. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` or `IDE_PROCESSES` in `eyede/config.py` for any other application.
 

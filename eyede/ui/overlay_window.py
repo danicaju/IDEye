@@ -69,6 +69,7 @@ try:
     from eyede.actions.context_reader import ContextReader, detect_syntactic_context
     from eyede.actions.ai_predictor import AIPredictorWorker
     from eyede.actions.diagnostics_fixer import DiagnosticsFixer
+    from eyede.actions.ast_code_jumper import ASTCodeJumper
     from eyede.ui.sniper_lens import SniperLens
     from eyede.modes.mode_manager import ModeManager
 except ImportError:
@@ -105,6 +106,7 @@ except ImportError:
     from actions.context_reader import ContextReader, detect_syntactic_context
     from actions.ai_predictor import AIPredictorWorker
     from actions.diagnostics_fixer import DiagnosticsFixer
+    from actions.ast_code_jumper import ASTCodeJumper
     from ui.sniper_lens import SniperLens
     from modes.mode_manager import ModeManager
 
@@ -193,6 +195,7 @@ HELP_SHORTCUTS = (
     ("[Ctrl+Alt+G]", "Gaming", "Alterna el perfil Gaming."),
     ("[Ctrl+Alt+N]", "Cambiar pantalla", "Mueve HUD y mirada al siguiente monitor."),
     ("[Ctrl+Alt+Z]", "Lupa Sniper", "Activa la lupa x3.5 y el modo slow-mo en FreeLook."),
+    ("[Ctrl+Alt+J]", "Salto AST", "Abre el mapa 3x3 de clases, m?todos y funciones."),
     ("[Ctrl+Alt+Q]", "Salida de emergencia", "Cierra IDEye de inmediato."),
 )
 
@@ -221,6 +224,7 @@ class OverlayWindow(QWidget):
     text_injected = pyqtSignal(int)  # characters inserted into the active editor
     mouth_clicked = pyqtSignal(int)  # hovered block index, or -1 for header/other
     autofix_requested = pyqtSignal(object)
+    ast_jump_requested = pyqtSignal(int)
     mode_changed = context_mode_changed
 
     def __init__(
@@ -262,6 +266,8 @@ class OverlayWindow(QWidget):
         self.menu_tree: Dict[str, MenuNode] = menu_tree if menu_tree is not None else build_menu_tree(self.current_language)
         self.context_reader: ContextReader = context_reader if context_reader is not None else ContextReader()
         self.diagnostics_fixer = DiagnosticsFixer(self.context_reader)
+        self.ast_code_jumper = ASTCodeJumper(self.context_reader)
+        self._ast_page: int = 0
         self._active_diagnostics: List[Dict[str, Any]] = []
         self._autofix_slot8_saved: Optional[tuple] = None
         self.autofix_badge_rect: QRectF = QRectF()
@@ -812,7 +818,7 @@ class OverlayWindow(QWidget):
         card_y = (h - card_h) * 0.5
         card_rect = QRectF(card_x, card_y, card_w, card_h)
         col_y = card_y + 80.0
-        col_content_h = max(80.0, card_h - 80.0 - 66.0)
+        col_content_h = max(80.0, card_h - 80.0 - 58.0)
         columns = [
             QRectF(card_x + margin, col_y, col_w, col_content_h),
             QRectF(card_x + margin + col_w + gap, col_y, col_w, col_content_h),
@@ -2696,6 +2702,21 @@ class OverlayWindow(QWidget):
             self._restore_autofix_slot()
         self.update()
 
+    def open_ast_symbols(self, refresh: bool = True) -> None:
+        """Builds the current file symbol map and opens its 3x3 page."""
+        symbols = self.ast_code_jumper.extract_symbols() if refresh else self.ast_code_jumper.symbols
+        if not symbols:
+            self.last_action_desc = "AST: sin s?mbolos en el archivo activo"
+            self.update()
+            return
+        self._ast_page = 0
+        self.menu_tree["AST_SYMBOLS"] = self.ast_code_jumper.get_symbols_menu_node(
+            symbols, self._ast_page, parent_id="ROOT"
+        )
+        self.navigate_to("AST_SYMBOLS")
+        self.last_action_desc = f"AST: {len(symbols)} s?mbolos"
+        self.update()
+
     def execute_action(self, item: MenuAction, target_block: int = 0) -> None:
         """Programmatically executes a MenuAction directly on the overlay."""
         if getattr(item, "action_type", "") == "AUTOFIX":
@@ -2704,6 +2725,31 @@ class OverlayWindow(QWidget):
                 self.autofix_requested.emit(fix)
             self.last_action_desc = f"Auto-Fix: {item.label}"
             self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if getattr(item, "action_type", "") == "AST_JUMP":
+            try:
+                self.ast_jump_requested.emit(int(item.snippet or 1))
+            except (TypeError, ValueError):
+                pass
+            self.last_action_desc = f"AST: saltar a {item.hint}"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if getattr(item, "action_type", "") == "AST_NEXT_PAGE":
+            self._ast_page = int(item.snippet or 0)
+            self.menu_tree["AST_SYMBOLS"] = self.ast_code_jumper.get_symbols_menu_node(
+                self.ast_code_jumper.symbols, self._ast_page, parent_id="ROOT"
+            )
+            self.navigate_to("AST_SYMBOLS")
+            self.last_action_desc = f"AST p?gina {self._ast_page + 1}"
+            self.update()
+            return
+
+        if getattr(item, "action_type", "") == "AST_REFRESH":
+            self.open_ast_symbols(refresh=True)
             self.block_activated.emit(target_block, item.id)
             return
 

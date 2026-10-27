@@ -32,14 +32,17 @@ class HealthGuard:
         self.blink_times: Deque[float] = deque(maxlen=120)
         self._eyes_closed: bool = False
         self._near_since: Optional[float] = None
-        self._baseline_samples: list[float] = []
+        self._baseline_samples: Deque[float] = deque(maxlen=45)
 
     @staticmethod
     def _pt(landmarks: Any, index: int) -> Optional[tuple[float, float]]:
         try:
             points = getattr(landmarks, "landmark", landmarks)
             point = points[index]
-            return float(point.x), float(point.y)
+            x, y = float(point.x), float(point.y)
+            if not (math.isfinite(x) and math.isfinite(y)):
+                return None
+            return x, y
         except (AttributeError, IndexError, TypeError, ValueError):
             return None
 
@@ -48,7 +51,8 @@ class HealthGuard:
         right = self._pt(landmarks, 263)
         if left is None or right is None:
             return None
-        return math.hypot(right[0] - left[0], right[1] - left[1])
+        span = math.hypot(right[0] - left[0], right[1] - left[1])
+        return span if math.isfinite(span) and span > 0.0 else None
 
     def _ears(self, landmarks: Any) -> tuple[float, float]:
         def ear(indices: tuple[int, ...]) -> float:
@@ -59,16 +63,20 @@ class HealthGuard:
             v1 = math.hypot(p[1][0] - p[5][0], p[1][1] - p[5][1])
             v2 = math.hypot(p[2][0] - p[4][0], p[2][1] - p[4][1])
             h = math.hypot(p[0][0] - p[3][0], p[0][1] - p[3][1])
-            return (v1 + v2) / (2.0 * h) if h > 1e-4 else 0.0
+            if h <= 1e-4:
+                return 0.0
+            ratio = (v1 + v2) / (2.0 * h)
+            return ratio if math.isfinite(ratio) else 0.0
 
         return ear((33, 160, 158, 133, 153, 144)), ear((362, 385, 387, 263, 373, 380))
 
     def set_baseline(self, landmarks: Any) -> bool:
         span = self._eye_span(landmarks)
-        if span is None or span <= 1e-4:
+        if span is None or not math.isfinite(span) or span <= 1e-4:
             return False
         self.baseline_eye_span = float(span)
-        self._baseline_samples = [span]
+        self._baseline_samples.clear()
+        self._baseline_samples.append(float(span))
         return True
 
     def reset(self) -> None:
@@ -78,7 +86,7 @@ class HealthGuard:
         self._near_since = None
         self.last_alert_time = 0.0
         self.baseline_eye_span = None
-        self._baseline_samples = []
+        self._baseline_samples.clear()
 
     def process(self, landmarks: Any, now: Optional[float] = None, tracking_active: bool = True) -> Optional[str]:
         """Returns a user-facing warning or None. Never raises on bad landmarks."""
@@ -86,7 +94,12 @@ class HealthGuard:
             self._near_since = None
             self._eyes_closed = False
             return None
-        timestamp = time.time() if now is None else float(now)
+        try:
+            timestamp = time.time() if now is None else float(now)
+            if not math.isfinite(timestamp):
+                timestamp = time.time()
+        except (TypeError, ValueError, OverflowError):
+            timestamp = time.time()
         try:
             span = self._eye_span(landmarks)
             if span is not None and span > 1e-4:
@@ -126,6 +139,11 @@ class HealthGuard:
         return None
 
     def blink_rate_per_minute(self, now: Optional[float] = None) -> float:
-        timestamp = time.time() if now is None else float(now)
+        try:
+            timestamp = time.time() if now is None else float(now)
+            if not math.isfinite(timestamp):
+                timestamp = time.time()
+        except (TypeError, ValueError, OverflowError):
+            timestamp = time.time()
         recent = [t for t in self.blink_times if timestamp - t <= 60.0]
         return float(len(recent))

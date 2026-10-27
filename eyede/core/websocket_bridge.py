@@ -245,7 +245,7 @@ class WebSocketBridge(QObject):
                 try:
                     payload = json.loads(raw_message)
                     self._process_inbound_message(payload, websocket)
-                except json.JSONDecodeError:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     logger.warning(f"[WebSocketBridge] Mensaje JSON no válido: {raw_message[:100]}")
         except websockets.exceptions.ConnectionClosed:
             pass
@@ -259,6 +259,9 @@ class WebSocketBridge(QObject):
 
     def _process_inbound_message(self, payload: Dict[str, Any], websocket: Any) -> None:
         """Dispatches inbound messages from VS Code extension to Qt signals."""
+        if not isinstance(payload, dict):
+            logger.warning("[WebSocketBridge] Ignoring non-object JSON payload: %r", type(payload))
+            return
         msg_type = payload.get("type", "")
 
         if msg_type == "EDITOR_STATE":

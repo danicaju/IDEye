@@ -7,6 +7,13 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+try:
+    from eyede.core.logging_config import get_logger
+except ImportError:  # pragma: no cover
+    from core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 DEFAULT_PROFILES: Dict[str, Dict[str, Any]] = {
     "sandbox_3d": {
@@ -72,19 +79,49 @@ class GameProfileManager:
             self.load()
 
     def load(self) -> Dict[str, Dict[str, Any]]:
-        self.profiles = {name: dict(data) for name, data in DEFAULT_PROFILES.items()}
+        self.profiles = {
+            name: self._normalize_profile(name, dict(data))
+            for name, data in DEFAULT_PROFILES.items()
+        }
         try:
             if self.path.is_file():
                 raw = json.loads(self.path.read_text(encoding="utf-8"))
-                if isinstance(raw, dict):
-                    for name, data in raw.items():
-                        if isinstance(data, dict):
-                            self.profiles[str(name)] = {**self.profiles.get(str(name), {}), **data}
+                if not isinstance(raw, dict):
+                    raise ValueError("root must be a JSON object")
+                for name, data in raw.items():
+                    if not isinstance(data, dict):
+                        logger.warning("Ignoring invalid game profile '%s': not an object", name)
+                        continue
+                    merged = {**self.profiles.get(str(name), {}), **data}
+                    self.profiles[str(name)] = self._normalize_profile(str(name), merged)
             else:
                 self.save()
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError, TypeError, ValueError) as exc:
+            logger.warning("Could not load game profiles '%s': %s. Using defaults.", self.path, exc)
+        except Exception as exc:
+            logger.warning("Unexpected error loading game profiles '%s': %s", self.path, exc)
         return self.get_profiles()
+
+    @staticmethod
+    def _normalize_profile(name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        profile = dict(data or {})
+        profile["label"] = str(profile.get("label") or name)
+        games = profile.get("games", [])
+        if not isinstance(games, (list, tuple)):
+            games = []
+        profile["games"] = [str(game) for game in games if str(game).strip()]
+        for key in ("movement", "jump", "menu", "primary", "aim"):
+            if key in profile and profile[key] is not None:
+                profile[key] = str(profile[key])
+        try:
+            profile["directions"] = max(1, min(16, int(profile.get("directions", 4))))
+        except (TypeError, ValueError, OverflowError):
+            profile["directions"] = 4
+        try:
+            profile["edge_scroll_px"] = max(0, int(profile.get("edge_scroll_px", 0)))
+        except (TypeError, ValueError, OverflowError):
+            profile["edge_scroll_px"] = 0
+        return profile
 
     def save(self) -> bool:
         try:
@@ -94,7 +131,8 @@ class GameProfileManager:
                 json.dump(self.profiles, fh, ensure_ascii=False, indent=2)
             os.replace(tmp, self.path)
             return True
-        except Exception:
+        except Exception as exc:
+            logger.warning("Could not save game profiles '%s': %s", self.path, exc)
             return False
 
     def get_profiles(self) -> Dict[str, Dict[str, Any]]:

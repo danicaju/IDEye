@@ -92,23 +92,31 @@ class ClipboardHistoryManager(QObject):
         self._timer.stop()
 
     def _read_clipboard(self) -> str:
-        try:
-            value = self.clipboard.paste()
-            return value if isinstance(value, str) else ""
-        except Exception as exc:
-            logger.debug("Could not read clipboard: %s", exc)
-            return ""
+        last_exc: Optional[Exception] = None
+        for attempt in range(3):
+            try:
+                value = self.clipboard.paste()
+                return value if isinstance(value, str) else ""
+            except Exception as exc:
+                last_exc = exc
+                if attempt < 2:
+                    time.sleep(0.01 * (attempt + 1))
+        logger.debug("Could not read clipboard after retries: %s", last_exc)
+        return ""
 
     def poll_once(self) -> None:
         """Records a changed OS clipboard value unless an internal write is active."""
         with self._lock:
             if self._internal_writes > 0:
                 return
-        text = self._read_clipboard()
-        if not text or text == self._last_seen:
-            return
-        self._last_seen = text
-        self.record(text)
+            text = self._read_clipboard()
+            if not text or text == self._last_seen:
+                return
+            self._last_seen = text
+            if text in self._history:
+                self._history.remove(text)
+            self._history.appendleft(text)
+        self.history_changed.emit()
 
     def record(self, text: str) -> bool:
         """Adds a real user copy using move-to-front deduplication."""

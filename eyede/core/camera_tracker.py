@@ -153,6 +153,9 @@ class CameraTracker(QThread):
         self._synthetic_tick: float = 0.0
         self._click_anchor_gaze: Optional[Tuple[float, float]] = None
         self._click_anchor_raw: Optional[Tuple[float, float]] = None
+        self._empty_frame_count: int = 0
+        self._last_face_lost_emit: float = 0.0
+        self._last_reconnect_attempt: float = 0.0
 
     @property
     def _worker_thread(self):
@@ -167,6 +170,49 @@ class CameraTracker(QThread):
         """Phase 1 compatibility method."""
         ms = int((timeout or 2.0) * 1000)
         self.wait(ms)
+
+    def _ensure_bgr(self, frame: Optional[np.ndarray]) -> Optional[np.ndarray]:
+        """Normalizes grayscale/RGBA frames to a safe contiguous BGR image."""
+        if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
+            return None
+        try:
+            if frame.ndim == 2:
+                return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            if frame.ndim != 3:
+                return None
+            channels = int(frame.shape[2])
+            if channels == 1:
+                return cv2.cvtColor(frame[:, :, 0], cv2.COLOR_GRAY2BGR)
+            if channels == 3:
+                return frame
+            if channels == 4:
+                return cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+        except Exception:
+            return None
+        return None
+
+    def _close_capture(self) -> None:
+        """Releases the capture device without touching Qt thread state."""
+        if self.cap is not None:
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
+        self._is_opened = False
+
+    def _safe_reconnect(self) -> bool:
+        """Best-effort camera reopen after a hot-unplug, never raising."""
+        if self.is_synthetic or self._stop_requested:
+            return False
+        try:
+            self._close_capture()
+            if self._open_device():
+                self._empty_frame_count = 0
+                return True
+        except Exception as exc:
+            logger.debug("[CameraTracker] Reconnect failed: %s", exc)
+        return False
 
     def _open_device(self) -> bool:
         """Opens capture device or initializes synthetic camera."""
@@ -308,17 +354,26 @@ class CameraTracker(QThread):
         if self.cap is None or not self.cap.isOpened():
             return None, None
 
-        ret, frame = self.cap.read()
+        try:
+            ret, frame = self.cap.read()
+        except Exception:
+            return None, None
         if not ret or frame is None:
             return None, None
 
+        frame = self._ensure_bgr(frame)
+        if frame is None:
+            return None, None
         if self.mirror:
             frame = cv2.flip(frame, 1)
         if self.lighting is not None:
             frame = self.lighting.process(frame)
+            frame = self._ensure_bgr(frame)
+        if frame is None:
+            return None, None
 
         landmarks = None
-        if self.face_mesh is not None:
+        if self.face_mesh is not None and frame is not None:
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             rgb_frame.flags.writeable = False
             try:
@@ -343,8 +398,23 @@ class CameraTracker(QThread):
 
             frame, landmarks = self._process_one_frame()
             if frame is None:
-                time.sleep(0.01)
+                self._empty_frame_count += 1
+                now = time.time()
+                if now - self._last_face_lost_emit >= 0.5:
+                    self._last_face_lost_emit = now
+                    self.face_lost.emit()
+                if (
+                    not self.is_synthetic
+                    and self._empty_frame_count >= 10
+                    and now - self._last_reconnect_attempt >= 2.0
+                ):
+                    self._last_reconnect_attempt = now
+                    self._safe_reconnect()
+                time.sleep(min(0.10, 0.01 * max(1, min(self._empty_frame_count, 10))))
                 continue
+
+            self._empty_frame_count = 0
+            self._last_reconnect_attempt = 0.0
 
             with self._lock:
                 self._latest_frame = frame
@@ -384,6 +454,7 @@ class CameraTracker(QThread):
             self.gaze_updated.emit(emit_gx, emit_gy)
             self.raw_gaze_updated.emit(emit_raw_x, emit_raw_y)
             if detected:
+                self._last_face_lost_emit = 0.0
                 self.raw_components_updated.emit(
                     float(self.gaze_estimator.last_raw_head_x),
                     float(self.gaze_estimator.last_raw_head_y),
@@ -391,7 +462,10 @@ class CameraTracker(QThread):
                     float(self.gaze_estimator.last_raw_iris_y),
                 )
             else:
-                self.face_lost.emit()
+                now = time.time()
+                if now - self._last_face_lost_emit >= 0.5:
+                    self._last_face_lost_emit = now
+                    self.face_lost.emit()
 
             if self.health_guard is not None:
                 alert = self.health_guard.process(landmarks, tracking_active=bool(detected))
@@ -498,11 +572,23 @@ class CameraTracker(QThread):
         Enforces contiguous memory layout and deep copy (.copy()) to guarantee
         independent memory ownership and prevent memory leaks or segfaults.
         """
-        if frame is None or frame.size == 0:
+        if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
             return None
         try:
             from PyQt6.QtGui import QImage
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            if frame.dtype != np.uint8:
+                frame = np.nan_to_num(frame, nan=0.0, posinf=255.0, neginf=0.0)
+                frame = np.clip(frame, 0, 255).astype(np.uint8)
+            if frame.ndim == 2:
+                rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+            elif frame.ndim == 3 and frame.shape[2] == 1:
+                rgb = cv2.cvtColor(frame[:, :, 0], cv2.COLOR_GRAY2RGB)
+            elif frame.ndim == 3 and frame.shape[2] == 3:
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            elif frame.ndim == 3 and frame.shape[2] == 4:
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGRA2RGB)
+            else:
+                return None
             rgb = np.ascontiguousarray(rgb)
             h, w, ch = rgb.shape
             bytes_per_line = ch * w
@@ -523,11 +609,7 @@ class CameraTracker(QThread):
                 pass
 
         if self.cap is not None:
-            try:
-                self.cap.release()
-            except Exception:
-                pass
-            self.cap = None
+            self._close_capture()
 
         if self.face_mesh is not None:
             try:

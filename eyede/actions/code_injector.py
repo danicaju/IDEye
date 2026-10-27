@@ -81,6 +81,7 @@ class CodeInjector:
         clipboard_module: Optional[Any] = None,
         websocket_bridge: Optional[Any] = None,
         clipboard_history: Optional[Any] = None,
+        release_game_keys: Optional[Callable[[], None]] = None,
     ):
         """
         Initializes the CodeInjector.
@@ -96,6 +97,7 @@ class CodeInjector:
         self.paste_delay = paste_delay
         self.websocket_bridge = websocket_bridge
         self.clipboard_history = clipboard_history
+        self.release_game_keys = release_game_keys
 
         # OS Platform detection
         self.is_macos: bool = (sys.platform == "darwin")
@@ -135,7 +137,7 @@ class CodeInjector:
         self._prefix_lock = threading.Lock()
 
         # Background worker thread & FIFO task queue
-        self._task_queue: queue.Queue = queue.Queue()
+        self._task_queue: queue.Queue = queue.Queue(maxsize=256)
         self._stop_event = threading.Event()
         self._worker_thread: Optional[threading.Thread] = None
         self._is_executing: bool = False
@@ -147,6 +149,40 @@ class CodeInjector:
     def is_busy(self) -> bool:
         """Returns True if the worker thread is currently executing an injection task or queue is non-empty."""
         return self._is_executing or not self._task_queue.empty()
+
+    def _enqueue(self, fn: Callable[..., Any], args: tuple, kwargs: dict) -> bool:
+        """Queues a task without ever blocking the Qt UI thread."""
+        try:
+            self._task_queue.put_nowait((fn, args, kwargs))
+            return True
+        except queue.Full:
+            logger.warning("Injection queue full; dropping task to protect UI latency.")
+            return False
+
+    def _clipboard_paste(self, attempts: int = 3) -> Any:
+        """Reads the clipboard with short backoff for transient OS locks."""
+        for attempt in range(max(1, attempts)):
+            try:
+                return self.clipboard.paste()
+            except Exception as exc:
+                if attempt + 1 >= attempts:
+                    logger.warning("Could not read clipboard after %s attempts: %s", attempts, exc)
+                    return None
+                time.sleep(0.01 * (attempt + 1))
+        return None
+
+    def _clipboard_copy(self, text: str, attempts: int = 3) -> bool:
+        """Writes the clipboard with short backoff for transient OS locks."""
+        for attempt in range(max(1, attempts)):
+            try:
+                self.clipboard.copy(str(text))
+                return True
+            except Exception as exc:
+                if attempt + 1 >= attempts:
+                    logger.warning("Could not write clipboard after %s attempts: %s", attempts, exc)
+                    return False
+                time.sleep(0.01 * (attempt + 1))
+        return False
 
     def _start_worker(self) -> None:
         """Starts the dedicated worker thread for non-blocking injection."""
@@ -332,7 +368,7 @@ class CodeInjector:
             return True
 
         if is_async:
-            self._task_queue.put((
+            return self._enqueue(
                 self._do_insert_snippet,
                 (
                     prepared,
@@ -343,8 +379,7 @@ class CodeInjector:
                     backspaces,
                 ),
                 {},
-            ))
-            return True
+            )
         else:
             return self._do_insert_snippet(
                 prepared,
@@ -396,19 +431,14 @@ class CodeInjector:
         # 1. Read and save existing clipboard
         old_clipboard = ""
         has_old_clipboard = False
-        try:
-            val = self.clipboard.paste()
-            if val is not None and isinstance(val, str):
-                old_clipboard = val
-                has_old_clipboard = True
-        except Exception as e:
-            logger.warning(f"Could not read prior clipboard: {e}")
+        val = self._clipboard_paste()
+        if isinstance(val, str):
+            old_clipboard = val
+            has_old_clipboard = True
 
-        # 2. Copy snippet into clipboard
-        try:
-            self.clipboard.copy(snippet)
-        except Exception as e:
-            logger.error(f"Failed to copy snippet to clipboard: {e}")
+        # 2. Copy snippet into clipboard with retry/backoff.
+        if not self._clipboard_copy(snippet):
+            logger.error("Failed to copy snippet to clipboard after retries.")
             return False
 
         # Controlled pause for OS clipboard propagation (prevents race condition)
@@ -442,10 +472,7 @@ class CodeInjector:
             # 6. Restore original user clipboard (guaranteed in finally)
             if restore_clipboard and has_old_clipboard and isinstance(old_clipboard, str):
                 time.sleep(0.015)
-                try:
-                    self.clipboard.copy(old_clipboard)
-                except Exception as e:
-                    logger.warning(f"Could not restore previous clipboard: {e}")
+                self._clipboard_copy(old_clipboard)
 
         return success
 
@@ -483,8 +510,7 @@ class CodeInjector:
         is_async = self.async_mode if async_exec is None else async_exec
 
         if is_async:
-            self._task_queue.put((self._do_send_key, (key_name,), {}))
-            return True
+            return self._enqueue(self._do_send_key, (key_name,), {})
         else:
             return self._do_send_key(key_name)
 
@@ -684,9 +710,18 @@ class CodeInjector:
             return False
 
     def stop(self, timeout: float = 1.0) -> None:
-        """Gracefully terminates the background worker thread."""
+        """Gracefully terminates the background worker thread and releases input state."""
         if self._worker_thread is not None and self._worker_thread.is_alive():
             self._stop_event.set()
-            self._task_queue.put(None)
+            try:
+                self._task_queue.put_nowait(None)
+            except queue.Full:
+                pass
             self._worker_thread.join(timeout=timeout)
         self.release_all_modifiers()
+        callback = getattr(self, "release_game_keys", None)
+        if callable(callback):
+            try:
+                callback()
+            except Exception as exc:
+                logger.warning("Could not release game keys during injector stop: %s", exc)

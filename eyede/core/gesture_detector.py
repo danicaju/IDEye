@@ -283,7 +283,10 @@ class GestureDetector:
                 return 0.0
             brow_y = sum(float(landmarks[i].y) for i in (65, 105, 295, 334)) / 4.0
             eye_y = sum(float(landmarks[i].y) for i in (33, 133, 362, 263)) / 4.0
-            return abs(eye_y - brow_y) / eye_span
+            ratio = abs(eye_y - brow_y) / eye_span
+            if math.isnan(ratio) or math.isinf(ratio):
+                return 0.0
+            return max(0.0, min(float(ratio), 5.0))
         except (AttributeError, IndexError, TypeError, ValueError):
             return 0.0
 
@@ -295,8 +298,12 @@ class GestureDetector:
             landmarks = getattr(face_landmarks, "landmark", face_landmarks)
             left = landmarks[33]
             right = landmarks[263]
-            return float(math.degrees(math.atan2(float(right.y) - float(left.y), float(right.x) - float(left.x))))
-        except (AttributeError, IndexError, TypeError, ValueError):
+            dx = float(right.x) - float(left.x)
+            dy = float(right.y) - float(left.y)
+            if not math.isfinite(dx) or not math.isfinite(dy):
+                return 0.0
+            return float(math.degrees(math.atan2(dy, dx)))
+        except (AttributeError, IndexError, TypeError, ValueError, OverflowError):
             return 0.0
 
     def process(

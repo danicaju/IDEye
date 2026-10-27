@@ -646,6 +646,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
 .page-dot.active {{ background:var(--cyan); border-color:var(--cyan); color:#06111f; box-shadow:3px 3px 0 rgba(0,0,0,.5); }}
 .page-label {{ color:var(--muted); font-size:12px; margin-left:8px; }}
 .legal-footer {{ margin:22px 0 8px; border-top:1px solid var(--line); padding-top:14px; }}
+.build-stamp {{ margin:10px 0 0; color:var(--muted); font-size:11px; text-align:right; }}
 .legal-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; }}
 .legal-item {{ display:flex; gap:10px; border:1px solid #2b3b52; border-radius:12px; padding:10px 12px; background:rgba(15,23,42,.72); }}
 .legal-icon {{ color:#b91c2c; display:inline-flex; width:22px; height:22px; flex:0 0 22px; }} .legal-icon .ui-icon {{ width:22px; height:22px; }}
@@ -699,6 +700,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
   </footer>
   <section class="legal-footer" aria-label="Privacidad y avisos legales">
     <div class="legal-grid">{legal_html}</div>
+    <p class="build-stamp">{_esc(catalog.get("test_summary", ""))}</p>
   </section>
 </div>
 <script>

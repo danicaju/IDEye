@@ -52,30 +52,60 @@ class OneEuroFilter:
         self.min_cutoff = float(min_cutoff)
         self.beta = float(beta)
         self.d_cutoff = float(d_cutoff)
-        self.x_prev = float(x0)
+        try:
+            x0 = float(x0)
+        except (TypeError, ValueError):
+            x0 = 0.5
+        try:
+            t0 = float(t0)
+        except (TypeError, ValueError):
+            t0 = 0.0
+        self.x_prev = x0 if math.isfinite(x0) else 0.5
         self.dx_prev = 0.0
-        self.t_prev = float(t0)
+        self.t_prev = t0 if math.isfinite(t0) else 0.0
 
     @staticmethod
     def smoothing_factor(dt: float, cutoff: float) -> float:
+        try:
+            dt = float(dt)
+            cutoff = float(cutoff)
+        except (TypeError, ValueError):
+            return 0.0
+        if not (math.isfinite(dt) and math.isfinite(cutoff)) or dt <= 0.0 or cutoff <= 0.0:
+            return 0.0
         r = 2.0 * math.pi * cutoff * dt
+        if not math.isfinite(r):
+            return 0.0
         return r / (r + 1.0)
 
     def filter(self, t: float, x: float) -> float:
+        try:
+            t = float(t)
+        except (TypeError, ValueError):
+            t = self.t_prev + (1.0 / 30.0)
+        try:
+            x = float(x)
+        except (TypeError, ValueError):
+            x = self.x_prev
+        if not math.isfinite(t):
+            t = self.t_prev + (1.0 / 30.0)
+        if not math.isfinite(x):
+            return self.x_prev if math.isfinite(self.x_prev) else 0.5
         if self.t_prev <= 0.0:
-            self.t_prev = float(t)
-            self.x_prev = float(x)
+            self.t_prev = t
+            self.x_prev = x
             self.dx_prev = 0.0
-            return float(x)
+            return x
 
-        dt = float(t) - self.t_prev
+        dt = t - self.t_prev
         # If dt is less than realistic frame interval or excessive (pause/gap), fallback to nominal 1/30s
         if dt < 0.001 or dt > 0.5:
             dt = 1.0 / 30.0
         self.t_prev = float(t)
 
         # 1. Estimate filtered derivative (velocity)
-        dx = (float(x) - self.x_prev) / dt
+        previous = self.x_prev if math.isfinite(self.x_prev) else 0.5
+        dx = (float(x) - previous) / dt
         edx = self.smoothing_factor(dt, self.d_cutoff)
         dx_hat = edx * dx + (1.0 - edx) * self.dx_prev
 
@@ -84,16 +114,28 @@ class OneEuroFilter:
         a = self.smoothing_factor(dt, cutoff)
 
         # 3. Filter position
-        x_hat = a * float(x) + (1.0 - a) * self.x_prev
+        x_hat = a * float(x) + (1.0 - a) * previous
+        if not math.isfinite(dx_hat):
+            dx_hat = 0.0
+        if not math.isfinite(x_hat):
+            x_hat = previous if math.isfinite(previous) else 0.5
 
-        self.x_prev = x_hat
-        self.dx_prev = dx_hat
-        return x_hat
+        self.x_prev = float(x_hat)
+        self.dx_prev = float(dx_hat)
+        return float(x_hat)
 
     def reset(self, t0: float = 0.0, x0: float = 0.5) -> None:
-        self.x_prev = float(x0)
+        try:
+            x0 = float(x0)
+        except (TypeError, ValueError):
+            x0 = 0.5
+        try:
+            t0 = float(t0)
+        except (TypeError, ValueError):
+            t0 = 0.0
+        self.x_prev = x0 if math.isfinite(x0) else 0.5
         self.dx_prev = 0.0
-        self.t_prev = float(t0)
+        self.t_prev = t0 if math.isfinite(t0) else 0.0
 
 
 class GazeEstimator:
@@ -278,15 +320,31 @@ class GazeEstimator:
         self._lock = threading.RLock()
 
     @staticmethod
-    def _safe_coord(point: Any) -> Tuple[float, float]:
-        """Safely extracts x and y from landmark object or tuple/list."""
+    def _finite_unit(value: Any, default: float = 0.5) -> float:
+        """Coerces a value to a finite normalized [0, 1] coordinate."""
         try:
-            return float(point.x), float(point.y)
+            number = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return float(default)
+        if not math.isfinite(number):
+            return float(default)
+        return float(max(0.0, min(1.0, number)))
+
+    @staticmethod
+    def _safe_coord(point: Any) -> Tuple[float, float]:
+        """Safely extracts finite x/y from a landmark object or tuple/list."""
+        try:
+            x, y = float(point.x), float(point.y)
         except (AttributeError, TypeError):
             try:
-                return float(point[0]), float(point[1])
-            except (IndexError, TypeError, ValueError):
+                x, y = float(point[0]), float(point[1])
+            except (IndexError, TypeError, ValueError, OverflowError):
                 return 0.5, 0.5
+        except (ValueError, OverflowError):
+            return 0.5, 0.5
+        if not (math.isfinite(x) and math.isfinite(y)):
+            return 0.5, 0.5
+        return float(max(0.0, min(1.0, x))), float(max(0.0, min(1.0, y)))
 
     def _orbital_points(
         self, landmarks: Any, indices: Tuple[int, ...]
@@ -780,8 +838,8 @@ class GazeEstimator:
 
     def _apply_static_pinning(self, x: float, y: float) -> Tuple[float, float]:
         """Schmitt-trigger static pinning: exact zero drift while at rest."""
-        cx = float(np.clip(x, 0.0, 1.0))
-        cy = float(np.clip(y, 0.0, 1.0))
+        cx = self._finite_unit(x)
+        cy = self._finite_unit(y)
 
         if self._is_pinned:
             if self._pinned_pos is None:
@@ -1029,16 +1087,16 @@ class GazeEstimator:
         # 1. Face loss check: maintain last valid coordinates gracefully (strictly clipped)
         if face_landmarks is None:
             self.last_head_yaw = 0.0
-            cx = float(np.clip(self.smoothed_x, 0.0, 1.0))
-            cy = float(np.clip(self.smoothed_y, 0.0, 1.0))
+            cx = self._finite_unit(self.smoothed_x)
+            cy = self._finite_unit(self.smoothed_y)
             return cx, cy, False, debug_info
 
         try:
             landmarks = getattr(face_landmarks, "landmark", face_landmarks)
             if not landmarks:
                 self.last_head_yaw = 0.0
-                cx = float(np.clip(self.smoothed_x, 0.0, 1.0))
-                cy = float(np.clip(self.smoothed_y, 0.0, 1.0))
+                cx = self._finite_unit(self.smoothed_x)
+                cy = self._finite_unit(self.smoothed_y)
                 return cx, cy, False, debug_info
 
             # 2. Extract raw signals
@@ -1191,12 +1249,10 @@ class GazeEstimator:
                 "calibration_rmse": self.calibration_rmse,
             })
 
-            return self.smoothed_x, self.smoothed_y, True, debug_info
+            return self._finite_unit(self.smoothed_x), self._finite_unit(self.smoothed_y), True, debug_info
 
         except (IndexError, AttributeError, TypeError, ValueError):
-            cx = float(np.clip(self.smoothed_x, 0.0, 1.0))
-            cy = float(np.clip(self.smoothed_y, 0.0, 1.0))
-            return cx, cy, False, debug_info
+            return self._finite_unit(self.smoothed_x), self._finite_unit(self.smoothed_y), False, debug_info
 
     def get_raw_gaze(self, face_landmarks: Any) -> Optional[Tuple[float, float]]:
         """
@@ -1218,7 +1274,11 @@ class GazeEstimator:
             expanded_delta_x, expanded_delta_y = self._compute_combined_deltas(
                 delta_head_x, delta_head_y, delta_iris_x, delta_iris_y
             )
-            return 0.5 + expanded_delta_x, 0.5 + expanded_delta_y
+            raw_x = 0.5 + expanded_delta_x
+            raw_y = 0.5 + expanded_delta_y
+            if not (math.isfinite(raw_x) and math.isfinite(raw_y)):
+                return None
+            return max(0.0, min(1.0, float(raw_x))), max(0.0, min(1.0, float(raw_y)))
         except Exception:
             return None
 
@@ -1229,6 +1289,8 @@ class GazeEstimator:
         Safeguarded against NaN, Inf, and erratic out-of-screen extrapolation.
         """
         with self._lock:
+            u = self._finite_unit(u)
+            v = self._finite_unit(v)
             if not self.has_5_point_calibration or not self.calib_weights_x or not self.calib_weights_y:
                 return u, v
             try:
@@ -1236,9 +1298,9 @@ class GazeEstimator:
                 b0, b1, b2, b3 = self.calib_weights_y
                 mx = a0 + a1 * u + a2 * v + a3 * (u * v)
                 my = b0 + b1 * u + b2 * v + b3 * (u * v)
-                if math.isnan(mx) or math.isinf(mx):
+                if not math.isfinite(mx):
                     mx = u
-                if math.isnan(my) or math.isinf(my):
+                if not math.isfinite(my):
                     my = v
                 # Aspect-ratio correction: calibrating on one screen and handing
                 # over to a screen with a different width/height ratio scales the
@@ -1332,17 +1394,18 @@ class GazeEstimator:
     ) -> Tuple[float, float]:
         if bounds is None:
             return 0.5, 0.5
+        x = GazeEstimator._finite_unit(x)
+        y = GazeEstimator._finite_unit(y)
         min_x, max_x, min_y, max_y = bounds
-        u = (float(x) - min_x) / max(max_x - min_x, 1e-4)
-        v = (float(y) - min_y) / max(max_y - min_y, 1e-4)
+        u = (x - min_x) / max(max_x - min_x, 1e-4)
+        v = (y - min_y) / max(max_y - min_y, 1e-4)
         u = max(0.0, min(1.0, u))
         v = max(0.0, min(1.0, v))
         ax = linear_x or (0.0, 1.0)
         ay = linear_y or (0.0, 1.0)
-        return (
-            float(np.clip(ax[0] + ax[1] * u, 0.0, 1.0)),
-            float(np.clip(ay[0] + ay[1] * v, 0.0, 1.0)),
-        )
+        mapped_x = ax[0] + ax[1] * u
+        mapped_y = ay[0] + ay[1] * v
+        return GazeEstimator._finite_unit(mapped_x), GazeEstimator._finite_unit(mapped_y)
 
     def calibrate_5_points(self, points_data: List[Dict[str, Any]]) -> bool:
         """

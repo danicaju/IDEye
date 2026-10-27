@@ -4198,6 +4198,10 @@ class OverlayWindow(QWidget):
                     self.ai_predictor_worker.wait(2000)
             except Exception:
                 pass
+        try:
+            self.release_all_game_keys()
+        except Exception:
+            pass
         if hasattr(self, "code_injector") and self.code_injector is not None:
             self.code_injector.stop()
         super().closeEvent(event)

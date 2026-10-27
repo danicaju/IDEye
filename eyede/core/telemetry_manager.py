@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import threading
 import time
@@ -57,6 +58,24 @@ class TelemetryManager(QObject):
         self._usage_timer.start()
 
     # ------------------------------------------------------------------
+    @staticmethod
+    def _safe_int(value: Any, default: int = 0, minimum: int = 0) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError, OverflowError):
+            return default
+        return max(minimum, number)
+
+    @staticmethod
+    def _safe_float(value: Any, default: float = 0.0) -> float:
+        try:
+            number = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return default
+        if not math.isfinite(number):
+            return default
+        return max(0.0, number)
+
     def _recompute(self) -> None:
         saved = max(0, int(self.total_chars_injected) - int(self.total_mouth_clicks))
         self.keystrokes_saved = saved
@@ -90,8 +109,8 @@ class TelemetryManager(QObject):
     def record_mouth_click(self, cell_index: Optional[int] = None) -> None:
         with self._lock:
             self.total_mouth_clicks += 1
-            if cell_index is not None and 0 <= int(cell_index) < 9:
-                self.cell_heatmap[int(cell_index)] += 1
+            if cell_index is not None and 0 <= self._safe_int(cell_index, -1, -1) < 9:
+                self.cell_heatmap[self._safe_int(cell_index, 0)] += 1
         self._emit_and_schedule()
 
     def record_injection(self, chars: int) -> None:
@@ -106,9 +125,10 @@ class TelemetryManager(QObject):
         self._emit_and_schedule()
 
     def record_cell(self, cell_index: int) -> None:
-        if 0 <= int(cell_index) < 9:
+        safe_cell = self._safe_int(cell_index, -1, -1)
+        if 0 <= safe_cell < 9:
             with self._lock:
-                self.cell_heatmap[int(cell_index)] += 1
+                self.cell_heatmap[safe_cell] += 1
             self._emit_and_schedule()
 
     # ------------------------------------------------------------------
@@ -153,16 +173,18 @@ class TelemetryManager(QObject):
             data = {}
 
         with self._lock:
-            self.total_mouth_clicks = max(0, int(data.get("total_mouth_clicks", 0) or 0))
-            self.total_chars_injected = max(0, int(data.get("total_chars_injected", 0) or 0))
+            self.total_mouth_clicks = self._safe_int(data.get("total_mouth_clicks", 0))
+            self.total_chars_injected = self._safe_int(data.get("total_chars_injected", 0))
             heatmap = data.get("cell_heatmap", [])
+            if not isinstance(heatmap, (list, tuple)):
+                heatmap = []
             self.cell_heatmap = [
-                max(0, int(heatmap[i] if i < len(heatmap) else 0))
+                self._safe_int(heatmap[i] if i < len(heatmap) else 0)
                 for i in range(9)
             ]
             usage = data.get("mode_usage_seconds", {})
             self.mode_usage_seconds = {
-                str(k): max(0.0, float(v))
+                str(k): self._safe_float(v)
                 for k, v in usage.items()
                 if isinstance(k, str)
             } if isinstance(usage, dict) else {}

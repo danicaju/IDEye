@@ -66,6 +66,8 @@ class SniperMouseMode(BaseMode):
         super().__init__(language)
         self.current_action: str = self.ACTION_LEFT
         self.gaming_control_state: str = self.CONTROL_JOYSTICK
+        self.game_profile_name: str = "default_desktop"
+        self.edge_scroll_step: int = 8
 
     # ------------------------------------------------------------------ #
     # Mouse action selector
@@ -89,6 +91,22 @@ class SniperMouseMode(BaseMode):
 
     def get_action(self) -> str:
         return self.current_action
+
+    def set_game_profile(self, profile_name: str) -> str:
+        self.game_profile_name = str(profile_name or "default_desktop")
+        if self.game_profile_name == "strategy_rpg":
+            self.gaming_control_state = self.CONTROL_MENU_CURSOR
+        elif self.game_profile_name in ("sandbox_3d", "twin_stick_roguelike"):
+            self.gaming_control_state = self.CONTROL_JOYSTICK
+        return self.game_profile_name
+
+    @property
+    def is_twin_stick(self) -> bool:
+        return self.game_profile_name == "twin_stick_roguelike"
+
+    @property
+    def is_strategy(self) -> bool:
+        return self.game_profile_name == "strategy_rpg"
 
     def set_gaming_control_state(self, state: str) -> str:
         self.gaming_control_state = (

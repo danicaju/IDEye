@@ -90,6 +90,7 @@ class WindowWatcher(QObject):
 
     foreground_changed = pyqtSignal(str, str)  # title, process
     mode_requested = pyqtSignal(str, str)  # mode_id, subprofile ("gaming"/"desktop"/"")
+    profile_requested = pyqtSignal(str)  # resolved game profile name
 
     def __init__(
         self,
@@ -98,12 +99,14 @@ class WindowWatcher(QObject):
         foreground_provider: Optional[ForegroundProvider] = None,
         websocket_connected: Optional[Callable[[], bool]] = None,
         debounce_reads: int = 2,
+        profile_manager: Optional[object] = None,
         parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
         self.mode_manager = mode_manager
         self.foreground_provider = foreground_provider or self._default_foreground_info
         self.websocket_connected = websocket_connected
+        self.profile_manager = profile_manager
         self.debounce_reads = max(1, int(debounce_reads))
         self._candidate: Optional[Tuple[str, str]] = None
         self._candidate_count = 0
@@ -157,6 +160,11 @@ class WindowWatcher(QObject):
         self._applied = candidate
 
         self.foreground_changed.emit(title, process)
+        if self.profile_manager is not None:
+            try:
+                self.profile_requested.emit(self.profile_manager.resolve_for_window(title, process))
+            except Exception:
+                pass
         mode_id, subprofile = resolve_mode_for_window(title, process)
         if not mode_id:
             return

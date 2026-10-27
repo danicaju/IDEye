@@ -284,6 +284,26 @@ function collectDiagnostics(doc: vscode.TextDocument, currentLine: number): any[
     return diagnostics.slice(0, 12).map(({ distance, ...rest }) => rest);
 }
 
+async function handleJumpToLine(msg: any) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        sendMessage({ type: 'ACK', action: 'jump_to_line', success: false, error: 'No active editor' });
+        return;
+    }
+    try {
+        const doc = editor.document;
+        const line = Math.max(0, Math.min(doc.lineCount - 1, Number(msg.line || 1) - 1));
+        const position = new vscode.Position(line, 0);
+        const range = new vscode.Range(position, doc.lineAt(line).range.end);
+        editor.selection = new vscode.Selection(position, position);
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+        sendMessage({ type: 'ACK', action: 'jump_to_line', success: true, line: line + 1 });
+        triggerEditorStateSync(50);
+    } catch (e: any) {
+        sendMessage({ type: 'ACK', action: 'jump_to_line', success: false, error: e.message || String(e) });
+    }
+}
+
 async function handleApplyLineFix(msg: any) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {

@@ -332,6 +332,9 @@ class OverlayWindow(QWidget):
         self._gaming_mode: bool = False
         self._gaming_right_held: bool = False
         self._gaming_control_state: str = "JOYSTICK"
+        self._game_profile_name: str = "default_desktop"
+        self._game_profile_label: str = "Escritorio"
+        self.game_profile_badge_rect: QRectF = QRectF()
         self._game_keys_down: set = set()
         self._gaming_toggle_rect: QRectF = QRectF()
         self.hovered_gaming_toggle: bool = False
@@ -1769,10 +1772,40 @@ class OverlayWindow(QWidget):
         self._edge_scroll_since = 0.0
         self._edge_scroll_last = 0.0
 
+    def _update_strategy_edge_scroll(self, gx: float, gy: float, now: Optional[float] = None) -> bool:
+        """Pan the cursor/camera near the 20 px screen borders in strategy profiles."""
+        if self._game_profile_name != "strategy_rpg" or not self._gaming_mode:
+            return False
+        sw, sh = self._get_screen_size()
+        x, y = self._freelook_screen_coords(gx, gy, sw, sh)
+        margin = 20
+        dx = -8 if x <= margin else 8 if x >= sw - margin else 0
+        dy = -8 if y <= margin else 8 if y >= sh - margin else 0
+        if dx == 0 and dy == 0:
+            self._edge_scroll_last = 0.0
+            return False
+        timestamp = time.time() if now is None else float(now)
+        if timestamp - self._edge_scroll_last < 0.08:
+            return True
+        controller = self.mouse_controller
+        if controller is None:
+            return False
+        px, py = self._freelook_last_pos
+        nx = max(0, min(sw - 1, px + dx))
+        ny = max(0, min(sh - 1, py + dy))
+        try:
+            controller.move_direct(nx, ny)
+            self._freelook_last_pos = (nx, ny)
+        except Exception:
+            pass
+        self._edge_scroll_last = timestamp
+        self.last_action_desc = "Edge-Scroll activo"
+        return True
+
     def _update_freelook_edge_scroll(self, gy: float, now: Optional[float] = None) -> int:
         """Scroll while the gaze rests near the top/bottom edge in desktop FreeLook."""
         if (
-            self._gaming_mode
+            (self._gaming_mode and self._game_profile_name != "strategy_rpg")
             or self._jaw_locked
             or not bool(getattr(config, "FREELOOK_EDGE_SCROLL_ENABLED", True))
         ):
@@ -1877,6 +1910,7 @@ class OverlayWindow(QWidget):
             x = int(round(px + (x - px) * self.sniper_lens.movement_multiplier))
             y = int(round(py + (y - py) * self.sniper_lens.movement_multiplier))
             self._capture_sniper_lens()
+        self._update_strategy_edge_scroll(gx, gy)
         self._update_freelook_edge_scroll(gy)
         normalized = (x / float(screen_w), y / float(screen_h))
         if normalized != self.current_gaze:
@@ -1918,6 +1952,15 @@ class OverlayWindow(QWidget):
                 self._game_keys_down.discard(key)
         if had_keys and not desired:
             self.release_all_game_keys()
+        mode = self._sniper_mode()
+        if mode is not None and getattr(mode, "is_twin_stick", False):
+            sw, sh = self._get_screen_size()
+            tx, ty = self._freelook_screen_coords(gx, gy, sw, sh)
+            try:
+                controller.move_direct(tx, ty)
+                self._freelook_last_pos = (tx, ty)
+            except Exception:
+                pass
         self.current_gaze = (float(gx), float(gy))
         self.update()
 
@@ -2024,6 +2067,26 @@ class OverlayWindow(QWidget):
             self._mouth_active = False
             self._hold_started = False
             self.update()
+
+    def set_game_profile(self, profile_name: str) -> None:
+        """Applies a dynamic game/application profile without restarting."""
+        labels = {
+            "sandbox_3d": "Sandbox 3D",
+            "twin_stick_roguelike": "Twin-Stick",
+            "strategy_rpg": "Estrategia / RPG",
+            "default_desktop": "Escritorio",
+        }
+        name = str(profile_name or "default_desktop")
+        self._game_profile_name = name
+        self._game_profile_label = labels.get(name, name)
+        mode = self._sniper_mode()
+        if mode is not None and hasattr(mode, "set_game_profile"):
+            mode.set_game_profile(name)
+        self.set_gaming_profile(name != "default_desktop")
+        if name == "strategy_rpg":
+            self._gaming_control_state = "MENU_CURSOR"
+        self.last_action_desc = f"Perfil: {self._game_profile_label}"
+        self.update()
 
     def set_gaming_profile(self, enabled: bool) -> None:
         """Applies the watcher's gaming/desktop FreeLook sub-profile."""
@@ -3621,6 +3684,21 @@ class OverlayWindow(QWidget):
             painter.drawText(self.autofix_badge_rect, Qt.AlignmentFlag.AlignCenter, badge)
         else:
             self.autofix_badge_rect = QRectF()
+
+        # Active game/app profile badge.
+        if self._game_profile_name != "default_desktop":
+            profile_text = f"PERFIL: {self._game_profile_label}"
+            fm_profile = QFontMetrics(self._font_header_bold_btn)
+            pw = min(260.0, max(170.0, fm_profile.horizontalAdvance(profile_text) + 24.0))
+            self.game_profile_badge_rect = QRectF(header_rect.left() + 8.0, header_rect.bottom() + 8.0, pw, 28.0)
+            painter.setBrush(QColor(8, 47, 73, 235))
+            painter.setPen(QPen(QColor(34, 211, 238, 230), 1.4))
+            painter.drawRoundedRect(self.game_profile_badge_rect, 7.0, 7.0)
+            painter.setPen(QColor(207, 250, 254))
+            painter.setFont(self._font_header_bold_btn)
+            painter.drawText(self.game_profile_badge_rect, Qt.AlignmentFlag.AlignCenter, profile_text)
+        else:
+            self.game_profile_badge_rect = QRectF()
 
         # 2. 3x3 Grid Category Cards
         # =====================================================================

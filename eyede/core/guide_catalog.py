@@ -317,6 +317,13 @@ PAGES: List[Dict[str, Any]] = [
                 "text": "Ctrl+Alt+J extrae clases, m?todos y funciones del archivo activo y los reparte en una cuadr?cula 3x3 paginada. Un clic salta a la l?nea exacta.",
                 "chip": "3x3 s?mbolos",
             },
+            {
+                "icon": "gamepad",
+                "badge": "PROFILE",
+                "title": "Perfiles de Juego Din?micos",
+                "text": "game_profiles.json adapta el control al g?nero activo: sandbox 3D, twin-stick roguelike o estrategia/RPG con edge-scrolling y puntero t?ctico.",
+                "chip": "Cambio autom?tico",
+            },
         ],
     },
 ]

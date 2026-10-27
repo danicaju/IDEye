@@ -39,6 +39,7 @@ try:
     from eyede.core.macro_manager import MacroManager
     from eyede.core.screen_manager import ScreenManager
     from eyede.core.window_watcher import WindowWatcher
+    from eyede.core.game_profiles import GameProfileManager
     from eyede.core.telemetry_manager import TelemetryManager
     from eyede.actions.clipboard_history import get_clipboard_history_manager
     from eyede.ui.macro_editor_dialog import CustomMacroDialog
@@ -62,6 +63,7 @@ except ImportError:
     from core.macro_manager import MacroManager
     from core.screen_manager import ScreenManager
     from core.window_watcher import WindowWatcher
+    from core.game_profiles import GameProfileManager
     from core.telemetry_manager import TelemetryManager
     from actions.clipboard_history import get_clipboard_history_manager
     from ui.macro_editor_dialog import CustomMacroDialog
@@ -760,8 +762,10 @@ class EyeDEApplication(QObject):
             if hasattr(self.overlay, "code_injector") and self.overlay.code_injector is not None:
                 self.overlay.code_injector.set_websocket_bridge(self.ws_bridge)
 
+        self.game_profile_manager = GameProfileManager()
         self.window_watcher = WindowWatcher(
             mode_manager=self.mode_manager,
+            profile_manager=self.game_profile_manager,
             websocket_connected=(
                 (lambda: bool(self.ws_bridge and self.ws_bridge.is_connected))
                 if self.ws_bridge is not None
@@ -1105,6 +1109,7 @@ class EyeDEApplication(QObject):
         self.overlay.interactive_guide_requested.connect(self._open_interactive_guide)
         self.window_watcher.foreground_changed.connect(self.debug_widget.set_foreground_window)
         self.window_watcher.mode_requested.connect(self._on_window_mode_requested)
+        self.window_watcher.profile_requested.connect(self.overlay.set_game_profile)
         self.mode_manager.mode_changed.connect(
             lambda mode_id, *_: self.telemetry_manager.set_current_mode(mode_id)
         )

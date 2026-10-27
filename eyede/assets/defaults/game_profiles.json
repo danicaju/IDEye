@@ -1,0 +1,78 @@
+{
+  "sandbox_3d": {
+    "label": "Sandbox 3D",
+    "games": [
+      "minecraft",
+      "roblox",
+      "terraria",
+      "fortnite",
+      "gta",
+      "red dead",
+      "witcher",
+      "skyrim",
+      "fallout"
+    ],
+    "movement": "head_joystick",
+    "jump": "wink_left",
+    "menu": "wink_right",
+    "primary": "mouth_click",
+    "aim": "gaze_cursor",
+    "directions": 8,
+    "edge_scroll_px": 0
+  },
+  "twin_stick_roguelike": {
+    "label": "Twin-Stick / Roguelike",
+    "games": [
+      "isaac",
+      "gungeon",
+      "hades",
+      "dead cells",
+      "deadcells",
+      "vampire survivors",
+      "risk of rain",
+      "roguelike",
+      "rogue"
+    ],
+    "movement": "head_tilt",
+    "jump": "wink_left",
+    "menu": "wink_right",
+    "primary": "mouth_click",
+    "aim": "gaze",
+    "directions": 8,
+    "edge_scroll_px": 0
+  },
+  "strategy_rpg": {
+    "label": "Estrategia / RPG",
+    "games": [
+      "baldur",
+      "civilization",
+      "civ ",
+      "xcom",
+      "total war",
+      "age of empires",
+      "stellaris",
+      "crusader kings",
+      "divinity",
+      "pillars of eternity",
+      "rpg"
+    ],
+    "movement": "edge_scroll",
+    "jump": null,
+    "menu": "wink_right",
+    "primary": "jaw_lock",
+    "aim": "gaze_cursor",
+    "directions": 4,
+    "edge_scroll_px": 20
+  },
+  "default_desktop": {
+    "label": "Escritorio",
+    "games": [],
+    "movement": "direct_pointer",
+    "jump": null,
+    "menu": "wink_right",
+    "primary": "mouth_click",
+    "aim": "gaze_cursor",
+    "directions": 4,
+    "edge_scroll_px": 20
+  }
+}

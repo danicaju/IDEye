@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-530%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-536%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -88,7 +88,7 @@ The `WebSocketBridge` exchanges editor state, diagnostics, and selection info wi
 
 ### 11. Interactive Game Manual (Living Documentation)
 
-`docs/guia_interactiva.html` is a self-contained, offline "Nintendo Game Manual meets Cyber-Glass" guide: five tabbed pages, illustrated action cards with inline SVG, a live 3x3 mode simulator, a shortcut cheatsheet and A4 landscape PDF export. Open it from the **📖 Abrir Manual Interactivo** button in the debug panel or the help modal. Its single source of truth is `eyede/core/guide_catalog.py`, regenerated with `generate_interactive_guide()`.
+`docs/guia_interactiva.html` is a self-contained, offline "Nintendo Game Manual meets Cyber-Glass" guide: five tabbed pages, illustrated action cards with inline SVG, a live 3x3 mode simulator, a shortcut cheatsheet and A4 landscape PDF export. Open it from the **Abrir Manual Interactivo** button in the debug panel or the help modal. Its single source of truth is `eyede/core/guide_catalog.py`, regenerated with `generate_interactive_guide()`.
 
 ### 12. Live Diagnostics, Health Guard & Micro-Gestures
 
@@ -228,6 +228,7 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`Ctrl+Alt+N`** | **Multi-Monitor Handover** | Moves the HUD and gaze mapping to the next connected display |
 | **`Ctrl+Alt+Z`** | **Sniper Lens x3.5** | Activates the precision lens and slow-mo in FreeLook |
 | **`Ctrl+Alt+J`** | **Semantic AST Jump** | Opens the 3x3 symbol map for the active file |
+| **`Ctrl+Alt+I`** | **Agentic Prompt Launcher** | Opens six engineering prompts for VS Code chat or the local MCP queue |
 | **Eye Exit** | **[X EXIT] Hands-Free** | Gaze at the top-right header `[X EXIT]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 
 ---
@@ -299,12 +300,13 @@ IDEye/
 │   │   ├── code_injector.py # Atomic clipboard injection and cursor offsets
 │   │   ├── clipboard_history.py # 6-slot MTF clipboard time-machine
 │   │   ├── language_support.py # Multi-language syntax definitions
+│   │   ├── agentic_launcher.py # Six gaze-fired engineering prompts + MCP queue
 │   │   └── text_predictor.py # Local word prediction engine
 │   └── assets/
 │   │   ├── data/es_common_words.txt # Spanish common-word dictionary
 │   │   ├── defaults/ # user_settings.json and custom_macros.json templates
 │   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 530 automated unit & integration tests
+└── tests/ # 536 automated unit & integration tests
     ├── test_phase1.py # Core CV and MAR state machine
     ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py # Syntax tree validation and code injection
@@ -319,13 +321,14 @@ IDEye/
     ├── test_phase8_3_multimonitor.py # Screen handover, bounds and build command
     ├── test_phase8_4_refactor.py # Bezel detector, header layout and logging
     ├── test_phase9_os_intelligence.py # Clipboard, window routing and telemetry
-    ??? test_phase9_5_biometrics_and_autofix.py # Auto-Fix, Health Guard and micro-gestures
+    ├── test_phase9_5_biometrics_and_autofix.py # Auto-Fix, Health Guard and micro-gestures
     ├── test_phase10_1_lighting_and_sniper_lens.py # CLAHE and Sniper Lens
-    ??? test_phase10_2_ast_code_jumper.py # AST extraction and symbol menu
-    ??? test_phase10_3_game_profiles.py # Profiles, twin-stick and edge-scroll
+    ├── test_phase10_2_ast_code_jumper.py # AST extraction and symbol menu
+    ├── test_phase10_3_game_profiles.py # Profiles, twin-stick and edge-scroll
+    ├── test_phase10_4_agentic_launcher.py # Prompt builder, 3x3 menu, MCP queue
     ├── test_hotfix_ui_and_gaming.py # Head-joystick, audio cache and help layout
     ├── test_writing_words_and_letters.py # Letter keyboard, predictions and word/phrase menus
-    ??? test_interactive_guide.py # Guide catalog, generation and entry points
+    ├── test_interactive_guide.py # Guide catalog, generation and entry points
     ├── test_interactive_guide_sync.py # UTF-8 and Nintendo theme sync
     ├── test_freelook_edge_scroll.py # FreeLook edge-scroll behavior
     ├── test_glass_focus_ui.py # Glass/Focus HUD widgets
@@ -351,11 +354,11 @@ pytest -q
 ```
 
 ```text
-530 passed, 74 subtests, 18.33s
+536 passed, 76 subtests, 19.99s
 ```
 
 > [!NOTE]
-> All 530 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 536 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
 
 ---
 
@@ -384,6 +387,7 @@ pytest -q
 - [x] **Phase 10.1:** Adaptive low-light CLAHE and Sniper Lens x3.5 with slow-mo.
 - [x] **Phase 10.2:** Semantic AST Jump with 3x3 symbol map and VS Code cursor teleport.
 - [x] **Phase 10.3:** Dynamic game profiles from game_profiles.json, twin-stick and strategy edge-scrolling.
+- [x] **Phase 10.4:** Agentic Prompt Launcher for VS Code chat and the local MCP gaze-task queue.
 
 > Window routing is not limited to Roblox or a few editors: it recognizes broad built-in lists for games, terminals, writing/communication apps, browsers and IDEs. Generic Unreal `-Win64-Shipping.exe` games and configurable title keywords are also supported. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` or `IDE_PROCESSES` in `eyede/config.py` for any other application.
 

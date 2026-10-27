@@ -328,7 +328,7 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
                 self.assertRegex(spec, pattern)
         expected = {
             "q", "r", "v", "k", "s", "f", "g", "m",
-            "a", "b", "t", "c", "p", "l", "h", "n", "z", "j",
+            "a", "b", "t", "c", "p", "l", "h", "n", "z", "j", "i",
         }
         actual = {spec.rsplit("+", 1)[-1] for spec in HOTKEY_ACTIONS}
         self.assertEqual(actual, expected)

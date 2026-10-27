@@ -58,6 +58,7 @@ SHORTCUT_LABELS = {
     "s": ("Sonido", "Activa o silencia la retroalimentación acústica."),
     "f": ("FreeLook", "Activa el ratón directo por mirada."),
     "g": ("Gaming", "Entra en el perfil Gaming con head-joystick."),
+    "i": ("Agentic Launcher", "Ctrl+Alt+I abre las seis órdenes de ingeniería para VS Code y la cola MCP."),
 }
 
 PAGES: List[Dict[str, Any]] = [
@@ -323,6 +324,13 @@ PAGES: List[Dict[str, Any]] = [
                 "title": "Perfiles de Juego Din?micos",
                 "text": "game_profiles.json adapta el control al g?nero activo: sandbox 3D, twin-stick roguelike o estrategia/RPG con edge-scrolling y puntero t?ctico.",
                 "chip": "Cambio autom?tico",
+            },
+            {
+                "icon": "wand",
+                "badge": "AI",
+                "title": "Agentic Prompt Launcher",
+                "text": "Ctrl+Alt+I abre seis órdenes de ingeniería con el código, los símbolos AST y los diagnósticos del bloque activo. El prompt viaja al chat de VS Code o a la cola MCP local.",
+                "chip": "VS Code + MCP",
             },
         ],
     },

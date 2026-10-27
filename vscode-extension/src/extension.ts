@@ -261,6 +261,8 @@ async function handleInboundMessage(rawData: any) {
             await handleApplyLineFix(msg);
         } else if (msg.type === 'jump_to_line') {
             await handleJumpToLine(msg);
+        } else if (msg.type === 'trigger_agent_prompt') {
+            await handleAgenticPrompt(msg);
         } else if (msg.type === 'PING') {
             sendMessage({ type: 'PONG', timestamp: Date.now() });
         }
@@ -301,6 +303,63 @@ async function handleJumpToLine(msg: any) {
         triggerEditorStateSync(50);
     } catch (e: any) {
         sendMessage({ type: 'ACK', action: 'jump_to_line', success: false, error: e.message || String(e) });
+    }
+}
+
+async function handleAgenticPrompt(msg: any) {
+    const prompt = String(msg.prompt || '');
+    const actionId = String(msg.action_id || 'agentic');
+    if (!prompt.trim()) {
+        sendMessage({ type: 'ACK', action: 'trigger_agent_prompt', success: false, error: 'Empty prompt' });
+        return;
+    }
+
+    // Prefer the native chat panel. Command signatures changed across VS Code
+    // releases, so try the structured object first and then the legacy string.
+    try {
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            query: prompt,
+            isPartialQuery: false
+        });
+        sendMessage({ type: 'ACK', action: 'trigger_agent_prompt', success: true, mode: 'chat', action_id: actionId });
+        return;
+    } catch (chatError) {
+        // Continue to inline chat fallback.
+    }
+
+    try {
+        await vscode.commands.executeCommand('workbench.action.chat.open', prompt);
+        sendMessage({ type: 'ACK', action: 'trigger_agent_prompt', success: true, mode: 'chat', action_id: actionId });
+        return;
+    } catch (legacyChatError) {
+        // Continue to inline chat fallback.
+    }
+
+    try {
+        await vscode.commands.executeCommand('inlineChat.start');
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            await editor.edit((builder) => {
+                builder.insert(editor.selection.active, prompt);
+            });
+        }
+        sendMessage({ type: 'ACK', action: 'trigger_agent_prompt', success: true, mode: 'inline', action_id: actionId });
+        return;
+    } catch (inlineError) {
+        // Final fallback: clipboard plus direct insertion for the active editor.
+    }
+
+    try {
+        await vscode.env.clipboard.writeText(prompt);
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            await editor.edit((builder) => {
+                builder.insert(editor.selection.active, prompt);
+            });
+        }
+        sendMessage({ type: 'ACK', action: 'trigger_agent_prompt', success: true, mode: 'clipboard', action_id: actionId });
+    } catch (e: any) {
+        sendMessage({ type: 'ACK', action: 'trigger_agent_prompt', success: false, error: e.message || String(e) });
     }
 }
 

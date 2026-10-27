@@ -3,6 +3,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const MCP_DIR = path.dirname(fileURLToPath(import.meta.url));
+const AGENTIC_QUEUE_PATH = process.env.IDEYE_AGENTIC_QUEUE
+  || path.resolve(MCP_DIR, "../../agentic_task_queue.json");
 
 const server = new McpServer({
   name: "ideye-dev-tools",
@@ -387,6 +394,83 @@ server.tool(
           }, null, 2)
         }
       ]
+    };
+  }
+);
+
+// Tool 6: Read the latest gaze-fired agentic task for external AI agents
+server.tool(
+  "get_pending_gaze_task",
+  "Returns the latest engineering prompt that the IDEye user launched with their eyes (Agentic Prompt Launcher). External agents such as Claude Code, OpenCode or Antigravity can read and execute it. Set consume=true to remove the task atomically from the queue.",
+  {
+    consume: z.boolean().default(false).describe("Remove the returned task from agentic_task_queue.json")
+  },
+  async ({ consume }) => {
+    let queue = { version: 1, updated_at: "", pending: [] };
+    try {
+      if (fs.existsSync(AGENTIC_QUEUE_PATH)) {
+        queue = JSON.parse(fs.readFileSync(AGENTIC_QUEUE_PATH, "utf8"));
+      }
+    } catch (err) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            pending: false,
+            error: `Cannot read agentic task queue: ${err.message || String(err)}`,
+            queuePath: AGENTIC_QUEUE_PATH
+          }, null, 2)
+        }]
+      };
+    }
+
+    const pending = Array.isArray(queue.pending) ? queue.pending : [];
+    const task = pending.length > 0 ? pending[pending.length - 1] : null;
+    if (!task) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            pending: false,
+            queuePath: AGENTIC_QUEUE_PATH,
+            pendingCount: 0
+          }, null, 2)
+        }]
+      };
+    }
+
+    if (consume) {
+      try {
+        queue.pending = pending.filter((item) => item.id !== task.id);
+        queue.updated_at = new Date().toISOString();
+        const tmpPath = `${AGENTIC_QUEUE_PATH}.tmp`;
+        fs.writeFileSync(tmpPath, JSON.stringify(queue, null, 2), "utf8");
+        fs.renameSync(tmpPath, AGENTIC_QUEUE_PATH);
+      } catch (err) {
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              pending: true,
+              task,
+              consumed: false,
+              error: `Cannot consume task: ${err.message || String(err)}`
+            }, null, 2)
+          }]
+        };
+      }
+    }
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          pending: true,
+          pendingCount: consume ? Math.max(0, pending.length - 1) : pending.length,
+          queuePath: AGENTIC_QUEUE_PATH,
+          task
+        }, null, 2)
+      }]
     };
   }
 );

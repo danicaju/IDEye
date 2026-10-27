@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-530%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-536%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -88,7 +88,7 @@ El `WebSocketBridge` intercambia estado del editor, diagnósticos e información
 
 ### 11. Manual Interactivo Game Manual (Documentación Viva)
 
-`docs/guia_interactiva.html` es una guía autocontenida y offline con estética "Nintendo Game Manual meets Cyber-Glass": cinco páginas con pestañas, tarjetas ilustradas con SVG inline, simulador 3x3 en vivo, chuleta de atajos y exportación A4 apaisada a PDF. Se abre desde el botón **📖 Abrir Manual Interactivo** del panel de depuración o desde el modal de ayuda. Su fuente única de verdad es `eyede/core/guide_catalog.py` y se regenera con `generate_interactive_guide()`.
+`docs/guia_interactiva.html` es una guía autocontenida y offline con estética "Nintendo Game Manual meets Cyber-Glass": cinco páginas con pestañas, tarjetas ilustradas con SVG inline, simulador 3x3 en vivo, chuleta de atajos y exportación A4 apaisada a PDF. Se abre desde el botón **Abrir Manual Interactivo** del panel de depuración o desde el modal de ayuda. Su fuente única de verdad es `eyede/core/guide_catalog.py` y se regenera con `generate_interactive_guide()`.
 
 ### 12. Diagnósticos en Vivo, Health Guard y Micro-Gestos
 
@@ -226,6 +226,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+M`** | **Alternar Mini-Feed** | Pulsa `Ctrl+Alt+M` desde cualquier sitio; alterna el panel de monitor |
 | **`Ctrl+Alt+N`** | **Handover Multi-Monitor** | Mueve el HUD y el mapeo de mirada a la siguiente pantalla conectada |
 | **`Ctrl+Alt+Z`** | **Lupa Sniper x3.5** | Activa la lupa de precisión y el slow-mo en FreeLook |
+| **`Ctrl+Alt+I`** | **Agentic Prompt Launcher** | Abre seis órdenes de ingeniería para el chat de VS Code o la cola MCP local |
 | **Salida Ocular** | **[X SALIR] Manos Libres** | Mira a la esquina superior derecha `[X SALIR]` y abre la boca; despliega un diálogo de confirmación 100% asistivo |
 
 ---
@@ -297,12 +298,13 @@ IDEye/
 │   │   ├── code_injector.py # Inyección atómica y offsets
 │   │   ├── clipboard_history.py # Máquina del tiempo MTF de 6 ranuras
 │   │   ├── language_support.py # Sintaxis multi-lenguaje
+│   │   ├── agentic_launcher.py # Seis prompts de ingeniería + cola MCP
 │   │   └── text_predictor.py # Predicción local de palabras
 │   └── assets/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 530 pruebas de unidad e integración
+└── tests/ # 536 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -317,13 +319,14 @@ IDEye/
     ├── test_phase8_3_multimonitor.py # Handover, límites y build
     ├── test_phase8_4_refactor.py # Bisel, layout y logging
     ├── test_phase9_os_intelligence.py # Portapapeles, rutas y telemetría
-    ??? test_phase9_5_biometrics_and_autofix.py # Auto-Fix, Health Guard y micro-gestos
+    ├── test_phase9_5_biometrics_and_autofix.py # Auto-Fix, Health Guard y micro-gestos
     ├── test_phase10_1_lighting_and_sniper_lens.py # CLAHE y lupa Sniper
-    ??? test_phase10_2_ast_code_jumper.py # Extracción AST y mapa de símbolos
-    ??? test_phase10_3_game_profiles.py # Perfiles, twin-stick y edge-scroll
+    ├── test_phase10_2_ast_code_jumper.py # Extracción AST y mapa de símbolos
+    ├── test_phase10_3_game_profiles.py # Perfiles, twin-stick y edge-scroll
+    ├── test_phase10_4_agentic_launcher.py # Prompt, menú 3x3 y cola MCP
     ├── test_hotfix_ui_and_gaming.py # Joystick, audio y ayuda
     ├── test_writing_words_and_letters.py # Teclado de letras, predicciones y frases
-    ??? test_interactive_guide.py # Generación, catálogo y accesos al manual
+    ├── test_interactive_guide.py # Generación, catálogo y accesos al manual
     ├── test_interactive_guide_sync.py # Sincronización UTF-8 y tema Nintendo
     ├── test_freelook_edge_scroll.py # Scroll por borde en FreeLook
     ├── test_glass_focus_ui.py # Widgets Glass/Focus
@@ -349,11 +352,11 @@ pytest -q
 ```
 
 ```text
-530 pruebas superadas, 74 subtests, 18.33s
+536 pruebas superadas, 76 subtests, 19.99s
 ```
 
 > [!NOTE]
-> Todos los 530 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 536 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 
@@ -382,6 +385,7 @@ pytest -q
 - [x] **Fase 10.1:** Visión nocturna adaptativa CLAHE y Lupa Sniper x3.5 con slow-mo.
 - [x] **Fase 10.2:** Salto semántico AST con mapa 3x3 y teleport de cursor en VS Code.
 - [x] **Fase 10.3:** Perfiles de juego dinámicos desde game_profiles.json, twin-stick y edge-scrolling de estrategia.
+- [x] **Fase 10.4:** Agentic Prompt Launcher para el chat de VS Code y la cola MCP de tareas oculares.
 
 > El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `eyede/config.py` para cualquier otra aplicación.
 

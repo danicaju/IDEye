@@ -333,6 +333,24 @@ class WebSocketBridge(QObject):
         }
         return self.broadcast_message(payload)
 
+    def send_trigger_agent_prompt(
+        self,
+        action_id: str,
+        prompt: str,
+        selection_only: bool = True,
+    ) -> bool:
+        """Sends a rich agentic prompt to the VS Code chat/inline-chat bridge."""
+        if not self.is_connected:
+            return False
+        return self.broadcast_message(
+            {
+                "type": "trigger_agent_prompt",
+                "action_id": str(action_id),
+                "prompt": str(prompt),
+                "selection_only": bool(selection_only),
+            }
+        )
+
     def broadcast_message(self, message: Union[Dict[str, Any], str], payload: Optional[Dict[str, Any]] = None) -> bool:
         """
         Thread-safe broadcast of a JSON payload to all connected clients.

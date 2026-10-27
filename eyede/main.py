@@ -793,6 +793,7 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.screen_cycle_requested.connect(self.screen_manager.cycle_next_screen)
         self.hotkey_manager.sniper_lens_toggle_requested.connect(self.overlay.toggle_sniper_lens)
         self.hotkey_manager.ast_jump_requested.connect(self.overlay.open_ast_symbols)
+        self.hotkey_manager.agentic_launcher_requested.connect(self.overlay.open_agentic_launcher)
         self.hotkey_manager.adaptive_ast_toggle_requested.connect(self.overlay.toggle_adaptive_ast)
         self.hotkey_manager.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
         self.hotkey_manager.center_calibration_requested.connect(self._on_center_calibration_shortcut)
@@ -1067,6 +1068,7 @@ class EyeDEApplication(QObject):
         self.overlay.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
         self.overlay.autofix_requested.connect(self._apply_autofix)
         self.overlay.ast_jump_requested.connect(self._on_ast_jump_requested)
+        self.overlay.agentic_prompt_requested.connect(self._on_agentic_prompt_requested)
 
         # Context reader & AI status connections
         self.debug_widget.file_linked.connect(self.context_reader.set_active_file)
@@ -1124,6 +1126,7 @@ class EyeDEApplication(QObject):
         Handles real-time editor state stream from native VS Code extension over WebSocket.
         Synchronizes active file path, programming language, and AST context across IDEye.
         """
+        self.overlay._vscode_editor_state = dict(state or {})
         file_path = state.get("filePath") or state.get("file_path")
         language_id = state.get("languageId") or state.get("language_id")
 
@@ -1163,6 +1166,33 @@ class EyeDEApplication(QObject):
             except Exception:
                 pass
             self.overlay.last_action_desc = "AST: abriendo símbolos del editor"
+        self.overlay.update()
+
+    def _on_agentic_prompt_requested(
+        self,
+        action_id: str,
+        prompt: str,
+        queue_only: bool = False,
+    ) -> None:
+        """Sends a gaze-fired engineering prompt to VS Code or the MCP queue."""
+        launcher = getattr(self.overlay, "agentic_launcher", None)
+        if launcher is None:
+            return
+        bridge = getattr(self, "ws_bridge", None)
+        result = launcher.dispatch(
+            action_id,
+            prompt,
+            bridge=bridge,
+            queue_only=bool(queue_only),
+            selection_only=True,
+        )
+        if result.get("sent") and not queue_only:
+            self.overlay.last_action_desc = (
+                f"IA: {result.get('label', action_id)} enviado a VS Code"
+            )
+        else:
+            self.overlay.copy_agentic_prompt(prompt)
+            self.overlay.last_action_desc = "ORDEN IA LISTA EN PORTAPAPELES / MCP"
         self.overlay.update()
 
     def _apply_autofix(self, fix: Dict[str, Any]) -> None:

@@ -70,6 +70,7 @@ try:
     from eyede.actions.ai_predictor import AIPredictorWorker
     from eyede.actions.diagnostics_fixer import DiagnosticsFixer
     from eyede.actions.ast_code_jumper import ASTCodeJumper
+    from eyede.actions.agentic_launcher import AgenticPromptLauncher
     from eyede.ui.sniper_lens import SniperLens
     from eyede.modes.mode_manager import ModeManager
 except ImportError:
@@ -107,6 +108,7 @@ except ImportError:
     from actions.ai_predictor import AIPredictorWorker
     from actions.diagnostics_fixer import DiagnosticsFixer
     from actions.ast_code_jumper import ASTCodeJumper
+    from actions.agentic_launcher import AgenticPromptLauncher
     from ui.sniper_lens import SniperLens
     from modes.mode_manager import ModeManager
 
@@ -225,6 +227,7 @@ class OverlayWindow(QWidget):
     mouth_clicked = pyqtSignal(int)  # hovered block index, or -1 for header/other
     autofix_requested = pyqtSignal(object)
     ast_jump_requested = pyqtSignal(int)
+    agentic_prompt_requested = pyqtSignal(str, str, bool)  # action_id, prompt, queue_only
     mode_changed = context_mode_changed
 
     def __init__(
@@ -267,8 +270,14 @@ class OverlayWindow(QWidget):
         self.context_reader: ContextReader = context_reader if context_reader is not None else ContextReader()
         self.diagnostics_fixer = DiagnosticsFixer(self.context_reader)
         self.ast_code_jumper = ASTCodeJumper(self.context_reader)
+        self.agentic_launcher = AgenticPromptLauncher(
+            self.context_reader,
+            self.diagnostics_fixer,
+        )
+        self._last_agentic_action_id: str = "refactor_clean"
         self._ast_page: int = 0
         self._active_diagnostics: List[Dict[str, Any]] = []
+        self._vscode_editor_state: Dict[str, Any] = {}
         self._autofix_slot8_saved: Optional[tuple] = None
         self.autofix_badge_rect: QRectF = QRectF()
         self.sniper_lens = SniperLens(
@@ -2780,6 +2789,43 @@ class OverlayWindow(QWidget):
         self.last_action_desc = f"AST: {len(symbols)} s?mbolos"
         self.update()
 
+    def open_agentic_launcher(self, refresh: bool = True) -> None:
+        """Opens the six-action Agentic Prompt Launcher from any mode."""
+        self.menu_tree["AGENTIC_LAUNCHER"] = self.agentic_launcher.get_agentic_menu_node(
+            parent_id="ROOT"
+        )
+        self.navigate_to("AGENTIC_LAUNCHER")
+        self.last_action_desc = "Agentic: elige una orden de ingeniería"
+        self.update()
+
+    def copy_agentic_prompt(self, prompt: str) -> bool:
+        """Copies a rich agentic prompt to the system clipboard."""
+        try:
+            clipboard = QGuiApplication.clipboard()
+            if clipboard is not None:
+                clipboard.setText(str(prompt or ""))
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _current_agentic_context(self) -> Dict[str, Any]:
+        state = getattr(self, "_vscode_editor_state", {}) or {}
+        cursor = state.get("cursor") if isinstance(state, dict) else None
+        cursor_line = None
+        if isinstance(cursor, dict):
+            try:
+                cursor_line = int(cursor.get("line", 0)) + 1
+            except (TypeError, ValueError):
+                cursor_line = None
+        return {
+            "file_path": self.context_reader.get_active_file() if self.context_reader else "",
+            "source_code": self.context_reader.read_file_content() if self.context_reader else "",
+            "language": self.context_reader.get_active_language() if self.context_reader else "",
+            "cursor_line": cursor_line,
+            "diagnostics": list(getattr(self, "_active_diagnostics", []) or []),
+        }
+
     def execute_action(self, item: MenuAction, target_block: int = 0) -> None:
         """Programmatically executes a MenuAction directly on the overlay."""
         if getattr(item, "action_type", "") == "AUTOFIX":
@@ -2814,6 +2860,30 @@ class OverlayWindow(QWidget):
         if getattr(item, "action_type", "") == "AST_REFRESH":
             self.open_ast_symbols(refresh=True)
             self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.action_type in ("AGENTIC_PROMPT", "AGENTIC_SEND"):
+            queue_only = item.action_type == "AGENTIC_SEND"
+            action_id = (
+                self._last_agentic_action_id
+                if queue_only
+                else str(item.snippet or "refactor_clean")
+            )
+            prompt = self.agentic_launcher.build_prompt(
+                action_id,
+                context=self._current_agentic_context(),
+            )
+            self._last_agentic_action_id = action_id
+            self.agentic_prompt_requested.emit(action_id, prompt, bool(queue_only))
+            label = self.agentic_launcher.get_action_label(action_id)
+            self.last_action_desc = (
+                f"Orden IA en cola MCP: {label}"
+                if queue_only
+                else f"Orden IA: {label}"
+            )
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
             return
 
         if item.action_type == "PAUSE":

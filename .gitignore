@@ -19,6 +19,8 @@ custom_macros.json
 custom_macros.json.tmp
 game_profiles.json
 game_profiles.json.tmp
+agentic_task_queue.json
+agentic_task_queue.json.tmp
 !eyede/assets/defaults/user_settings.json
 !eyede/assets/defaults/custom_macros.json
 !eyede/assets/defaults/game_profiles.json

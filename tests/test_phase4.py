@@ -188,7 +188,9 @@ class TestContextReader(unittest.TestCase):
             "        return total_count\n"
         )
         reader = ContextReader()
-        symbols = reader.extract_local_symbols(source_code=code, max_symbols=12)
+        symbols = reader.extract_local_symbols(
+            source_code=code, max_symbols=12, language="PYTHON"
+        )
 
         # Expected symbols
         expected = ["total_count", "valid_items", "item", "threshold", "batch_data", "process_records", "DataProcessor"]

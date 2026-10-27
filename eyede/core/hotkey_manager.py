@@ -38,6 +38,7 @@ HOTKEY_ACTIONS = {
     "<ctrl>+<alt>+n": "_on_screen_cycle",
     "<ctrl>+<alt>+z": "_on_sniper_lens_toggle",
     "<ctrl>+<alt>+j": "_on_ast_jump",
+    "<ctrl>+<alt>+i": "_on_agentic_launcher",
 }
 
 
@@ -68,6 +69,7 @@ class GlobalHotkeyManager(QObject):
     screen_cycle_requested = pyqtSignal()
     sniper_lens_toggle_requested = pyqtSignal()
     ast_jump_requested = pyqtSignal()
+    agentic_launcher_requested = pyqtSignal()
     adaptive_ast_toggle_requested = pyqtSignal()
     tracking_mode_cycle_requested = pyqtSignal()
     center_calibration_requested = pyqtSignal()
@@ -105,7 +107,7 @@ class GlobalHotkeyManager(QObject):
                 self._listener.daemon = True
                 self._listener.start()
                 self._is_running = True
-                logger.info("[HotkeyManager] Global hotkeys active: Ctrl+Alt+Q/R/V/K/S/F/G/M/A/B/T/C/P/L/N (all Ctrl+Alt+letter).")
+                logger.info("[HotkeyManager] Global hotkeys active: Ctrl+Alt+Q/R/V/K/S/F/G/M/A/B/T/C/P/L/N/I/J/Z (all Ctrl+Alt+letter).")
                 return True
             except Exception as e:
                 logger.warning(f"[HotkeyManager] Warning: Failed to start global hotkey listener: {e}")
@@ -187,6 +189,10 @@ class GlobalHotkeyManager(QObject):
     def _on_ast_jump(self) -> None:
         """Callback for Ctrl+Alt+J Semantic AST Code Jumper."""
         self.ast_jump_requested.emit()
+
+    def _on_agentic_launcher(self) -> None:
+        """Callback for Ctrl+Alt+I Agentic Prompt Launcher."""
+        self.agentic_launcher_requested.emit()
 
     def _on_sniper_lens_toggle(self) -> None:
         """Callback for Ctrl+Alt+Z Sniper Zoom Lens."""

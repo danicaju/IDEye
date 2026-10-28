@@ -259,6 +259,7 @@ body[data-theme="nintendo-booklet"] .hero::after {
   background: rgba(255,255,255,.62);
   border: 1px solid rgba(17,17,17,.18);
   box-shadow: 1px 2px 2px rgba(0,0,0,.16);
+  z-index: 0;
 }
 body[data-theme="nintendo-booklet"] .hero::before { left: 9%; transform: rotate(-9deg); }
 body[data-theme="nintendo-booklet"] .hero::after { right: 8%; transform: rotate(7deg); }
@@ -269,6 +270,16 @@ body[data-theme="nintendo-booklet"] .brand h1 {
   letter-spacing: -.045em;
   -webkit-text-stroke: 1.5px #111;
   text-shadow: 4px 4px 0 #facc15, 7px 7px 0 #111;
+  position: relative;
+  z-index: 3;
+}
+body[data-theme="nintendo-booklet"] .brand {
+  position: relative;
+  z-index: 3;
+}
+body[data-theme="nintendo-booklet"] .hero-actions {
+  position: relative;
+  z-index: 3;
 }
 body[data-theme="nintendo-booklet"] .brand p {
   color: #242424;
@@ -329,7 +340,7 @@ body[data-theme="nintendo-booklet"] .tab.active {
 body[data-theme="nintendo-booklet"] .page.active {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(250px, .76fr) minmax(0, 1.24fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   column-gap: 52px;
   align-items: start;
   padding: 36px 42px 66px;
@@ -350,7 +361,7 @@ body[data-theme="nintendo-booklet"] .page.active::before {
   top: 24px;
   bottom: 24px;
   left: 50%;
-  width: 42px;
+  width: 36px;
   transform: translateX(-50%);
   background: repeating-radial-gradient(ellipse 22px 10px at 50% 16px, #e5e7eb 0 54%, #111 55% 68%, transparent 69%) 0 0 / 100% 44px repeat-y;
   filter: drop-shadow(2px 2px 0 rgba(0,0,0,.28));
@@ -755,8 +766,8 @@ body[data-theme="nintendo-booklet"] .page-numbers span:first-child { left: 24px;
 body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 24px; transform: rotate(5deg); }
 @media (max-width: 980px) and (min-width: 641px) {
   body[data-theme="nintendo-booklet"] .page.active {
-    grid-template-columns: minmax(210px, .78fr) minmax(0, 1.22fr);
-    column-gap: 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 42px;
     padding: 28px 24px 62px;
   }
   body[data-theme="nintendo-booklet"] .page.active > .ribbon,

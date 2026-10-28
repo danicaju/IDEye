@@ -557,7 +557,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "594 tests, 78 subtests, 17.65s",
+        "test_summary": "594 tests, 78 subtests, 20.07s",
     }
 
 

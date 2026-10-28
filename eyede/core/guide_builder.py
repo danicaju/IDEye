@@ -266,10 +266,13 @@ body[data-theme="nintendo-booklet"] .hero::after { right: 8%; transform: rotate(
 body[data-theme="nintendo-booklet"] .brand h1 {
   color: #b91c2c;
   font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
+  font-size: clamp(24px, 3.2vw, 38px);
   font-weight: 900;
   letter-spacing: -.045em;
+  line-height: 1.22;
   -webkit-text-stroke: 1.5px #111;
-  text-shadow: 4px 4px 0 #facc15, 7px 7px 0 #111;
+  text-shadow: 3px 3px 0 #111;
+  text-wrap: balance;
   position: relative;
   z-index: 3;
 }
@@ -470,7 +473,7 @@ body[data-theme="nintendo-booklet"] .card-grid {
 body[data-theme="nintendo-booklet"] .card {
   overflow: visible;
   min-height: 310px;
-  padding: 94px 17px 18px;
+  padding: 104px 17px 18px;
   border: 4px solid #111;
   border-radius: 6px;
   background:
@@ -616,21 +619,22 @@ body[data-theme="nintendo-booklet"] .sticker .ui-icon { width: 16px; height: 16p
 body[data-theme="nintendo-booklet"] .sticker span { font-size: 9px; line-height: 1; }
 body[data-theme="nintendo-booklet"] .brush-title {
   position: absolute;
-  top: 16px;
+  top: 52px;
   left: 12px;
   right: 12px;
   margin: 0;
-  padding: 10px 14px;
+  padding: 8px 14px;
   background: #16a34a;
   color: #fff;
   font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
-  font-size: 17px;
+  font-size: clamp(13px, 1.3vw, 16px);
   font-weight: 900;
-  line-height: 1.04;
+  line-height: 1.06;
   text-align: left;
+  overflow-wrap: anywhere;
   -webkit-text-stroke: 1.4px #000;
   text-shadow: 2px 3px 0 #000;
-  transform: rotate(-1.6deg);
+  transform: rotate(-1.4deg);
   clip-path: polygon(2% 0%, 98% 4%, 100% 92%, 0% 100%);
   box-shadow: 4px 4px 0 #111;
 }

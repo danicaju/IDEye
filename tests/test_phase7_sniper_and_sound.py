@@ -66,6 +66,7 @@ class TestSoundFeedback(unittest.TestCase):
                        for i in range(0, len(frames), 2))
             self.assertGreater(peak, 18000)
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows sound backend only")
     def test_windows_uses_filename_async_flags(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
         with patch("eyede.core.sound_feedback.winsound.PlaySound") as mock_play:
@@ -77,6 +78,7 @@ class TestSoundFeedback(unittest.TestCase):
         self.assertTrue(flags & 0x0001)      # SND_ASYNC
         self.assertTrue(flags & 0x00000002)  # SND_NODEFAULT
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows sound backend only")
     def test_mute_prevents_backend_call(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
         mgr.set_enabled(False)
@@ -87,6 +89,7 @@ class TestSoundFeedback(unittest.TestCase):
             mgr.play("pause")
             mock_play.assert_not_called()
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows sound backend only")
     def test_backend_exception_is_swallowed(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
         with patch("eyede.core.sound_feedback.winsound.PlaySound", side_effect=OSError("boom")):
@@ -94,6 +97,7 @@ class TestSoundFeedback(unittest.TestCase):
             mgr.play("click")
             mgr.play("unknown")
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows sound backend only")
     def test_unknown_sound_is_noop(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
         with patch("eyede.core.sound_feedback.winsound.PlaySound") as mock_play:

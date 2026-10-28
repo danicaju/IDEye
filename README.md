@@ -359,11 +359,11 @@ pytest -q
 ```
 
 ```text
-594 passed, 78 subtests, 21.26s
+594 passed, 78 subtests, 21.20s
 ```
 
 > [!NOTE]
-> All 594 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`; the legacy forwarders under `eyede/tests/` are not collected.
+> All 594 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
 
 ---
 

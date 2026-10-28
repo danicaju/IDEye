@@ -357,11 +357,11 @@ pytest -q
 ```
 
 ```text
-594 pruebas superadas, 78 subtests, 21.26s
+594 pruebas superadas, 78 subtests, 21.20s
 ```
 
 > [!NOTE]
-> Todos los 594 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 594 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
 
 ---
 

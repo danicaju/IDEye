@@ -98,12 +98,19 @@ def _brand_logo() -> str:
 
 def _cards(cards: List[Dict[str, Any]], accent: str) -> str:
     blocks = []
+    bubbles = ("¡MIRA!", "¡BIEN!", "¡CLIC!", "¡UF!")
     for index, card in enumerate(cards):
+        bubble = bubbles[index % len(bubbles)]
         blocks.append(
             f'''
             <article class="card card-{index % 2}" style="--accent:{accent}">
 <div class="badge sticker">{_ui_icon("star-badge")}<span>{_esc(card.get("badge", "FIX"))}</span></div>
-              <div class="card-icon"><div class="illustration" style="--accent:{accent}">{_icon(str(card.get("icon", "grid")))}</div></div>
+              <div class="card-icon"><div class="illustration" style="--accent:{accent}">
+                <span class="comic-bubble">{bubble}</span>
+                <span class="comic-star">{_ui_icon("star-badge")}</span>
+                {_icon(str(card.get("icon", "grid")))}
+                <svg class="action-arrow" viewBox="0 0 48 32" fill="none" aria-hidden="true"><path d="M4 24c10-1 18-6 26-16M26 8h10v10" stroke="#111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 24c10-1 18-6 26-16M26 8h10v10" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div></div>
               <h3 class="brush-title"><span>{_esc(card.get("title", ""))}</span></h3>
               <p>{_esc(card.get("text", ""))}</p>
               <span class="chip">{_esc(card.get("chip", ""))}</span>
@@ -194,260 +201,463 @@ applyTheme("nintendo-booklet");
 
 NINTENDO_CSS = """
 /* ======================================================================
-   NINTENDO BOOKLET THEME ? Paper Mario magazine spread
+   NINTENDO BOOKLET THEME - hand-made paper spread, no external assets
    ====================================================================== */
 body[data-theme="nintendo-booklet"] {
   color: #172033;
-  background-color: #8ed7ff;
+  background-color: #5f3824;
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(255,255,255,.75) 0 2.5px, transparent 3.5px),
-    radial-gradient(circle at 78% 72%, rgba(255,255,255,.55) 0 2px, transparent 3px),
-    radial-gradient(circle at 42% 88%, rgba(255,235,130,.55) 0 3px, transparent 4px),
-    linear-gradient(180deg, #9be7ff 0%, #c7f4ff 42%, #b8f5b1 100%);
-  background-size: 42px 42px, 58px 58px, 76px 76px, 100% 100%;
+    radial-gradient(circle at 3% 8%, rgba(255,255,255,.96) 0 3.2%, transparent 3.6%),
+    radial-gradient(circle at 13% 20%, rgba(255,255,255,.92) 0 2.1%, transparent 2.6%),
+    radial-gradient(circle at 7% 15%, rgba(255,255,255,.9) 0 1.3%, transparent 1.8%),
+    radial-gradient(circle at 94% 12%, rgba(255,255,255,.9) 0 2.4%, transparent 2.9%),
+    radial-gradient(circle at 86% 22%, rgba(255,255,255,.82) 0 1.4%, transparent 1.9%),
+    radial-gradient(circle at 96% 76%, rgba(250,204,21,.95) 0 4.2%, transparent 4.6%),
+    radial-gradient(circle at 5% 82%, rgba(225,29,72,.9) 0 3.8%, transparent 4.2%),
+    radial-gradient(circle at 8% 94%, rgba(250,204,21,.9) 0 1.3%, transparent 1.8%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.08) 0 2px, transparent 2px 86px),
+    linear-gradient(90deg, #6e432b 0%, #815134 38%, #603722 100%);
+  font-family: "Trebuchet MS", "Comic Sans MS", "Segoe UI", sans-serif;
+}
+body[data-theme="nintendo-booklet"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .55;
+  background:
+    linear-gradient(98deg, transparent 0 9%, rgba(255,255,255,.12) 9% 10%, transparent 10% 100%),
+    radial-gradient(circle at 98% 45%, #facc15 0 18px, transparent 19px),
+    radial-gradient(circle at 4% 52%, #facc15 0 14px, transparent 15px);
 }
 body[data-theme="nintendo-booklet"] .app {
-  width: min(1260px, calc(100% - 30px));
-  padding-top: 16px;
+  position: relative;
+  z-index: 1;
+  width: min(1420px, calc(100% - 24px));
+  padding-top: 18px;
 }
 body[data-theme="nintendo-booklet"] .hero {
-  border: 4px solid #111;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fffdf7, #fff1b8);
-  box-shadow: 8px 8px 0 #b91c2c;
+  position: relative;
+  border: 5px solid #111;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.025) 0 2px, transparent 2px 7px),
+    linear-gradient(135deg, #fffdf5 0%, #f8e3a8 52%, #f3cf72 100%);
+  box-shadow: 10px 10px 0 #111, 0 22px 50px rgba(0,0,0,.28);
   color: #111;
+  transform: rotate(-.55deg);
+  padding: 20px 24px;
 }
+body[data-theme="nintendo-booklet"] .hero::before,
+body[data-theme="nintendo-booklet"] .hero::after {
+  content: "";
+  position: absolute;
+  top: -16px;
+  width: 86px;
+  height: 28px;
+  background: rgba(255,255,255,.62);
+  border: 1px solid rgba(17,17,17,.18);
+  box-shadow: 1px 2px 2px rgba(0,0,0,.16);
+}
+body[data-theme="nintendo-booklet"] .hero::before { left: 9%; transform: rotate(-9deg); }
+body[data-theme="nintendo-booklet"] .hero::after { right: 8%; transform: rotate(7deg); }
 body[data-theme="nintendo-booklet"] .brand h1 {
   color: #b91c2c;
-  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
   font-weight: 900;
-  text-shadow: 2px 2px 0 #facc15, 4px 4px 0 #111;
+  letter-spacing: -.045em;
+  -webkit-text-stroke: 1.5px #111;
+  text-shadow: 4px 4px 0 #facc15, 7px 7px 0 #111;
 }
-body[data-theme="nintendo-booklet"] .brand p { color: #334155; font-weight: 700; }
+body[data-theme="nintendo-booklet"] .brand p {
+  color: #242424;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
 body[data-theme="nintendo-booklet"] .brand-icon-frame {
   background: #fffdf7;
   color: #111;
-  border: 2.5px solid #111;
-  border-radius: 14px;
+  border: 3px solid #111;
+  border-radius: 50%;
   box-shadow: 4px 4px 0 #111;
 }
 body[data-theme="nintendo-booklet"] .btn {
   border: 3px solid #111;
   background: #facc15;
   color: #111;
-  border-radius: 9px;
+  border-radius: 6px;
   box-shadow: 4px 4px 0 #111;
-  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
   font-weight: 900;
+  transform: rotate(-.5deg);
 }
-body[data-theme="nintendo-booklet"] .btn:hover { background: #fde047; transform: translate(-1px,-1px); }
+body[data-theme="nintendo-booklet"] .btn:hover { background: #fde047; transform: translate(-1px,-1px) rotate(-.5deg); }
 body[data-theme="nintendo-booklet"] .theme-toggle { background: #22c55e; color: #fff; }
-body[data-theme="nintendo-booklet"] .tabs { gap: 10px; margin-top: 22px; }
+body[data-theme="nintendo-booklet"] .tabs {
+  position: relative;
+  z-index: 2;
+  gap: 7px;
+  margin: 24px 8px 0;
+  align-items: flex-end;
+}
 body[data-theme="nintendo-booklet"] .tab {
   border: 3px solid #111;
-  background: #fffdf7;
+  border-bottom-width: 6px;
+  background: #fef3c7;
   color: #111;
-  border-radius: 8px;
-  box-shadow: 3px 3px 0 #111;
-  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  border-radius: 11px 11px 4px 4px;
+  box-shadow: 4px 4px 0 #111;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
   font-weight: 900;
-  transform: rotate(-.6deg);
+  padding: 10px 16px;
+  transform: rotate(-1.2deg);
+  min-height: 44px;
 }
-body[data-theme="nintendo-booklet"] .tab:nth-child(even) { transform: rotate(.7deg); }
+body[data-theme="nintendo-booklet"] .tab:nth-child(1) { background: #ef4444; color: #fff; transform: rotate(-1.8deg); }
+body[data-theme="nintendo-booklet"] .tab:nth-child(2) { background: #fde047; color: #111; transform: rotate(.7deg); }
+body[data-theme="nintendo-booklet"] .tab:nth-child(3) { background: #86efac; color: #111; transform: rotate(-.4deg); }
+body[data-theme="nintendo-booklet"] .tab:nth-child(4) { background: #93c5fd; color: #111; transform: rotate(1deg); }
+body[data-theme="nintendo-booklet"] .tab:nth-child(5) { background: #f9a8d4; color: #111; transform: rotate(-.9deg); }
 body[data-theme="nintendo-booklet"] .tab.active {
   background: #b91c2c;
   color: #facc15;
   border-color: #111;
-  box-shadow: 4px 4px 0 #111;
+  box-shadow: 5px 5px 0 #111;
+  transform: translateY(4px) rotate(-1deg);
 }
 body[data-theme="nintendo-booklet"] .page.active {
   position: relative;
-  padding: 26px 28px 58px;
-  border: 6px solid #fff;
-  border-radius: 6px;
+  display: grid;
+  grid-template-columns: minmax(250px, .76fr) minmax(0, 1.24fr);
+  column-gap: 52px;
+  align-items: start;
+  padding: 36px 42px 66px;
+  border: 8px solid #fff;
+  border-radius: 8px;
   outline: 4px solid #111;
-  box-shadow: 10px 10px 0 #111;
+  box-shadow: 12px 12px 0 #111, 0 28px 70px rgba(0,0,0,.34);
   background:
-    linear-gradient(90deg, transparent 47.8%, rgba(0,0,0,.14) 49.7%, rgba(255,255,255,.65) 50.2%, rgba(0,0,0,.10) 50.7%, transparent 52.2%),
-    radial-gradient(circle at 8% 8%, #fff9d9 0 7%, transparent 8%),
-    radial-gradient(circle at 92% 94%, #e8f7c9 0 8%, transparent 9%),
-    linear-gradient(90deg, #fffdf7 0 49.6%, #fdf6e8 49.6% 50.4%, #fffdf7 50.4% 100%);
+    radial-gradient(circle at 8% 8%, rgba(255,249,217,.9) 0 6%, transparent 7%),
+    radial-gradient(circle at 92% 96%, rgba(232,247,201,.65) 0 9%, transparent 10%),
+    repeating-linear-gradient(0deg, rgba(80,60,40,.035) 0 1px, transparent 1px 5px),
+    linear-gradient(90deg, #fffdf7 0 48.9%, #e3d6bd 49.2% 50.8%, #fffdf7 51.1% 100%);
+  transform: rotate(.15deg);
 }
-body[data-theme="nintendo-booklet"] .page-numbers span {
+body[data-theme="nintendo-booklet"] .page.active::before {
+  content: "";
   position: absolute;
-  bottom: 12px;
-  color: #fff;
-  font-family: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
-  font-size: 22px;
-  font-weight: 900;
-  -webkit-text-stroke: 2px #000;
-  text-shadow: 3px 3px 0 #000;
+  top: 24px;
+  bottom: 24px;
+  left: 50%;
+  width: 42px;
+  transform: translateX(-50%);
+  background: repeating-radial-gradient(ellipse 22px 10px at 50% 16px, #e5e7eb 0 54%, #111 55% 68%, transparent 69%) 0 0 / 100% 44px repeat-y;
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,.28));
+  z-index: 4;
+  pointer-events: none;
+  opacity: .96;
 }
-body[data-theme="nintendo-booklet"] .page-numbers span:first-child { left: 20px; }
-body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 20px; }
+body[data-theme="nintendo-booklet"] .page.active::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 15px);
+  top: 0;
+  bottom: 0;
+  width: 30px;
+  background: linear-gradient(90deg, transparent, rgba(80,55,30,.18), transparent);
+  z-index: 1;
+  pointer-events: none;
+}
+body[data-theme="nintendo-booklet"] .page.active > .ribbon,
+body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; }
+body[data-theme="nintendo-booklet"] .page.active > .card-grid {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+body[data-theme="nintendo-booklet"] .page.active > .threshold-row,
+body[data-theme="nintendo-booklet"] .page.active > .gesture-strip,
+body[data-theme="nintendo-booklet"] .page.active > .simulator,
+body[data-theme="nintendo-booklet"] .page.active > .shortcut-grid {
+  grid-column: 1 / -1;
+}
 body[data-theme="nintendo-booklet"] .ribbon {
   position: relative;
-  display: inline-block;
-  margin: 6px 0 18px 6px;
-  padding: 14px 30px 15px 56px;
-  border: 5px solid #facc15;
+  z-index: 2;
+  display: block;
+  width: calc(100% - 8px);
+  margin: 2px 0 18px 4px;
+  padding: 17px 20px 17px 54px;
+  border: 4px solid #111;
   border-radius: 4px;
-  background: #b91c2c;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.06) 0 2px, transparent 2px 8px),
+    #d21f2b;
   color: #facc15;
-  transform: rotate(-1.5deg);
-  box-shadow: 6px 6px 0 #111;
-  clip-path: polygon(0 4%, 97% 0, 100% 88%, 3% 100%);
+  transform: rotate(-2.1deg);
+  box-shadow: 9px 9px 0 #111;
+  clip-path: polygon(1% 3%, 98% 0, 100% 91%, 2% 100%);
+  isolation: isolate;
 }
 body[data-theme="nintendo-booklet"] .ribbon::before {
   content: "";
   position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%) rotate(-12deg);
-  color: #facc15;
-  font-size: 30px;
-  text-shadow: 2px 2px 0 #111;
+  inset: 8px -14px -9px 13px;
+  background: #facc15;
+  z-index: -1;
+  transform: rotate(2.2deg);
+  clip-path: polygon(1% 7%, 100% 0, 98% 92%, 0 100%);
 }
 body[data-theme="nintendo-booklet"] .ribbon-star {
-  position:absolute; left:14px; top:50%; transform:translateY(-50%) rotate(-8deg);
-  color:#facc15; width:32px; height:32px; filter:drop-shadow(2px 2px 0 #111);
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-10deg);
+  color: #facc15;
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(2px 2px 0 #111);
+  z-index: 2;
 }
-body[data-theme="nintendo-booklet"] .ribbon-star .ui-icon { width:32px; height:32px; stroke-width:2.2; }
+body[data-theme="nintendo-booklet"] .ribbon-star .ui-icon { width: 36px; height: 36px; stroke-width: 2.2; }
 body[data-theme="nintendo-booklet"] .kicker {
   color: #fde68a;
   opacity: 1;
   font-size: 10px;
-  letter-spacing: .12em;
+  letter-spacing: .13em;
   text-shadow: 1px 1px 0 #111;
 }
 body[data-theme="nintendo-booklet"] .ribbon h2 {
-  color: #fbbf24;
-  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
-  font-size: clamp(26px, 4.5vw, 48px);
+  color: #fff;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
+  font-size: clamp(25px, 3.7vw, 44px);
   font-weight: 900;
+  line-height: .98;
   -webkit-text-stroke: 2px #111;
-  text-shadow: 3px 3px 0 #000;
+  text-shadow: 3px 3px 0 #111, 5px 5px 0 #facc15;
 }
 body[data-theme="nintendo-booklet"] .intro {
   color: #1e293b;
-  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
   font-size: 16px;
-  font-weight: 700;
-  max-width: 900px;
+  font-weight: 800;
+  line-height: 1.55;
+  max-width: 640px;
+  padding: 15px 17px;
+  border: 3px solid #111;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(59,130,246,.12) 25px 26px),
+    #fffdf7;
+  box-shadow: 5px 5px 0 #111;
+  transform: rotate(.6deg);
 }
 body[data-theme="nintendo-booklet"] .card-grid {
-  grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
-  gap: 30px 22px;
-  padding-top: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 34px 24px;
+  padding-top: 6px;
 }
 body[data-theme="nintendo-booklet"] .card {
   overflow: visible;
-  min-height: 290px;
-  padding: 68px 16px 17px;
-  border: 3px solid #111;
-  border-radius: 8px;
-  background: #fffdf7;
-  box-shadow: 7px 7px 0 rgba(0,0,0,.75);
-  transform: rotate(-1.2deg);
+  min-height: 310px;
+  padding: 94px 17px 18px;
+  border: 4px solid #111;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.025) 0 2px, transparent 2px 7px),
+    #fffdf7;
+  box-shadow: 8px 8px 0 rgba(0,0,0,.82);
+  transform: rotate(-1.1deg);
   transition: transform .18s cubic-bezier(.2,1.6,.4,1), box-shadow .18s ease;
 }
-body[data-theme="nintendo-booklet"] .card.card-1 { transform: rotate(1.4deg); }
+body[data-theme="nintendo-booklet"] .card::before {
+  content: "";
+  position: absolute;
+  top: -14px;
+  left: 18px;
+  width: 82px;
+  height: 24px;
+  background: rgba(255,255,255,.6);
+  border: 1px solid rgba(17,17,17,.16);
+  transform: rotate(-7deg);
+  z-index: 6;
+}
+body[data-theme="nintendo-booklet"] .card.card-1 { transform: rotate(1.2deg); }
 body[data-theme="nintendo-booklet"] .card:hover {
-  transform: rotate(0deg) scale(1.03);
-  box-shadow: 10px 10px 0 rgba(0,0,0,.8);
-  z-index: 4;
+  transform: rotate(0deg) scale(1.025);
+  box-shadow: 12px 12px 0 rgba(0,0,0,.86);
+  z-index: 8;
 }
-body[data-theme="nintendo-booklet"] .card::after {
-  display: none;
-}
-body[data-theme="nintendo-booklet"] .card-icon {
-  margin: 0 0 12px;
-}
+body[data-theme="nintendo-booklet"] .card::after { display: none; }
+body[data-theme="nintendo-booklet"] .card-icon { margin: 0 0 12px; }
 body[data-theme="nintendo-booklet"] .illustration {
-  height: 142px;
+  position: relative;
+  overflow: hidden;
+  height: 158px;
   display: grid;
   place-items: center;
   color: #fff;
   background:
-    radial-gradient(circle at 75% 20%, #fff7a8 0 12%, transparent 13%),
+    radial-gradient(circle at 76% 18%, #fff7a8 0 11%, transparent 12%),
+    repeating-conic-gradient(from -8deg at 72% 40%, rgba(255,255,255,.28) 0 6deg, transparent 6deg 16deg),
     linear-gradient(145deg, var(--accent), #38bdf8 62%, #22c55e 100%);
-  border: 5px solid #fff;
-  outline: 3px solid #111;
-  box-shadow: 4px 4px 0 #111;
-  clip-path: polygon(7% 0, 93% 0, 100% 18%, 100% 100%, 0 100%, 0 18%);
+  border: 6px solid #fff;
+  outline: 4px solid #111;
+  box-shadow: 6px 6px 0 #111;
+  clip-path: polygon(3% 0, 97% 0, 100% 12%, 100% 100%, 0 100%, 0 12%);
+}
+body[data-theme="nintendo-booklet"] .illustration::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,.85) 1px, transparent 1.5px);
+  background-size: 12px 12px;
+  opacity: .28;
+  pointer-events: none;
 }
 body[data-theme="nintendo-booklet"] .illustration .icon {
-  width: 86px;
-  height: 86px;
-  filter: drop-shadow(3px 3px 0 #111);
+  position: relative;
+  z-index: 2;
+  width: 90px;
+  height: 90px;
+  filter: drop-shadow(4px 4px 0 #111);
+}
+body[data-theme="nintendo-booklet"] .comic-bubble {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  z-index: 5;
+  padding: 8px 11px 9px;
+  background: #fff;
+  color: #111;
+  border: 3px solid #111;
+  border-radius: 45% 55% 48% 52% / 52% 46% 54% 48%;
+  box-shadow: 3px 3px 0 #111;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  transform: rotate(-7deg);
+}
+body[data-theme="nintendo-booklet"] .comic-bubble::after {
+  content: "";
+  position: absolute;
+  right: 9px;
+  bottom: -9px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-right: 3px solid #111;
+  border-bottom: 3px solid #111;
+  transform: rotate(28deg);
+}
+body[data-theme="nintendo-booklet"] .comic-star {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 5;
+  width: 26px;
+  height: 26px;
+  color: #facc15;
+  filter: drop-shadow(2px 2px 0 #111);
+  transform: rotate(12deg);
+}
+body[data-theme="nintendo-booklet"] .comic-star .ui-icon { width: 26px; height: 26px; }
+body[data-theme="nintendo-booklet"] .action-arrow {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 5;
+  width: 44px;
+  height: 32px;
+  color: #fff;
+  filter: drop-shadow(2px 2px 0 #111);
 }
 body[data-theme="nintendo-booklet"] .sticker {
-  display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:0;
-  top: -20px;
-  right: -12px;
-  width: 60px;
-  height: 60px;
-  min-width: 60px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  top: -24px;
+  right: -14px;
+  width: 66px;
+  height: 66px;
+  min-width: 66px;
   border: 4px solid #fff;
   background: #22c55e;
   color: #fff;
-  font-family: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
   font-size: 13px;
   font-weight: 900;
   text-shadow: 1px 1px 0 #111;
-  box-shadow: 4px 4px 0 rgba(0,0,0,.5);
-  z-index: 5;
+  box-shadow: 5px 5px 0 rgba(0,0,0,.55);
+  z-index: 9;
+  transform: rotate(8deg);
+}
+body[data-theme="nintendo-booklet"] .sticker::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 2px dashed rgba(255,255,255,.72);
+  border-radius: 50%;
 }
 body[data-theme="nintendo-booklet"] .card:nth-child(even) .sticker { background: #facc15; color: #111; }
-body[data-theme="nintendo-booklet"] .sticker .ui-icon { width:16px; height:16px; stroke-width:2.4; }
-body[data-theme="nintendo-booklet"] .sticker span { font-size:10px; line-height:1; }
+body[data-theme="nintendo-booklet"] .sticker .ui-icon { width: 16px; height: 16px; stroke-width: 2.4; }
+body[data-theme="nintendo-booklet"] .sticker span { font-size: 9px; line-height: 1; }
 body[data-theme="nintendo-booklet"] .brush-title {
   position: absolute;
-  top: -17px;
-  left: 10px;
-  right: 10px;
+  top: 16px;
+  left: 12px;
+  right: 12px;
   margin: 0;
-  padding: 9px 13px;
-  background: #e11d48;
+  padding: 10px 14px;
+  background: #16a34a;
   color: #fff;
-  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
   font-size: 17px;
   font-weight: 900;
-  line-height: 1.08;
+  line-height: 1.04;
   text-align: left;
-  -webkit-text-stroke: 1.5px #000;
+  -webkit-text-stroke: 1.4px #000;
   text-shadow: 2px 3px 0 #000;
-  transform: rotate(-2.5deg);
+  transform: rotate(-1.6deg);
   clip-path: polygon(2% 0%, 98% 4%, 100% 92%, 0% 100%);
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 4px 4px 0 #111;
 }
+body[data-theme="nintendo-booklet"] .card-1 .brush-title { background: #f59e0b; color: #111; -webkit-text-stroke: 1.2px #111; text-shadow: 2px 2px 0 #fff; }
 body[data-theme="nintendo-booklet"] .brush-title span { display: block; }
 body[data-theme="nintendo-booklet"] .card p {
   color: #1e293b;
-  font-family: "Fredoka", "Nunito", "Comic Neue", "Trebuchet MS", sans-serif;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
   font-size: 14px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 body[data-theme="nintendo-booklet"] .chip {
   border: 2px solid #111;
   background: #fef3c7;
   color: #111;
-  border-radius: 5px;
+  border-radius: 4px;
   box-shadow: 2px 2px 0 #111;
-  font-family: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
   font-weight: 900;
+  transform: rotate(-1deg);
 }
 body[data-theme="nintendo-booklet"] .threshold-row span,
 body[data-theme="nintendo-booklet"] .gesture-card,
 body[data-theme="nintendo-booklet"] .shortcut,
 body[data-theme="nintendo-booklet"] .legal-item {
   border: 3px solid #111;
-  background: #fffdf7;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.02) 0 2px, transparent 2px 7px),
+    #fffdf7;
   color: #1e293b;
-  box-shadow: 4px 4px 0 #111;
-  border-radius: 7px;
+  box-shadow: 5px 5px 0 #111;
+  border-radius: 6px;
 }
+body[data-theme="nintendo-booklet"] .threshold-row span,
+body[data-theme="nintendo-booklet"] .shortcut { transform: rotate(-.7deg); }
+body[data-theme="nintendo-booklet"] .threshold-row span:nth-child(even),
+body[data-theme="nintendo-booklet"] .shortcut:nth-child(even) { transform: rotate(.7deg); }
 body[data-theme="nintendo-booklet"] .threshold-row b,
 body[data-theme="nintendo-booklet"] .gesture-card strong { color: #b91c2c; }
 body[data-theme="nintendo-booklet"] .gesture-card p,
@@ -455,53 +665,133 @@ body[data-theme="nintendo-booklet"] .shortcut span,
 body[data-theme="nintendo-booklet"] .legal-item p { color: #334155; }
 body[data-theme="nintendo-booklet"] .gesture-icon,
 body[data-theme="nintendo-booklet"] .legal-icon { color: #b91c2c; }
+body[data-theme="nintendo-booklet"] .gesture-icon {
+  background: #fff;
+  border: 3px solid #111;
+  padding: 5px;
+  box-shadow: 3px 3px 0 #111;
+  transform: rotate(-4deg);
+}
 body[data-theme="nintendo-booklet"] .simulator {
   border: 4px solid #111;
-  background: #fffdf7;
-  box-shadow: 7px 7px 0 #111;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.025) 0 2px, transparent 2px 7px),
+    #fffdf7;
+  box-shadow: 8px 8px 0 #111;
+  transform: rotate(-.3deg);
 }
+body[data-theme="nintendo-booklet"] .sim-heading h3,
+body[data-theme="nintendo-booklet"] .mini-kicker { color: #111; }
 body[data-theme="nintendo-booklet"] .sim-mode {
   border: 2px solid #111;
   background: #fef3c7;
   color: #111;
-  border-radius: 6px;
-  box-shadow: 2px 2px 0 #111;
+  border-radius: 5px;
+  box-shadow: 3px 3px 0 #111;
   font-weight: 900;
+  transform: rotate(-1deg);
 }
 body[data-theme="nintendo-booklet"] .sim-mode.active { background: #b91c2c; color: #facc15; }
 body[data-theme="nintendo-booklet"] .sim-cell {
-  border: 2px solid #111;
-  background: #fff7d6;
+  border: 3px solid #111;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 21px, rgba(59,130,246,.12) 21px 22px),
+    #fff7d6;
   color: #111;
-  box-shadow: 3px 3px 0 #111;
-  font-family: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
+  box-shadow: 4px 4px 0 #111;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
+  transform: rotate(-.6deg);
 }
+body[data-theme="nintendo-booklet"] .sim-cell:nth-child(even) { transform: rotate(.6deg); }
 body[data-theme="nintendo-booklet"] .sim-cell small { color: #b91c2c; }
 body[data-theme="nintendo-booklet"] .sim-info {
   border: 3px solid #111;
   background: #fffdf7;
-  box-shadow: 4px 4px 0 #111;
+  box-shadow: 5px 5px 0 #111;
 }
 body[data-theme="nintendo-booklet"] .sim-info h4 { color: #b91c2c; }
 body[data-theme="nintendo-booklet"] .sim-info p { color: #1e293b; }
+body[data-theme="nintendo-booklet"] .shortcut-grid { gap: 14px; margin-top: 22px; }
+body[data-theme="nintendo-booklet"] .shortcut { gap: 11px; padding: 12px 13px; }
+body[data-theme="nintendo-booklet"] .pager { gap: 10px; padding-top: 28px; }
 body[data-theme="nintendo-booklet"] .pager .btn,
 body[data-theme="nintendo-booklet"] .page-dot {
   border: 3px solid #111;
   background: #fffdf7;
   color: #111;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 4px 4px 0 #111;
 }
 body[data-theme="nintendo-booklet"] .page-dot.active { background: #b91c2c; color: #facc15; }
-body[data-theme="nintendo-booklet"] .page-label { color: #111; font-weight: 900; }
-body[data-theme="nintendo-booklet"] .legal-footer { border-top: 3px dashed #111; }
+body[data-theme="nintendo-booklet"] .page-label { color: #fffdf7; font-weight: 900; text-shadow: 2px 2px 0 #111; }
+body[data-theme="nintendo-booklet"] .legal-footer {
+  margin-top: 28px;
+  border: 4px solid #111;
+  background: #fffdf7;
+  box-shadow: 8px 8px 0 #111;
+  padding: 18px;
+  transform: rotate(-.3deg);
+}
+body[data-theme="nintendo-booklet"] .build-stamp { color: #334155; font-weight: 800; }
 body[data-theme="nintendo-booklet"] kbd {
   border: 2px solid #111;
   background: #fef3c7;
   color: #111;
   border-bottom-width: 4px;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: 3px 3px 0 #111;
 }
+body[data-theme="nintendo-booklet"] .page-numbers span {
+  position: absolute;
+  bottom: 8px;
+  color: #fff;
+  font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
+  font-size: 30px;
+  font-weight: 900;
+  -webkit-text-stroke: 2px #000;
+  text-shadow: 4px 4px 0 #000;
+  z-index: 6;
+  transform: rotate(-5deg);
+}
+body[data-theme="nintendo-booklet"] .page-numbers span:first-child { left: 24px; }
+body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 24px; transform: rotate(5deg); }
+@media (max-width: 980px) and (min-width: 641px) {
+  body[data-theme="nintendo-booklet"] .page.active {
+    grid-template-columns: minmax(210px, .78fr) minmax(0, 1.22fr);
+    column-gap: 24px;
+    padding: 28px 24px 62px;
+  }
+  body[data-theme="nintendo-booklet"] .page.active > .ribbon,
+  body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; }
+  body[data-theme="nintendo-booklet"] .page.active > .card-grid {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  body[data-theme="nintendo-booklet"] .page.active > .threshold-row,
+  body[data-theme="nintendo-booklet"] .page.active > .gesture-strip,
+  body[data-theme="nintendo-booklet"] .page.active > .simulator,
+  body[data-theme="nintendo-booklet"] .page.active > .shortcut-grid {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  body[data-theme="nintendo-booklet"] .page.active { grid-template-columns: 1fr; column-gap: 0; padding: 30px 24px 62px; }
+  body[data-theme="nintendo-booklet"] .page.active > .ribbon,
+  body[data-theme="nintendo-booklet"] .page.active > .intro,
+  body[data-theme="nintendo-booklet"] .page.active > .card-grid { grid-column: 1; grid-row: auto; }
+  body[data-theme="nintendo-booklet"] .page.active::before,
+  body[data-theme="nintendo-booklet"] .page.active::after { display: none; }
+  body[data-theme="nintendo-booklet"] .card-grid { grid-template-columns: 1fr; }
+}
+@media print {
+  body[data-theme="nintendo-booklet"] { background: #fff !important; }
+  body[data-theme="nintendo-booklet"] .page.active { grid-template-columns: 1fr 1fr; box-shadow: none; outline: 2px solid #555; }
+  body[data-theme="nintendo-booklet"] .page.active::before { opacity: .45; }
+  body[data-theme="nintendo-booklet"] .hero { box-shadow: none; }
+}
+
 """
+
 
 def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
     """Renders the complete offline guide from a catalog dictionary."""

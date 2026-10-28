@@ -42,7 +42,14 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
 
+      - name: Run headless test suite (Linux)
+        if: runner.os == 'Linux'
+        env:
+          PYNPUT_BACKEND: dummy
+        run: python -m pytest -q --tb=short
+
       - name: Run headless test suite
+        if: runner.os != 'Linux'
         run: python -m pytest -q --tb=short
 
       - name: Build standalone application

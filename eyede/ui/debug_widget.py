@@ -97,6 +97,8 @@ class DebugWidget(QWidget):
     health_guard_toggled = pyqtSignal(bool)
     micro_gestures_toggled = pyqtSignal(bool)
     low_light_toggled = pyqtSignal(bool)
+    eco_sleep_toggled = pyqtSignal(bool)
+    ghost_peek_toggled = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -251,6 +253,9 @@ class DebugWidget(QWidget):
         self.lbl_fps = QLabel("30.0 FPS", self)
         self.lbl_fps.setStyleSheet("font-size: 11px; font-weight: bold; color: #38bdf8;")
         stats_layout.addWidget(self.lbl_fps, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.lbl_power_state = QLabel("ECO: ACTIVE", self)
+        self.lbl_power_state.setStyleSheet("font-size: 10px; font-weight: bold; color: #22d3ee;")
+        stats_layout.addWidget(self.lbl_power_state, alignment=Qt.AlignmentFlag.AlignLeft)
 
         self.lbl_stability = QLabel("100% Fijación", self)
         self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
@@ -510,6 +515,18 @@ class DebugWidget(QWidget):
         self.chk_low_light.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.chk_low_light.toggled.connect(self.low_light_toggled.emit)
         content_layout.addWidget(self.chk_low_light)
+
+        self.chk_eco_sleep = QCheckBox("Eco-Sleep: 10/2 FPS en reposo", self)
+        self.chk_eco_sleep.setChecked(bool(getattr(config, "ECO_SLEEP_ENABLED", True)))
+        self.chk_eco_sleep.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_eco_sleep.toggled.connect(self.eco_sleep_toggled.emit)
+        content_layout.addWidget(self.chk_eco_sleep)
+
+        self.chk_ghost_peek = QCheckBox("Ghost-Peek: atenuar grid al leer", self)
+        self.chk_ghost_peek.setChecked(bool(getattr(config, "GHOST_PEEK_ENABLED", True)))
+        self.chk_ghost_peek.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_ghost_peek.toggled.connect(self.ghost_peek_toggled.emit)
+        content_layout.addWidget(self.chk_ghost_peek)
 
         # 7. Language Selector & VS Code WebSocket Bridge Status
         lang_bridge_frame = QFrame(self)
@@ -784,6 +801,33 @@ class DebugWidget(QWidget):
             self.chk_low_light.blockSignals(True)
             self.chk_low_light.setChecked(bool(enabled))
             self.chk_low_light.blockSignals(False)
+
+    def set_eco_sleep_enabled(self, enabled: bool) -> None:
+        if hasattr(self, "chk_eco_sleep"):
+            self.chk_eco_sleep.blockSignals(True)
+            self.chk_eco_sleep.setChecked(bool(enabled))
+            self.chk_eco_sleep.blockSignals(False)
+
+    def set_ghost_peek_enabled(self, enabled: bool) -> None:
+        if hasattr(self, "chk_ghost_peek"):
+            self.chk_ghost_peek.blockSignals(True)
+            self.chk_ghost_peek.setChecked(bool(enabled))
+            self.chk_ghost_peek.blockSignals(False)
+
+    def set_power_state(self, state: str) -> None:
+        if not hasattr(self, "lbl_power_state"):
+            return
+        normalized = str(state or "ACTIVE").upper()
+        colors = {
+            "ACTIVE": "#22d3ee",
+            "PAUSED_ECO": "#f59e0b",
+            "AWAY_DEEP_SLEEP": "#94a3b8",
+        }
+        label = normalized.replace("_", " ")
+        self.lbl_power_state.setText(f"ECO: {label}")
+        self.lbl_power_state.setStyleSheet(
+            f"font-size: 10px; font-weight: bold; color: {colors.get(normalized, '#22d3ee')};"
+        )
 
     def set_lighting_status(self, active: bool, luma: float) -> None:
         if hasattr(self, "lbl_lighting"):

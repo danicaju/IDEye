@@ -467,6 +467,11 @@ ENABLE_ADAPTIVE_AST_MENUS: bool = True
 START_IN_MODE_SELECTOR: bool = True
 CONTEXT_AUTO_SWITCH_ENABLED: bool = False
 
+# Phase 11: ergonomic reading, eco power and ghost-peek HUD
+ECO_SLEEP_ENABLED: bool = True
+GHOST_PEEK_ENABLED: bool = True
+GAZE_SCROLL_ENABLED: bool = True
+
 # ==============================================================================
 # Phase 5: Multi-Language Syntax Trees & Native VS Code WebSocket Bridge
 # ==============================================================================

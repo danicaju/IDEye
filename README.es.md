@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-580%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-594%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -227,6 +227,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+N`** | **Handover Multi-Monitor** | Mueve el HUD y el mapeo de mirada a la siguiente pantalla conectada |
 | **`Ctrl+Alt+Z`** | **Lupa Sniper x3.5** | Activa la lupa de precisión y el slow-mo en FreeLook |
 | **`Ctrl+Alt+I`** | **Agentic Prompt Launcher** | Abre seis órdenes de ingeniería para el chat de VS Code o la cola MCP local |
+| **`Ctrl+Alt+W`** | **Scroll ocular inercial** | Rueda vertical/horizontal proporcional con zona muerta central y frenado suave |
 | **Salida Ocular** | **[X SALIR] Manos Libres** | Mira a la esquina superior derecha `[X SALIR]` y abre la boca; despliega un diálogo de confirmación 100% asistivo |
 
 ---
@@ -254,6 +255,8 @@ IDEye/
 │   ├── core/
 │   │   ├── camera_tracker.py # QThread OpenCV + MediaPipe FaceMesh (468 pts)
 │   │   ├── gaze_estimator.py # Mirada híbrida, calibración por monitor y fusión
+│   │   ├── gaze_scroller.py # Scroll inercial proporcional por mirada
+│   │   ├── eco_power_manager.py # Eco-Sleep 30/10/2 FPS
 │   │   ├── gesture_detector.py # MAR, guiños y máquina de estados
 │   │   ├── hotkey_manager.py # Atajos globales Ctrl+Alt+letra
 │   │   ├── mouse_controller.py # Ratón SO y liberación de teclas gaming
@@ -289,8 +292,9 @@ IDEye/
 │   │   ├── calibration_ui.py # Asistente de calibración
 │   │   ├── debug_widget.py # Mini-feed, telemetría y controles
 │   │   ├── macro_editor_dialog.py # Editor de macros 3x3
-│   │   └── icon_manager.py # Iconos Lucide/SVG alta DPI
-?   ?   ??? sniper_lens.py # Lupa circular, micro-fijación y slow-mo
+│   │   ├── icon_manager.py # Iconos Lucide/SVG alta DPI
+│   │   ├── system_tray.py # Bandeja nativa con estados de energ?a
+│   │   └── sniper_lens.py # Lupa circular, micro-fijación y slow-mo
 │   ├── actions/
 │   │   ├── menu_trees.py # Árboles 3x3 y nodos pegajosos
 │   │   ├── context_reader.py # Extractor AST + Regex tolerante
@@ -304,7 +308,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 580 pruebas de unidad e integración
+└── tests/ # 594 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -324,6 +328,7 @@ IDEye/
     ├── test_phase10_2_ast_code_jumper.py # Extracción AST y mapa de símbolos
     ├── test_phase10_3_game_profiles.py # Perfiles, twin-stick y edge-scroll
     ├── test_phase10_4_agentic_launcher.py # Prompt, menú 3x3 y cola MCP
+        ├── test_phase11_scroll_eco_and_ghost_hud.py # Scroll, Eco-Sleep, Ghost-Peek y tray
     ├── test_hotfix_ui_and_gaming.py # Joystick, audio y ayuda
     ├── test_writing_words_and_letters.py # Teclado de letras, predicciones y frases
     ├── test_interactive_guide.py # Generación, catálogo y accesos al manual
@@ -352,11 +357,11 @@ pytest -q
 ```
 
 ```text
-580 pruebas superadas, 76 subtests, 20.10s
+594 pruebas superadas, 78 subtests, 20.20s
 ```
 
 > [!NOTE]
-> Todos los 580 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
+> Todos los 594 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`; los *forwarders* legacy bajo `eyede/tests/` no se recolectan.
 
 ---
 
@@ -386,6 +391,7 @@ pytest -q
 - [x] **Fase 10.2:** Salto semántico AST con mapa 3x3 y teleport de cursor en VS Code.
 - [x] **Fase 10.3:** Perfiles de juego dinámicos desde game_profiles.json, twin-stick y edge-scrolling de estrategia.
 - [x] **Fase 10.4:** Agentic Prompt Launcher para el chat de VS Code y la cola MCP de tareas oculares.
+- [x] **Fase 11:** Scroll ocular inercial, Eco-Sleep din?mico, Ghost-Peek HUD y bandeja nativa.
 
 > El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `eyede/config.py` para cualquier otra aplicación.
 

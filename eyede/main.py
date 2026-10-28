@@ -47,6 +47,7 @@ try:
     from eyede.ui.debug_widget import DebugWidget
     from eyede.ui.calibration_ui import CalibrationUI
     from eyede.ui.icon_manager import IconManager
+    from eyede.ui.system_tray import IDEyeSystemTray
     from eyede.actions.context_reader import ContextReader
     from eyede.actions.language_support import normalize_language, get_language_display_name
     from eyede.modes.mode_manager import ModeManager
@@ -71,6 +72,7 @@ except ImportError:
     from ui.debug_widget import DebugWidget
     from ui.calibration_ui import CalibrationUI
     from ui.icon_manager import IconManager
+    from ui.system_tray import IDEyeSystemTray
     from actions.context_reader import ContextReader
     from actions.language_support import normalize_language, get_language_display_name
     from modes.mode_manager import ModeManager
@@ -794,6 +796,7 @@ class EyeDEApplication(QObject):
         self.hotkey_manager.sniper_lens_toggle_requested.connect(self.overlay.toggle_sniper_lens)
         self.hotkey_manager.ast_jump_requested.connect(self.overlay.open_ast_symbols)
         self.hotkey_manager.agentic_launcher_requested.connect(self.overlay.open_agentic_launcher)
+        self.hotkey_manager.gaze_scroll_toggle_requested.connect(self.overlay.toggle_gaze_scroll)
         self.hotkey_manager.adaptive_ast_toggle_requested.connect(self.overlay.toggle_adaptive_ast)
         self.hotkey_manager.tracking_mode_cycle_requested.connect(self.debug_widget.cycle_tracking_mode)
         self.hotkey_manager.center_calibration_requested.connect(self._on_center_calibration_shortcut)
@@ -936,6 +939,9 @@ class EyeDEApplication(QObject):
         health_enabled = bool(values.get("health_guard_enabled", True))
         micro_enabled = bool(values.get("micro_gestures_enabled", True))
         low_light_enabled = bool(values.get("auto_low_light_clahe", True))
+        eco_enabled = bool(values.get("eco_sleep_enabled", getattr(config, "ECO_SLEEP_ENABLED", True)))
+        ghost_enabled = bool(values.get("ghost_peek_enabled", getattr(config, "GHOST_PEEK_ENABLED", True)))
+        gaze_scroll_enabled = bool(values.get("gaze_scroll_enabled", getattr(config, "GAZE_SCROLL_ENABLED", True)))
 
         if estimator is not None:
             estimator.set_tracking_mode(mode)
@@ -954,11 +960,16 @@ class EyeDEApplication(QObject):
             self.tracker.health_guard.enabled = health_enabled
         if hasattr(self.tracker, "lighting"):
             self.tracker.lighting.enabled = low_light_enabled
+        if hasattr(self.tracker, "set_eco_enabled"):
+            self.tracker.set_eco_enabled(eco_enabled)
         config.MAR_THRESHOLD = mar
 
         self.sound_feedback.set_enabled(sound_enabled)
         self.overlay.set_adaptive_ast_enabled(ast_enabled)
         self.overlay.toggle_auto_switch(auto_switch)
+        self.overlay.set_ghost_peek_enabled(ghost_enabled, emit_signal=False)
+        if getattr(self.overlay, "_gaze_scroll_enabled", None) != gaze_scroll_enabled:
+            self.overlay.toggle_gaze_scroll(gaze_scroll_enabled)
         self.overlay.set_language(lang)
         self.debug_widget.set_language(lang)
         self.debug_widget.set_tracking_mode_by_name(mode)
@@ -967,6 +978,8 @@ class EyeDEApplication(QObject):
         self.debug_widget.set_health_guard_enabled(health_enabled)
         self.debug_widget.set_micro_gestures_enabled(micro_enabled)
         self.debug_widget.set_low_light_enabled(low_light_enabled)
+        self.debug_widget.set_eco_sleep_enabled(eco_enabled)
+        self.debug_widget.set_ghost_peek_enabled(ghost_enabled)
         if hasattr(self.mode_manager, "set_language"):
             self.mode_manager.set_language(lang)
         if hasattr(self.context_reader, "set_active_language"):
@@ -1069,6 +1082,17 @@ class EyeDEApplication(QObject):
         self.overlay.autofix_requested.connect(self._apply_autofix)
         self.overlay.ast_jump_requested.connect(self._on_ast_jump_requested)
         self.overlay.agentic_prompt_requested.connect(self._on_agentic_prompt_requested)
+        self.overlay.reading_mode_toggled.connect(self.tracker.set_paused)
+        self.overlay.gaze_scroll_toggled.connect(
+            lambda v: self.settings_manager.set("gaze_scroll_enabled", bool(v))
+        )
+        self.overlay.ghost_peek_toggled.connect(
+            lambda v: self.settings_manager.set("ghost_peek_enabled", bool(v))
+        )
+        if hasattr(self.tracker, "power_state_changed"):
+            self.tracker.power_state_changed.connect(self._on_power_state_changed)
+        self.debug_widget.eco_sleep_toggled.connect(self._on_eco_sleep_toggled)
+        self.debug_widget.ghost_peek_toggled.connect(self._on_ghost_peek_toggled)
 
         # Context reader & AI status connections
         self.debug_widget.file_linked.connect(self.context_reader.set_active_file)
@@ -1194,6 +1218,31 @@ class EyeDEApplication(QObject):
             self.overlay.copy_agentic_prompt(prompt)
             self.overlay.last_action_desc = "ORDEN IA LISTA EN PORTAPAPELES / MCP"
         self.overlay.update()
+
+    def _on_power_state_changed(self, state: str) -> None:
+        """Propagates ECO state to the debug panel and native tray."""
+        if hasattr(self.debug_widget, "set_power_state"):
+            self.debug_widget.set_power_state(state)
+        tray = getattr(self, "tray_icon", None)
+        if tray is not None and hasattr(tray, "set_power_state"):
+            tray.set_power_state(state)
+
+    def _on_eco_sleep_toggled(self, enabled: bool) -> None:
+        if hasattr(self.tracker, "set_eco_enabled"):
+            self.tracker.set_eco_enabled(bool(enabled))
+        self.settings_manager.set("eco_sleep_enabled", bool(enabled))
+        if hasattr(self.debug_widget, "set_eco_sleep_enabled"):
+            self.debug_widget.set_eco_sleep_enabled(bool(enabled))
+
+    def _on_ghost_peek_toggled(self, enabled: bool) -> None:
+        if hasattr(self.overlay, "set_ghost_peek_enabled"):
+            self.overlay.set_ghost_peek_enabled(bool(enabled), emit_signal=False)
+        self.settings_manager.set("ghost_peek_enabled", bool(enabled))
+        if hasattr(self.debug_widget, "set_ghost_peek_enabled"):
+            self.debug_widget.set_ghost_peek_enabled(bool(enabled))
+        tray = getattr(self, "tray_icon", None)
+        if tray is not None and hasattr(tray, "set_ghost_peek"):
+            tray.set_ghost_peek(bool(enabled))
 
     def _apply_autofix(self, fix: Dict[str, Any]) -> None:
         """Applies a selected Auto-Fix locally or through the VS Code bridge."""
@@ -1473,46 +1522,22 @@ class EyeDEApplication(QObject):
             return
 
         try:
-            self.tray_icon = QSystemTrayIcon(self.debug_widget)
-            logo_icon = IconManager.instance().get_app_icon()
-            if not logo_icon.isNull():
-                self.tray_icon.setIcon(logo_icon)
-            else:
-                pixmap = QPixmap(32, 32)
-                pixmap.fill(Qt.GlobalColor.transparent)
-                painter = QPainter(pixmap)
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                painter.setBrush(QBrush(QColor(56, 189, 248)))
-                painter.setPen(Qt.PenStyle.NoPen)
-                painter.drawEllipse(2, 2, 28, 28)
-                painter.setPen(QColor(15, 23, 42))
-                painter.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
-                painter.drawText(0, 0, 32, 32, Qt.AlignmentFlag.AlignCenter, "I")
-                painter.end()
-                self.tray_icon.setIcon(QIcon(pixmap))
-
-            self.tray_icon.setToolTip("IDEye - Control Ocular Activo (Ctrl+Alt+Q para salir)")
-
-            tray_menu = QMenu()
-            action_title = tray_menu.addAction("IDEye - Control Ocular")
-            action_title.setEnabled(False)
-            tray_menu.addSeparator()
-
-            action_mode = tray_menu.addAction("Cambiar Modo Seguimiento [T]")
-            action_mode.triggered.connect(self.debug_widget.cycle_tracking_mode)
-            tray_menu.addSeparator()
-
-            action_recalib = tray_menu.addAction("Recalibrar (5 puntos)")
-            action_recalib.triggered.connect(self.launch_calibration)
-
-            action_reset = tray_menu.addAction("Resetear Calibración")
-            action_reset.triggered.connect(self.reset_calibration)
-
-            tray_menu.addSeparator()
-            action_exit = tray_menu.addAction("Salida de Emergencia (Ctrl+Alt+Q)")
-            action_exit.triggered.connect(self.shutdown)
-
-            self.tray_icon.setContextMenu(tray_menu)
+            self.tray_icon = IDEyeSystemTray(self.debug_widget)
+            self.tray_icon.pause_requested.connect(self.overlay.toggle_pause)
+            self.tray_icon.mode_requested.connect(
+                lambda mode_id: self.mode_manager.set_mode(mode_id)
+            )
+            self.tray_icon.ghost_peek_toggled.connect(self._on_ghost_peek_toggled)
+            self.tray_icon.recalibrate_requested.connect(self.launch_calibration)
+            self.tray_icon.guide_requested.connect(self._open_interactive_guide)
+            self.tray_icon.mini_feed_requested.connect(self.debug_widget.toggle_collapse)
+            self.tray_icon.exit_requested.connect(self.shutdown)
+            self.tray_icon.set_ghost_peek(
+                bool(getattr(self.overlay, "ghost_peek_enabled", True))
+            )
+            self.tray_icon.set_power_state(
+                str(getattr(self.tracker, "current_power_state", "ACTIVE"))
+            )
             self.tray_icon.show()
         except Exception as e:
             logger.warning(f"[IDEye] Warning: Could not initialize system tray: {e}")

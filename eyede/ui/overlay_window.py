@@ -71,6 +71,7 @@ try:
     from eyede.actions.diagnostics_fixer import DiagnosticsFixer
     from eyede.actions.ast_code_jumper import ASTCodeJumper
     from eyede.actions.agentic_launcher import AgenticPromptLauncher
+    from eyede.core.gaze_scroller import GazeScroller
     from eyede.ui.sniper_lens import SniperLens
     from eyede.modes.mode_manager import ModeManager
 except ImportError:
@@ -109,6 +110,7 @@ except ImportError:
     from actions.diagnostics_fixer import DiagnosticsFixer
     from actions.ast_code_jumper import ASTCodeJumper
     from actions.agentic_launcher import AgenticPromptLauncher
+    from core.gaze_scroller import GazeScroller
     from ui.sniper_lens import SniperLens
     from modes.mode_manager import ModeManager
 
@@ -228,6 +230,8 @@ class OverlayWindow(QWidget):
     autofix_requested = pyqtSignal(object)
     ast_jump_requested = pyqtSignal(int)
     agentic_prompt_requested = pyqtSignal(str, str, bool)  # action_id, prompt, queue_only
+    ghost_peek_toggled = pyqtSignal(bool)
+    gaze_scroll_toggled = pyqtSignal(bool)
     mode_changed = context_mode_changed
 
     def __init__(
@@ -385,6 +389,16 @@ class OverlayWindow(QWidget):
         self.hovered_block: Optional[int] = None
         self.active_click_block: Optional[int] = None
         self.current_gaze: Tuple[float, float] = (0.5, 0.5)
+        self.gaze_scroller = GazeScroller()
+        self._gaze_scroll_enabled: bool = bool(getattr(config, "GAZE_SCROLL_ENABLED", True))
+        self.ghost_peek_enabled: bool = bool(getattr(config, "GHOST_PEEK_ENABLED", True))
+        self._ghost_opacity: float = 1.0
+        self._last_ghost_interaction: float = time.time()
+        self._last_ghost_gaze: Tuple[float, float] = (0.5, 0.5)
+        self._ghost_timer = QTimer(self)
+        self._ghost_timer.setInterval(50)
+        self._ghost_timer.timeout.connect(self._tick_ghost_peek)
+        self._ghost_timer.start()
 
         # Hands-free header exit button state
         self.hovered_header_exit: bool = False
@@ -1271,6 +1285,14 @@ class OverlayWindow(QWidget):
         with sub-pixel geometry alignment matching visual category cards.
         """
         self.current_gaze = (gx, gy)
+        try:
+            old_x, old_y = self._last_ghost_gaze
+            if abs(float(gx) - old_x) + abs(float(gy) - old_y) >= 0.10:
+                self._wake_ghost_peek()
+        except Exception:
+            pass
+        self._last_ghost_gaze = (float(gx), float(gy))
+        self._apply_gaze_scroll(gy)
 
         # FreeLook: header remains interactive; the rest of the screen moves
         # the real OS cursor directly and hides the 3x3 grid.
@@ -1988,6 +2010,16 @@ class OverlayWindow(QWidget):
         self._game_keys_down.clear()
         self._gaming_right_held = False
         self._hold_started = False
+        try:
+            self.gaze_scroller.stop()
+        except Exception:
+            pass
+        if getattr(self, "_gaze_scroll_enabled", False):
+            self._gaze_scroll_enabled = False
+            try:
+                self.gaze_scroll_toggled.emit(False)
+            except Exception:
+                pass
 
     def _freelook_click(self) -> None:
         mode = self._sniper_mode()
@@ -2301,6 +2333,9 @@ class OverlayWindow(QWidget):
             self.current_mar = float(current_mar)
         except (TypeError, ValueError):
             self.current_mar = 0.0
+        mouth_rest = max(0.0, float(getattr(config, "MAR_REST_THRESHOLD", 0.20)))
+        if self.current_mar > mouth_rest + 0.04:
+            self._wake_ghost_peek()
         if (
             self.current_context_mode_id == "sniper"
             and self.current_node_id != "MODE_SELECT"
@@ -2320,6 +2355,12 @@ class OverlayWindow(QWidget):
         - 'WINK_RIGHT': Toggles Option B pause mode (hides/restores HUD completely).
         - 'WINK_LEFT': Submenu 'Volver atrás' (parent menu node), or Undo 'Ctrl+Z' at ROOT.
         """
+        self._wake_ghost_peek()
+        if gesture_name in ("MOUTH_CLICK", "WINK_LEFT", "WINK_RIGHT"):
+            self.gaze_scroller.stop()
+            if self._gaze_scroll_enabled:
+                self._gaze_scroll_enabled = False
+                self.gaze_scroll_toggled.emit(False)
         if self.show_help_modal and gesture_name == "MOUTH_CLICK":
             self.mouth_clicked.emit(self.hovered_block if self.hovered_block is not None else -1)
             open_guide = bool(getattr(self, "hovered_help_modal_guide", False))
@@ -2886,6 +2927,16 @@ class OverlayWindow(QWidget):
             self.update()
             return
 
+        if item.action_type == "GAZE_SCROLL":
+            enabled = self.toggle_gaze_scroll()
+            self.last_action_desc = (
+                "Scroll continuo: ON" if enabled else "Scroll continuo: OFF"
+            )
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            self.update()
+            return
+
         if item.action_type == "PAUSE":
             self.toggle_reading_mode()
             self.last_action_desc = "Modo Reposo Activo"
@@ -3378,17 +3429,104 @@ class OverlayWindow(QWidget):
             self.adaptive_ast_toggled.emit(self.adaptive_ast_enabled)
             self.update()
 
+    def _ghost_card_opacity(self) -> float:
+        """Returns the live card-only opacity used by Ghost-Peek."""
+        return float(max(0.15, min(1.0, self._ghost_opacity))) if self.ghost_peek_enabled else 1.0
+
+    def update_ghost_peek(
+        self,
+        now: Optional[float] = None,
+        idle_seconds: float = 4.0,
+        target_opacity: float = 0.15,
+    ) -> float:
+        """Advances the Ghost-Peek fade and wake animation."""
+        if not self.ghost_peek_enabled:
+            self._ghost_opacity = 1.0
+            return 1.0
+        timestamp = time.time() if now is None else float(now)
+        idle = max(0.0, timestamp - self._last_ghost_interaction)
+        if idle >= max(0.0, float(idle_seconds)):
+            target = max(0.15, min(1.0, float(target_opacity)))
+            if self._ghost_opacity > target:
+                self._ghost_opacity = max(target, self._ghost_opacity - 0.08)
+            else:
+                self._ghost_opacity = target
+        elif self._ghost_opacity < 1.0:
+            self._ghost_opacity = 1.0
+        return self._ghost_opacity
+
+    def _tick_ghost_peek(self) -> None:
+        before = self._ghost_opacity
+        self.update_ghost_peek()
+        if abs(self._ghost_opacity - before) > 1e-4:
+            self.update()
+
+    def _wake_ghost_peek(self) -> None:
+        self._last_ghost_interaction = time.time()
+        if self._ghost_opacity < 1.0:
+            self._ghost_opacity = 1.0
+            self.update()
+
+    def set_ghost_peek_enabled(self, enabled: bool, emit_signal: bool = True) -> None:
+        self.ghost_peek_enabled = bool(enabled)
+        if not self.ghost_peek_enabled:
+            self._ghost_opacity = 1.0
+        else:
+            self._last_ghost_interaction = time.time()
+        if emit_signal:
+            self.ghost_peek_toggled.emit(self.ghost_peek_enabled)
+        self.update()
+
+    def toggle_ghost_peek(self) -> bool:
+        self.set_ghost_peek_enabled(not self.ghost_peek_enabled)
+        return self.ghost_peek_enabled
+
+    def toggle_gaze_scroll(self, enabled: Optional[bool] = None) -> bool:
+        """Toggles proportional inertial scrolling for the current gaze."""
+        next_state = (not self._gaze_scroll_enabled) if enabled is None else bool(enabled)
+        if next_state:
+            self.gaze_scroller.activate()
+            self._last_ghost_interaction = time.time()
+        else:
+            self.gaze_scroller.stop()
+        self._gaze_scroll_enabled = next_state
+        self.gaze_scroll_toggled.emit(next_state)
+        self.last_action_desc = "Scroll ocular: ON" if next_state else "Scroll ocular: OFF"
+        self.update()
+        return next_state
+
+    def _apply_gaze_scroll(self, gy: float) -> None:
+        if not self._gaze_scroll_enabled or self.reading_mode or self.show_help_modal:
+            return
+        if self.current_context_mode_id == "sniper":
+            return
+        if self.mouse_controller is None:
+            return
+        try:
+            self.gaze_scroller.update(float(gy), dt=1.0 / 60.0, active=True)
+            steps = int(self.gaze_scroller.last_steps)
+            horizontal = int(self.gaze_scroller.last_horizontal_steps)
+            if steps:
+                self.mouse_controller.scroll(steps)
+            if horizontal:
+                self.mouse_controller.scroll_horizontal(horizontal)
+        except Exception:
+            pass
+
     def toggle_reading_mode(self) -> None:
         """Toggles between Active HUD mode and Hidden/Reading Mode (Option B: full hide)."""
         self.reading_mode = not self.reading_mode
         self.current_opacity = config.OVERLAY_OPACITY_READING if self.reading_mode else config.OVERLAY_OPACITY_ACTIVE
         if self.reading_mode:
             self.release_freelook_controls()
+            self.gaze_scroller.stop()
+            self._gaze_scroll_enabled = False
             self.hovered_block = None
             self.hide()
         else:
             self.show()
             self.raise_()
+            self._wake_ghost_peek()
         self.reading_mode_toggled.emit(self.reading_mode)
         self.update()
 
@@ -3787,6 +3925,9 @@ class OverlayWindow(QWidget):
             "SNIPER": "crosshair",
         }
 
+        painter.save()
+        card_alpha = self._ghost_card_opacity()
+        painter.setOpacity(card_alpha)
         for i in range(9):
             if self.current_context_mode_id == "sniper" and self.current_node_id != "MODE_SELECT":
                 continue
@@ -3824,7 +3965,7 @@ class OverlayWindow(QWidget):
                 band_brush = self._brush_band_inactive
 
             # 1. Transparent body (keeps VS Code readable)
-            painter.setOpacity(1.0)
+            painter.setOpacity(card_alpha)
             painter.setBrush(body_brush)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRoundedRect(rect, 12.0, 12.0)
@@ -3868,7 +4009,7 @@ class OverlayWindow(QWidget):
 
             # Content (dimmed for inactive cards)
             painter.save()
-            painter.setOpacity(text_opacity)
+            painter.setOpacity(text_opacity * card_alpha)
 
             number = i + 1
             number_rect = QRectF(rect.x() + 10.0, rect.y() + 8.0, 24.0, 24.0)
@@ -3970,6 +4111,8 @@ class OverlayWindow(QWidget):
 
             painter.restore()
 
+        painter.restore()
+
         # =====================================================================
         # 3. High-Contrast In-App Gesture & Shortcut Cheat Sheet Modal Card
         # =====================================================================
@@ -3986,6 +4129,7 @@ class OverlayWindow(QWidget):
         # =====================================================================
         # 4. Refined High-Visibility Dual-Ring Reticle with Glow Aura
         # =====================================================================
+        self._paint_gaze_scroll_indicators(painter, w, h)
         if not self.reading_mode or self.hovered_block == 4:
             painter.setOpacity(0.95 if not self.reading_mode else 0.85)
             gx, gy = self.current_gaze
@@ -4020,6 +4164,34 @@ class OverlayWindow(QWidget):
             painter.drawEllipse(center, 3.0, 3.0)
 
         painter.end()
+    def _paint_gaze_scroll_indicators(self, painter: QPainter, w: float, h: float) -> None:
+        """Draws subtle top/bottom velocity indicators while gaze scroll is active."""
+        if not getattr(self, "_gaze_scroll_enabled", False):
+            return
+        try:
+            speed = float(self.gaze_scroller.speed())
+        except Exception:
+            return
+        if abs(speed) < 0.01:
+            return
+        intensity = min(1.0, abs(speed) / max(1e-6, self.gaze_scroller.max_scroll_rate))
+        color = QColor(getattr(self, "theme_color", "#22d3ee"))
+        color.setAlpha(int(45 + 150 * intensity))
+        painter.save()
+        painter.setPen(QPen(color, 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        cx = w * 0.5
+        span = 26.0
+        if speed > 0:
+            y = h - 54.0
+            painter.drawLine(QPointF(cx - span, y - 8.0), QPointF(cx, y))
+            painter.drawLine(QPointF(cx, y), QPointF(cx + span, y - 8.0))
+            painter.drawLine(QPointF(cx, y + 10.0), QPointF(cx, y + 2.0))
+        else:
+            y = 54.0
+            painter.drawLine(QPointF(cx - span, y + 8.0), QPointF(cx, y))
+            painter.drawLine(QPointF(cx, y), QPointF(cx + span, y + 8.0))
+            painter.drawLine(QPointF(cx, y - 10.0), QPointF(cx, y - 2.0))
+        painter.restore()
 
     def _paint_help_modal(self, painter: QPainter, w: float, h: float) -> None:
         """Paints a wrapped, height-fitted gesture and shortcut cheat sheet."""

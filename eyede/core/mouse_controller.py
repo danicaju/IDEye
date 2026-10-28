@@ -108,6 +108,13 @@ class OSMouseController:
         except Exception:
             pass
 
+    def scroll_horizontal(self, dx: int) -> None:
+        """Scroll horizontally at the current pointer position."""
+        try:
+            self._controller.scroll(self._safe_int(dx), 0)
+        except Exception:
+            pass
+
     def scroll_at(self, x: int, y: int, dy: int) -> None:
         """Move to coordinates and scroll vertically by dy lines."""
         self.move_to(x, y)

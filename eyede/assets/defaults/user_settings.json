@@ -1,1 +1,5 @@
-{}
+{
+  "eco_sleep_enabled": true,
+  "ghost_peek_enabled": true,
+  "gaze_scroll_enabled": true
+}

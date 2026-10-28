@@ -30,12 +30,14 @@ try:
     from eyede.core.gesture_detector import GestureDetector
     from eyede.core.health_guard import HealthGuard
     from eyede.core.lighting_compensator import LightingCompensator
+    from eyede.core.eco_power_manager import EcoPowerManager
 except ImportError:
     import config
     from core.gaze_estimator import GazeEstimator
     from core.gesture_detector import GestureDetector
     from core.health_guard import HealthGuard
     from core.lighting_compensator import LightingCompensator
+    from core.eco_power_manager import EcoPowerManager
 
 
 def _ensure_qt_app():
@@ -63,6 +65,7 @@ class CameraTracker(QThread):
     health_alert = pyqtSignal(str)
     gesture_triggered = pyqtSignal(str)
     frame_ready = pyqtSignal(object, float)
+    power_state_changed = pyqtSignal(str)
 
     def __init__(
         self,
@@ -87,6 +90,11 @@ class CameraTracker(QThread):
         self.frame_width = frame_width
         self.frame_height = frame_height
         self.fps = fps
+        self._paused = False
+        self.eco_manager = EcoPowerManager(
+            enabled=bool(getattr(config, "ECO_SLEEP_ENABLED", True))
+        )
+        self._last_power_state = self.eco_manager.current_power_state
         self.mirror = mirror
         self.threaded = threaded
 
@@ -161,6 +169,32 @@ class CameraTracker(QThread):
     def _worker_thread(self):
         """Phase 1 compatibility property."""
         return self
+
+    def set_paused(self, paused: bool) -> None:
+        """Pauses the HUD and puts the camera into the 10 FPS eco state."""
+        self._paused = bool(paused)
+        self.eco_manager.set_paused(self._paused)
+        self._emit_power_state()
+
+    def set_eco_enabled(self, enabled: bool) -> None:
+        """Enables or disables adaptive framerate scaling at runtime."""
+        self.eco_manager.set_enabled(bool(enabled))
+        self._emit_power_state()
+
+    @property
+    def current_power_state(self) -> str:
+        return self.eco_manager.current_power_state
+
+    def _target_delay(self) -> float:
+        if self.eco_manager.current_power_state == EcoPowerManager.ACTIVE:
+            return 1.0 / max(1.0, float(self.fps))
+        return self.eco_manager.frame_interval
+
+    def _emit_power_state(self) -> None:
+        state = self.eco_manager.current_power_state
+        if state != getattr(self, "_last_power_state", ""):
+            self._last_power_state = state
+            self.power_state_changed.emit(state)
 
     def is_alive(self) -> bool:
         """Phase 1 compatibility method."""
@@ -391,14 +425,14 @@ class CameraTracker(QThread):
         Executes OpenCV capture, MediaPipe inference, gaze estimation, and gesture detection.
         CRITICAL: Never touches PyQt6 widgets directly. All communication is via pyqtSignals.
         """
-        target_delay = 1.0 / max(1, self.fps)
-
         while self._running and not self._stop_requested:
             t_start = time.perf_counter()
 
             frame, landmarks = self._process_one_frame()
             if frame is None:
                 self._empty_frame_count += 1
+                self.eco_manager.update(detected=False, paused=self._paused)
+                self._emit_power_state()
                 now = time.time()
                 if now - self._last_face_lost_emit >= 0.5:
                     self._last_face_lost_emit = now
@@ -410,7 +444,7 @@ class CameraTracker(QThread):
                 ):
                     self._last_reconnect_attempt = now
                     self._safe_reconnect()
-                time.sleep(min(0.10, 0.01 * max(1, min(self._empty_frame_count, 10))))
+                time.sleep(max(0.01, min(0.5, self._target_delay())))
                 continue
 
             self._empty_frame_count = 0
@@ -423,6 +457,8 @@ class CameraTracker(QThread):
 
             # Gaze estimation
             gx, gy, detected, debug_info = self.gaze_estimator.estimate(landmarks)
+            self.eco_manager.update(detected=bool(detected), paused=self._paused)
+            self._emit_power_state()
 
             # Gesture detection
             clicked, current_mar, hold_progress = self.gesture_detector.process(landmarks)
@@ -482,7 +518,7 @@ class CameraTracker(QThread):
             self.frame_ready.emit(annotated_frame, float(current_mar))
 
             elapsed = time.perf_counter() - t_start
-            sleep_time = max(0.001, target_delay - elapsed)
+            sleep_time = max(0.001, self._target_delay() - elapsed)
             time.sleep(sleep_time)
 
     def get_latest_landmarks(self) -> Optional[Any]:

@@ -39,7 +39,7 @@ class IdeNavMode(BaseMode):
             _act("4", "N_SCROLL_BOTTOM", "Ir abajo", None, key_name="CTRL_END"),
             _act("6", "N_LINE_UP", "Línea arriba", None, key_name="UP"),
             _act("8", "N_LINE_DOWN", "Línea abajo", None, key_name="DOWN"),
-            _act("9", "N_CENTER", "Centrar cursor", None, key_name="CTRL_L"),
+            _act("9", "N_GAZE_SCROLL", "SCROLL CONTINUO", None, action_type="GAZE_SCROLL"),
         ]
         tree["NAV_SCROLL"] = make_submenu("NAV_SCROLL", "SCROLL", scroll)
 

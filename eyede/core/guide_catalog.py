@@ -59,6 +59,7 @@ SHORTCUT_LABELS = {
     "f": ("FreeLook", "Activa el ratón directo por mirada."),
     "g": ("Gaming", "Entra en el perfil Gaming con head-joystick."),
     "i": ("Agentic Launcher", "Ctrl+Alt+I abre las seis órdenes de ingeniería para VS Code y la cola MCP."),
+    "w": ("Scroll ocular", "Ctrl+Alt+W activa o desactiva la rueda de scroll inercial por mirada."),
 }
 
 PAGES: List[Dict[str, Any]] = [
@@ -339,6 +340,27 @@ PAGES: List[Dict[str, Any]] = [
                 "text": "Landmarks no finitos, cámaras desconectadas, JSON corrupto, portapapeles bloqueado y teclas atascadas se recuperan sin cerrar la app ni perder el control ocular.",
                 "chip": "Chaos tested",
             },
+            {
+                "icon": "scroll",
+                "badge": "W",
+                "title": "Gaze Scroll Wheel Elástico",
+                "text": "Ctrl+Alt+W activa una rueda vertical y horizontal proporcional a la mirada. La zona central de lectura no desplaza y la inercia frena con suavidad al volver.",
+                "chip": "Scroll inercial",
+            },
+            {
+                "icon": "health",
+                "badge": "ECO",
+                "title": "Modo Eco-Sleep de Bajo Consumo",
+                "text": "El pipeline baja a 10 FPS durante la pausa y a 2 FPS tras diez segundos sin rostro. Cualquier rostro detectado despierta de inmediato a máxima frecuencia.",
+                "chip": "CPU casi cero",
+            },
+            {
+                "icon": "mouse",
+                "badge": "GHOST",
+                "title": "Ghost-Peek HUD + System Tray",
+                "text": "El grid se atenúa al 15% tras cuatro segundos de lectura tranquila y reaparece al instante con un gesto o sácada. La bandeja nativa ofrece pausa, modos y calibración.",
+                "chip": "HUD discreto",
+            },
         ],
     },
 ]
@@ -535,7 +557,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "580 tests, 76 subtests, 20.10s",
+        "test_summary": "594 tests, 78 subtests, 20.20s",
     }
 
 

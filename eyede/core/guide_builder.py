@@ -383,11 +383,17 @@ body[data-theme="nintendo-booklet"] .page.active::after {
   z-index: 1;
   pointer-events: none;
 }
-body[data-theme="nintendo-booklet"] .page.active > .ribbon,
-body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; }
-body[data-theme="nintendo-booklet"] .page.active > .card-grid {
+body[data-theme="nintendo-booklet"] .page.active > .ribbon { grid-column: 1; grid-row: 1; }
+body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; grid-row: 2; }
+body[data-theme="nintendo-booklet"] .page.active > .card-grid-left {
+  grid-column: 1;
+  grid-row: 3;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+body[data-theme="nintendo-booklet"] .page.active > .card-grid-right {
   grid-column: 3;
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 body[data-theme="nintendo-booklet"] .page.active > .threshold-row,
 body[data-theme="nintendo-booklet"] .page.active > .gesture-strip,
@@ -778,9 +784,15 @@ body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 24px;
   }
   body[data-theme="nintendo-booklet"] .page.active > .ribbon,
   body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; }
-  body[data-theme="nintendo-booklet"] .page.active > .card-grid {
+  body[data-theme="nintendo-booklet"] .page.active > .card-grid-left {
+    grid-column: 1;
+    grid-row: 3;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  body[data-theme="nintendo-booklet"] .page.active > .card-grid-right {
     grid-column: 3;
-    grid-row: 1 / span 2;
+    grid-row: 1 / span 3;
     grid-template-columns: 1fr;
     gap: 24px;
   }
@@ -795,14 +807,15 @@ body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 24px;
   body[data-theme="nintendo-booklet"] .page.active { grid-template-columns: 1fr; column-gap: 0; padding: 30px 24px 62px; }
   body[data-theme="nintendo-booklet"] .page.active > .ribbon,
   body[data-theme="nintendo-booklet"] .page.active > .intro,
-  body[data-theme="nintendo-booklet"] .page.active > .card-grid { grid-column: 1; grid-row: auto; }
+  body[data-theme="nintendo-booklet"] .page.active > .card-grid-left,
+  body[data-theme="nintendo-booklet"] .page.active > .card-grid-right { grid-column: 1; grid-row: auto; }
   body[data-theme="nintendo-booklet"] .page.active::before,
   body[data-theme="nintendo-booklet"] .page.active::after { display: none; }
   body[data-theme="nintendo-booklet"] .card-grid { grid-template-columns: 1fr; }
 }
 @media print {
   body[data-theme="nintendo-booklet"] { background: #fff !important; }
-  body[data-theme="nintendo-booklet"] .page.active { grid-template-columns: 1fr 1fr; box-shadow: none; outline: 2px solid #555; }
+  body[data-theme="nintendo-booklet"] .page.active { grid-template-columns: 1fr 36px 1fr; box-shadow: none; outline: 2px solid #555; }
   body[data-theme="nintendo-booklet"] .page.active::before { opacity: .45; }
   body[data-theme="nintendo-booklet"] .hero { box-shadow: none; }
 }
@@ -840,6 +853,10 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
             extra = _simulator(simulator) + _shortcut_grid(catalog.get("shortcuts", []))
         if page_id == "custom":
             extra = _shortcut_grid(catalog.get("shortcuts", []))
+        page_cards = list(page.get("cards", []))
+        split_at = (len(page_cards) + 1) // 2
+        left_cards = _cards(page_cards[:split_at], accent)
+        right_cards = _cards(page_cards[split_at:], accent)
         sections.append(
             f'''
             <section class="page{active}" data-page="{index}" id="{_esc(page_id)}">
@@ -849,7 +866,8 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
                 <h2>{_esc(page.get("title", ""))}</h2>
               </div>
               <p class="intro">{_esc(page.get("intro", ""))}</p>
-              <div class="card-grid">{_cards(page.get("cards", []), accent)}</div>
+              <div class="card-grid card-grid-left">{left_cards}</div>
+              <div class="card-grid card-grid-right">{right_cards}</div>
               {extra}
               <div class="page-numbers"><span>{index * 2 + 11}</span><span>{index * 2 + 12}</span></div>
             </section>'''

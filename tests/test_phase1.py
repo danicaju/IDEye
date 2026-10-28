@@ -402,7 +402,7 @@ class TestResourceLifecycleAndThreading(unittest.TestCase):
 
     def test_main_app_clean_finally_release(self):
         app = EyeDEMainApp(canvas_width=640, canvas_height=480, camera_index="synthetic", threaded=False)
-        with patch("cv2.imshow"), patch("cv2.waitKey", return_value=ord('q')), patch("cv2.destroyAllWindows") as mock_destroy:
+        with patch("cv2.namedWindow"), patch("cv2.resizeWindow"), patch("cv2.imshow"), patch("cv2.waitKey", return_value=ord('q')), patch("cv2.destroyAllWindows") as mock_destroy:
             app.run(max_frames=1)
             mock_destroy.assert_called_once()
             self.assertIsNone(app.tracker.cap)

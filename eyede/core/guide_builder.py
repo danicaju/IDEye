@@ -344,7 +344,7 @@ body[data-theme="nintendo-booklet"] .page.active {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 52px;
+  column-gap: 88px;
   align-items: start;
   padding: 36px 42px 66px;
   border: 8px solid #fff;
@@ -364,7 +364,7 @@ body[data-theme="nintendo-booklet"] .page.active::before {
   top: 24px;
   bottom: 24px;
   left: 50%;
-  width: 36px;
+  width: 24px;
   transform: translateX(-50%);
   background: repeating-radial-gradient(ellipse 22px 10px at 50% 16px, #e5e7eb 0 54%, #111 55% 68%, transparent 69%) 0 0 / 100% 44px repeat-y;
   filter: drop-shadow(2px 2px 0 rgba(0,0,0,.28));
@@ -771,7 +771,7 @@ body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 24px;
 @media (max-width: 980px) and (min-width: 641px) {
   body[data-theme="nintendo-booklet"] .page.active {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 42px;
+    column-gap: 64px;
     padding: 28px 24px 62px;
   }
   body[data-theme="nintendo-booklet"] .page.active > .ribbon,

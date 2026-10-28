@@ -343,8 +343,8 @@ body[data-theme="nintendo-booklet"] .tab.active {
 body[data-theme="nintendo-booklet"] .page.active {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 88px;
+  grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr);
+  column-gap: 0;
   align-items: start;
   padding: 36px 42px 66px;
   border: 8px solid #fff;
@@ -386,7 +386,7 @@ body[data-theme="nintendo-booklet"] .page.active::after {
 body[data-theme="nintendo-booklet"] .page.active > .ribbon,
 body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; }
 body[data-theme="nintendo-booklet"] .page.active > .card-grid {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1 / span 2;
 }
 body[data-theme="nintendo-booklet"] .page.active > .threshold-row,
@@ -772,14 +772,14 @@ body[data-theme="nintendo-booklet"] .page-numbers span:first-child { left: 24px;
 body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 24px; transform: rotate(5deg); }
 @media (max-width: 980px) and (min-width: 641px) {
   body[data-theme="nintendo-booklet"] .page.active {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 64px;
+    grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+    column-gap: 0;
     padding: 28px 24px 62px;
   }
   body[data-theme="nintendo-booklet"] .page.active > .ribbon,
   body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; }
   body[data-theme="nintendo-booklet"] .page.active > .card-grid {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1 / span 2;
     grid-template-columns: 1fr;
     gap: 24px;

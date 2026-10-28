@@ -105,13 +105,13 @@ def _cards(cards: List[Dict[str, Any]], accent: str) -> str:
             f'''
             <article class="card card-{index % 2}" style="--accent:{accent}">
 <div class="badge sticker">{_ui_icon("star-badge")}<span>{_esc(card.get("badge", "FIX"))}</span></div>
+              <h3 class="brush-title"><span>{_esc(card.get("title", ""))}</span></h3>
               <div class="card-icon"><div class="illustration" style="--accent:{accent}">
                 <span class="comic-bubble">{bubble}</span>
                 <span class="comic-star">{_ui_icon("star-badge")}</span>
                 {_icon(str(card.get("icon", "grid")))}
                 <svg class="action-arrow" viewBox="0 0 48 32" fill="none" aria-hidden="true"><path d="M4 24c10-1 18-6 26-16M26 8h10v10" stroke="#111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 24c10-1 18-6 26-16M26 8h10v10" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </div></div>
-              <h3 class="brush-title"><span>{_esc(card.get("title", ""))}</span></h3>
               <p>{_esc(card.get("text", ""))}</p>
               <span class="chip">{_esc(card.get("chip", ""))}</span>
             </article>'''
@@ -342,11 +342,8 @@ body[data-theme="nintendo-booklet"] .tab.active {
 }
 body[data-theme="nintendo-booklet"] .page.active {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr);
-  column-gap: 0;
-  align-items: start;
-  padding: 36px 42px 66px;
+  display: block;
+  padding: 20px 28px 64px;
   border: 8px solid #fff;
   border-radius: 8px;
   outline: 4px solid #111;
@@ -355,51 +352,59 @@ body[data-theme="nintendo-booklet"] .page.active {
     radial-gradient(circle at 8% 8%, rgba(255,249,217,.9) 0 6%, transparent 7%),
     radial-gradient(circle at 92% 96%, rgba(232,247,201,.65) 0 9%, transparent 10%),
     repeating-linear-gradient(0deg, rgba(80,60,40,.035) 0 1px, transparent 1px 5px),
-    linear-gradient(90deg, #fffdf7 0 48.9%, #e3d6bd 49.2% 50.8%, #fffdf7 51.1% 100%);
+    linear-gradient(90deg, #fffdf7 0 49.65%, #fffdf7 50.35% 100%);
   transform: rotate(.15deg);
 }
-body[data-theme="nintendo-booklet"] .page.active::before {
-  content: "";
-  position: absolute;
-  top: 24px;
-  bottom: 24px;
-  left: 50%;
-  width: 24px;
-  transform: translateX(-50%);
-  background: repeating-radial-gradient(ellipse 22px 10px at 50% 16px, #e5e7eb 0 54%, #111 55% 68%, transparent 69%) 0 0 / 100% 44px repeat-y;
-  filter: drop-shadow(2px 2px 0 rgba(0,0,0,.28));
-  z-index: 4;
-  pointer-events: none;
-  opacity: .96;
+body[data-theme="nintendo-booklet"] .double-page-container {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 48px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
-body[data-theme="nintendo-booklet"] .page.active::after {
-  content: "";
+body[data-theme="nintendo-booklet"] .double-page-container > .page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px 40px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+}
+body[data-theme="nintendo-booklet"] .book-spine {
   position: absolute;
-  left: calc(50% - 15px);
+  left: 50%;
   top: 0;
   bottom: 0;
-  width: 30px;
-  background: linear-gradient(90deg, transparent, rgba(80,55,30,.18), transparent);
-  z-index: 1;
+  width: 32px;
+  transform: translateX(-50%);
   pointer-events: none;
+  z-index: 10;
+  background: linear-gradient(to right, rgba(0,0,0,.03), rgba(0,0,0,.12) 35%, rgba(0,0,0,.18) 50%, rgba(0,0,0,.12) 65%, rgba(0,0,0,.03));
 }
-body[data-theme="nintendo-booklet"] .page.active > .ribbon { grid-column: 1; grid-row: 1; }
-body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; grid-row: 2; }
-body[data-theme="nintendo-booklet"] .page.active > .card-grid-left {
-  grid-column: 1;
-  grid-row: 3;
+body[data-theme="nintendo-booklet"] .book-spine::before,
+body[data-theme="nintendo-booklet"] .book-spine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 2px dashed rgba(0,0,0,.15);
+}
+body[data-theme="nintendo-booklet"] .book-spine::before { left: 4px; }
+body[data-theme="nintendo-booklet"] .book-spine::after { right: 4px; }
+body[data-theme="nintendo-booklet"] .cards-subgrid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
 }
-body[data-theme="nintendo-booklet"] .page.active > .card-grid-right {
-  grid-column: 3;
-  grid-row: 1 / span 3;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-body[data-theme="nintendo-booklet"] .page.active > .threshold-row,
-body[data-theme="nintendo-booklet"] .page.active > .gesture-strip,
-body[data-theme="nintendo-booklet"] .page.active > .simulator,
-body[data-theme="nintendo-booklet"] .page.active > .shortcut-grid {
-  grid-column: 1 / -1;
+body[data-theme="nintendo-booklet"] .cards-subgrid.mechanics { margin-top: 4px; }
+body[data-theme="nintendo-booklet"] .tab-navigation {
+  margin-top: 16px;
+  margin-bottom: 24px;
 }
 body[data-theme="nintendo-booklet"] .ribbon {
   position: relative;
@@ -479,7 +484,7 @@ body[data-theme="nintendo-booklet"] .card-grid {
 body[data-theme="nintendo-booklet"] .card {
   overflow: visible;
   min-height: 310px;
-  padding: 118px 17px 18px;
+  padding: 18px 22px;
   border: 4px solid #111;
   border-radius: 6px;
   background:
@@ -624,11 +629,11 @@ body[data-theme="nintendo-booklet"] .card:nth-child(even) .sticker { background:
 body[data-theme="nintendo-booklet"] .sticker .ui-icon { width: 16px; height: 16px; stroke-width: 2.4; }
 body[data-theme="nintendo-booklet"] .sticker span { font-size: 9px; line-height: 1; }
 body[data-theme="nintendo-booklet"] .brush-title {
-  position: absolute;
-  top: 54px;
-  left: 12px;
-  right: 12px;
-  margin: 0;
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  margin: 26px 0 12px;
   z-index: 7;
   min-height: 44px;
   padding: 10px 14px 11px;
@@ -777,46 +782,23 @@ body[data-theme="nintendo-booklet"] .page-numbers span {
 body[data-theme="nintendo-booklet"] .page-numbers span:first-child { left: 24px; }
 body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 24px; transform: rotate(5deg); }
 @media (max-width: 980px) and (min-width: 641px) {
-  body[data-theme="nintendo-booklet"] .page.active {
-    grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
-    column-gap: 0;
-    padding: 28px 24px 62px;
-  }
-  body[data-theme="nintendo-booklet"] .page.active > .ribbon,
-  body[data-theme="nintendo-booklet"] .page.active > .intro { grid-column: 1; }
-  body[data-theme="nintendo-booklet"] .page.active > .card-grid-left {
-    grid-column: 1;
-    grid-row: 3;
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  body[data-theme="nintendo-booklet"] .page.active > .card-grid-right {
-    grid-column: 3;
-    grid-row: 1 / span 3;
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  body[data-theme="nintendo-booklet"] .page.active > .threshold-row,
-  body[data-theme="nintendo-booklet"] .page.active > .gesture-strip,
-  body[data-theme="nintendo-booklet"] .page.active > .simulator,
-  body[data-theme="nintendo-booklet"] .page.active > .shortcut-grid {
-    grid-column: 1 / -1;
-  }
+  body[data-theme="nintendo-booklet"] .page.active { padding: 18px 18px 58px; }
+  body[data-theme="nintendo-booklet"] .double-page-container { gap: 28px; }
+  body[data-theme="nintendo-booklet"] .double-page-container > .page { padding: 16px 22px; gap: 18px; }
+  body[data-theme="nintendo-booklet"] .cards-subgrid { grid-template-columns: 1fr; gap: 18px; }
 }
 @media (max-width: 640px) {
-  body[data-theme="nintendo-booklet"] .page.active { grid-template-columns: 1fr; column-gap: 0; padding: 30px 24px 62px; }
-  body[data-theme="nintendo-booklet"] .page.active > .ribbon,
-  body[data-theme="nintendo-booklet"] .page.active > .intro,
-  body[data-theme="nintendo-booklet"] .page.active > .card-grid-left,
-  body[data-theme="nintendo-booklet"] .page.active > .card-grid-right { grid-column: 1; grid-row: auto; }
-  body[data-theme="nintendo-booklet"] .page.active::before,
-  body[data-theme="nintendo-booklet"] .page.active::after { display: none; }
-  body[data-theme="nintendo-booklet"] .card-grid { grid-template-columns: 1fr; }
+  body[data-theme="nintendo-booklet"] .page.active { padding: 22px 14px 58px; }
+  body[data-theme="nintendo-booklet"] .double-page-container { grid-template-columns: 1fr; gap: 24px; }
+  body[data-theme="nintendo-booklet"] .double-page-container > .page { padding: 12px 8px; }
+  body[data-theme="nintendo-booklet"] .book-spine { display: none; }
+  body[data-theme="nintendo-booklet"] .cards-subgrid { grid-template-columns: 1fr; }
 }
 @media print {
   body[data-theme="nintendo-booklet"] { background: #fff !important; }
-  body[data-theme="nintendo-booklet"] .page.active { grid-template-columns: 1fr 36px 1fr; box-shadow: none; outline: 2px solid #555; }
-  body[data-theme="nintendo-booklet"] .page.active::before { opacity: .45; }
+  body[data-theme="nintendo-booklet"] .page.active { display: block; box-shadow: none; outline: 2px solid #555; }
+  body[data-theme="nintendo-booklet"] .double-page-container { grid-template-columns: 1fr 1fr; gap: 36px; }
+  body[data-theme="nintendo-booklet"] .book-spine { opacity: .45; }
   body[data-theme="nintendo-booklet"] .hero { box-shadow: none; }
 }
 
@@ -854,21 +836,36 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
         if page_id == "custom":
             extra = _shortcut_grid(catalog.get("shortcuts", []))
         page_cards = list(page.get("cards", []))
-        split_at = (len(page_cards) + 1) // 2
-        left_cards = _cards(page_cards[:split_at], accent)
-        right_cards = _cards(page_cards[split_at:], accent)
+        left_count = 2 if len(page_cards) <= 6 else (len(page_cards) + 1) // 2
+        left_cards = _cards(page_cards[:left_count], accent)
+        right_cards = page_cards[left_count:]
+        right_primary = _cards(right_cards[:2], accent)
+        right_mechanics = _cards(right_cards[2:], accent) if len(right_cards) > 2 else ""
+        mechanics_block = (
+            f'<div class="cards-subgrid mechanics">{right_mechanics}</div>'
+            if right_mechanics
+            else ""
+        )
         sections.append(
             f'''
             <section class="page{active}" data-page="{index}" id="{_esc(page_id)}">
-              <div class="ribbon" style="--ribbon:{accent}">
-                <span class="ribbon-star">{_ui_icon("star-badge")}</span>
-                <span class="kicker">{_esc(page.get("kicker", ""))}</span>
-                <h2>{_esc(page.get("title", ""))}</h2>
+              <div class="double-page-container">
+                <div class="page page-left">
+                  <div class="ribbon" style="--ribbon:{accent}">
+                    <span class="ribbon-star">{_ui_icon("star-badge")}</span>
+                    <span class="kicker">{_esc(page.get("kicker", ""))}</span>
+                    <h2>{_esc(page.get("title", ""))}</h2>
+                  </div>
+                  <p class="intro">{_esc(page.get("intro", ""))}</p>
+                  <div class="cards-subgrid">{left_cards}</div>
+                </div>
+                <div class="page page-right">
+                  <div class="cards-subgrid">{right_primary}</div>
+                  {mechanics_block}
+                  {extra}
+                </div>
+                <div class="book-spine" aria-hidden="true"></div>
               </div>
-              <p class="intro">{_esc(page.get("intro", ""))}</p>
-              <div class="card-grid card-grid-left">{left_cards}</div>
-              <div class="card-grid card-grid-right">{right_cards}</div>
-              {extra}
               <div class="page-numbers"><span>{index * 2 + 11}</span><span>{index * 2 + 12}</span></div>
             </section>'''
         )
@@ -877,7 +874,7 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
         f'<button class="page-dot{" active" if index == 0 else ""}" data-page-target="{index}">{index + 1}</button>'
         for index in range(len(pages))
     )
-    return f'''<!DOCTYPE html>
+    html = f'''<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1015,7 +1012,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
 <button class="btn" onclick="window.print()">{_ui_icon("printer")}<span>Guardar como PDF</span></button>
     </div>
   </header>
-  <nav class="tabs" aria-label="Categorías del manual">{''.join(tabs)}</nav>
+  <nav class="tabs tab-navigation" aria-label="Categorías del manual">{''.join(tabs)}</nav>
   <main>{''.join(sections)}</main>
   <footer class="pager">
     <button class="btn" id="prevPage" aria-label="Página anterior">←</button>
@@ -1035,7 +1032,7 @@ let currentPage = 0;
 let currentMode = Object.keys(GUIDE.simulator || {{}})[0] || "coding";
 
 function showPage(index) {{
-  const pages = [...document.querySelectorAll(".page")];
+  const pages = [...document.querySelectorAll("section.page")];
   if (!pages.length) return;
   currentPage = Math.max(0, Math.min(pages.length - 1, index));
   pages.forEach((page, i) => page.classList.toggle("active", i === currentPage));
@@ -1078,3 +1075,4 @@ renderSimulator(currentMode);
 </script>
 </body>
 </html>'''
+    return "\n".join(line.rstrip() for line in html.splitlines())

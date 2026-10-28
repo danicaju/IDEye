@@ -35,6 +35,10 @@ class TestInteractiveGuideSync(unittest.TestCase):
         self.assertIn("illustration", text)
         self.assertIn("page-numbers", text)
         self.assertIn("sticker", text)
+        self.assertIn('class="book-spine"', text)
+        self.assertIn('class="double-page-container"', text)
+        self.assertIn('class="cards-subgrid"', text)
+        self.assertNotIn("repeating-radial-gradient", text)
         self.assertIn("body[data-theme=\"nintendo-booklet\"]", text)
         self.assertIn("@media print", text)
 

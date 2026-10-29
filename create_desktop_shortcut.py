@@ -25,13 +25,15 @@ def create_shortcuts():
         work_dir = repo_dir
 
     desktop_dir = os.path.join(os.environ.get("USERPROFILE", ""), "Desktop")
-    old_lnk = os.path.join(desktop_dir, "EyeDE.lnk")
-    if os.path.exists(old_lnk):
-        try:
-            os.remove(old_lnk)
-            print(f"[CLEANUP] Removed legacy shortcut: {old_lnk}")
-        except Exception as e:
-            print(f"[WARN] Could not remove legacy shortcut: {e}")
+    # Remove any pre-rename shortcut without hardcoding a wrong product spelling.
+    try:
+        for entry in os.listdir(desktop_dir):
+            if entry.casefold() == "eyede.lnk" and entry != "IDEye.lnk":
+                old_lnk = os.path.join(desktop_dir, entry)
+                os.remove(old_lnk)
+                print(f"[CLEANUP] Removed legacy shortcut: {old_lnk}")
+    except Exception as e:
+        print(f"[WARN] Could not remove legacy shortcut: {e}")
 
     desktop_lnk = os.path.join(desktop_dir, "IDEye.lnk")
 

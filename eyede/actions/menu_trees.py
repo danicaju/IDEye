@@ -1489,7 +1489,7 @@ def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
     # =========================================================================
     tree["EXIT_CONFIRM"] = MenuNode(
         id="EXIT_CONFIRM",
-        title="¿SALIR DE IDEYE?",
+        title="¿SALIR DE IDEye?",
         breadcrumb_label="CONFIRMAR SALIDA",
         items=populate_exit_confirm_items(parent_id="ROOT"),
         parent_id="ROOT",

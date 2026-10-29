@@ -19,7 +19,7 @@
 ---
 
 <!-- TODO: Reemplazar con un GIF de 15 segundos grabado con OBS mostrando cómo programas en VS Code con el HUD -->
-![Demostración de IDEye](https://via.placeholder.com/900x450/0d1117/58a6ff?text=Insertar+GIF+Demostracion:+HUD+3x3+Eyede+en+VS+Code)
+![Demostración de IDEye](https://via.placeholder.com/900x450/0d1117/58a6ff?text=Insertar+GIF+Demostracion:+HUD+3x3+IDEye+en+VS+Code)
 
 </div>
 
@@ -357,7 +357,7 @@ pytest -q
 ```
 
 ```text
-594 pruebas superadas, 78 subtests, 21.20s
+594 pruebas superadas, 78 subtests, 18.91s
 ```
 
 > [!NOTE]

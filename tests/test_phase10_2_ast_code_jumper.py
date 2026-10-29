@@ -3,7 +3,7 @@
 import textwrap
 import unittest
 
-from eyede.actions.ast_code_jumper import ASTCodeJumper
+from ideye.actions.ast_code_jumper import ASTCodeJumper
 
 
 SAMPLE = textwrap.dedent(

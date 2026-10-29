@@ -9,7 +9,7 @@ import subprocess
 
 def create_shortcuts():
     repo_dir = os.path.dirname(os.path.abspath(__file__))
-    ico_path = os.path.join(repo_dir, "eyede.ico")
+    ico_path = os.path.join(repo_dir, "ideye.ico")
     main_py = os.path.join(repo_dir, "main.py")
     exe_path = os.path.join(repo_dir, "dist", "IDEye", "IDEye.exe")
     if os.path.exists(exe_path):
@@ -28,7 +28,7 @@ def create_shortcuts():
     # Remove any pre-rename shortcut without hardcoding a wrong product spelling.
     try:
         for entry in os.listdir(desktop_dir):
-            if entry.casefold() == "eyede.lnk" and entry != "IDEye.lnk":
+            if entry.casefold() == "ideye.lnk" and entry != "IDEye.lnk":
                 old_lnk = os.path.join(desktop_dir, entry)
                 os.remove(old_lnk)
                 print(f"[CLEANUP] Removed legacy shortcut: {old_lnk}")

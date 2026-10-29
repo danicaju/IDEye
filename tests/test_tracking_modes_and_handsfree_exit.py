@@ -24,28 +24,28 @@ from PyQt6.QtWidgets import QApplication
 
 # Path resolution
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-import eyede.config as config
-from eyede.core.gaze_estimator import (
+import ideye.config as config
+from ideye.core.gaze_estimator import (
     GazeEstimator,
     TRACKING_MODE_PURE_IRIS,
     TRACKING_MODE_HYBRID,
     TRACKING_MODE_HEAD_PRIMARY,
 )
-from eyede.actions.menu_trees import (
+from ideye.actions.menu_trees import (
     build_menu_tree,
     validate_menu_tree,
     populate_exit_confirm_items,
     MenuNode,
     MenuAction,
 )
-from eyede.ui.icon_manager import IconManager
-from eyede.ui.overlay_window import OverlayWindow
-from eyede.ui.debug_widget import DebugWidget, DebugMonitorWidget
+from ideye.ui.icon_manager import IconManager
+from ideye.ui.overlay_window import OverlayWindow
+from ideye.ui.debug_widget import DebugWidget, DebugMonitorWidget
 
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
@@ -324,12 +324,12 @@ class TestVectorIconsAndIconManager(unittest.TestCase):
     """Verifies vector SVG icons and IconManager caching and rendering."""
 
     def test_all_vector_svg_files_exist_on_disk(self):
-        """All 11 modern neon/glassmorphic SVG icons must exist in eyede/assets/icons/."""
-        icons_dir = os.path.join(_EYEDE_DIR, "assets", "icons")
+        """All 11 modern neon/glassmorphic SVG icons must exist in ideye/assets/icons/."""
+        icons_dir = os.path.join(_IDEYE_DIR, "assets", "icons")
         self.assertTrue(os.path.isdir(icons_dir), f"Icons dir not found: {icons_dir}")
 
         expected_icons = [
-            "eyede_logo.svg",
+            "ideye_logo.svg",
             "flow.svg",
             "function.svg",
             "operators.svg",
@@ -351,7 +351,7 @@ class TestVectorIconsAndIconManager(unittest.TestCase):
     def test_icon_manager_loads_and_renders_pixmaps(self):
         """IconManager successfully renders cached QPixmaps and QIcons for all registered SVGs."""
         icon_names = [
-            "eyede_logo", "flow", "function", "operators", "navigation",
+            "ideye_logo", "flow", "function", "operators", "navigation",
             "pause_eye", "variables", "edit", "format", "ai_spark", "exit", "help"
         ]
 

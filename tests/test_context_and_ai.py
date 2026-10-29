@@ -23,13 +23,13 @@ _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") 
 
 # Ensure project root is in sys.path
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from eyede.actions.context_reader import ContextReader
-from eyede.actions.ai_predictor import (
+from ideye.actions.context_reader import ContextReader
+from ideye.actions.ai_predictor import (
     AIPredictorWorker,
     generate_heuristic_predictions,
     parse_llm_suggestions,
@@ -328,9 +328,9 @@ Let me know if you need any additional assistance!
 
     def test_cross_module_signal_slot_signatures(self):
         """Cross-Module Check: pyqtSignal signatures must match slots and connection targets across components."""
-        from eyede.core.camera_tracker import CameraTracker
-        from eyede.ui.overlay_window import OverlayWindow
-        from eyede.ui.debug_widget import DebugWidget
+        from ideye.core.camera_tracker import CameraTracker
+        from ideye.ui.overlay_window import OverlayWindow
+        from ideye.ui.debug_widget import DebugWidget
 
         # Ensure OverlayWindow and DebugWidget slots exist and have callable signatures
         overlay = OverlayWindow()

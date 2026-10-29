@@ -88,7 +88,7 @@ El `WebSocketBridge` intercambia estado del editor, diagnósticos e información
 
 ### 11. Manual Interactivo Game Manual (Documentación Viva)
 
-`docs/guia_interactiva.html` es una guía autocontenida y offline con estética "Nintendo Game Manual meets Cyber-Glass": cinco páginas con pestañas, tarjetas ilustradas con SVG inline, simulador 3x3 en vivo, chuleta de atajos y exportación A4 apaisada a PDF. Se abre desde el botón **Abrir Manual Interactivo** del panel de depuración o desde el modal de ayuda. Su fuente única de verdad es `eyede/core/guide_catalog.py` y se regenera con `generate_interactive_guide()`.
+`docs/guia_interactiva.html` es una guía autocontenida y offline con estética "Nintendo Game Manual meets Cyber-Glass": cinco páginas con pestañas, tarjetas ilustradas con SVG inline, simulador 3x3 en vivo, chuleta de atajos y exportación A4 apaisada a PDF. Se abre desde el botón **Abrir Manual Interactivo** del panel de depuración o desde el modal de ayuda. Su fuente única de verdad es `ideye/core/guide_catalog.py` y se regenera con `generate_interactive_guide()`.
 
 ### 12. Diagnósticos en Vivo, Health Guard y Micro-Gestos
 
@@ -243,13 +243,13 @@ IDEye/
 ├── build_app.py # Build PyInstaller onedir multiplataforma
 ├── create_desktop_shortcut.py # Acceso directo Windows
 ├── IDEye.bat / IDEye.vbs / IDEye_debug.bat # Lanzadores Windows
-├── eyede.ico # Icono de la aplicación
+├── ideye.ico # Icono de la aplicación
 ├── .github/workflows/build.yml # Matriz CI Windows/macOS/Linux
 ├── docs/MULTI_MONITOR_VALIDATION.md # Guía de validación multi-monitor
 ?   ??? guia_interactiva.html # Manual visual interactivo Game Manual
 ├── tools/ideye-mcp/ # Servidor MCP de desarrollo
 ├── vscode-extension/ # Extensión VS Code del puente WebSocket
-├── eyede/
+├── ideye/
 │   ├── config.py # Ajustes de tracking, MAR, HUD, LLM, rutas y gaming
 │   ├── main.py # Ciclo de vida PyQt6, managers y señales
 │   ├── core/
@@ -357,7 +357,7 @@ pytest -q
 ```
 
 ```text
-594 pruebas superadas, 78 subtests, 18.91s
+594 pruebas superadas, 78 subtests, 21.52s
 ```
 
 > [!NOTE]
@@ -393,7 +393,7 @@ pytest -q
 - [x] **Fase 10.4:** Agentic Prompt Launcher para el chat de VS Code y la cola MCP de tareas oculares.
 - [x] **Fase 11:** Scroll ocular inercial, Eco-Sleep din?mico, Ghost-Peek HUD y bandeja nativa.
 
-> El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `eyede/config.py` para cualquier otra aplicación.
+> El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `ideye/config.py` para cualquier otra aplicación.
 
 ---
 

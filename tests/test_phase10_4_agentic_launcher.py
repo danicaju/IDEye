@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from eyede.actions.agentic_launcher import (
+from ideye.actions.agentic_launcher import (
     AGENTIC_ACTIONS,
     ACTION_SLOTS,
     AgenticPromptLauncher,

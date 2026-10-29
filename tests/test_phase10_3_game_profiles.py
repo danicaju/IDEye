@@ -9,8 +9,8 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtWidgets import QApplication
 
-from eyede.core.game_profiles import GameProfileManager
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.core.game_profiles import GameProfileManager
+from ideye.ui.overlay_window import OverlayWindow
 
 _APP = QApplication.instance() or QApplication(sys.argv)
 

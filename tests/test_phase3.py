@@ -20,14 +20,14 @@ from PyQt6.QtWidgets import QApplication
 
 # Path resolution
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-import eyede.config as config
-from eyede.actions.code_injector import CodeInjector, DummyKeyboard, DummyClipboard
-from eyede.actions.menu_trees import (
+import ideye.config as config
+from ideye.actions.code_injector import CodeInjector, DummyKeyboard, DummyClipboard
+from ideye.actions.menu_trees import (
     MenuAction,
     MenuNode,
     build_menu_tree,
@@ -36,7 +36,7 @@ from eyede.actions.menu_trees import (
     create_pause_action,
     create_back_action,
 )
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.ui.overlay_window import OverlayWindow
 
 
 # Single QApplication instance for the test suite

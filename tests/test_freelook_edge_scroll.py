@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtWidgets import QApplication
 
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.ui.overlay_window import OverlayWindow
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 

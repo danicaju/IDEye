@@ -10,9 +10,9 @@ from PyQt6.QtCore import QRectF
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import QApplication
 
-import eyede.config as config
-from eyede.ui.debug_widget import DebugWidget
-from eyede.ui.overlay_window import (
+import ideye.config as config
+from ideye.ui.debug_widget import DebugWidget
+from ideye.ui.overlay_window import (
     OverlayWindow,
     HELP_GESTURES,
     HELP_SHORTCUTS,

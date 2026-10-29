@@ -4,7 +4,7 @@ import math
 import random
 import unittest
 
-from eyede.core.gaze_estimator import GazeEstimator
+from ideye.core.gaze_estimator import GazeEstimator
 
 
 class FakeFace:

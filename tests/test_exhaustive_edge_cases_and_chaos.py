@@ -18,28 +18,28 @@ from PyQt6.QtWidgets import QApplication
 
 _APP = QApplication.instance() or QApplication(sys.argv)
 
-from eyede.actions.agentic_launcher import AgenticPromptLauncher
-from eyede.actions.clipboard_history import ClipboardHistoryManager
-from eyede.actions.code_injector import CodeInjector, DummyKeyboard
-from eyede.actions.diagnostics_fixer import DiagnosticsFixer
-from eyede.actions.ast_code_jumper import ASTCodeJumper
-from eyede.actions.menu_trees import (
+from ideye.actions.agentic_launcher import AgenticPromptLauncher
+from ideye.actions.clipboard_history import ClipboardHistoryManager
+from ideye.actions.code_injector import CodeInjector, DummyKeyboard
+from ideye.actions.diagnostics_fixer import DiagnosticsFixer
+from ideye.actions.ast_code_jumper import ASTCodeJumper
+from ideye.actions.menu_trees import (
     MenuNode,
     build_menu_tree,
     get_adaptive_context_node,
 )
-from eyede.core.camera_tracker import CameraTracker
-from eyede.core.game_profiles import GameProfileManager
-from eyede.core.gaze_estimator import GazeEstimator, OneEuroFilter
-from eyede.core.gesture_detector import GestureDetector
-from eyede.core.health_guard import HealthGuard
-from eyede.core.lighting_compensator import LightingCompensator
-from eyede.core.mouse_controller import OSMouseController
-from eyede.core.settings_manager import SettingsManager
-from eyede.core.telemetry_manager import TelemetryManager
-from eyede.core.websocket_bridge import WebSocketBridge
-from eyede.modes.mode_manager import ModeManager
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.core.camera_tracker import CameraTracker
+from ideye.core.game_profiles import GameProfileManager
+from ideye.core.gaze_estimator import GazeEstimator, OneEuroFilter
+from ideye.core.gesture_detector import GestureDetector
+from ideye.core.health_guard import HealthGuard
+from ideye.core.lighting_compensator import LightingCompensator
+from ideye.core.mouse_controller import OSMouseController
+from ideye.core.settings_manager import SettingsManager
+from ideye.core.telemetry_manager import TelemetryManager
+from ideye.core.websocket_bridge import WebSocketBridge
+from ideye.modes.mode_manager import ModeManager
+from ideye.ui.overlay_window import OverlayWindow
 
 
 class _P:

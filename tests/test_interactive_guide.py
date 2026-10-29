@@ -10,10 +10,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtWidgets import QApplication
 
-from eyede.core.guide_builder import build_interactive_guide_html
-from eyede.core.guide_catalog import build_catalog, generate_interactive_guide
-from eyede.ui.debug_widget import DebugWidget
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.core.guide_builder import build_interactive_guide_html
+from ideye.core.guide_catalog import build_catalog, generate_interactive_guide
+from ideye.ui.debug_widget import DebugWidget
+from ideye.ui.overlay_window import OverlayWindow
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 

@@ -17,15 +17,15 @@ _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT_DIR not in sys.path:
     sys.path.insert(0, _ROOT_DIR)
 
-from eyede.core.sound_feedback import SoundFeedback, SoundFeedbackManager
-from eyede.core.mouse_controller import OSMouseController
-from eyede.actions.code_injector import CodeInjector, DummyKeyboard, DummyClipboard
-from eyede.actions.menu_trees import validate_menu_tree
-from eyede.core.hotkey_manager import HOTKEY_ACTIONS
-from eyede.modes.mode_manager import ModeManager
-from eyede.modes.sniper_mouse_mode import SniperMouseMode
+from ideye.core.sound_feedback import SoundFeedback, SoundFeedbackManager
+from ideye.core.mouse_controller import OSMouseController
+from ideye.actions.code_injector import CodeInjector, DummyKeyboard, DummyClipboard
+from ideye.actions.menu_trees import validate_menu_tree
+from ideye.core.hotkey_manager import HOTKEY_ACTIONS
+from ideye.modes.mode_manager import ModeManager
+from ideye.modes.sniper_mouse_mode import SniperMouseMode
 from PyQt6.QtWidgets import QApplication
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.ui.overlay_window import OverlayWindow
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 
@@ -69,7 +69,7 @@ class TestSoundFeedback(unittest.TestCase):
     @unittest.skipUnless(sys.platform == "win32", "Windows sound backend only")
     def test_windows_uses_filename_async_flags(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
-        with patch("eyede.core.sound_feedback.winsound.PlaySound") as mock_play:
+        with patch("ideye.core.sound_feedback.winsound.PlaySound") as mock_play:
             mgr.play("click")
         mock_play.assert_called_once()
         path, flags = mock_play.call_args[0]
@@ -82,7 +82,7 @@ class TestSoundFeedback(unittest.TestCase):
     def test_mute_prevents_backend_call(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
         mgr.set_enabled(False)
-        with patch("eyede.core.sound_feedback.winsound.PlaySound") as mock_play:
+        with patch("ideye.core.sound_feedback.winsound.PlaySound") as mock_play:
             mgr.play("click")
             mgr.play("back")
             mgr.play("mode")
@@ -92,7 +92,7 @@ class TestSoundFeedback(unittest.TestCase):
     @unittest.skipUnless(sys.platform == "win32", "Windows sound backend only")
     def test_backend_exception_is_swallowed(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
-        with patch("eyede.core.sound_feedback.winsound.PlaySound", side_effect=OSError("boom")):
+        with patch("ideye.core.sound_feedback.winsound.PlaySound", side_effect=OSError("boom")):
             # Should not raise.
             mgr.play("click")
             mgr.play("unknown")
@@ -100,7 +100,7 @@ class TestSoundFeedback(unittest.TestCase):
     @unittest.skipUnless(sys.platform == "win32", "Windows sound backend only")
     def test_unknown_sound_is_noop(self):
         mgr = SoundFeedbackManager(enabled=True, volume=0.5)
-        with patch("eyede.core.sound_feedback.winsound.PlaySound") as mock_play:
+        with patch("ideye.core.sound_feedback.winsound.PlaySound") as mock_play:
             mgr.play("nonexistent")
             mock_play.assert_not_called()
 

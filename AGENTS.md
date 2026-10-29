@@ -108,15 +108,15 @@ Reglas específicas:
 ## 📖 REGLA OBLIGATORIA DE DOCUMENTACIÓN VIVA (INTERACTIVE GUIDE SYNC)
 
 1. Cada vez que añadas, modifiques o elimines una funcionalidad, modo, gesto facial, atajo de teclado o comportamiento de UI en IDEye:
-   - DEBES actualizar obligatoriamente `eyede/core/guide_catalog.py` y regenerar `docs/guia_interactiva.html` ejecutando el generador de la guía.
+   - DEBES actualizar obligatoriamente `ideye/core/guide_catalog.py` y regenerar `docs/guia_interactiva.html` ejecutando el generador de la guía.
    - Toda nueva función debe documentarse siguiendo el estilo visual "Game Manual" (título llamativo en cinta, badge visual, icono SVG y explicación clara de 3-4 líneas orientada al usuario final).
    - Ninguna tarea o Fase se considerará completada si `docs/guia_interactiva.html`, `README.md` y `README.es.md` no reflejan los cambios realizados.
-   - **PROHIBICIÓN DE EMOJIS (ZERO EMOJI POLICY):** Queda estrictamente prohibido utilizar emojis Unicode en `docs/guia_interactiva.html`, `eyede/core/guide_catalog.py` y en los componentes visuales de la UI. Todo icono, insignia o indicador visual debe implementarse mediante gráficos vectoriales SVG inline o a través de `IconManager` (Lucide SVG).
+   - **PROHIBICIÓN DE EMOJIS (ZERO EMOJI POLICY):** Queda estrictamente prohibido utilizar emojis Unicode en `docs/guia_interactiva.html`, `ideye/core/guide_catalog.py` y en los componentes visuales de la UI. Todo icono, insignia o indicador visual debe implementarse mediante gráficos vectoriales SVG inline o a través de `IconManager` (Lucide SVG).
 
 ### Generación y verificación
 
 ```bash
-python -c "from eyede.core.guide_catalog import generate_interactive_guide; print(generate_interactive_guide())"
+python -c "from ideye.core.guide_catalog import generate_interactive_guide; print(generate_interactive_guide())"
 pytest -q tests/test_interactive_guide.py
 ```
 

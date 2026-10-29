@@ -12,10 +12,10 @@ _APP = QApplication.instance() or QApplication(sys.argv)
 from pathlib import Path
 from typing import List
 
-from eyede.actions.diagnostics_fixer import DiagnosticsFixer
-from eyede.core.gesture_detector import GestureDetector
-from eyede.core.health_guard import HealthGuard
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.actions.diagnostics_fixer import DiagnosticsFixer
+from ideye.core.gesture_detector import GestureDetector
+from ideye.core.health_guard import HealthGuard
+from ideye.ui.overlay_window import OverlayWindow
 
 
 class Point:

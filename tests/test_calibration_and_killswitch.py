@@ -14,13 +14,13 @@ from PyQt6.QtCore import Qt, QCoreApplication
 from PyQt6.QtWidgets import QApplication
 
 try:
-    import eyede.config as config
-    from eyede.core.gaze_estimator import GazeEstimator
-    from eyede.core.hotkey_manager import GlobalHotkeyManager, HOTKEY_ACTIONS
-    from eyede.ui.calibration_ui import CalibrationUI
-    from eyede.ui.debug_widget import DebugWidget
-    from eyede.ui.overlay_window import OverlayWindow
-    from eyede.main import EyeDEApplication
+    import ideye.config as config
+    from ideye.core.gaze_estimator import GazeEstimator
+    from ideye.core.hotkey_manager import GlobalHotkeyManager, HOTKEY_ACTIONS
+    from ideye.ui.calibration_ui import CalibrationUI
+    from ideye.ui.debug_widget import DebugWidget
+    from ideye.ui.overlay_window import OverlayWindow
+    from ideye.main import IDEyeApplication
 except ImportError:
     import config
     from core.gaze_estimator import GazeEstimator
@@ -28,7 +28,7 @@ except ImportError:
     from ui.calibration_ui import CalibrationUI
     from ui.debug_widget import DebugWidget
     from ui.overlay_window import OverlayWindow
-    from main import EyeDEApplication
+    from main import IDEyeApplication
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 
@@ -345,7 +345,7 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
 
     def test_emergency_exit_signal_invokes_shutdown(self):
         """Verifies that firing the emergency exit signal cleanly triggers application shutdown."""
-        app = EyeDEApplication(camera_index="synthetic", force_calibrate=False, threaded=False)
+        app = IDEyeApplication(camera_index="synthetic", force_calibrate=False, threaded=False)
         self.assertFalse(app._is_shutting_down)
 
         # Trigger emergency exit via hotkey signal
@@ -361,7 +361,7 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
             temp_profile = f.name
 
         try:
-            app = EyeDEApplication(camera_index="synthetic", profile_path=temp_profile, force_calibrate=False, threaded=False)
+            app = IDEyeApplication(camera_index="synthetic", profile_path=temp_profile, force_calibrate=False, threaded=False)
             # Simulate a loaded calibration
             app.tracker.gaze_estimator.has_5_point_calibration = True
             app.tracker.gaze_estimator.calib_weights_x = [1.0, 2.0, 3.0, 4.0]
@@ -433,7 +433,7 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
         Tests that when hold_progress > 0 (mouth click in progress), CameraTracker
         stabilizes emitted gaze to prevent facial distortion from flinging cursor across blocks.
         """
-        from eyede.core.camera_tracker import CameraTracker
+        from ideye.core.camera_tracker import CameraTracker
         tracker = CameraTracker(camera_index="synthetic", threaded=False)
         self.assertIsNone(tracker._click_anchor_gaze)
         self.assertIsNone(tracker._click_anchor_raw)
@@ -465,12 +465,12 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
 
     def test_cross_thread_safe_shutdown_and_reset(self):
         """
-        Verifies that EyeDEApplication.shutdown and reset_calibration safely handle
+        Verifies that IDEyeApplication.shutdown and reset_calibration safely handle
         invocations from background worker threads (like pynput daemon thread).
         """
         import threading
         temp_profile = os.path.join(tempfile.gettempdir(), "test_cross_thread_calib.json")
-        app = EyeDEApplication(camera_index="synthetic", profile_path=temp_profile, force_calibrate=False, threaded=False)
+        app = IDEyeApplication(camera_index="synthetic", profile_path=temp_profile, force_calibrate=False, threaded=False)
         self.assertFalse(app._is_shutting_down)
 
         worker_thread_executed = []

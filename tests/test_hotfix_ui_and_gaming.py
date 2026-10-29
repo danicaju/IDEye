@@ -9,8 +9,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QPainter, QPixmap
 
-from eyede.ui.overlay_window import OverlayWindow, HELP_SHORTCUTS
-from eyede.ui.debug_widget import DebugWidget
+from ideye.ui.overlay_window import OverlayWindow, HELP_SHORTCUTS
+from ideye.ui.debug_widget import DebugWidget
 
 _APP = QApplication.instance() or QApplication(sys.argv)
 

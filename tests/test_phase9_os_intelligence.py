@@ -10,18 +10,18 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtWidgets import QApplication
 
-from eyede.actions.clipboard_history import ClipboardHistoryManager, HISTORY_SLOTS
-from eyede.actions.code_injector import CodeInjector, DummyKeyboard
-from eyede.actions.menu_trees import build_menu_tree
-from eyede.core.telemetry_manager import TelemetryManager
-from eyede.core.window_watcher import (
+from ideye.actions.clipboard_history import ClipboardHistoryManager, HISTORY_SLOTS
+from ideye.actions.code_injector import CodeInjector, DummyKeyboard
+from ideye.actions.menu_trees import build_menu_tree
+from ideye.core.telemetry_manager import TelemetryManager
+from ideye.core.window_watcher import (
     WindowWatcher,
     is_game_process,
     resolve_mode_for_window,
 )
-from eyede.modes.data_math_mode import DataMathMode
-from eyede.modes.writing_mode import WritingMode
-from eyede.ui.debug_widget import DebugWidget
+from ideye.modes.data_math_mode import DataMathMode
+from ideye.modes.writing_mode import WritingMode
+from ideye.ui.debug_widget import DebugWidget
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 
@@ -197,7 +197,7 @@ class TestWindowWatcher(unittest.TestCase):
         )
 
     def test_route_process_lists_are_configurable(self):
-        import eyede.config as config
+        import ideye.config as config
 
         original = config.TERMINAL_PROCESSES
         try:
@@ -214,7 +214,7 @@ class TestWindowWatcher(unittest.TestCase):
         self.assertEqual(resolve_mode_for_window("Steam", "steam.exe"), ("", None))
 
     def test_gaming_lists_are_configurable(self):
-        import eyede.config as config
+        import ideye.config as config
 
         original = config.GAMING_PROCESSES
         try:

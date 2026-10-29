@@ -7,8 +7,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import numpy as np
 
-from eyede.core.lighting_compensator import LightingCompensator
-from eyede.ui.sniper_lens import SniperLens
+from ideye.core.lighting_compensator import LightingCompensator
+from ideye.ui.sniper_lens import SniperLens
 
 
 class TestLightingCompensator(unittest.TestCase):

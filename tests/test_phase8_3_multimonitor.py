@@ -10,9 +10,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtCore import QRect
 from PyQt6.QtWidgets import QApplication
 
-from eyede.core.gaze_estimator import GazeEstimator
-from eyede.core.screen_manager import ScreenManager
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.core.gaze_estimator import GazeEstimator
+from ideye.core.screen_manager import ScreenManager
+from ideye.ui.overlay_window import OverlayWindow
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 
@@ -133,8 +133,8 @@ class TestCrossPlatformBuildCommand(unittest.TestCase):
 
         cmd = build_app.build_command()
         joined = " ".join(cmd)
-        self.assertIn("eyede/assets", joined)
-        self.assertIn("eyede.core.screen_manager", joined)
+        self.assertIn("ideye/assets", joined)
+        self.assertIn("ideye.core.screen_manager", joined)
         self.assertIn("pynput.", joined)
         self.assertIn("--onedir", cmd)
         if build_app.IS_WINDOWS or build_app.IS_MACOS:

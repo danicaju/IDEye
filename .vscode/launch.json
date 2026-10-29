@@ -16,7 +16,7 @@
       "name": "Iniciar IDEye (Python App)",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/eyede/main.py",
+      "program": "${workspaceFolder}/ideye/main.py",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}"
     }

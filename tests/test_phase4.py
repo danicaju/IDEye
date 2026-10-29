@@ -24,20 +24,20 @@ from PyQt6.QtWidgets import QApplication
 
 # Path resolution
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-import eyede.config as config
-from eyede.actions.context_reader import ContextReader, PYTHON_KEYWORDS
-from eyede.actions.ai_predictor import (
+import ideye.config as config
+from ideye.actions.context_reader import ContextReader, PYTHON_KEYWORDS
+from ideye.actions.ai_predictor import (
     AIPredictorWorker,
     generate_heuristic_predictions,
     clean_markdown_blocks,
     parse_llm_suggestions,
 )
-from eyede.actions.menu_trees import (
+from ideye.actions.menu_trees import (
     MenuAction,
     MenuNode,
     build_menu_tree,
@@ -48,9 +48,9 @@ from eyede.actions.menu_trees import (
     create_pause_action,
     create_back_action,
 )
-from eyede.actions.code_injector import CodeInjector
-from eyede.ui.overlay_window import OverlayWindow
-from eyede.ui.debug_widget import DebugWidget
+from ideye.actions.code_injector import CodeInjector
+from ideye.ui.overlay_window import OverlayWindow
+from ideye.ui.debug_widget import DebugWidget
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 
@@ -96,7 +96,7 @@ class TestContextReader(unittest.TestCase):
     """
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix="eyede_test_context_")
+        self.test_dir = tempfile.mkdtemp(prefix="ideye_test_context_")
 
     def tearDown(self):
         shutil.rmtree(self.test_dir, ignore_errors=True)
@@ -564,7 +564,7 @@ class TestContextReader(unittest.TestCase):
 
     def test_worker_background_context_extraction(self):
         """Verifies AIPredictorWorker extracts context via context_reader on its background thread."""
-        tmp_dir = tempfile.mkdtemp(prefix="eyede_worker_bg_")
+        tmp_dir = tempfile.mkdtemp(prefix="ideye_worker_bg_")
         try:
             f_path = os.path.join(tmp_dir, "sample.py")
             with open(f_path, "w", encoding="utf-8") as f:
@@ -676,7 +676,7 @@ class TestOverlayWindowPhase4(unittest.TestCase):
     """
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix="eyede_overlay_test_")
+        self.test_dir = tempfile.mkdtemp(prefix="ideye_overlay_test_")
         self.script_path = os.path.join(self.test_dir, "active_script.py")
         with open(self.script_path, "w", encoding="utf-8") as f:
             f.write("user_score = 95\nplayer_name = 'Alice'\nstatus = 'active'\n")

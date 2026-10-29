@@ -10,10 +10,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtWidgets import QApplication
 
-from eyede.core.settings_manager import SettingsManager
-from eyede.core.gaze_estimator import GazeEstimator
-from eyede.ui.calibration_ui import CalibrationUI, compute_auto_mar_threshold
-from eyede.ui.debug_widget import DebugWidget
+from ideye.core.settings_manager import SettingsManager
+from ideye.core.gaze_estimator import GazeEstimator
+from ideye.ui.calibration_ui import CalibrationUI, compute_auto_mar_threshold
+from ideye.ui.debug_widget import DebugWidget
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 
@@ -90,7 +90,7 @@ class TestAutoMarMath(unittest.TestCase):
 
 class TestDoubleClickExitInEveryMode(unittest.TestCase):
     def test_header_exit_requires_two_clicks_in_terminal_mode(self):
-        from eyede.ui.overlay_window import OverlayWindow
+        from ideye.ui.overlay_window import OverlayWindow
 
         overlay = OverlayWindow(start_in_mode_selector=False)
         overlay.mode_manager.set_mode("terminal", emit=False)
@@ -117,8 +117,8 @@ class TestDoubleClickExitInEveryMode(unittest.TestCase):
 
 class TestLanguageAutoDetectRegression(unittest.TestCase):
     def test_lang_auto_uses_context_reader_api(self):
-        from eyede.actions.menu_trees import MenuAction
-        from eyede.ui.overlay_window import OverlayWindow
+        from ideye.actions.menu_trees import MenuAction
+        from ideye.ui.overlay_window import OverlayWindow
 
         overlay = OverlayWindow(start_in_mode_selector=False)
         action = MenuAction(id="LANG_AUTO_TEST", label="Auto", action_type="LANG_AUTO")
@@ -129,9 +129,9 @@ class TestLanguageAutoDetectRegression(unittest.TestCase):
 
 class TestCalibrationHudIsolation(unittest.TestCase):
     def test_suspend_and_resume_hud_input(self):
-        from eyede.main import EyeDEApplication
+        from ideye.main import IDEyeApplication
 
-        app = EyeDEApplication(camera_index="synthetic", threaded=False)
+        app = IDEyeApplication(camera_index="synthetic", threaded=False)
         app._suspend_hud_input_for_calibration()
         self.assertTrue(app._hud_input_suspended)
         app._resume_hud_input_after_calibration()

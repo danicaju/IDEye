@@ -8,11 +8,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtWidgets import QApplication
 
-from eyede.actions.menu_trees import validate_menu_tree
-from eyede.actions.text_predictor import predict_words
-from eyede.modes.mode_manager import ModeManager
-from eyede.modes.writing_mode import WritingMode
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.actions.menu_trees import validate_menu_tree
+from ideye.actions.text_predictor import predict_words
+from ideye.modes.mode_manager import ModeManager
+from ideye.modes.writing_mode import WritingMode
+from ideye.ui.overlay_window import OverlayWindow
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 

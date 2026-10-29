@@ -70,7 +70,7 @@ For deterministic action tests, call `execute_action(item, target_block=0)` dire
 Validate every new menu tree with the project validator:
 
 ```python
-from eyede.actions.menu_trees import validate_menu_tree
+from ideye.actions.menu_trees import validate_menu_tree
 
 assert validate_menu_tree(root_node) is True
 ```
@@ -82,7 +82,7 @@ A valid non-root node needs 9 items, slot 5 is PAUSE, slot 6 is BACK to its pare
 `OverlayWindow` uses `WindowDoesNotAcceptFocus`, `WA_ShowWithoutActivating`, and `NoFocus`. Therefore:
 
 - `keyPressEvent` will not receive plain `V`, `K`, `T`, etc. from the OS.
-- Global shortcuts live in `eyede/core/hotkey_manager.py` and use `pynput`; do not trigger them in tests.
+- Global shortcuts live in `ideye/core/hotkey_manager.py` and use `pynput`; do not trigger them in tests.
 - Application-level shortcuts in `DebugWidget` use `QShortcut` with `Qt.ShortcutContext.ApplicationShortcut`; test the handler method or the shortcut object directly.
 - Gaze-gated shortcuts are plain `V`/`K` plus `Ctrl+Alt+V/K`; the main app checks `overlay.is_mode_shortcut_targeted()`. Tests can set `overlay.current_gaze` to a normalized point inside `header_mode_rect` and assert the gate.
 

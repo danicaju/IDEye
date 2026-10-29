@@ -14,16 +14,16 @@ from unittest.mock import MagicMock, patch
 
 # Ensure paths
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from eyede.core.gesture_detector import GestureDetector, GestureState
-from eyede.core.gaze_estimator import GazeEstimator
-from eyede.core.camera_tracker import CameraTracker
-from eyede.main import EyeDEMainApp
-import eyede.config as config
+from ideye.core.gesture_detector import GestureDetector, GestureState
+from ideye.core.gaze_estimator import GazeEstimator
+from ideye.core.camera_tracker import CameraTracker
+from ideye.main import IDEyeMainApp
+import ideye.config as config
 
 
 class MockPoint:
@@ -328,7 +328,7 @@ class TestBlock9AndMiniFeedLayout(unittest.TestCase):
     """Audits requirement 4: All 9 Macro-blocks must be visible, responsive, and not covered."""
 
     def test_block9_label_is_not_covered_by_mini_feed(self):
-        app = EyeDEMainApp(canvas_width=1280, canvas_height=720, threaded=False)
+        app = IDEyeMainApp(canvas_width=1280, canvas_height=720, threaded=False)
         x1, y1, x2, y2 = app._get_block_rect(2, 2)  # Block 9: SALIR
 
         mw = config.MINI_FEED_WIDTH
@@ -343,7 +343,7 @@ class TestBlock9AndMiniFeedLayout(unittest.TestCase):
         self.assertLess(label_y, fy1 - 10)
 
     def test_block9_click_flash_and_hover_synchronized(self):
-        app = EyeDEMainApp(canvas_width=1280, canvas_height=720, threaded=False)
+        app = IDEyeMainApp(canvas_width=1280, canvas_height=720, threaded=False)
         canvas = np.zeros((720, 1280, 3), dtype=np.uint8)
 
         # Hover block 8 (Block 9)
@@ -401,7 +401,7 @@ class TestResourceLifecycleAndThreading(unittest.TestCase):
         self.assertFalse(tracker._is_opened)
 
     def test_main_app_clean_finally_release(self):
-        app = EyeDEMainApp(canvas_width=640, canvas_height=480, camera_index="synthetic", threaded=False)
+        app = IDEyeMainApp(canvas_width=640, canvas_height=480, camera_index="synthetic", threaded=False)
         with patch("cv2.namedWindow"), patch("cv2.resizeWindow"), patch("cv2.imshow"), patch("cv2.waitKey", return_value=ord('q')), patch("cv2.destroyAllWindows") as mock_destroy:
             app.run(max_frames=1)
             mock_destroy.assert_called_once()

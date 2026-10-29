@@ -9,9 +9,9 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtWidgets import QApplication
 
-from eyede.core.macro_manager import MacroManager
-from eyede.actions.menu_trees import MenuAction, MenuNode
-from eyede.ui.macro_editor_dialog import CustomMacroDialog
+from ideye.core.macro_manager import MacroManager
+from ideye.actions.menu_trees import MenuAction, MenuNode
+from ideye.ui.macro_editor_dialog import CustomMacroDialog
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 

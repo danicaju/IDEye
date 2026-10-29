@@ -11,9 +11,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtCore import QRectF
 from PyQt6.QtWidgets import QApplication
 
-from eyede.core.bezel_crossing import BezelCrossingDetector
-from eyede.core.gaze_estimator import GazeEstimator
-from eyede.ui.header_layout import HeaderLayout
+from ideye.core.bezel_crossing import BezelCrossingDetector
+from ideye.core.gaze_estimator import GazeEstimator
+from ideye.ui.header_layout import HeaderLayout
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
 

@@ -21,19 +21,19 @@ from PyQt6.QtWidgets import QApplication
 
 # Path resolution
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-import eyede.config as config
-from eyede.core.camera_tracker import CameraTracker
-from eyede.core.gaze_estimator import GazeEstimator
-from eyede.core.gesture_detector import GestureDetector
-from eyede.ui.overlay_window import OverlayWindow
-from eyede.ui.debug_widget import DebugWidget
-from eyede.ui.calibration_ui import CalibrationUI
-from eyede.main import EyeDEApplication
+import ideye.config as config
+from ideye.core.camera_tracker import CameraTracker
+from ideye.core.gaze_estimator import GazeEstimator
+from ideye.core.gesture_detector import GestureDetector
+from ideye.ui.overlay_window import OverlayWindow
+from ideye.ui.debug_widget import DebugWidget
+from ideye.ui.calibration_ui import CalibrationUI
+from ideye.main import IDEyeApplication
 
 
 # Ensure single QApplication exists for the test session
@@ -501,12 +501,12 @@ class TestCalibrationUIWorkflow(unittest.TestCase):
         calib_ui.close()
 
 
-class TestEyeDEApplicationLifecycle(unittest.TestCase):
+class TestIDEyeApplicationLifecycle(unittest.TestCase):
     """Tests the PyQt6 orchestrator lifecycle, window coordination, and shutdown."""
 
     def test_app_lifecycle_synthetic(self):
-        """Verifies EyeDEApplication can start and cleanly shut down without errors or zombie threads."""
-        app = EyeDEApplication(camera_index="synthetic", force_calibrate=False, threaded=True)
+        """Verifies IDEyeApplication can start and cleanly shut down without errors or zombie threads."""
+        app = IDEyeApplication(camera_index="synthetic", force_calibrate=False, threaded=True)
         self.assertIsNotNone(app.tracker)
         self.assertIsNotNone(app.overlay)
         self.assertIsNotNone(app.debug_widget)
@@ -525,8 +525,8 @@ class TestEyeDEApplicationLifecycle(unittest.TestCase):
         self.assertFalse(app.tracker.isRunning())
 
     def test_app_block_activation(self):
-        """Verifies block_activated signal handler in EyeDEApplication."""
-        app = EyeDEApplication(camera_index="synthetic", force_calibrate=False, threaded=False)
+        """Verifies block_activated signal handler in IDEyeApplication."""
+        app = IDEyeApplication(camera_index="synthetic", force_calibrate=False, threaded=False)
         # Should not raise exception
         app._on_block_activated(0, "INSERT_IF_ELSE")
         app._on_block_activated(4, "PAUSE_RESUME")
@@ -535,7 +535,7 @@ class TestEyeDEApplicationLifecycle(unittest.TestCase):
 
     def test_app_slider_wiring_to_tracker_gaze_estimator(self):
         """Verifies that debug widget sliders update the tracker's gaze estimator in real-time."""
-        app = EyeDEApplication(camera_index="synthetic", force_calibrate=False, threaded=False)
+        app = IDEyeApplication(camera_index="synthetic", force_calibrate=False, threaded=False)
         self.assertIsNotNone(app.tracker.gaze_estimator)
 
         # Move X slider to 55 (5.5x)

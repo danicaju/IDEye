@@ -27,19 +27,19 @@ from PyQt6.QtWidgets import QApplication
 
 # Path resolution
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
 from typing import List, Tuple, Any, Optional
 
-import eyede.config as config
-from eyede.core.gesture_detector import GestureDetector, GestureResult, GestureState
-from eyede.ui.overlay_window import OverlayWindow
-from eyede.ui.debug_widget import DebugWidget
-from eyede.actions.menu_trees import MenuAction
-from eyede.actions.code_injector import CodeInjector
+import ideye.config as config
+from ideye.core.gesture_detector import GestureDetector, GestureResult, GestureState
+from ideye.ui.overlay_window import OverlayWindow
+from ideye.ui.debug_widget import DebugWidget
+from ideye.actions.menu_trees import MenuAction
+from ideye.actions.code_injector import CodeInjector
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, 'argv') else [])
 

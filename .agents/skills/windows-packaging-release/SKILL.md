@@ -19,20 +19,20 @@ python build_app.py
 What the script does:
 
 - Runs PyInstaller in `--onedir --windowed` mode with `main.py` as entrypoint.
-- Bundles `eyede/assets` into `eyede/assets` inside the distribution.
+- Bundles `ideye/assets` into `ideye/assets` inside the distribution.
 - Collects MediaPipe data/binaries and metadata.
-- Adds hidden imports for `eyede`, core engines, WebSocket bridge, `websockets.asyncio`, and Windows `pynput` backends.
+- Adds hidden imports for `ideye`, core engines, WebSocket bridge, `websockets.asyncio`, and Windows `pynput` backends.
 - Copies `calibration_profile.json` into `dist/IDEye/` when present.
 
 The wrapper prints `[SUCCESS]` and may still exit with code 1. Verify the artifact instead of trusting the wrapper code:
 
 ```powershell
 Test-Path dist\IDEye\IDEye.exe
-Test-Path dist\IDEye\_internal\eyede\assets\icons\mode.svg
+Test-Path dist\IDEye\_internal\ideye\assets\icons\mode.svg
 Get-Item dist\IDEye\IDEye.exe | Select-Object FullName,Length,LastWriteTime
 ```
 
-If an icon or SVG is missing, confirm it is under `eyede/assets/` before rebuilding. Do not add individual `--add-data` entries for every asset; the whole assets directory is bundled.
+If an icon or SVG is missing, confirm it is under `ideye/assets/` before rebuilding. Do not add individual `--add-data` entries for every asset; the whole assets directory is bundled.
 
 ### Common failures
 
@@ -55,7 +55,7 @@ Verify the target in the shortcut properties. It should point to:
 C:\Users\danic\Desktop\IDEye\dist\IDEye\IDEye.exe
 ```
 
-Working directory: `dist\IDEye`. Icon: `eyede.ico`.
+Working directory: `dist\IDEye`. Icon: `ideye.ico`.
 
 ## 3. VS Code extension (VSIX)
 

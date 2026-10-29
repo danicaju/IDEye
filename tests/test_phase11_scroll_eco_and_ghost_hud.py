@@ -13,12 +13,12 @@ from PyQt6.QtWidgets import QApplication
 
 _APP = QApplication.instance() or QApplication(sys.argv)
 
-from eyede import config
-from eyede.config import MAR_THRESHOLD
-from eyede.core.eco_power_manager import EcoPowerManager
-from eyede.core.gaze_scroller import GazeScroller
-from eyede.ui.overlay_window import OverlayWindow
-from eyede.ui.system_tray import IDEyeSystemTray
+from ideye import config
+from ideye.config import MAR_THRESHOLD
+from ideye.core.eco_power_manager import EcoPowerManager
+from ideye.core.gaze_scroller import GazeScroller
+from ideye.ui.overlay_window import OverlayWindow
+from ideye.ui.system_tray import IDEyeSystemTray
 
 
 class TestGazeScroller:

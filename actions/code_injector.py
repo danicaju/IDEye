@@ -1,11 +1,11 @@
 """
-Root wrapper for eyede.actions.code_injector.
+Root wrapper for ideye.actions.code_injector.
 """
 import sys
 import os
 
-_EYEDE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "eyede")
-if _EYEDE_DIR not in sys.path:
-    sys.path.insert(0, _EYEDE_DIR)
+_IDEYE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ideye")
+if _IDEYE_DIR not in sys.path:
+    sys.path.insert(0, _IDEYE_DIR)
 
-from eyede.actions.code_injector import *
+from ideye.actions.code_injector import *

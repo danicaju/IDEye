@@ -12,12 +12,12 @@ from typing import Set, Dict
 
 # Ensure project root is in sys.path
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from eyede.actions.menu_trees import (
+from ideye.actions.menu_trees import (
     MenuNode,
     MenuAction,
     build_menu_tree,

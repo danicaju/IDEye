@@ -10,7 +10,7 @@ The bridge connects the PyQt6 engine to a native VS Code extension so code can b
 
 ## 1. Architecture
 
-- Python server: `eyede/core/websocket_bridge.py`, class `WebSocketBridge(QObject)`.
+- Python server: `ideye/core/websocket_bridge.py`, class `WebSocketBridge(QObject)`.
 - Transport: `ws://127.0.0.1:54321` by default (`config.WEBSOCKET_HOST` / `WEBSOCKET_PORT`).
 - Server thread: dedicated daemon thread named `IDEye-WebSocketServer`, running an asyncio loop. Never block the Qt main thread.
 - Extension: `vscode-extension/src/extension.ts`, compiled to `dist/extension.js`.

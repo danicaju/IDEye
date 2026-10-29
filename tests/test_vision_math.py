@@ -14,14 +14,14 @@ import numpy as np
 
 # Ensure project root is in sys.path
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from eyede.core.gaze_estimator import GazeEstimator, OneEuroFilter
-from eyede.core.gesture_detector import GestureDetector, GestureState
-from eyede.core.camera_tracker import CameraTracker
+from ideye.core.gaze_estimator import GazeEstimator, OneEuroFilter
+from ideye.core.gesture_detector import GestureDetector, GestureState
+from ideye.core.camera_tracker import CameraTracker
 
 
 class MockLandmarkPoint:

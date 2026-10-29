@@ -18,7 +18,7 @@ if _WORKSPACE_ROOT not in sys.path:
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QRectF
 
-from eyede.modes import (
+from ideye.modes import (
     ModeManager,
     CodingMode,
     WritingMode,
@@ -28,8 +28,8 @@ from eyede.modes import (
     MODE_ORDER,
     MODE_CLASSES,
 )
-from eyede.actions.menu_trees import validate_menu_tree
-from eyede.ui.overlay_window import (
+from ideye.actions.menu_trees import validate_menu_tree
+from ideye.ui.overlay_window import (
     OverlayWindow,
     _clean_action_label,
     _menu_card_label,

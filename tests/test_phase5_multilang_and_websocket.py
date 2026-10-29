@@ -20,7 +20,7 @@ _WORKSPACE_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, ".."))
 if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
-from eyede.actions.language_support import (
+from ideye.actions.language_support import (
     LANG_PYTHON,
     LANG_TYPESCRIPT,
     LANG_RUST,
@@ -34,7 +34,7 @@ from eyede.actions.language_support import (
     get_language_badge,
     get_language_keywords,
 )
-from eyede.actions.menu_trees import (
+from ideye.actions.menu_trees import (
     build_menu_tree,
     validate_menu_tree,
     get_adaptive_context_node,
@@ -43,9 +43,9 @@ from eyede.actions.menu_trees import (
     MenuAction,
     MenuNode,
 )
-from eyede.actions.context_reader import ContextReader, detect_syntactic_context
-from eyede.actions.code_injector import CodeInjector
-from eyede.core.websocket_bridge import WebSocketBridge
+from ideye.actions.context_reader import ContextReader, detect_syntactic_context
+from ideye.actions.code_injector import CodeInjector
+from ideye.core.websocket_bridge import WebSocketBridge
 from PyQt6.QtWidgets import QApplication
 
 
@@ -442,7 +442,7 @@ def test_code_injector_fallback_when_bridge_disconnected(qapp):
 
 def test_overlay_language_switch(qapp):
     """Verifies OverlayWindow language switching, menu tree rebuilding, and signal emission."""
-    from eyede.ui.overlay_window import OverlayWindow
+    from ideye.ui.overlay_window import OverlayWindow
 
     overlay = OverlayWindow()
     emitted_langs = []
@@ -470,7 +470,7 @@ def test_overlay_language_switch(qapp):
 
 def test_debug_widget_language_switch_and_vscode_status(qapp):
     """Verifies DebugWidget language combo box synchronization and VS Code status badge."""
-    from eyede.ui.debug_widget import DebugWidget
+    from ideye.ui.debug_widget import DebugWidget
 
     widget = DebugWidget()
     emitted_langs = []

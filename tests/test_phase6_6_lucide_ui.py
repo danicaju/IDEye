@@ -11,11 +11,11 @@ from PyQt6.QtCore import QRectF
 from PyQt6.QtGui import QColor, QImage, QPainter
 from PyQt6.QtWidgets import QApplication
 
-from eyede.ui.icon_manager import IconManager
-from eyede.ui.overlay_window import OverlayWindow
+from ideye.ui.icon_manager import IconManager
+from ideye.ui.overlay_window import OverlayWindow
 
 _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") else [])
-_ICONS = Path(__file__).resolve().parent.parent / "eyede" / "assets" / "icons"
+_ICONS = Path(__file__).resolve().parent.parent / "ideye" / "assets" / "icons"
 
 _SVG_FILES = (
     "function.svg",

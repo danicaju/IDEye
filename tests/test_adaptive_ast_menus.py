@@ -21,12 +21,12 @@ _APP = QApplication.instance() or QApplication(sys.argv if hasattr(sys, "argv") 
 
 # Ensure project root is in sys.path
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_EYEDE_DIR = os.path.join(_ROOT_DIR, "eyede")
-for p in (_ROOT_DIR, _EYEDE_DIR):
+_IDEYE_DIR = os.path.join(_ROOT_DIR, "ideye")
+for p in (_ROOT_DIR, _IDEYE_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from eyede.actions.context_reader import (
+from ideye.actions.context_reader import (
     ContextReader,
     detect_syntactic_context,
     SyntacticContext,
@@ -38,7 +38,7 @@ from eyede.actions.context_reader import (
     CONTEXT_WITH_BLOCK,
     CONTEXT_GENERAL,
 )
-from eyede.actions.menu_trees import (
+from ideye.actions.menu_trees import (
     MenuNode,
     MenuAction,
     build_menu_tree,
@@ -48,9 +48,9 @@ from eyede.actions.menu_trees import (
     create_pause_action,
     create_back_action,
 )
-from eyede.ui.overlay_window import OverlayWindow
-from eyede.ui.debug_widget import DebugWidget
-import eyede.config as config
+from ideye.ui.overlay_window import OverlayWindow
+from ideye.ui.debug_widget import DebugWidget
+import ideye.config as config
 
 
 class TestAdaptiveASTContextDetection(unittest.TestCase):

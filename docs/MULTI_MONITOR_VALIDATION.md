@@ -24,7 +24,7 @@ Use two displays with different resolutions or physical sizes.
    four corners without re-running the wizard.
 8. Look past the left/right edge for about 0.4 s; automatic handover must follow
    the physical direction. Tune `BEZEL_YAW_THRESHOLD_DEG`, `BEZEL_HOLD_SEC` and
-   `BEZEL_COOLDOWN_SEC` in `eyede/config.py` if needed.
+   `BEZEL_COOLDOWN_SEC` in `ideye/config.py` if needed.
 9. Pause with `Ctrl+Alt+P`; FreeLook movement and held mouse/W keys must stop.
 10. Repeat on Windows, macOS and Linux. The GitHub Actions matrix in
     `.github/workflows/build.yml` runs the headless suite and builds the

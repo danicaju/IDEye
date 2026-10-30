@@ -195,7 +195,7 @@ class CalibrationUI(QWidget):
             if len(self._rest_mar_samples) >= 45:
                 self._rest_mar = float(np.median(self._rest_mar_samples))
                 self._mar_phase = "peaks"
-                self.status_message = "Abre la boca cómodamente 3 veces como para hacer clic (1/3)"
+                self.status_message = self._mar_status_text()
                 self.update()
             return
 
@@ -218,16 +218,14 @@ class CalibrationUI(QWidget):
                         self.sound_feedback.play("click")
                     except Exception:
                         pass
-                count = self._completed_reps
+                count = min(3, len(self._peak_mar_samples))
                 if count < 3:
-                    self.status_message = (
-                        f"Abre la boca c\u00f3modamente 3 veces como para hacer clic ({count + 1}/3)"
-                    )
+                    self.status_message = self._mar_status_text()
                     self.update()
                     QApplication.processEvents()
                 else:
                     self._mar_phase = "complete"
-                    self.status_message = "\u00a13/3 Completado! Umbral calibrado correctamente"
+                    self.status_message = self._mar_status_text()
                     self.update()
                     QApplication.processEvents()
                     if self.sound_feedback is not None:
@@ -275,7 +273,7 @@ class CalibrationUI(QWidget):
             except Exception:
                 pass
         self._mar_phase = "done"
-        self.status_message = "¡3/3 Completado! Umbral calibrado correctamente"
+        self.status_message = self._mar_status_text()
         self.update()
         QApplication.processEvents()
         self._complete_calibration()
@@ -478,6 +476,19 @@ class CalibrationUI(QWidget):
         if not self.is_sampling and not self.is_completed:
             self.start_sampling()
 
+    def _mar_completed_count(self) -> int:
+        """Number of completed mouth-click reps, capped at the target of 3."""
+        return max(0, min(3, len(self._peak_mar_samples)))
+
+    def _mar_status_text(self) -> str:
+        """Single source of truth for the Step 6 counter shown above the ring."""
+        count = self._mar_completed_count()
+        if self._mar_phase in ("complete", "done") or count >= 3:
+            return "3/3 Completado. Umbral calibrado correctamente"
+        if self._mar_phase == "peaks":
+            return f"Abre la boca c\u00f3modamente 3 veces como para hacer clic ({count}/3)"
+        return self.status_message
+
     def _paint_mar_step(self, painter: QPainter, w: int, h: int) -> None:
         """Step 6: resting baseline and three natural mouth-click peaks."""
         painter.setPen(QColor(230, 235, 245))
@@ -486,7 +497,7 @@ class CalibrationUI(QWidget):
 
         painter.setFont(QFont("Segoe UI", 12))
         painter.setPen(QColor(160, 170, 190))
-        painter.drawText(0, 95, w, 30, Qt.AlignmentFlag.AlignCenter, self.status_message)
+        painter.drawText(0, 95, w, 30, Qt.AlignmentFlag.AlignCenter, self._mar_status_text())
 
         cx, cy = w / 2.0, h / 2.0
         radius = 96.0

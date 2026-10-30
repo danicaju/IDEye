@@ -179,9 +179,12 @@ class TestStep6AndMarSlider(unittest.TestCase):
         ui._start_auto_mar_calibration()
         for _ in range(45):
             ui.on_mar_updated(0.03)
-        for _ in range(3):
+        self.assertEqual(ui._mar_phase, "peaks")
+        self.assertIn("(0/3)", ui.status_message)
+        for completed in (1, 2, 3):
             ui.on_mar_updated(0.50)
             ui.on_mar_updated(0.03)
+            self.assertIn(f"{completed}/3", ui.status_message)
         self.assertEqual(ui.completed_reps, 3)
         self.assertEqual(ui._mar_phase, "complete")
         self.assertIn("3/3", ui.status_message)

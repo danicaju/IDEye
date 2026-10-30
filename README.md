@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-601%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-603%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -60,7 +60,7 @@ For sub-pixel stability, IDEye computes a cranial centroid from MediaPipe FaceMe
 * **`HYBRID`** — fuses head and iris signals with an adaptive saccade coefficient ramping `0.08 -> 0.55` for fast, stable transitions.
 
 ### 2. Zero-Dwell Midas Elimination + Jaw-Lock Gestures
-Navigation and activation are fully decoupled: looking only highlights, never clicks. A short mouth opening performs an instant click/inject, while a held open mouth at **55% MAR** enters **Jaw-Lock** drag mode. No dwell timers means no accidental Midas clicks while reading.
+Navigation and activation are fully decoupled: looking only highlights, never clicks. A short mouth opening performs an instant click/inject, while a held open mouth above your adaptive resting-MAR threshold enters **Jaw-Lock** drag mode. No dwell timers means no accidental Midas clicks while reading.
 
 ### 3. 6-Mode Strategy Engine + WebSocket Auto-Switch
 The `ModeManager` hosts six specialized modes - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE`, and `FREELOOK_GAMING_MODE` - and can switch automatically based on VS Code context received over the bidirectional WebSocket bridge. FreeLook delivers smooth 60 Hz camera/look control; Gaming uses a **head-joystick with a central deadzone** for WASD movement, while a right wink toggles a menu cursor for in-game buttons. Writing combines a gaze-friendly **letter keyboard** with a **Predictive Word & Phrase Engine** that suggests whole words and phrases as you type.
@@ -132,7 +132,7 @@ The VS Code extension streams active-line errors and warnings over WebSocket. `D
  v                                   v
 +-------------------------------------------------------------------------+
 | OS MOUSE & GAMING CONTROLLER                                            |
-| - SetCursorPos gaze cursor    | - Jaw-Lock 55% MAR drag                 |
+| - SetCursorPos gaze cursor    | - Adaptive Jaw-Lock drag                 |
 | - Head-joystick WASD / jump  | - FreeLook 60 Hz / right-wink cursor    |
 +-------------------------------+-----------------------------------------+
  |
@@ -218,7 +218,7 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`Ctrl+Alt+S`** | **Toggle Sound Feedback** | Press `Ctrl+Alt+S` anywhere |
 | **`Ctrl+Alt+H`** | **Help & Gesture Guide** | Open/close the in-app gesture and shortcut cheat sheet modal |
 | **Mouth Click** | **Inject / Click** | Short mouth opening (MAR) triggers a zero-dwell click or snippet injection; in FreeLook it also works as a confirmed gesture fallback |
-| **Held Mouth** | **Drag / Jaw-Lock** | Holding the mouth open at 55% MAR enables drag/lock without hand buttons |
+| **Held Mouth** | **Drag / Jaw-Lock** | Holding the mouth open adapts to your resting MAR instead of using a fixed 55% threshold |
 | **Right Wink** | **Pause / Gaming Joystick → Cursor** | Pauses/hides HUD in normal modes; in Gaming switches between head-joystick and menu cursor |
 | **Left Wink** | **Back / Undo / Jump** | Navigates back in menus or triggers Undo; makes the character jump in Gaming mode |
 | **`Ctrl+Alt+T`** | **Cycle Tracking Mode** | Switch between **`HEAD_PRIMARY`**, **`PURE_IRIS`**, and **`HYBRID`** |
@@ -310,7 +310,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Spanish common-word dictionary
 │   │   ├── defaults/ # user_settings.json and custom_macros.json templates
 │   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 601 automated unit & integration tests
+└── tests/ # 603 automated unit & integration tests
     ├── test_phase1.py # Core CV and MAR state machine
     ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py # Syntax tree validation and code injection
@@ -360,11 +360,11 @@ pytest -q
 ```
 
 ```text
-601 passed, 78 subtests, 24.34s
+603 passed, 78 subtests, 31.74s
 ```
 
 > [!NOTE]
-> All 601 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
+> All 603 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
 
 ---
 

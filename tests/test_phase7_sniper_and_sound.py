@@ -292,7 +292,7 @@ class TestSniperOverlayCoordinates(unittest.TestCase):
         self.overlay.toggle_sniper_mode()
         self.overlay._freelook_last_pos = (100, 200)
         self.overlay.mar_threshold = 0.45
-        self.overlay.current_mar = 0.30
+        self.overlay.current_mar = 0.36
         self.overlay.on_gaze_updated(0.8, 0.8)
         self.overlay.mouse_controller.move_direct.assert_not_called()
         self.assertTrue(self.overlay._jaw_locked)

@@ -203,7 +203,7 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "mouse",
                 "badge": "06",
                 "title": "FreeLook",
-                "text": "Ratón directo por mirada a 60 Hz con imán superior para alcanzar la barra de comandos, overscan y carril magnético para la barra de tareas.",
+                "text": "Ratón directo por mirada a 60 Hz con imán superior, umbral de boca adaptado a tu MAR de reposo y carril magnético para la barra de tareas.",
                 "chip": "60 Hz",
             },
         ],
@@ -557,7 +557,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "601 tests, 78 subtests, 24.34s",
+        "test_summary": "603 tests, 78 subtests, 31.74s",
     }
 
 

@@ -960,6 +960,8 @@ class IDEyeApplication(QObject):
             detector.mar_threshold = mar
             detector.release_threshold = max(0.20, mar - 0.10)
             detector.micro_gestures_enabled = micro_enabled
+        if hasattr(self.overlay, "set_mar_threshold"):
+            self.overlay.set_mar_threshold(mar)
         if hasattr(self.tracker, "health_guard"):
             self.tracker.health_guard.enabled = health_enabled
         if hasattr(self.tracker, "lighting"):
@@ -1319,6 +1321,8 @@ class IDEyeApplication(QObject):
         self.debug_widget.set_mar_threshold(mar, emit=False)
         self.settings_manager.set("mar_threshold", mar)
         if self.overlay is not None:
+            if hasattr(self.overlay, "set_mar_threshold"):
+                self.overlay.set_mar_threshold(mar)
             self.overlay.last_action_desc = f"Umbral MAR: {mar:.2f}"
             self.overlay.update()
 

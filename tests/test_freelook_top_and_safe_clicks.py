@@ -35,6 +35,36 @@ class TestFreeLookSafety(unittest.TestCase):
         self.overlay.close()
         _APP.processEvents()
 
+    def test_calibration_threshold_updates_freelook_trigger(self):
+        self.overlay.set_mar_threshold(0.36)
+        self.assertEqual(self.overlay.mar_threshold, 0.36)
+        for _ in range(40):
+            self.overlay.on_mar_updated(None, 0.20)
+        self.overlay._freelook_last_pos = (300, 400)
+        self.overlay.on_gaze_updated(0.8, 0.8)
+        self.overlay.on_mar_updated(None, 0.32)
+        self.assertTrue(self.overlay._mouth_active)
+        self.overlay._mouth_start = time.time() - 0.05
+        self.overlay.on_mar_updated(None, 0.22)
+        self.overlay.mouse_controller.left_click.assert_called_once_with(
+            *self.overlay._freelook_last_pos
+        )
+
+    def test_high_resting_mouth_still_allows_click(self):
+        for _ in range(40):
+            self.overlay.on_mar_updated(None, 0.25)
+        self.assertFalse(self.overlay._jaw_locked)
+        self.overlay._freelook_last_pos = (300, 400)
+        self.overlay.on_gaze_updated(0.8, 0.8)
+        self.overlay.mouse_controller.move_direct.assert_called()
+        self.overlay.on_mar_updated(None, 0.40)
+        self.assertTrue(self.overlay._mouth_active)
+        self.overlay._mouth_start = time.time() - 0.05
+        self.overlay.on_mar_updated(None, 0.28)
+        self.overlay.mouse_controller.left_click.assert_called_once_with(
+            *self.overlay._freelook_last_pos
+        )
+
     def test_comfortable_upward_gaze_reaches_command_bar(self):
         y = self.overlay._freelook_screen_coords(0.5, 0.10, 1920, 1080)[1]
         self.assertLessEqual(y, 48, "FreeLook must reach the 38px header plus its top margin")
@@ -65,7 +95,7 @@ class TestFreeLookSafety(unittest.TestCase):
         self.assertFalse(self.overlay._jaw_locked)
 
     def test_intentional_mouth_click_fires_at_locked_pointer(self):
-        self.overlay.current_mar = 0.30
+        self.overlay.current_mar = 0.40
         self.overlay._freelook_last_pos = (300, 400)
         self.overlay.on_gaze_updated(0.8, 0.8)
         self.assertTrue(self.overlay._jaw_locked)
@@ -74,11 +104,11 @@ class TestFreeLookSafety(unittest.TestCase):
         self.overlay._mouth_active = False
         self.overlay._hold_started = False
         self.overlay._last_freelook_click_ts = 0.0
-        self.overlay.current_mar = 0.36
-        self.overlay._update_freelook_mouth(0.36)
+        self.overlay.current_mar = 0.40
+        self.overlay._update_freelook_mouth(0.40)
         self.assertTrue(self.overlay._mouth_active)
         self.overlay._mouth_start = time.time() - 0.05
-        self.overlay._update_freelook_mouth(0.20)
+        self.overlay._update_freelook_mouth(0.28)
         self.overlay.mouse_controller.left_click.assert_called_once_with(300, 400)
 
     def test_confirmed_mouth_gesture_is_a_click_fallback(self):

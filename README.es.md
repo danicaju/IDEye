@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-601%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-603%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -60,7 +60,7 @@ Para estabilidad subpíxel, IDEye calcula un centroide craneal a partir de los l
 * **`HYBRID`** — fusiona señales de cabeza e iris con un coeficiente de sácada adaptativo que rampa de `0.08` a `0.55` para transiciones rápidas y estables.
 
 ### 2. Eliminación del "Toque de Midas" sin Tiempos de Espera + Jaw-Lock
-La navegación y la activación están totalmente desacopladas: mirar solo ilumina, nunca clica. Una breve apertura de boca realiza un clic/inyección instantáneo, mientras mantener la boca abierta al **55% MAR** activa el modo de arrastre **Jaw-Lock**. Sin temporizadores de fijación no hay clics Midas accidentales mientras se lee.
+La navegación y la activación están totalmente desacopladas: mirar solo ilumina, nunca clica. Una breve apertura de boca realiza un clic/inyección instantáneo, mientras mantener la boca abierta por encima de tu umbral MAR de reposo activa el modo de arrastre **Jaw-Lock**. Sin temporizadores de fijación no hay clics Midas accidentales mientras se lee.
 
 ### 3. Motor de Estrategia de 6 Modos + Cambio Automático por WebSocket
 El `ModeManager` alberga seis modos especializados - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` - y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; Gaming usa un **joystick de cabeza con zona muerta central** para moverte con WASD, y un guiño derecho alterna el cursor de menú para botones del juego. El modo Redacción combina un **teclado de letras** accesible por mirada con un **Motor Predictivo de Palabras y Frases** que sugiere palabras y frases completas mientras escribes.
@@ -132,7 +132,7 @@ La extensión de VS Code envía errores y warnings de la línea activa por WebSo
  v                                   v
 +-------------------------------------------------------------------------+
 | RATÓN SO & CONTROLADOR GAMING                                           |
-| - SetCursorPos del cursor de mirada | - Jaw-Lock 55% MAR arrastre       |
+| - SetCursorPos del cursor de mirada | - Arrastre Jaw-Lock adaptativo       |
 | - Joystick de cabeza WASD / salto | - FreeLook 60 Hz / cursor con guiño der. |
 +-------------------------------+-----------------------------------------+
  |
@@ -217,7 +217,7 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+S`** | **Alternar Retroalimentación Sonora** | Pulsa `Ctrl+Alt+S` desde cualquier sitio |
 | **`Ctrl+Alt+H`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
 | **Clic de Boca** | **Inyectar / Clic** | Una breve apertura de boca (MAR) dispara un clic sin tiempo de espera o una inyección de snippet; en FreeLook también funciona como respaldo confirmado |
-| **Boca Mantenida** | **Arrastrar / Jaw-Lock** | Mantener la boca abierta al 55% MAR habilita arrastrar/bloquear sin botones de mano |
+| **Boca Mantenida** | **Arrastrar / Jaw-Lock** | Mantener la boca abierta usa un umbral adaptado a tu MAR de reposo, no un 55% fijo |
 | **Guiño Derecho** | **Pausar / Gaming: joystick → cursor** | Pausa/oculta el HUD en modos normales; en Gaming alterna joystick de cabeza y cursor de menú |
 | **Guiño Izquierdo** | **Volver / Deshacer / Saltar** | Regresa al menú anterior o ejecuta Deshacer; hace saltar al personaje en modo Gaming |
 | **`Ctrl+Alt+T`** | **Conmutar Modo de Seguimiento** | Alterna en vivo entre **`HEAD_PRIMARY`**, **`PURE_IRIS`** y **`HYBRID`** |
@@ -308,7 +308,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 601 pruebas de unidad e integración
+└── tests/ # 603 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -358,11 +358,11 @@ pytest -q
 ```
 
 ```text
-601 pruebas superadas, 78 subtests, 24.34s
+603 pruebas superadas, 78 subtests, 31.74s
 ```
 
 > [!NOTE]
-> Todos los 601 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
+> Todos los 603 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
 
 ---
 

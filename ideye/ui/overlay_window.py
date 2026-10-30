@@ -17,6 +17,7 @@ Features:
 """
 
 from typing import Optional, Tuple, Dict, Any, List
+from collections import deque
 import sys
 import os
 import math
@@ -448,6 +449,17 @@ class OverlayWindow(QWidget):
         self._header_mode_w: float = 220.0
         self.current_mar: float = 0.0
         self.mar_threshold: float = float(getattr(config, "MAR_THRESHOLD", 0.55))
+        self._mar_rest_window: deque = deque(maxlen=90)
+        self._mar_rest_baseline: float = max(
+            0.15,
+            min(
+                0.30,
+                max(
+                    float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
+                    self.mar_threshold - 0.18,
+                ),
+            ),
+        )
         self.resize(1920, 1080)
 
         # Window title for identification
@@ -1749,6 +1761,17 @@ class OverlayWindow(QWidget):
         self._jaw_lock_pos = None
         self._mouth_active = False
         self._hold_started = False
+        self._mar_rest_window.clear()
+        self._mar_rest_baseline = max(
+            0.15,
+            min(
+                0.30,
+                max(
+                    float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
+                    self.mar_threshold - 0.18,
+                ),
+            ),
+        )
         sw, sh = self._get_screen_size()
         self._freelook_last_pos = (sw // 2, sh // 2)
         self.navigate_to("ROOT")
@@ -1909,9 +1932,31 @@ class OverlayWindow(QWidget):
         The old 55% threshold was close to a relaxed mouth for many users,
         which made the cursor stop and swallowed intentional clicks.
         """
-        rest = float(getattr(config, "MAR_REST_THRESHOLD", 0.20))
+        rest = max(
+            float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
+            float(getattr(self, "_mar_rest_baseline", 0.20)),
+        )
         minimum = float(getattr(config, "FREELOOK_JAW_LOCK_MIN_MAR", 0.27))
-        return max(self._freelook_prethreshold(), rest + 0.06, minimum)
+        return max(self._freelook_prethreshold(), rest + 0.08, minimum)
+
+    def set_mar_threshold(self, value: float) -> None:
+        """Keeps FreeLook click thresholds aligned with calibration/settings."""
+        try:
+            mar = max(0.10, min(0.90, float(value)))
+        except (TypeError, ValueError, OverflowError):
+            return
+        self.mar_threshold = mar
+        self._mar_rest_window.clear()
+        self._mar_rest_baseline = max(
+            0.15,
+            min(
+                0.30,
+                max(
+                    float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
+                    mar - 0.18,
+                ),
+            ),
+        )
 
     def _freelook_screen_coords(
         self, gx: float, gy: float, screen_w: int, screen_h: int
@@ -2122,10 +2167,15 @@ class OverlayWindow(QWidget):
     def _update_freelook_mouth(self, mar: float) -> None:
         pre = self._freelook_prethreshold()
         threshold = float(getattr(self, "mar_threshold", 0.45))
+        baseline = max(
+            float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
+            float(getattr(self, "_mar_rest_baseline", 0.20)),
+        )
         trigger_ratio = max(0.35, min(0.95, float(getattr(config, "FREELOOK_MOUTH_TRIGGER_RATIO", 0.78))))
         release_ratio = max(0.25, min(0.90, float(getattr(config, "FREELOOK_MOUTH_RELEASE_RATIO", 0.48))))
-        trigger = max(pre + 0.01, threshold * trigger_ratio)
-        release = max(pre, min(trigger - 0.01, threshold * release_ratio))
+        trigger = max(pre + 0.01, threshold * trigger_ratio, baseline + 0.10)
+        release = max(pre, baseline + 0.035, threshold * release_ratio)
+        release = min(trigger - 0.01, release)
         now = time.time()
 
         # In gameplay, mouth = click at the current pointer; never move it.
@@ -2407,6 +2457,11 @@ class OverlayWindow(QWidget):
             self.current_mar = 0.0
         if not math.isfinite(self.current_mar):
             self.current_mar = 0.0
+        self._mar_rest_window.append(self.current_mar)
+        if len(self._mar_rest_window) >= 20:
+            values = sorted(self._mar_rest_window)
+            baseline = values[max(0, int(len(values) * 0.10) - 1)]
+            self._mar_rest_baseline = max(0.10, min(0.40, float(baseline)))
         mouth_rest = max(0.0, float(getattr(config, "MAR_REST_THRESHOLD", 0.20)))
         if self.current_mar > mouth_rest + 0.04:
             self._wake_ghost_peek()

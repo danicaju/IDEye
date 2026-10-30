@@ -368,6 +368,27 @@ PAGES: List[Dict[str, Any]] = [
                 "text": "Cada ojo aprende su propia apertura. Un parpadeo bilateral, una cara lejana, una cabeza muy girada o una apertura demasiado breve se descartan. Los guinos válidos duran 180-300 ms, tienen enfriamiento y un segundo guino confirma acciones delicadas.",
                 "chip": "Anti-blink adaptativo",
             },
+            {
+                "icon": "grid-3x3",
+                "badge": "PHASE 12",
+                "title": "Taxonomía Semántica Profunda",
+                "text": "Código se organiza en ocho categorías: condicionales, bucles, funciones, variables, errores, imports, operadores e IA en vivo. Cada categoría abre un 3x3 adaptado a Python, C, Java, JavaScript, SQL, GDScript y Lua.",
+                "chip": "8 categorías",
+            },
+            {
+                "icon": "eye-scan",
+                "badge": "LIVE",
+                "title": "Contexto en Vivo: VS Code y Google Docs",
+                "text": "VS Code envía prefijo, línea actual, sufijo, selección, símbolos y diagnósticos. Google Docs, Notion, Overleaf y Word usan un búfer espejo para generar seis sugerencias de escritura coherentes.",
+                "chip": "Código + redacción",
+            },
+            {
+                "icon": "terminal",
+                "badge": "ENV",
+                "title": "Terminal, Navegación y Debug Conscientes",
+                "text": "Terminal lee rama, estado Git y tipo de proyecto. Navegación cambia entre IDE y documento web. Debug inspecciona variables locales, breakpoints, pila y pasos con la mirada.",
+                "chip": "Entorno real",
+            },
         ],
     },
 ]
@@ -564,7 +585,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "622 tests, 78 subtests, 17.38s",
+        "test_summary": "630 tests, 85 subtests, 18.70s",
     }
 
 

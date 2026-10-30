@@ -11,9 +11,11 @@ from typing import Any, Dict, List, Optional
 try:
     from ideye.actions.menu_trees import build_menu_tree, MenuNode
     from ideye.actions.ai_predictor import generate_heuristic_predictions as _gen_heuristics
+    from ideye.actions.semantic_taxonomy import build_semantic_coding_tree
 except ImportError:  # pragma: no cover
     from actions.menu_trees import build_menu_tree, MenuNode
     from actions.ai_predictor import generate_heuristic_predictions as _gen_heuristics
+    from actions.semantic_taxonomy import build_semantic_coding_tree
 
 from .base_mode import BaseMode
 
@@ -26,14 +28,32 @@ class CodingMode(BaseMode):
     def __init__(self, language: str = "PYTHON") -> None:
         super().__init__(language)
         self.language = language
+        self.local_symbols: List[str] = []
+        self.document_context: bool = False
+        self.ai_suggestions: List[str] = []
+
+    def set_context(
+        self,
+        symbols: Optional[List[str]] = None,
+        document_context: bool = False,
+        ai_suggestions: Optional[List[str]] = None,
+    ) -> None:
+        self.local_symbols = list(symbols or [])
+        self.document_context = bool(document_context)
+        self.ai_suggestions = list(ai_suggestions or [])
 
     def get_menu_tree(self, language: Optional[str] = None) -> Dict[str, MenuNode]:
         lang = language or self.language
-        return build_menu_tree(lang)
+        return build_semantic_coding_tree(
+            lang,
+            symbols=self.local_symbols,
+            ai_suggestions=self.ai_suggestions,
+            document_context=self.document_context,
+        )
 
     def get_root_menu(self, language: Optional[str] = None) -> MenuNode:
         lang = language or self.language
-        tree = build_menu_tree(lang)
+        tree = self.get_menu_tree(lang)
         return tree["ROOT"]
 
     def get_ai_system_prompt(self, context_data: Optional[Dict[str, Any]] = None) -> str:

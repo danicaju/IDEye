@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-622%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-630%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -286,6 +286,7 @@ IDEye/
 │   │   ├── base_mode.py # Abstract mode interface
 │   │   ├── mode_manager.py # 6-mode strategy engine and auto-context switching
 │   │   ├── coding_mode.py # Coding menu trees and snippet injection
+?   ?   ??? debug_mode.py # Phase 12 local-variable debug inspector
 │   │   ├── writing_mode.py # Letter keyboard, word/phrase predictions and Markdown
 │   │   ├── terminal_git_mode.py # Terminal / Git command palette
 │   │   ├── data_math_mode.py # Data/math symbol entry
@@ -308,13 +309,14 @@ IDEye/
 │   │   ├── code_injector.py # Atomic clipboard injection and cursor offsets
 │   │   ├── clipboard_history.py # 6-slot MTF clipboard time-machine
 │   │   ├── language_support.py # Multi-language syntax definitions
+?   ?   ??? semantic_taxonomy.py # Phase 12 multi-language semantic trees
 │   │   ├── agentic_launcher.py # Six gaze-fired engineering prompts + MCP queue
 │   │   └── text_predictor.py # Local word prediction engine
 │   └── assets/
 │   │   ├── data/es_common_words.txt # Spanish common-word dictionary
 │   │   ├── defaults/ # user_settings.json and custom_macros.json templates
 │   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 622 automated unit & integration tests
+└── tests/ # 630 automated unit & integration tests
     ├── test_phase1.py # Core CV and MAR state machine
     ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py # Syntax tree validation and code injection
@@ -335,6 +337,7 @@ IDEye/
     ├── test_phase10_3_game_profiles.py # Profiles, twin-stick and edge-scroll
     ├── test_phase10_4_agentic_launcher.py # Prompt builder, 3x3 menu, MCP queue
         ├── test_phase11_scroll_eco_and_ghost_hud.py # Scroll, Eco-Sleep, Ghost-Peek and tray
+    ??? test_phase12_semantic_coding_and_live_context.py # Semantic taxonomy and live context
     ├── test_hotfix_ui_and_gaming.py # Head-joystick, audio cache and help layout
     ├── test_writing_words_and_letters.py # Letter keyboard, predictions and word/phrase menus
     ├── test_interactive_guide.py # Guide catalog, generation and entry points
@@ -365,11 +368,11 @@ pytest -q
 ```
 
 ```text
-622 passed, 78 subtests, 17.38s
+630 passed, 85 subtests, 18.70s
 ```
 
 > [!NOTE]
-> All 622 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
+> All 630 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
 
 ---
 
@@ -401,6 +404,7 @@ pytest -q
 - [x] **Phase 10.3:** Dynamic game profiles from game_profiles.json, twin-stick and strategy edge-scrolling.
 - [x] **Phase 10.4:** Agentic Prompt Launcher for VS Code chat and the local MCP gaze-task queue.
 - [x] **Phase 11:** Inertial gaze scroll, adaptive Eco-Sleep, Ghost-Peek HUD and native system tray.
+- [x] **Phase 12:** Deep semantic coding taxonomy, live VS Code/Google Docs context AI, and environment-aware Terminal, Navigation and Debug modes.
 
 > Window routing is not limited to Roblox or a few editors: it recognizes broad built-in lists for games, terminals, writing/communication apps, browsers and IDEs. Generic Unreal `-Win64-Shipping.exe` games and configurable title keywords are also supported. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` or `IDE_PROCESSES` in `ideye/config.py` for any other application.
 

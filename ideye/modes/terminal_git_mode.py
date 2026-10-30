@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from ideye.actions.menu_trees import MenuAction, MenuNode
+from ideye.actions.semantic_taxonomy import build_terminal_semantic_tree
 
 try:
     from ideye.modes._helpers import make_root, make_submenu
@@ -30,6 +31,7 @@ class TerminalGitMode(BaseMode):
     theme_color = "#A855F7"
 
     def get_menu_tree(self, language: Optional[str] = None) -> Dict[str, MenuNode]:
+        return build_terminal_semantic_tree(getattr(self, "project_context", None))
         tree: Dict[str, MenuNode] = {}
 
         git_basic = [

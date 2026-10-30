@@ -60,6 +60,57 @@ PYTHON_KEYWORDS: Set[str] = LANGUAGE_KEYWORDS.get(LANG_PYTHON, {
 })
 
 
+class DocumentShadowBuffer:
+    """Bounded in-memory mirror of text written into Google Docs or web editors."""
+
+    DOCUMENT_KEYWORDS = (
+        "google docs",
+        "documentos de google",
+        "notion",
+        "overleaf",
+        "word",
+        "onedrive",
+        "sharepoint",
+    )
+
+    def __init__(self, max_chars: int = 12000) -> None:
+        self.max_chars = max(500, int(max_chars))
+        self.title: str = ""
+        self.process: str = ""
+        self._text: str = ""
+
+    @classmethod
+    def is_document_window(cls, title: str, process: str = "") -> bool:
+        haystack = f"{title or ''} {process or ''}".lower()
+        return any(keyword in haystack for keyword in cls.DOCUMENT_KEYWORDS)
+
+    def update_title(self, title: str, process: str = "") -> None:
+        self.title = str(title or "")[:200]
+        self.process = str(process or "")[:120]
+
+    def append(self, text: str) -> None:
+        value = str(text or "")
+        if not value:
+            return
+        combined = (self._text + value)[-self.max_chars :]
+        self._text = combined
+
+    def recent(self, max_chars: int = 4000) -> str:
+        limit = max(1, min(self.max_chars, int(max_chars)))
+        return self._text[-limit:]
+
+    def clear(self) -> None:
+        self._text = ""
+
+    def snapshot(self) -> Dict[str, Any]:
+        return {
+            "title": self.title,
+            "process": self.process,
+            "text": self.recent(),
+            "has_text": bool(self._text),
+        }
+
+
 class ContextReader:
     """
     Non-intrusive live context reader for the active code editing session.
@@ -86,6 +137,9 @@ class ContextReader:
 
         raw_lang = default_language or getattr(config, "DEFAULT_PROGRAMMING_LANGUAGE", LANG_PYTHON)
         self.active_language: str = normalize_language(raw_lang)
+        self.document_buffer = DocumentShadowBuffer()
+        self.document_context_active: bool = False
+        self.editor_state: Dict[str, Any] = {}
 
     def set_language(self, language: str) -> None:
         """Sets the active programming language."""
@@ -105,6 +159,44 @@ class ContextReader:
     def detect_active_language(self) -> str:
         """Backward-compatible alias for get_active_language()."""
         return self.get_active_language()
+
+    def set_document_context(self, title: str, process: str = "") -> bool:
+        """Activates the shadow buffer for Google Docs, Notion, Overleaf or Word."""
+        active = DocumentShadowBuffer.is_document_window(title, process)
+        self.document_context_active = bool(active)
+        if active:
+            self.document_buffer.update_title(title, process)
+        return self.document_context_active
+
+    def clear_document_context(self) -> None:
+        self.document_context_active = False
+        self.document_buffer.update_title("", "")
+
+    def record_document_text(self, text: str) -> None:
+        if self.document_context_active:
+            self.document_buffer.append(text)
+
+    def get_document_context(self, max_chars: int = 4000) -> Dict[str, Any]:
+        snapshot = self.document_buffer.snapshot()
+        snapshot["text"] = self.document_buffer.recent(max_chars)
+        snapshot["active"] = self.document_context_active
+        return snapshot
+
+    def update_editor_snapshot(self, state: Optional[Dict[str, Any]]) -> None:
+        self.editor_state = dict(state or {})
+        if self.editor_state.get("filePath") or self.editor_state.get("file_path"):
+            self.document_context_active = False
+
+    def get_editor_context(self) -> Dict[str, Any]:
+        state = dict(self.editor_state or {})
+        return {
+            "prefix_lines": state.get("prefix_lines") or state.get("prefixLines") or [],
+            "current_line": state.get("current_line") or state.get("lineText") or "",
+            "suffix_lines": state.get("suffix_lines") or state.get("suffixLines") or [],
+            "active_selection": state.get("active_selection") or state.get("selection") or "",
+            "local_symbols": state.get("local_symbols") or state.get("localSymbols") or [],
+            "diagnostics": state.get("diagnostics") or [],
+        }
 
     def set_active_file(self, file_path: Optional[str]) -> None:
         """Explicitly links or unlinks an active file for context reading."""

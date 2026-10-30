@@ -1244,6 +1244,8 @@ class OverlayWindow(QWidget):
             api_key=getattr(config, "LLM_API_KEY", ""),
             temperature=getattr(config, "LLM_TEMPERATURE", 0.2),
             context_reader=self.context_reader,
+            document_context=bool(getattr(self.context_reader, "document_context_active", False)),
+            document_title=str(getattr(getattr(self.context_reader, "document_buffer", None), "title", "")),
             parent=self,
         )
         self.ai_predictor_worker.predictions_ready.connect(self._on_ai_predictions_ready)

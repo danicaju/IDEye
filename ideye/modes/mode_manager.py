@@ -17,6 +17,7 @@ try:
     from ideye.modes.data_math_mode import DataMathMode
     from ideye.modes.ide_nav_mode import IdeNavMode
     from ideye.modes.sniper_mouse_mode import SniperMouseMode
+    from ideye.modes.debug_mode import DebugMode
 except ImportError:  # pragma: no cover
     from modes.base_mode import BaseMode
     from modes.coding_mode import CodingMode
@@ -25,6 +26,7 @@ except ImportError:  # pragma: no cover
     from modes.data_math_mode import DataMathMode
     from modes.ide_nav_mode import IdeNavMode
     from modes.sniper_mouse_mode import SniperMouseMode
+    from modes.debug_mode import DebugMode
 
 
 MODE_ORDER: List[str] = ["coding", "writing", "terminal", "data_math", "navigation", "sniper"]
@@ -36,6 +38,7 @@ MODE_CLASSES: Dict[str, type] = {
     "data_math": DataMathMode,
     "navigation": IdeNavMode,
     "sniper": SniperMouseMode,
+    "debug": DebugMode,
 }
 
 # Friendly aliases accepted by set_mode
@@ -61,6 +64,8 @@ MODE_ALIASES: Dict[str, str] = {
     "sniper_mouse": "sniper",
     "mouse": "sniper",
     "francotirador": "sniper",
+    "debug": "debug",
+    "debug_mode": "debug",
 }
 
 SOURCE_EXTENSIONS = {

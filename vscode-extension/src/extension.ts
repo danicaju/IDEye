@@ -184,6 +184,21 @@ function triggerEditorStateSync(delayMs: number = 80) {
     }, delayMs);
 }
 
+function collectLocalSymbols(doc: vscode.TextDocument, currentLine: number): string[] {
+    const symbols: string[] = [];
+    const start = Math.max(0, currentLine - 40);
+    const end = Math.min(doc.lineCount - 1, currentLine + 5);
+    const text = [];
+    for (let line = start; line <= end; line++) {
+        text.push(doc.lineAt(line).text);
+    }
+    const pattern = /\b(?:def|class|function|const|let|var|fn|func)\s+([A-Za-z_]\w*)/g;
+    for (const match of text.join('\n').matchAll(pattern)) {
+        if (!symbols.includes(match[1])) symbols.push(match[1]);
+    }
+    return symbols.slice(0, 12);
+}
+
 function sendEditorState() {
     if (!wsClient || wsClient.readyState !== WebSocket.OPEN) return;
 
@@ -218,6 +233,14 @@ function sendEditorState() {
     for (let l = startLine; l <= endLine; l++) {
         surrounding.push(doc.lineAt(l).text);
     }
+    const prefixLines: string[] = [];
+    for (let l = Math.max(0, pos.line - 40); l < pos.line; l++) {
+        prefixLines.push(doc.lineAt(l).text);
+    }
+    const suffixLines: string[] = [];
+    for (let l = pos.line + 1; l <= Math.min(doc.lineCount - 1, pos.line + 15); l++) {
+        suffixLines.push(doc.lineAt(l).text);
+    }
 
     const payload = {
         type: 'EDITOR_STATE',
@@ -229,8 +252,13 @@ function sendEditorState() {
             character: pos.character
         },
         selection: selectedText,
+        active_selection: selectedText,
         lineText: currentLine,
+        current_line: currentLine,
+        prefix_lines: prefixLines,
+        suffix_lines: suffixLines,
         surroundingLines: surrounding,
+        local_symbols: collectLocalSymbols(doc, pos.line),
         diagnostics: collectDiagnostics(doc, pos.line),
         workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || null
     };

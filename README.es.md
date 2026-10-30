@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-622%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-630%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -284,6 +284,7 @@ IDEye/
 │   │   ├── base_mode.py # Interfaz abstracta de modo
 │   │   ├── mode_manager.py # Motor de 6 modos y cambio automático
 │   │   ├── coding_mode.py # Árboles de código e inyección de snippets
+?   ?   ??? debug_mode.py # Inspector de variables locales de Fase 12
 │   │   ├── writing_mode.py # Teclado de letras, predicción de palabras/frases y Markdown
 │   │   ├── terminal_git_mode.py # Paleta Terminal / Git
 │   │   ├── data_math_mode.py # Entrada de símbolos datos/mates
@@ -306,13 +307,14 @@ IDEye/
 │   │   ├── code_injector.py # Inyección atómica y offsets
 │   │   ├── clipboard_history.py # Máquina del tiempo MTF de 6 ranuras
 │   │   ├── language_support.py # Sintaxis multi-lenguaje
+?   ?   ??? semantic_taxonomy.py # ?rboles sem?nticos multiling?es de Fase 12
 │   │   ├── agentic_launcher.py # Seis prompts de ingeniería + cola MCP
 │   │   └── text_predictor.py # Predicción local de palabras
 │   └── assets/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 622 pruebas de unidad e integración
+└── tests/ # 630 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -333,6 +335,7 @@ IDEye/
     ├── test_phase10_3_game_profiles.py # Perfiles, twin-stick y edge-scroll
     ├── test_phase10_4_agentic_launcher.py # Prompt, menú 3x3 y cola MCP
         ├── test_phase11_scroll_eco_and_ghost_hud.py # Scroll, Eco-Sleep, Ghost-Peek y tray
+    ??? test_phase12_semantic_coding_and_live_context.py # Taxonom?a sem?ntica y contexto vivo
     ├── test_hotfix_ui_and_gaming.py # Joystick, audio y ayuda
     ├── test_writing_words_and_letters.py # Teclado de letras, predicciones y frases
     ├── test_interactive_guide.py # Generación, catálogo y accesos al manual
@@ -363,11 +366,11 @@ pytest -q
 ```
 
 ```text
-622 pruebas superadas, 78 subtests, 17.38s
+630 pruebas superadas, 85 subtests, 18.70s
 ```
 
 > [!NOTE]
-> Todos los 622 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
+> Todos los 630 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
 
 ---
 
@@ -399,6 +402,7 @@ pytest -q
 - [x] **Fase 10.3:** Perfiles de juego dinámicos desde game_profiles.json, twin-stick y edge-scrolling de estrategia.
 - [x] **Fase 10.4:** Agentic Prompt Launcher para el chat de VS Code y la cola MCP de tareas oculares.
 - [x] **Fase 11:** Scroll ocular inercial, Eco-Sleep din?mico, Ghost-Peek HUD y bandeja nativa.
+- [x] **Fase 12:** Taxonom?a sem?ntica profunda, IA contextual en vivo para VS Code/Google Docs y modos Terminal, Navegaci?n y Debug conscientes del entorno.
 
 > El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `ideye/config.py` para cualquier otra aplicación.
 

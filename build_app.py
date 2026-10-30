@@ -110,6 +110,8 @@ def build_command() -> list:
         "--hidden-import=ideye.ui.icon_manager",
         "--hidden-import=ideye.actions.code_injector",
         "--hidden-import=ideye.actions.menu_trees",
+        "--hidden-import=ideye.actions.semantic_taxonomy",
+        "--hidden-import=ideye.modes.debug_mode",
         "--hidden-import=ideye.actions.context_reader",
         "--hidden-import=ideye.actions.ai_predictor",
         "--hidden-import=ideye.actions.language_support",

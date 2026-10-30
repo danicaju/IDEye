@@ -16,6 +16,33 @@ except ImportError:
     import config
 
 
+def generate_document_predictions(context_text: str, title: str = "") -> List[str]:
+    """Six coherent writing suggestions for Google Docs, Notion or Overleaf."""
+    text = str(context_text or "").strip()
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    last = lines[-1] if lines else ""
+    subject = "el documento" if not title else f"'{title[:40]}'"
+    if last.endswith(("?", "¿")):
+        first = "Responder a la pregunta planteada con una tesis clara"
+    elif last.endswith((".", "!", ":")):
+        first = "Continuar la idea con una frase de desarrollo"
+    elif last:
+        first = "Completar la frase actual de forma coherente"
+    else:
+        first = f"Introducir {subject} con una tesis breve"
+    suggestions = [
+        first,
+        "Desarrollar el párrafo con un argumento técnico y un ejemplo",
+        "Sintetizar la idea en una lista de puntos clave",
+        "Redactar una conclusión o transición hacia la siguiente sección",
+        "Insertar un conector formal para enlazar el argumento anterior",
+        "Resumir o reformatear la selección actual",
+    ]
+    while len(suggestions) < 6:
+        suggestions.append("Añadir una frase de cierre")
+    return suggestions[:6]
+
+
 def generate_heuristic_predictions(
     context_text: str,
     local_symbols: Optional[List[str]] = None,
@@ -76,13 +103,16 @@ def generate_heuristic_predictions(
 
     # Heuristic 4: For loop header
     elif last_line.startswith("for "):
+        loop_match = re.search(r"for\s+([A-Za-z_]\w*)\s+in\s+([A-Za-z_]\w*)", last_line)
+        loop_var = loop_match.group(1) if loop_match else v3
+        iterable = loop_match.group(2) if loop_match else v1
         suggestions = [
-            f"print({v3})",
-            f"if {v3}:",
-            f"{v2}.append({v3})",
-            f"total += {v3}",
-            f"{v2} = process({v3})",
-            "continue",
+            f"print({loop_var})",
+            f"if {loop_var}:",
+            f"{v2}.append({loop_var})",
+            f"total += {loop_var}",
+            f"{loop_var} = process({loop_var})",
+            f"if not {iterable}: break",
         ]
 
     # Heuristic 5: While loop header
@@ -369,12 +399,16 @@ class AIPredictorWorker(QThread):
         api_key: Optional[str] = None,
         temperature: Optional[float] = None,
         context_reader: Optional[Any] = None,
+        document_context: bool = False,
+        document_title: str = "",
         parent: Optional[QThread] = None,
     ):
         super().__init__(parent)
         self.context_text: str = context_text or ""
         self.local_symbols: List[str] = local_symbols or []
         self.context_reader: Optional[Any] = context_reader
+        self.document_context: bool = bool(document_context)
+        self.document_title: str = str(document_title or "")
         self.provider: str = (provider or getattr(config, "LLM_PROVIDER", "ollama")).lower()
         self.endpoint: str = endpoint or getattr(config, "LLM_ENDPOINT", "http://localhost:11434/api/generate")
         self.model: str = model or getattr(config, "LLM_MODEL", "codellama")
@@ -400,6 +434,12 @@ class AIPredictorWorker(QThread):
 
         # Read context on worker thread if not explicitly passed
         if self.context_reader is not None:
+            if getattr(self.context_reader, "document_context_active", False):
+                self.document_context = True
+                doc = self.context_reader.get_document_context()
+                self.document_title = self.document_title or doc.get("title", "")
+                if not self.context_text:
+                    self.context_text = doc.get("text", "")
             if not self.context_text:
                 try:
                     self.context_text = self.context_reader.get_recent_context(
@@ -442,7 +482,10 @@ class AIPredictorWorker(QThread):
             if error_msg:
                 self.prediction_failed.emit(error_msg)
             self.status_changed.emit("Motor Heurístico Activo")
-            heuristic_suggestions = generate_heuristic_predictions(self.context_text, self.local_symbols)
+            if self.document_context:
+                heuristic_suggestions = generate_document_predictions(self.context_text, self.document_title)
+            else:
+                heuristic_suggestions = generate_heuristic_predictions(self.context_text, self.local_symbols)
             combined = []
             for s in suggestions:
                 if s and s not in combined:
@@ -464,14 +507,24 @@ class AIPredictorWorker(QThread):
 
     def _query_llm(self) -> List[str]:
         """Queries the configured LLM endpoint."""
-        prompt = (
-            "You are a Python code completion assistant for a disabled programmer using eye-tracking.\n"
-            f"Variables/functions in scope: {', '.join(self.local_symbols) if self.local_symbols else 'none'}\n"
-            f"Recent code context:\n```python\n{self.context_text}\n```\n"
-            "Predict the EXACTLY 6 most useful next Python statements or code completions.\n"
-            "Return ONLY a JSON array containing exactly 6 strings. No markdown fences, no explanations.\n"
-            'Example: ["result = []", "for x in items:", "print(data)", "return total", "if not valid: break", "self.value = 0"]'
-        )
+        if self.document_context:
+            prompt = (
+                "You are a writing assistant for a disabled author using eye-tracking in a web document.\n"
+                f"Document title: {self.document_title or 'untitled'}\n"
+                f"Recent text:\n{self.context_text}\n"
+                "Produce EXACTLY 6 suggestions: continue the sentence, develop the paragraph, "
+                "summarize as bullets, write a conclusion/transition, add a formal connector, "
+                "or reformat the selection. Return ONLY a JSON array of 6 strings.\n"
+            )
+        else:
+            prompt = (
+                "You are a Python code completion assistant for a disabled programmer using eye-tracking.\n"
+                f"Variables/functions in scope: {', '.join(self.local_symbols) if self.local_symbols else 'none'}\n"
+                f"Recent code context:\n```python\n{self.context_text}\n```\n"
+                "Predict the EXACTLY 6 most useful next Python statements or code completions.\n"
+                "Return ONLY a JSON array containing exactly 6 strings. No markdown fences, no explanations.\n"
+                'Example: ["result = []", "for x in items:", "print(data)", "return total", "if not valid: break", "self.value = 0"]'
+            )
 
         if self.provider == "ollama":
             payload = {

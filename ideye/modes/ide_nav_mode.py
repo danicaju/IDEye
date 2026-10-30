@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from ideye.actions.menu_trees import MenuAction, MenuNode
+from ideye.actions.semantic_taxonomy import build_navigation_dual_tree
 
 try:
     from ideye.modes._helpers import make_root, make_submenu
@@ -30,6 +31,7 @@ class IdeNavMode(BaseMode):
     theme_color = "#E2E8F0"
 
     def get_menu_tree(self, language: Optional[str] = None) -> Dict[str, MenuNode]:
+        return build_navigation_dual_tree(bool(getattr(self, "document_mode", False)))
         tree: Dict[str, MenuNode] = {}
 
         scroll = [

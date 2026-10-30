@@ -1164,6 +1164,7 @@ class IDEyeApplication(QObject):
         self.tracker.frame_ready.connect(self._on_lighting_frame)
         self.overlay.interactive_guide_requested.connect(self._open_interactive_guide)
         self.window_watcher.foreground_changed.connect(self.debug_widget.set_foreground_window)
+        self.window_watcher.foreground_changed.connect(self._on_foreground_document_context)
         self.window_watcher.mode_requested.connect(self._on_window_mode_requested)
         self.window_watcher.profile_requested.connect(self.overlay.set_game_profile)
         self.mode_manager.mode_changed.connect(
@@ -1175,12 +1176,26 @@ class IDEyeApplication(QObject):
         # Qt application about-to-quit hook
         self.qapp.aboutToQuit.connect(self.shutdown)
 
+    def _on_foreground_document_context(self, title: str, process: str) -> None:
+        """Routes Google Docs, Notion, Overleaf and Word to the shadow buffer."""
+        active = self.context_reader.set_document_context(title, process)
+        coding_mode = self.mode_manager.modes.get("coding") if self.mode_manager else None
+        if coding_mode is not None and hasattr(coding_mode, "set_context"):
+            coding_mode.set_context(
+                symbols=self.context_reader.extract_local_symbols() if not active else [],
+                document_context=active,
+            )
+        if active:
+            self.overlay.last_action_desc = f"Documento: {title[:48]}"
+            self.overlay.update()
+
     def _on_vscode_editor_state_received(self, state: Dict[str, Any]) -> None:
         """
         Handles real-time editor state stream from native VS Code extension over WebSocket.
         Synchronizes active file path, programming language, and AST context across IDEye.
         """
         self.overlay._vscode_editor_state = dict(state or {})
+        self.context_reader.update_editor_snapshot(state or {})
         file_path = state.get("filePath") or state.get("file_path")
         language_id = state.get("languageId") or state.get("language_id")
 
@@ -1188,6 +1203,12 @@ class IDEyeApplication(QObject):
             self.context_reader.set_active_file(file_path)
             self.debug_widget.set_linked_file(file_path)
             self.overlay.on_file_linked(file_path)
+            coding_mode = self.mode_manager.modes.get("coding") if self.mode_manager else None
+            if coding_mode is not None and hasattr(coding_mode, "set_context"):
+                coding_mode.set_context(
+                    symbols=state.get("local_symbols") or self.context_reader.extract_local_symbols(),
+                    document_context=False,
+                )
 
         if language_id:
             normalized_lang = normalize_language(language_id)

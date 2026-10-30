@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-610%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-619%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -64,6 +64,8 @@ La navegación y la activación están totalmente desacopladas: mirar solo ilumi
 
 ### 3. Motor de Estrategia de 6 Modos + Cambio Automático por WebSocket
 El `ModeManager` alberga seis modos especializados - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` - y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; Gaming usa un **joystick de cabeza con zona muerta central** para moverte con WASD, y un guiño derecho alterna el cursor de menú para botones del juego. El modo Redacción combina un **teclado de letras** accesible por mirada con un **Motor Predictivo de Palabras y Frases** que sugiere palabras y frases completas mientras escribes.
+
+La detecci?n de gui?os aprende una l?nea base EAR por ojo, descarta parpadeos bilaterales, caras lejanas, giros extremos y cierres demasiado breves, y expone duraci?n, enfriamiento, margen y distancia en user_settings.json.
 
 ### 4. Desduplicación Inteligente de Prefijos
 La tubería de escritura desduplica pulsaciones de prefijo repetidas: `h+hola` se convierte en `ola`, y `h+Hola` en retroceso seguido de `Hola`. Rastrea espacios, puntuación, flechas y estado de retroceso, y funciona de forma idéntica a través del puente WebSocket de VS Code. Cuando un par de delimitadores sigue a un nombre, el cursor queda después del par (`func` + `()` -> `func()`); en una posición vacía el par conserva el cursor centrado.
@@ -308,7 +310,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 610 pruebas de unidad e integración
+└── tests/ # 619 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -345,6 +347,7 @@ IDEye/
     ├── test_adaptive_ast_menus.py # Menús AST y atajo [A]
     ├── test_vision_math.py # Recorte de mirada y división
     └── test_wink_gestures_and_hud_hide.py # Guiños y visibilidad HUD
+    ├── test_wink_robustness.py # EAR por ojo, filtros, tiempos y doble gui?o
 ```
 
 ---
@@ -358,11 +361,11 @@ pytest -q
 ```
 
 ```text
-610 pruebas superadas, 78 subtests, 16.79s
+619 pruebas superadas, 78 subtests, 19.82s
 ```
 
 > [!NOTE]
-> Todos los 610 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
+> Todos los 619 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
 
 ---
 

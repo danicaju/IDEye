@@ -2,5 +2,13 @@
   "eco_sleep_enabled": true,
   "ghost_peek_enabled": true,
   "ghost_peek_idle_seconds": 30.0,
-  "gaze_scroll_enabled": true
+  "gaze_scroll_enabled": true,
+  "wink_enabled": true,
+  "wink_mouth_only": false,
+  "wink_difficulty": "normal",
+  "wink_min_hold_sec": 0.18,
+  "wink_max_hold_sec": 0.3,
+  "wink_cooldown_sec": 0.65,
+  "wink_opposite_margin": 0.035,
+  "wink_distance_compensation": true
 }

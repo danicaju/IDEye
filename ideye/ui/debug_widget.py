@@ -99,6 +99,8 @@ class DebugWidget(QWidget):
     low_light_toggled = pyqtSignal(bool)
     eco_sleep_toggled = pyqtSignal(bool)
     ghost_peek_toggled = pyqtSignal(bool)
+    winks_toggled = pyqtSignal(bool)
+    wink_mouth_only_toggled = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None, gaze_estimator: Optional[Any] = None):
         super().__init__(parent)
@@ -528,6 +530,18 @@ class DebugWidget(QWidget):
         self.chk_ghost_peek.toggled.connect(self.ghost_peek_toggled.emit)
         content_layout.addWidget(self.chk_ghost_peek)
 
+        self.chk_winks = QCheckBox("Guiños laterales con anti-blink", self)
+        self.chk_winks.setChecked(bool(getattr(config, "WINK_ENABLED", True)))
+        self.chk_winks.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_winks.toggled.connect(self.winks_toggled.emit)
+        content_layout.addWidget(self.chk_winks)
+
+        self.chk_wink_mouth_only = QCheckBox("Solo boca: desactivar guiños", self)
+        self.chk_wink_mouth_only.setChecked(bool(getattr(config, "WINK_MOUTH_ONLY", False)))
+        self.chk_wink_mouth_only.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_wink_mouth_only.toggled.connect(self.wink_mouth_only_toggled.emit)
+        content_layout.addWidget(self.chk_wink_mouth_only)
+
         # 7. Language Selector & VS Code WebSocket Bridge Status
         lang_bridge_frame = QFrame(self)
         lang_bridge_frame.setObjectName("cardFrame")
@@ -813,6 +827,18 @@ class DebugWidget(QWidget):
             self.chk_ghost_peek.blockSignals(True)
             self.chk_ghost_peek.setChecked(bool(enabled))
             self.chk_ghost_peek.blockSignals(False)
+
+    def set_winks_enabled(self, enabled: bool) -> None:
+        if hasattr(self, "chk_winks"):
+            self.chk_winks.blockSignals(True)
+            self.chk_winks.setChecked(bool(enabled))
+            self.chk_winks.blockSignals(False)
+
+    def set_wink_mouth_only(self, enabled: bool) -> None:
+        if hasattr(self, "chk_wink_mouth_only"):
+            self.chk_wink_mouth_only.blockSignals(True)
+            self.chk_wink_mouth_only.setChecked(bool(enabled))
+            self.chk_wink_mouth_only.blockSignals(False)
 
     def set_power_state(self, state: str) -> None:
         if not hasattr(self, "lbl_power_state"):

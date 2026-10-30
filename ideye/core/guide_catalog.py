@@ -361,6 +361,13 @@ PAGES: List[Dict[str, Any]] = [
                 "text": "El grid se atenúa al 15% tras 30 segundos de lectura tranquila (configurable en user_settings.json) y reaparece al instante con un gesto o sácada. La bandeja nativa ofrece pausa, modos y calibración.",
                 "chip": "HUD discreto",
             },
+            {
+                "icon": "eye-scan",
+                "badge": "WINK",
+                "title": "Guinos a prueba de parpadeos",
+                "text": "Cada ojo aprende su propia apertura. Un parpadeo bilateral, una cara lejana, una cabeza muy girada o una apertura demasiado breve se descartan. Los guinos válidos duran 180-300 ms, tienen enfriamiento y un segundo guino confirma acciones delicadas.",
+                "chip": "Anti-blink adaptativo",
+            },
         ],
     },
 ]
@@ -557,7 +564,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "610 tests, 78 subtests, 16.79s",
+        "test_summary": "619 tests, 78 subtests, 19.82s",
     }
 
 

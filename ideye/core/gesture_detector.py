@@ -9,6 +9,7 @@ Detects intentional facial triggers:
 
 import math
 import time
+from collections import deque
 from enum import Enum
 from typing import Optional, Any, Tuple, List, Union
 
@@ -86,6 +87,16 @@ class GestureDetector:
         wink_max_hold_sec: float = 0.45,
         wink_cooldown_sec: float = 0.40,
         wink_trigger_on_release: bool = True,
+        wink_opposite_margin: float = 0.035,
+        wink_enabled: bool = True,
+        wink_mouth_only: bool = False,
+        wink_difficulty: str = "normal",
+        wink_distance_compensation: bool = True,
+        wink_min_interocular_dist: float = 0.075,
+        wink_max_roll_deg: float = 28.0,
+        wink_max_yaw_ratio: float = 0.55,
+        wink_double_window_sec: float = 0.90,
+        wink_double_enabled: bool = False,
         left_eye_indices: Tuple[int, ...] = (33, 160, 158, 133, 153, 144),
         right_eye_indices: Tuple[int, ...] = (362, 385, 387, 263, 373, 380),
         micro_gestures_enabled: bool = True,
@@ -113,8 +124,37 @@ class GestureDetector:
         self.wink_max_hold_sec = float(wink_max_hold_sec)
         self.wink_cooldown_sec = float(wink_cooldown_sec)
         self.wink_trigger_on_release = bool(wink_trigger_on_release)
+        self.wink_opposite_margin = max(0.0, float(wink_opposite_margin))
+        self.wink_enabled = bool(wink_enabled)
+        self.wink_mouth_only = bool(wink_mouth_only)
+        self.wink_difficulty = str(wink_difficulty or "normal").lower()
+        self.wink_distance_compensation = bool(wink_distance_compensation)
+        self.wink_min_interocular_dist = max(0.0, float(wink_min_interocular_dist))
+        self.wink_max_roll_deg = max(1.0, float(wink_max_roll_deg))
+        self.wink_max_yaw_ratio = max(0.05, float(wink_max_yaw_ratio))
+        self.wink_double_window_sec = max(0.1, float(wink_double_window_sec))
+        self.wink_double_enabled = bool(wink_double_enabled)
+        self._wink_base_min_hold = self.wink_min_hold_sec
+        self._wink_base_max_hold = self.wink_max_hold_sec
+        self._wink_base_cooldown = self.wink_cooldown_sec
+        self._wink_base_margin = self.wink_opposite_margin
         self.left_eye_indices = left_eye_indices
         self.right_eye_indices = right_eye_indices
+
+        # Per-eye adaptive EAR calibration. The fixed thresholds above remain
+        # the fallback and the values exposed to existing callers.
+        self.ear_auto_calibrate = True
+        self.left_ear_baseline: Optional[float] = None
+        self.right_ear_baseline: Optional[float] = None
+        self.left_ear_close_threshold = self.ear_close_threshold
+        self.right_ear_close_threshold = self.ear_close_threshold
+        self.left_ear_open_threshold = self.ear_open_threshold
+        self.right_ear_open_threshold = self.ear_open_threshold
+        self._left_open_ear_samples: deque = deque(maxlen=45)
+        self._right_open_ear_samples: deque = deque(maxlen=45)
+        self.last_left_double_wink_time: float = 0.0
+        self.last_right_double_wink_time: float = 0.0
+        self._apply_wink_difficulty()
 
         # Mouth state tracking
         self.state: GestureState = GestureState.IDLE_CLOSED
@@ -272,6 +312,248 @@ class GestureDetector:
         """Returns scale-invariant Eye Aspect Ratio (EAR) for the right eye."""
         return self.compute_ear(face_landmarks)[1]
 
+    @staticmethod
+    def _median(values: List[float]) -> Optional[float]:
+        cleaned = sorted(float(v) for v in values if math.isfinite(float(v)))
+        if not cleaned:
+            return None
+        mid = len(cleaned) // 2
+        if len(cleaned) % 2:
+            return cleaned[mid]
+        return (cleaned[mid - 1] + cleaned[mid]) / 2.0
+
+    def _apply_wink_difficulty(self) -> None:
+        """Scales hold/cooldown/margin from the selected difficulty preset."""
+        difficulty = str(getattr(self, "wink_difficulty", "normal")).lower()
+        if difficulty == "relaxed":
+            factor_min, factor_max, factor_cd, factor_margin = 0.82, 1.20, 0.85, 0.80
+        elif difficulty == "strict":
+            factor_min, factor_max, factor_cd, factor_margin = 1.18, 0.82, 1.18, 1.25
+        else:
+            factor_min = factor_max = factor_cd = factor_margin = 1.0
+        self.wink_min_hold_sec = max(0.10, self._wink_base_min_hold * factor_min)
+        self.wink_max_hold_sec = max(self.wink_min_hold_sec + 0.05, self._wink_base_max_hold * factor_max)
+        self.wink_cooldown_sec = max(0.20, self._wink_base_cooldown * factor_cd)
+        self.wink_opposite_margin = max(0.0, self._wink_base_margin * factor_margin)
+
+    def configure_wink(self, **settings: Any) -> None:
+        """Applies runtime wink settings without rebuilding the detector."""
+        base_keys = {
+            "wink_min_hold_sec": "_wink_base_min_hold",
+            "wink_max_hold_sec": "_wink_base_max_hold",
+            "wink_cooldown_sec": "_wink_base_cooldown",
+            "wink_opposite_margin": "_wink_base_margin",
+        }
+        for key, attr in base_keys.items():
+            if key in settings and settings[key] is not None:
+                try:
+                    setattr(self, attr, max(0.0, float(settings[key])))
+                except (TypeError, ValueError):
+                    pass
+        if "wink_enabled" in settings:
+            self.wink_enabled = bool(settings["wink_enabled"])
+        if "wink_mouth_only" in settings:
+            self.wink_mouth_only = bool(settings["wink_mouth_only"])
+        if "wink_distance_compensation" in settings:
+            self.wink_distance_compensation = bool(settings["wink_distance_compensation"])
+        if "wink_difficulty" in settings and settings["wink_difficulty"] is not None:
+            self.wink_difficulty = str(settings["wink_difficulty"]).lower()
+        self._apply_wink_difficulty()
+
+    def set_ear_calibration(self, profile: Optional[dict] = None) -> bool:
+        """Applies per-eye open/closed EAR values from calibration or profile."""
+        if not isinstance(profile, dict):
+            return False
+        left_open = profile.get("left_open", profile.get("left_ear_open"))
+        right_open = profile.get("right_open", profile.get("right_ear_open"))
+        try:
+            if left_open is not None and math.isfinite(float(left_open)):
+                self.left_ear_baseline = max(0.05, min(1.0, float(left_open)))
+            if right_open is not None and math.isfinite(float(right_open)):
+                self.right_ear_baseline = max(0.05, min(1.0, float(right_open)))
+        except (TypeError, ValueError, OverflowError):
+            return False
+        if self.left_ear_baseline is None and self.right_ear_baseline is None:
+            return False
+        self.ear_auto_calibrate = False
+        self._rebuild_ear_thresholds()
+        return True
+
+    def calibrate_ear_from_samples(
+        self,
+        left_open_samples: Optional[List[float]] = None,
+        right_open_samples: Optional[List[float]] = None,
+    ) -> bool:
+        """Derives per-eye open baselines from explicit open-eye samples."""
+        left = self._median(list(left_open_samples or []))
+        right = self._median(list(right_open_samples or []))
+        if left is None and right is None:
+            return False
+        if left is not None:
+            self.left_ear_baseline = max(0.05, min(1.0, left))
+        if right is not None:
+            self.right_ear_baseline = max(0.05, min(1.0, right))
+        self.ear_auto_calibrate = False
+        self._rebuild_ear_thresholds()
+        return True
+
+    def _rebuild_ear_thresholds(self) -> None:
+        for side in ("left", "right"):
+            baseline = getattr(self, f"{side}_ear_baseline")
+            if baseline is None:
+                close = self.ear_close_threshold
+                open_threshold = self.ear_open_threshold
+            else:
+                close = max(float(getattr(self, "ear_close_threshold", 0.16)), baseline * 0.55)
+                open_threshold = max(close + 0.04, baseline * 0.75)
+            setattr(self, f"{side}_ear_close_threshold", close)
+            setattr(self, f"{side}_ear_open_threshold", open_threshold)
+
+    def _learn_ear_baseline(self, left_ear: float, right_ear: float) -> None:
+        if not self.ear_auto_calibrate:
+            return
+        if left_ear <= 0.0 or right_ear <= 0.0:
+            return
+        if left_ear < self.left_ear_open_threshold or right_ear < self.right_ear_open_threshold:
+            return
+        self._left_open_ear_samples.append(float(left_ear))
+        self._right_open_ear_samples.append(float(right_ear))
+        if len(self._left_open_ear_samples) < 12:
+            return
+        left = self._median(list(self._left_open_ear_samples))
+        right = self._median(list(self._right_open_ear_samples))
+        if left is not None:
+            self.left_ear_baseline = max(0.05, min(1.0, left))
+        if right is not None:
+            self.right_ear_baseline = max(0.05, min(1.0, right))
+        self._rebuild_ear_thresholds()
+
+    def _wink_quality_ok(self, face_landmarks: Any) -> bool:
+        """Rejects winks when the face is too far, tilted or turned away."""
+        try:
+            landmarks = getattr(face_landmarks, "landmark", face_landmarks)
+            if not landmarks:
+                return False
+            interocular = self._euclidean_distance_2d(landmarks[33], landmarks[263])
+            if interocular <= 1e-4:
+                return False
+            if self.wink_distance_compensation and interocular < self.wink_min_interocular_dist:
+                return False
+            roll = self.compute_head_roll(face_landmarks)
+            if abs(roll) > self.wink_max_roll_deg:
+                return False
+            nose_x = float(landmarks[1].x)
+            mid_x = (float(landmarks[33].x) + float(landmarks[263].x)) * 0.5
+            yaw_ratio = abs(nose_x - mid_x) / interocular
+            if not math.isfinite(yaw_ratio) or yaw_ratio > self.wink_max_yaw_ratio:
+                return False
+            return True
+        except (AttributeError, IndexError, TypeError, ValueError, OverflowError):
+            return False
+
+    def _wink_trigger_allowed(self, side: str, now: float) -> bool:
+        if now - self.last_wink_time >= self.wink_cooldown_sec:
+            return True
+        if self.wink_double_enabled:
+            last_side = self.last_left_wink_time if side == "left" else self.last_right_wink_time
+            elapsed = now - last_side
+            return 0.0 < elapsed <= self.wink_double_window_sec
+        return False
+
+    def _emit_wink(self, side: str, now: float) -> None:
+        side_upper = side.upper()
+        last_side = self.last_left_wink_time if side == "left" else self.last_right_wink_time
+        is_double = bool(
+            self.wink_double_enabled
+            and last_side > 0.0
+            and 0.0 < now - last_side <= self.wink_double_window_sec
+        )
+        gesture = f"WINK_{side_upper}_DOUBLE" if is_double else f"WINK_{side_upper}"
+        self.triggered_gestures.append(gesture)
+        self.last_gesture = gesture
+        self.last_wink_time = now
+        if side == "left":
+            self.last_left_wink_time = 0.0 if is_double else now
+        else:
+            self.last_right_wink_time = 0.0 if is_double else now
+
+    def _update_wink_candidate(self, side: str, now: float, closed: bool) -> None:
+        start_attr = f"{side}_wink_start_time"
+        invalid_attr = f"{side}_wink_invalid"
+        triggered_attr = f"{side}_wink_triggered"
+        start = getattr(self, start_attr)
+        if closed:
+            if start is None:
+                if self._wink_trigger_allowed(side, now):
+                    setattr(self, start_attr, now)
+                    setattr(self, invalid_attr, False)
+                    setattr(self, triggered_attr, False)
+                else:
+                    setattr(self, invalid_attr, True)
+                return
+            if getattr(self, invalid_attr):
+                return
+            duration = now - start
+            if duration > self.wink_max_hold_sec:
+                setattr(self, invalid_attr, True)
+            if (
+                not self.wink_trigger_on_release
+                and self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec
+                and not getattr(self, triggered_attr)
+                and self._wink_trigger_allowed(side, now)
+            ):
+                self._emit_wink(side, now)
+                setattr(self, triggered_attr, True)
+            return
+        if start is not None:
+            duration = now - start
+            if (
+                self.wink_trigger_on_release
+                and self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec
+                and not getattr(self, invalid_attr)
+                and self._wink_trigger_allowed(side, now)
+            ):
+                self._emit_wink(side, now)
+            setattr(self, start_attr, None)
+            setattr(self, invalid_attr, False)
+            setattr(self, triggered_attr, False)
+        else:
+            setattr(self, invalid_attr, False)
+
+    def _process_winks(self, now: float, face_landmarks: Any) -> None:
+        if not self.wink_enabled or self.wink_mouth_only:
+            self.left_wink_start_time = None
+            self.right_wink_start_time = None
+            self.left_wink_invalid = True
+            self.right_wink_invalid = True
+            return
+        if not self._wink_quality_ok(face_landmarks):
+            self.left_wink_start_time = None
+            self.right_wink_start_time = None
+            self.left_wink_invalid = True
+            self.right_wink_invalid = True
+            return
+
+        self._learn_ear_baseline(self.current_left_ear, self.current_right_ear)
+        left_closed = self.current_left_ear <= self.left_ear_close_threshold
+        right_closed = self.current_right_ear <= self.right_ear_close_threshold
+        left_open = self.current_left_ear >= (
+            self.left_ear_open_threshold + self.wink_opposite_margin
+        )
+        right_open = self.current_right_ear >= (
+            self.right_ear_open_threshold + self.wink_opposite_margin
+        )
+
+        if left_closed and right_closed:
+            self.left_wink_start_time = None
+            self.left_wink_invalid = True
+            self.right_wink_start_time = None
+            self.right_wink_invalid = True
+            return
+
+        self._update_wink_candidate("left", now, left_closed and right_open)
+        self._update_wink_candidate("right", now, right_closed and left_open)
+
     def compute_brow_raise(self, face_landmarks: Any) -> float:
         """Scale-invariant eyebrow height relative to the eye line."""
         if face_landmarks is None:
@@ -399,103 +681,7 @@ class GestureDetector:
         # ----------------------------------------------------------------------
         # 2. Eye Wink Detection State Machine (EAR)
         # ----------------------------------------------------------------------
-        left_closed = self.current_left_ear < self.ear_close_threshold
-        right_closed = self.current_right_ear < self.ear_close_threshold
-        left_open = self.current_left_ear > self.ear_open_threshold
-        right_open = self.current_right_ear > self.ear_open_threshold
-
-        time_since_last_wink = now - self.last_wink_time
-
-        if left_closed and right_closed:
-            # Bilateral blink detected: invalidate active wink candidates
-            self.left_wink_start_time = None
-            self.left_wink_invalid = True
-            self.right_wink_start_time = None
-            self.right_wink_invalid = True
-        else:
-            # Evaluate Left Eye Wink Candidate (Left closed, Right open)
-            if left_closed and right_open:
-                if self.left_wink_start_time is None:
-                    if time_since_last_wink >= self.wink_cooldown_sec:
-                        self.left_wink_start_time = now
-                        self.left_wink_invalid = False
-                        self.left_wink_triggered = False
-                    else:
-                        # Attempted wink during active cooldown: mark invalid until full release
-                        self.left_wink_invalid = True
-                elif not self.left_wink_invalid:
-                    duration = now - self.left_wink_start_time
-                    if duration > self.wink_max_hold_sec:
-                        self.left_wink_invalid = True
-                    if not self.wink_trigger_on_release:
-                        if (
-                            (self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec)
-                            and not self.left_wink_triggered
-                        ):
-                            if time_since_last_wink >= self.wink_cooldown_sec:
-                                self.triggered_gestures.append("WINK_LEFT")
-                                self.last_gesture = "WINK_LEFT"
-                                self.last_wink_time = now
-                                self.last_left_wink_time = now
-                                self.left_wink_triggered = True
-
-            if self.left_wink_start_time is not None and not left_closed:
-                # Left eye released / reopened
-                duration = now - self.left_wink_start_time
-                if self.wink_trigger_on_release:
-                    if (self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec) and not self.left_wink_invalid:
-                        if time_since_last_wink >= self.wink_cooldown_sec:
-                            self.triggered_gestures.append("WINK_LEFT")
-                            self.last_gesture = "WINK_LEFT"
-                            self.last_wink_time = now
-                            self.last_left_wink_time = now
-                self.left_wink_start_time = None
-                self.left_wink_invalid = False
-                self.left_wink_triggered = False
-            elif not left_closed:
-                self.left_wink_invalid = False
-
-            # Evaluate Right Eye Wink Candidate (Right closed, Left open)
-            if right_closed and left_open:
-                if self.right_wink_start_time is None:
-                    if time_since_last_wink >= self.wink_cooldown_sec:
-                        self.right_wink_start_time = now
-                        self.right_wink_invalid = False
-                        self.right_wink_triggered = False
-                    else:
-                        # Attempted wink during active cooldown: mark invalid until full release
-                        self.right_wink_invalid = True
-                elif not self.right_wink_invalid:
-                    duration = now - self.right_wink_start_time
-                    if duration > self.wink_max_hold_sec:
-                        self.right_wink_invalid = True
-                    if not self.wink_trigger_on_release:
-                        if (
-                            (self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec)
-                            and not self.right_wink_triggered
-                        ):
-                            if time_since_last_wink >= self.wink_cooldown_sec:
-                                self.triggered_gestures.append("WINK_RIGHT")
-                                self.last_gesture = "WINK_RIGHT"
-                                self.last_wink_time = now
-                                self.last_right_wink_time = now
-                                self.right_wink_triggered = True
-
-            if self.right_wink_start_time is not None and not right_closed:
-                # Right eye released / reopened
-                duration = now - self.right_wink_start_time
-                if self.wink_trigger_on_release:
-                    if (self.wink_min_hold_sec <= duration <= self.wink_max_hold_sec) and not self.right_wink_invalid:
-                        if time_since_last_wink >= self.wink_cooldown_sec:
-                            self.triggered_gestures.append("WINK_RIGHT")
-                            self.last_gesture = "WINK_RIGHT"
-                            self.last_wink_time = now
-                            self.last_right_wink_time = now
-                self.right_wink_start_time = None
-                self.right_wink_invalid = False
-                self.right_wink_triggered = False
-            elif not right_closed:
-                self.right_wink_invalid = False
+        self._process_winks(now, face_landmarks)
 
         # ------------------------------------------------------------------
         # 3. Optional expressive micro-gestures (brow raise + head tilt)
@@ -567,6 +753,15 @@ class GestureDetector:
         self.right_wink_invalid = False
         self.right_wink_triggered = False
         self.last_wink_time = 0.0
+        self.last_left_wink_time = 0.0
+        self.last_right_wink_time = 0.0
+        self.last_left_double_wink_time = 0.0
+        self.last_right_double_wink_time = 0.0
+        try:
+            self._left_open_ear_samples.clear()
+            self._right_open_ear_samples.clear()
+        except Exception:
+            pass
         self.triggered_gestures = []
         self.last_gesture = None
         self.brow_baseline = None

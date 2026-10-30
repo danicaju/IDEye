@@ -946,6 +946,14 @@ class IDEyeApplication(QObject):
             )
         )
         gaze_scroll_enabled = bool(values.get("gaze_scroll_enabled", getattr(config, "GAZE_SCROLL_ENABLED", True)))
+        wink_enabled = bool(values.get("wink_enabled", getattr(config, "WINK_ENABLED", True)))
+        wink_mouth_only = bool(values.get("wink_mouth_only", getattr(config, "WINK_MOUTH_ONLY", False)))
+        wink_difficulty = str(values.get("wink_difficulty", getattr(config, "WINK_DIFFICULTY", "normal")))
+        wink_min_hold = float(values.get("wink_min_hold_sec", getattr(config, "WINK_MIN_HOLD_SEC", 0.18)))
+        wink_max_hold = float(values.get("wink_max_hold_sec", getattr(config, "WINK_MAX_HOLD_SEC", 0.30)))
+        wink_cooldown = float(values.get("wink_cooldown_sec", getattr(config, "WINK_COOLDOWN_SEC", 0.65)))
+        wink_margin = float(values.get("wink_opposite_margin", getattr(config, "WINK_OPPOSITE_EYE_MARGIN", 0.035)))
+        wink_distance = bool(values.get("wink_distance_compensation", getattr(config, "WINK_DISTANCE_COMPENSATION", True)))
 
         if estimator is not None:
             estimator.set_tracking_mode(mode)
@@ -960,6 +968,17 @@ class IDEyeApplication(QObject):
             detector.mar_threshold = mar
             detector.release_threshold = max(0.20, mar - 0.10)
             detector.micro_gestures_enabled = micro_enabled
+            if hasattr(detector, "configure_wink"):
+                detector.configure_wink(
+                    wink_enabled=wink_enabled,
+                    wink_mouth_only=wink_mouth_only,
+                    wink_difficulty=wink_difficulty,
+                    wink_min_hold_sec=wink_min_hold,
+                    wink_max_hold_sec=wink_max_hold,
+                    wink_cooldown_sec=wink_cooldown,
+                    wink_opposite_margin=wink_margin,
+                    wink_distance_compensation=wink_distance,
+                )
         if hasattr(self.overlay, "set_mar_threshold"):
             self.overlay.set_mar_threshold(mar)
         if hasattr(self.tracker, "health_guard"):
@@ -987,6 +1006,8 @@ class IDEyeApplication(QObject):
         self.debug_widget.set_low_light_enabled(low_light_enabled)
         self.debug_widget.set_eco_sleep_enabled(eco_enabled)
         self.debug_widget.set_ghost_peek_enabled(ghost_enabled)
+        self.debug_widget.set_winks_enabled(wink_enabled)
+        self.debug_widget.set_wink_mouth_only(wink_mouth_only)
         if hasattr(self.mode_manager, "set_language"):
             self.mode_manager.set_language(lang)
         if hasattr(self.context_reader, "set_active_language"):
@@ -1100,6 +1121,8 @@ class IDEyeApplication(QObject):
             self.tracker.power_state_changed.connect(self._on_power_state_changed)
         self.debug_widget.eco_sleep_toggled.connect(self._on_eco_sleep_toggled)
         self.debug_widget.ghost_peek_toggled.connect(self._on_ghost_peek_toggled)
+        self.debug_widget.winks_toggled.connect(self._on_winks_toggled)
+        self.debug_widget.wink_mouth_only_toggled.connect(self._on_wink_mouth_only_toggled)
 
         # Context reader & AI status connections
         self.debug_widget.file_linked.connect(self.context_reader.set_active_file)
@@ -1250,6 +1273,22 @@ class IDEyeApplication(QObject):
         tray = getattr(self, "tray_icon", None)
         if tray is not None and hasattr(tray, "set_ghost_peek"):
             tray.set_ghost_peek(bool(enabled))
+
+    def _on_winks_toggled(self, enabled: bool) -> None:
+        detector = getattr(self.tracker, "gesture_detector", None)
+        if detector is not None and hasattr(detector, "configure_wink"):
+            detector.configure_wink(wink_enabled=bool(enabled))
+        self.settings_manager.set("wink_enabled", bool(enabled))
+        if hasattr(self.debug_widget, "set_winks_enabled"):
+            self.debug_widget.set_winks_enabled(bool(enabled))
+
+    def _on_wink_mouth_only_toggled(self, enabled: bool) -> None:
+        detector = getattr(self.tracker, "gesture_detector", None)
+        if detector is not None and hasattr(detector, "configure_wink"):
+            detector.configure_wink(wink_mouth_only=bool(enabled))
+        self.settings_manager.set("wink_mouth_only", bool(enabled))
+        if hasattr(self.debug_widget, "set_wink_mouth_only"):
+            self.debug_widget.set_wink_mouth_only(bool(enabled))
 
     def _apply_autofix(self, fix: Dict[str, Any]) -> None:
         """Applies a selected Auto-Fix locally or through the VS Code bridge."""

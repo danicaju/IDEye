@@ -152,9 +152,19 @@ CLICK_COOLDOWN_SEC: float = 0.35
 # Scale-invariant Eye Aspect Ratio thresholds
 EAR_WINK_CLOSE_THRESHOLD: float = 0.16  # Below this, eye is considered closed
 EAR_WINK_OPEN_THRESHOLD: float = 0.22   # Above this, eye is considered open
-WINK_MIN_HOLD_SEC: float = 0.15         # Minimum hold duration (150ms)
-WINK_MAX_HOLD_SEC: float = 0.45         # Maximum hold duration (450ms)
-WINK_COOLDOWN_SEC: float = 0.40         # Cooldown between winks (400ms)
+WINK_MIN_HOLD_SEC: float = 0.18         # Minimum intentional wink hold (180ms)
+WINK_MAX_HOLD_SEC: float = 0.30         # Longer closures are treated as squints
+WINK_COOLDOWN_SEC: float = 0.65         # Cooldown between independent winks
+WINK_OPPOSITE_EYE_MARGIN: float = 0.035  # Open eye must clear its threshold by this margin
+WINK_MIN_INTEROCULAR_DIST: float = 0.075  # Reject winks when the face is too far away
+WINK_MAX_ROLL_DEG: float = 28.0          # Reject extreme head roll
+WINK_MAX_YAW_RATIO: float = 0.55         # Nose offset / interocular distance
+WINK_DOUBLE_WINDOW_SEC: float = 0.90     # Second same-side wink = confirmed double wink
+WINK_ENABLED: bool = True
+WINK_MOUTH_ONLY: bool = False
+WINK_DIFFICULTY: str = "normal"           # relaxed | normal | strict
+WINK_DISTANCE_COMPENSATION: bool = True
+WINK_CONFIRM_DANGEROUS: bool = True
 
 # MediaPipe 478 Landmark Indices for EAR Calculation
 # Left eye (outer corner 33, top outer 160, top inner 158, inner corner 133, bottom inner 153, bottom outer 144)

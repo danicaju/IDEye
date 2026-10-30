@@ -128,6 +128,19 @@ class CameraTracker(QThread):
                 release_threshold=config.MAR_RELEASE_THRESHOLD,
                 hold_time_sec=config.CLICK_HOLD_TIME_SEC,
                 cooldown_sec=config.CLICK_COOLDOWN_SEC,
+                wink_min_hold_sec=config.WINK_MIN_HOLD_SEC,
+                wink_max_hold_sec=config.WINK_MAX_HOLD_SEC,
+                wink_cooldown_sec=config.WINK_COOLDOWN_SEC,
+                wink_opposite_margin=config.WINK_OPPOSITE_EYE_MARGIN,
+                wink_enabled=config.WINK_ENABLED,
+                wink_mouth_only=config.WINK_MOUTH_ONLY,
+                wink_difficulty=config.WINK_DIFFICULTY,
+                wink_distance_compensation=config.WINK_DISTANCE_COMPENSATION,
+                wink_min_interocular_dist=config.WINK_MIN_INTEROCULAR_DIST,
+                wink_max_roll_deg=config.WINK_MAX_ROLL_DEG,
+                wink_max_yaw_ratio=config.WINK_MAX_YAW_RATIO,
+                wink_double_window_sec=config.WINK_DOUBLE_WINDOW_SEC,
+                wink_double_enabled=config.WINK_CONFIRM_DANGEROUS,
             )
 
         self.health_guard = HealthGuard(

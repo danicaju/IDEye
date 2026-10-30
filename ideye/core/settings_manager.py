@@ -38,6 +38,14 @@ _FACTORY_DEFAULTS: Dict[str, Any] = {
     "ghost_peek_enabled": bool(getattr(config, "GHOST_PEEK_ENABLED", True)),
     "ghost_peek_idle_seconds": float(getattr(config, "GHOST_PEEK_IDLE_SECONDS", 30.0)),
     "gaze_scroll_enabled": bool(getattr(config, "GAZE_SCROLL_ENABLED", True)),
+    "wink_enabled": bool(getattr(config, "WINK_ENABLED", True)),
+    "wink_mouth_only": bool(getattr(config, "WINK_MOUTH_ONLY", False)),
+    "wink_difficulty": str(getattr(config, "WINK_DIFFICULTY", "normal")),
+    "wink_min_hold_sec": float(getattr(config, "WINK_MIN_HOLD_SEC", 0.18)),
+    "wink_max_hold_sec": float(getattr(config, "WINK_MAX_HOLD_SEC", 0.30)),
+    "wink_cooldown_sec": float(getattr(config, "WINK_COOLDOWN_SEC", 0.65)),
+    "wink_opposite_margin": float(getattr(config, "WINK_OPPOSITE_EYE_MARGIN", 0.035)),
+    "wink_distance_compensation": bool(getattr(config, "WINK_DISTANCE_COMPENSATION", True)),
 }
 
 

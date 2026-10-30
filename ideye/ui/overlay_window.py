@@ -19,6 +19,7 @@ Features:
 from typing import Optional, Tuple, Dict, Any, List
 import sys
 import os
+import math
 import time
 
 from PyQt6.QtCore import (
@@ -290,6 +291,8 @@ class OverlayWindow(QWidget):
         )
         self._lens_pixmap = None
         self._lens_capture_target: Optional[tuple] = None
+        self._lens_capture_in_progress: bool = False
+        self._last_freelook_click_ts: float = 0.0
         self.mode_manager = mode_manager if mode_manager is not None else ModeManager(
             initial_mode="coding", language=self.current_language
         )
@@ -1287,6 +1290,13 @@ class OverlayWindow(QWidget):
         Updates hovered block and gaze cursor position across the 3x3 grid,
         with sub-pixel geometry alignment matching visual category cards.
         """
+        try:
+            gx = float(gx)
+            gy = float(gy)
+        except (TypeError, ValueError, OverflowError):
+            return
+        if not (math.isfinite(gx) and math.isfinite(gy)):
+            return
         self.current_gaze = (gx, gy)
         try:
             old_x, old_y = self._last_ghost_gaze
@@ -1305,8 +1315,10 @@ class OverlayWindow(QWidget):
             and not self.show_help_modal
             and not self.reading_mode
         ):
-            px = gx * max(1.0, float(self.width()))
-            py = gy * max(1.0, float(self.height()))
+            screen_w, screen_h = self._get_screen_size()
+            mx, my = self._freelook_screen_coords(gx, gy, screen_w, screen_h)
+            px = mx * (max(1.0, float(self.width())) / max(1.0, float(screen_w)))
+            py = my * (max(1.0, float(self.height())) / max(1.0, float(screen_h)))
             header_targets = (
                 ("hovered_header_exit", self.header_exit_rect),
                 ("hovered_header_help", self.header_help_rect),
@@ -1316,8 +1328,15 @@ class OverlayWindow(QWidget):
                 ("hovered_sniper_action", self._sniper_action_pill_rect),
                 ("hovered_gaming_toggle", self._gaming_toggle_rect),
             )
+            active_target = next(
+                (attr for attr, _ in header_targets if getattr(self, attr, False)),
+                None,
+            )
             for attr, rect in header_targets:
-                if rect.isValid() and rect.adjusted(-15.0, -15.0, 15.0, 15.0).contains(px, py):
+                if not rect.isValid():
+                    continue
+                pad = 24.0 if attr == active_target else 15.0
+                if rect.adjusted(-pad, -pad, pad, pad).contains(px, py):
                     for other, _ in header_targets:
                         setattr(self, other, other == attr)
                     self.hovered_block = None
@@ -1884,6 +1903,16 @@ class OverlayWindow(QWidget):
     def _freelook_prethreshold(self) -> float:
         return max(0.01, float(getattr(self, "mar_threshold", 0.45)) * 0.55)
 
+    def _freelook_jaw_threshold(self) -> float:
+        """Mouth opening that freezes the pointer before a click.
+
+        The old 55% threshold was close to a relaxed mouth for many users,
+        which made the cursor stop and swallowed intentional clicks.
+        """
+        rest = float(getattr(config, "MAR_REST_THRESHOLD", 0.20))
+        minimum = float(getattr(config, "FREELOOK_JAW_LOCK_MIN_MAR", 0.27))
+        return max(self._freelook_prethreshold(), rest + 0.06, minimum)
+
     def _freelook_screen_coords(
         self, gx: float, gy: float, screen_w: int, screen_h: int
     ) -> Tuple[int, int]:
@@ -1893,6 +1922,13 @@ class OverlayWindow(QWidget):
         full geometry so the taskbar, tray and maximized-window close button
         remain reachable.
         """
+        try:
+            gx = float(gx)
+            gy = float(gy)
+        except (TypeError, ValueError, OverflowError):
+            return (0, 0)
+        if not (math.isfinite(gx) and math.isfinite(gy)):
+            return (0, 0)
         margin_x = max(0.0, min(0.20, float(getattr(config, "OVERSCAN_MARGIN_X", 0.04))))
         margin_top = max(0.0, min(0.20, float(getattr(config, "OVERSCAN_MARGIN_Y_TOP", 0.04))))
         margin_bottom = max(0.0, min(0.25, float(getattr(config, "OVERSCAN_MARGIN_Y_BOTTOM", 0.07))))
@@ -1902,6 +1938,16 @@ class OverlayWindow(QWidget):
         ny = max(0.0, min(1.0, (float(gy) - margin_top) / span_y))
         x = int(round(nx * max(0, screen_w - 1)))
         y = int(round(ny * max(0, screen_h - 1)))
+
+        # Top magnet: comfortable upward gaze rarely reaches the extreme top
+        # of the screen. Pull the cursor into the command bar before applying
+        # the taskbar rail so the header, mode selector and exit stay usable.
+        top_zone = max(0.0, min(0.35, float(getattr(config, "FREELOOK_TOP_MAGNET_ZONE", 0.18))))
+        top_pull = max(0.0, min(1.0, float(getattr(config, "FREELOOK_TOP_MAGNET_PULL", 0.94))))
+        gaze_y = max(0.0, min(1.0, float(gy)))
+        if top_zone > 0.0 and gaze_y < top_zone:
+            strength = max(0.0, 1.0 - (gaze_y / top_zone))
+            y = int(round(y * (1.0 - top_pull * strength)))
 
         rail_height = max(1, int(getattr(config, "TASKBAR_RAIL_HEIGHT", 52)))
         if y >= screen_h - rail_height:
@@ -1920,8 +1966,9 @@ class OverlayWindow(QWidget):
         screen_w, screen_h = self._get_screen_size()
         x, y = self._freelook_screen_coords(gx, gy, screen_w, screen_h)
         pre = self._freelook_prethreshold()
+        jaw_threshold = self._freelook_jaw_threshold()
 
-        if self.current_mar >= pre:
+        if self.current_mar >= jaw_threshold:
             if not self._jaw_locked:
                 self._jaw_locked = True
                 self._jaw_lock_pos = self._freelook_last_pos
@@ -2025,6 +2072,10 @@ class OverlayWindow(QWidget):
                 pass
 
     def _freelook_click(self) -> None:
+        now = time.time()
+        if now - float(getattr(self, "_last_freelook_click_ts", 0.0)) < 0.12:
+            return
+        self._last_freelook_click_ts = now
         mode = self._sniper_mode()
         action = getattr(mode, "get_action", lambda: "LEFT_CLICK")() if mode else "LEFT_CLICK"
         x, y = self._jaw_lock_pos or self._freelook_last_pos
@@ -2033,15 +2084,30 @@ class OverlayWindow(QWidget):
             controller = OSMouseController()
             self.mouse_controller = controller
         if action == "RIGHT_CLICK":
-            controller.right_click(x, y)
+            try:
+                controller.right_click(x, y)
+            except Exception:
+                pass
         elif action == "DOUBLE_CLICK":
-            controller.double_click(x, y)
+            try:
+                controller.double_click(x, y)
+            except Exception:
+                pass
         elif action == "SCROLL_UP":
-            controller.scroll_at(x, y, 3)
+            try:
+                controller.scroll_at(x, y, 3)
+            except Exception:
+                pass
         elif action == "SCROLL_DOWN":
-            controller.scroll_at(x, y, -3)
+            try:
+                controller.scroll_at(x, y, -3)
+            except Exception:
+                pass
         else:
-            controller.left_click(x, y)
+            try:
+                controller.left_click(x, y)
+            except Exception:
+                pass
         self._play_sound("click")
         self.last_action_desc = f"FreeLook: {getattr(mode, 'action_label', 'Clic Izq')}"
         self.sniper_lens.deactivate()
@@ -2055,7 +2121,11 @@ class OverlayWindow(QWidget):
 
     def _update_freelook_mouth(self, mar: float) -> None:
         pre = self._freelook_prethreshold()
-        trigger = max(pre + 0.01, float(getattr(self, "mar_threshold", 0.45)))
+        threshold = float(getattr(self, "mar_threshold", 0.45))
+        trigger_ratio = max(0.35, min(0.95, float(getattr(config, "FREELOOK_MOUTH_TRIGGER_RATIO", 0.78))))
+        release_ratio = max(0.25, min(0.90, float(getattr(config, "FREELOOK_MOUTH_RELEASE_RATIO", 0.48))))
+        trigger = max(pre + 0.01, threshold * trigger_ratio)
+        release = max(pre, min(trigger - 0.01, threshold * release_ratio))
         now = time.time()
 
         # In gameplay, mouth = click at the current pointer; never move it.
@@ -2066,7 +2136,7 @@ class OverlayWindow(QWidget):
                 self._mouth_start = now
                 self.update()
                 return
-            if self._mouth_active and mar < pre:
+            if self._mouth_active and mar < release:
                 self._mouth_active = False
                 self._hold_started = False
                 if controller is not None:
@@ -2100,7 +2170,7 @@ class OverlayWindow(QWidget):
             else:
                 controller.mouse_down("left")
 
-        if mar < pre:
+        if mar < release:
             if self._hold_started and controller is not None:
                 if self._gaming_mode:
                     controller.key_up("w")
@@ -2181,18 +2251,17 @@ class OverlayWindow(QWidget):
         screen = QGuiApplication.primaryScreen()
         if screen is None:
             return
+        self._lens_capture_in_progress = True
         try:
-            old_opacity = self.windowOpacity()
-            self.setWindowOpacity(0.0)
+            # Do not touch window opacity: hiding the whole HUD caused the
+            # command bar to flash on every lens refresh.
             QApplication.processEvents()
             self._lens_pixmap = screen.grabWindow(0, int(target[0]) - 40, int(target[1]) - 40, 80, 80)
             self._lens_capture_target = (target[0], target[1])
-            self.setWindowOpacity(old_opacity)
         except Exception:
-            try:
-                self.setWindowOpacity(1.0)
-            except Exception:
-                pass
+            pass
+        finally:
+            self._lens_capture_in_progress = False
 
     def activate_sniper_lens(self) -> None:
         if self.current_context_mode_id != "sniper":
@@ -2335,6 +2404,8 @@ class OverlayWindow(QWidget):
         try:
             self.current_mar = float(current_mar)
         except (TypeError, ValueError):
+            self.current_mar = 0.0
+        if not math.isfinite(self.current_mar):
             self.current_mar = 0.0
         mouth_rest = max(0.0, float(getattr(config, "MAR_REST_THRESHOLD", 0.20)))
         if self.current_mar > mouth_rest + 0.04:
@@ -2546,8 +2617,11 @@ class OverlayWindow(QWidget):
             return
 
         # FreeLook handles mouth clicks in on_mar_updated (click vs. hold).
-        # The mode hub still uses normal card selection.
+        # Confirmed MOUTH_CLICK is a fallback when MAR sampling misses a quick
+        # opening; duplicate suppression lives in _freelook_click.
         if self.current_context_mode_id == "sniper" and self.current_node_id != "MODE_SELECT":
+            if not self.reading_mode and not self._mouth_active and not self._hold_started:
+                self._freelook_click()
             return
 
         target_block = self.hovered_block
@@ -3619,6 +3693,9 @@ class OverlayWindow(QWidget):
         """Paints Glassmorphic Breadcrumb Header Bar, 3x3 Category Cards, and Dual-Ring Reticle."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if getattr(self, "_lens_capture_in_progress", False):
+            painter.end()
+            return
 
         w = float(self.width())
         h = float(self.height())

@@ -115,6 +115,14 @@ TASKBAR_RAIL_HEIGHT: int = 52
 TASKBAR_RAIL_TARGET_Y: int = 24
 TASKBAR_RAIL_PULL: float = 0.60
 
+# FreeLook ergonomics: guarantee the top command bar and desktop top edge
+# remain reachable even when the user's comfortable upward gaze is limited.
+FREELOOK_TOP_MAGNET_ZONE: float = 0.18
+FREELOOK_TOP_MAGNET_PULL: float = 0.94
+FREELOOK_JAW_LOCK_MIN_MAR: float = 0.27
+FREELOOK_MOUTH_TRIGGER_RATIO: float = 0.78
+FREELOOK_MOUTH_RELEASE_RATIO: float = 0.48
+
 # Smoothing factor for Exponential Moving Average (EMA)
 # Higher = more responsive, lower = smoother (less jitter)
 EMA_ALPHA: float = 0.22

@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-594%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-601%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -211,12 +211,12 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+L`** | **Cambiar Lenguaje** | Cicla Python, TypeScript, Rust, C++ y Go desde cualquier sitio |
 | **`Ctrl+Alt+V`** | **Abrir Selector de Modo** | Abre el selector de 6 modos; pulsa `Ctrl+Alt+V` desde cualquier sitio |
 | **`Ctrl+Alt+K`** | **Alternar Cambio Automático de Modo** | Activa/desactiva el cambio automático de modo según el contexto del editor vía WebSocket. Usa `Ctrl+Alt+K` desde cualquier sitio |
-| **`Ctrl+Alt+F`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz. Usa `Ctrl+Alt+F` desde cualquier sitio |
+| **`Ctrl+Alt+F`** | **Modo FreeLook** | Modo mirada/cámara a 60 Hz; un imán superior lleva el cursor a la barra de comandos y el clic de boca actúa como respaldo |
 | **Scroll por borde** | **Scroll web en FreeLook** | Mira al borde superior o inferior durante ~0.3 s para desplazar la página; vuelve al centro para detenerte |
 | **`Ctrl+Alt+G`** | **Modo Gaming** | Joystick de cabeza para WASD; guiño derecho alterna cursor de menú; guiño izquierdo salta. Usa `Ctrl+Alt+G` desde cualquier sitio |
 | **`Ctrl+Alt+S`** | **Alternar Retroalimentación Sonora** | Pulsa `Ctrl+Alt+S` desde cualquier sitio |
 | **`Ctrl+Alt+H`** | **Guía de Gestos y Ayuda** | Abre o cierra el modal de ayuda con la chuleta completa de gestos y atajos |
-| **Clic de Boca** | **Inyectar / Clic** | Una breve apertura de boca (MAR) dispara un clic sin tiempo de espera o una inyección de snippet |
+| **Clic de Boca** | **Inyectar / Clic** | Una breve apertura de boca (MAR) dispara un clic sin tiempo de espera o una inyección de snippet; en FreeLook también funciona como respaldo confirmado |
 | **Boca Mantenida** | **Arrastrar / Jaw-Lock** | Mantener la boca abierta al 55% MAR habilita arrastrar/bloquear sin botones de mano |
 | **Guiño Derecho** | **Pausar / Gaming: joystick → cursor** | Pausa/oculta el HUD en modos normales; en Gaming alterna joystick de cabeza y cursor de menú |
 | **Guiño Izquierdo** | **Volver / Deshacer / Saltar** | Regresa al menú anterior o ejecuta Deshacer; hace saltar al personaje en modo Gaming |
@@ -308,7 +308,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 594 pruebas de unidad e integración
+└── tests/ # 601 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -334,6 +334,7 @@ IDEye/
     ├── test_interactive_guide.py # Generación, catálogo y accesos al manual
     ├── test_interactive_guide_sync.py # Sincronización UTF-8 y tema Nintendo
     ├── test_freelook_edge_scroll.py # Scroll por borde en FreeLook
+    ├── test_freelook_top_and_safe_clicks.py # Alcance superior, clic de boca y parpadeo de lupa
     ├── test_glass_focus_ui.py # Widgets Glass/Focus
     ├── test_help_ui_and_card_layout.py # Ayuda y guía de gestos
     ├── test_menu_integrity.py # Integridad de árboles 3x3
@@ -357,11 +358,11 @@ pytest -q
 ```
 
 ```text
-594 pruebas superadas, 78 subtests, 24.33s
+601 pruebas superadas, 78 subtests, 27.73s
 ```
 
 > [!NOTE]
-> Todos los 594 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
+> Todos los 601 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
 
 ---
 
@@ -380,6 +381,7 @@ pytest -q
 - [x] **Fase 7.5:** FreeLook sin cuadrícula a 60 Hz, Jaw-Lock, perfil Gaming/Roblox y Desduplicación Inteligente de Prefijos (`h + hola` -> `ola`).
 - [x] **Fase 7.6:** Estabilidad subpíxel con centroide craneal, multi-anclaje orbital + mediana en PURE_IRIS, fusión de sácadas HYBRID y WebSocket bidireccional con contexto automático.
 - [x] **Fase 7.7:** Mapeo FreeLook a pantalla completa, overscan cómodo en bordes y carril magnético de la barra de tareas de Windows.
+- [x] **Fase 7.9:** Imán superior de FreeLook, clic de boca fiable y captura de Lupa Sniper sin parpadeo.
 - [x] **Fase 8.1:** `user_settings.json` persistente, sincronización live con debounce, calibración biométrica MAR de 6º paso y slider MAR en vivo.
 - [x] **Fase 8.2:** Constructor de Macros: `custom_macros.json` persistente, editor de 9 celdas, snippets/comandos/atajos OS y parcheo del HUD en vivo.
 - [x] **Fase 8.3:** Handover de mirada multi-monitor, cruce de bisel, límites de calibración por pantalla y empaquetado PyInstaller multiplataforma.

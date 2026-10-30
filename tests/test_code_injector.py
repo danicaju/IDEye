@@ -236,5 +236,70 @@ class TestCodeInjector(unittest.TestCase):
         self.assertEqual(mock_clip.paste(), "x = 42")
 
 
+    def test_delimiter_after_word_places_cursor_after_pair(self):
+        """After a typed name, () must leave the cursor after func(), not inside."""
+        mock_kb = MockRecorderKeyboard()
+        injector = CodeInjector(
+            async_mode=False,
+            paste_delay=0.001,
+            keyboard_controller=mock_kb,
+            clipboard_module=MockClipboard(),
+        )
+        injector.set_current_word_prefix("func")
+        self.assertTrue(injector.insert_snippet("()", cursor_offset_left=1, restore_clipboard=False))
+        left_key = Key.left if Key is not None else "LEFT"
+        self.assertEqual([k for k in mock_kb.tapped if k == left_key], [])
+
+    def test_delimiter_at_empty_position_keeps_centered_cursor(self):
+        """An empty () keeps the historical centered cursor for grouping."""
+        mock_kb = MockRecorderKeyboard()
+        injector = CodeInjector(
+            async_mode=False,
+            paste_delay=0.001,
+            keyboard_controller=mock_kb,
+            clipboard_module=MockClipboard(),
+        )
+        injector.set_current_word_prefix("")
+        self.assertTrue(injector.insert_snippet("()", cursor_offset_left=1, restore_clipboard=False))
+        left_key = Key.left if Key is not None else "LEFT"
+        self.assertEqual(len([k for k in mock_kb.tapped if k == left_key]), 1)
+
+    def test_websocket_delimiter_uses_adjusted_cursor_offset(self):
+        """VS Code bridge receives the same smart offset as the OS path."""
+        class FakeBridge:
+            is_connected = True
+
+            def __init__(self):
+                self.inserts = []
+                self.commands = []
+
+            def send_execute_command(self, command, args=None):
+                self.commands.append((command, args))
+                return True
+
+            def send_insert_snippet(self, snippet, cursor_offset_left=0, cursor_offset_up=0, tabstops=True):
+                self.inserts.append((snippet, cursor_offset_left, cursor_offset_up, tabstops))
+                return True
+
+        bridge = FakeBridge()
+        injector = CodeInjector(
+            async_mode=False,
+            keyboard_controller=MockRecorderKeyboard(),
+            clipboard_module=MockClipboard(),
+        )
+        injector.set_websocket_bridge(bridge)
+        injector.set_current_word_prefix("func")
+        action = MenuAction(
+            id="DELIM_PAREN",
+            label="1: ()",
+            action_type="SNIPPET",
+            snippet="()",
+            cursor_offset_left=1,
+        )
+        self.assertTrue(injector.execute_action(action))
+        self.assertEqual(bridge.inserts[0][0], "()")
+        self.assertEqual(bridge.inserts[0][1], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

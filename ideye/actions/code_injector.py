@@ -330,6 +330,27 @@ class CodeInjector:
             else:
                 self._current_word_prefix = ""
 
+    def _effective_cursor_offset_left(
+        self,
+        prepared: str,
+        offset_left: int,
+        prefix_before: str,
+    ) -> int:
+        """Avoid landing inside a closing pair when completing a call/name.
+
+        Example: after typing ``func``, inserting ``()`` should leave the
+        cursor after ``func()`` so the next token (for example ``:``) is
+        appended in the right place. When the pair is inserted at an empty
+        position, keep the historical centered cursor.
+        """
+        pairs = {"()", "[]", "{}", '""', "''"}
+        if prefix_before and prepared in pairs:
+            return 0
+        try:
+            return max(0, int(offset_left))
+        except (TypeError, ValueError):
+            return 0
+
     def insert_snippet(
         self,
         snippet: str,
@@ -363,16 +384,22 @@ class CodeInjector:
         is_async = self.async_mode if async_exec is None else async_exec
         delay = self.paste_delay if paste_delay is None else paste_delay
 
+        prefix_before = self._current_word_prefix
         prepared, backspaces = self.prepare_insert_text(snippet)
         if not prepared and backspaces == 0:
             return True
+        effective_left = self._effective_cursor_offset_left(
+            prepared,
+            cursor_offset_left,
+            prefix_before,
+        )
 
         if is_async:
             return self._enqueue(
                 self._do_insert_snippet,
                 (
                     prepared,
-                    cursor_offset_left,
+                    effective_left,
                     cursor_offset_up,
                     restore_clipboard,
                     delay,
@@ -383,7 +410,7 @@ class CodeInjector:
         else:
             return self._do_insert_snippet(
                 prepared,
-                cursor_offset_left,
+                effective_left,
                 cursor_offset_up,
                 restore_clipboard,
                 delay,
@@ -641,7 +668,13 @@ class CodeInjector:
             if atype == "SNIPPET" and getattr(action, "snippet", None):
                 offset_left = getattr(action, "cursor_offset_left", 0)
                 offset_up = getattr(action, "cursor_offset_up", 0)
+                prefix_before = self._current_word_prefix
                 prepared, backspaces = self.prepare_insert_text(action.snippet)
+                offset_left = self._effective_cursor_offset_left(
+                    prepared,
+                    offset_left,
+                    prefix_before,
+                )
                 for _ in range(backspaces):
                     ws.send_execute_command("deleteLeft")
                 if prepared:

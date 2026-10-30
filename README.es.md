@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-605%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-608%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -66,7 +66,7 @@ La navegación y la activación están totalmente desacopladas: mirar solo ilumi
 El `ModeManager` alberga seis modos especializados - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` - y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; Gaming usa un **joystick de cabeza con zona muerta central** para moverte con WASD, y un guiño derecho alterna el cursor de menú para botones del juego. El modo Redacción combina un **teclado de letras** accesible por mirada con un **Motor Predictivo de Palabras y Frases** que sugiere palabras y frases completas mientras escribes.
 
 ### 4. Desduplicación Inteligente de Prefijos
-La tubería de escritura desduplica pulsaciones de prefijo repetidas: `h+hola` se convierte en `ola`, y `h+Hola` en retroceso seguido de `Hola`. Rastrea espacios, puntuación, flechas y estado de retroceso, y funciona de forma idéntica a través del puente WebSocket de VS Code.
+La tubería de escritura desduplica pulsaciones de prefijo repetidas: `h+hola` se convierte en `ola`, y `h+Hola` en retroceso seguido de `Hola`. Rastrea espacios, puntuación, flechas y estado de retroceso, y funciona de forma idéntica a través del puente WebSocket de VS Code. Cuando un par de delimitadores sigue a un nombre, el cursor queda después del par (`func` + `()` -> `func()`); en una posición vacía el par conserva el cursor centrado.
 
 ### 5. HUD Glass & Focus + Lucide Alta DPI + Audio Procedural
 El HUD renderiza paneles Glass y Focus con iconos Lucide/SVG de alta definición. La retroalimentación sonora se sintetiza proceduralmente con `numpy` y se cachea como archivos WAV pequeños en `tempfile.gettempdir()/ideye_audio_cache`; la reproducción usa el backend nativo asíncrono `winsound`, sin empaquetar audio externo y manteniendo la app totalmente offline.
@@ -308,7 +308,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 605 pruebas de unidad e integración
+└── tests/ # 608 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -358,11 +358,11 @@ pytest -q
 ```
 
 ```text
-605 pruebas superadas, 78 subtests, 17.35s
+608 pruebas superadas, 78 subtests, 20.65s
 ```
 
 > [!NOTE]
-> Todos los 605 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
+> Todos los 608 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
 
 ---
 

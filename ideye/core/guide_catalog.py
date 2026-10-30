@@ -168,7 +168,7 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "code",
                 "badge": "01",
                 "title": "Código",
-                "text": "Árboles AST, snippets, operadores, variables locales y predicción IA para programar sin teclear.",
+                "text": "Árboles AST, snippets y operadores con cursor inteligente: al completar `func` + `()` el cursor queda tras `func()`; en pares vacíos queda dentro. Predicción IA para programar sin teclear.",
                 "chip": "AST + IA",
             },
             {
@@ -557,7 +557,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "605 tests, 78 subtests, 17.35s",
+        "test_summary": "608 tests, 78 subtests, 20.65s",
     }
 
 

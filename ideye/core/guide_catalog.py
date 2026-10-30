@@ -309,7 +309,7 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "cursor",
                 "badge": "3.5x",
                 "title": "Lupa Sniper Zoom",
-                "text": "Levanta las cejas o pulsa Ctrl+Alt+Z para ampliar 3.5x y reducir el cursor al 28% de velocidad. Se cierra con boca o gui?o izquierdo.",
+                "text": "Pulsa Ctrl+Alt+Z para ampliar 3.5x y reducir el cursor al 28% de velocidad. Se cierra con boca o guiño izquierdo; ya no se activa sola al fijar la mirada.",
                 "chip": "Precisi?n subp?xel",
             },
             {
@@ -557,7 +557,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "608 tests, 78 subtests, 20.65s",
+        "test_summary": "610 tests, 78 subtests, 16.79s",
     }
 
 

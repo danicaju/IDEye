@@ -17,12 +17,14 @@ class SniperLens:
         fixation_radius_px: float = 28.0,
         fixation_hold_sec: float = 0.55,
         saccade_breakout_px: float = 70.0,
+        auto_fixation: bool = False,
     ) -> None:
         self.zoom = float(zoom)
         self.slowmo_factor = float(slowmo_factor)
         self.fixation_radius_px = float(fixation_radius_px)
         self.fixation_hold_sec = float(fixation_hold_sec)
         self.saccade_breakout_px = float(saccade_breakout_px)
+        self.auto_fixation = bool(auto_fixation)
         self.active = False
         self.target: Optional[tuple[float, float]] = None
         self._anchor: Optional[tuple[float, float]] = None
@@ -79,8 +81,10 @@ class SniperLens:
             self._anchor_since = timestamp
             return False
         if self._anchor_since is not None and timestamp - self._anchor_since >= self.fixation_hold_sec:
-            self.activate(point[0], point[1])
-            return True
+            if self.auto_fixation:
+                self.activate(point[0], point[1])
+                return True
+            return False
         return False
 
     def on_gesture(self, gesture: str) -> bool:

@@ -255,6 +255,9 @@ MICRO_GESTURES_ENABLED: bool = True
 AUTO_LOW_LIGHT_CLAHE: bool = True
 SNIPER_LENS_ZOOM: float = 3.5
 SNIPER_LENS_SLOWMO: float = 0.28
+# Brow raises happen naturally while looking up; keep them from opening the
+# lens unless the user explicitly opts in.
+SNIPER_LENS_BROW_TRIGGER_ENABLED: bool = False
 GAMING_AUTO_RETURN_AFTER_CLICK: bool = False
 GAMING_PROCESS_SUFFIXES: tuple[str, ...] = (
     "-win64-shipping.exe",

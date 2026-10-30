@@ -2505,10 +2505,11 @@ class OverlayWindow(QWidget):
             return
 
         if gesture_name == "BROW_RAISE":
-            if self.current_context_mode_id == "sniper" and (
-                not self._gaming_mode or self._gaming_control_state == "MENU_CURSOR"
-            ):
-                self.activate_sniper_lens()
+            if self.current_context_mode_id == "sniper":
+                if bool(getattr(config, "SNIPER_LENS_BROW_TRIGGER_ENABLED", False)) and (
+                    not self._gaming_mode or self._gaming_control_state == "MENU_CURSOR"
+                ):
+                    self.activate_sniper_lens()
                 return
             if self._active_diagnostics and "AUTO_FIX" in self.menu_tree:
                 self.navigate_to("AUTO_FIX")

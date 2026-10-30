@@ -1425,7 +1425,7 @@ class GazeEstimator:
             u = max(0.0, min(1.0, u))
             v = max(0.0, min(1.0, v))
             # Calibration targets live at 10% and 90% of the screen.
-            return (0.1 + 0.8 * u, 0.1 + 0.8 * v)
+            return (u, v)
 
         u = (x - min_x) / max(max_x - min_x, 1e-4)
         v = (y - min_y) / max(max_y - min_y, 1e-4)

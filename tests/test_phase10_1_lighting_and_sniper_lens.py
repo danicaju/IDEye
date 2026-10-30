@@ -43,11 +43,17 @@ class TestLightingCompensator(unittest.TestCase):
 
 class TestSniperLens(unittest.TestCase):
     def test_micro_fixation_activates_and_slowmo_multiplier(self):
-        lens = SniperLens()
+        lens = SniperLens(auto_fixation=True)
         self.assertFalse(lens.update_gaze(500, 500, now=0.0))
         self.assertTrue(lens.update_gaze(510, 505, now=0.6))
         self.assertTrue(lens.active)
         self.assertAlmostEqual(lens.movement_multiplier, 0.28)
+
+    def test_manual_lens_does_not_auto_activate_on_fixation(self):
+        lens = SniperLens()
+        self.assertFalse(lens.update_gaze(500, 500, now=0.0))
+        self.assertFalse(lens.update_gaze(510, 505, now=2.0))
+        self.assertFalse(lens.active)
 
     def test_mouth_click_and_left_wink_cancel(self):
         lens = SniperLens()

@@ -133,6 +133,10 @@ class TestFreeLookSafety(unittest.TestCase):
         self.overlay.setWindowOpacity.assert_not_called()
         fake_screen.grabWindow.assert_called_once()
 
+    def test_brow_raise_does_not_open_lens_in_freelook(self):
+        self.overlay.on_gesture_triggered("BROW_RAISE")
+        self.assertFalse(self.overlay.sniper_lens.active)
+
     def test_nan_gaze_does_not_crash_or_move_pointer(self):
         self.overlay.on_gaze_updated(float("nan"), float("inf"))
         self.overlay.mouse_controller.move_direct.assert_not_called()

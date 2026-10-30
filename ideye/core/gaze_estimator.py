@@ -1125,12 +1125,14 @@ class GazeEstimator:
                     self.head_bounds,
                     self.calib_head_linear_x,
                     self.calib_head_linear_y,
+                    center=self.head_center,
                 )
                 iris_screen_x, iris_screen_y = self._map_dual_source(
                     iris_x, iris_y,
                     self.iris_bounds,
                     self.calib_iris_linear_x,
                     self.calib_iris_linear_y,
+                    center=self.iris_center,
                 )
                 if self.tracking_mode == "HEAD_PRIMARY":
                     target_x, target_y = head_screen_x, head_screen_y
@@ -1391,12 +1393,40 @@ class GazeEstimator:
         bounds: Optional[Tuple[float, float, float, float]],
         linear_x: Optional[Tuple[float, float]],
         linear_y: Optional[Tuple[float, float]],
+        center: Optional[Tuple[float, float]] = None,
     ) -> Tuple[float, float]:
         if bounds is None:
             return 0.5, 0.5
         x = GazeEstimator._finite_unit(x)
         y = GazeEstimator._finite_unit(y)
         min_x, max_x, min_y, max_y = bounds
+
+        if center is not None:
+            # Center-anchored piecewise mapping. A single least-squares line
+            # cannot fit left target, center and right target when the raw
+            # head/iris center is not exactly halfway between the extremes;
+            # it compromises by leaving part of the left edge unreachable.
+            cx = GazeEstimator._finite_unit(center[0])
+            cy = GazeEstimator._finite_unit(center[1])
+            left_span = max(cx - min_x, 1e-4)
+            right_span = max(max_x - cx, 1e-4)
+            lower_span = max(cy - min_y, 1e-4)
+            upper_span = max(max_y - cy, 1e-4)
+            u = (
+                0.5 * (x - min_x) / left_span
+                if x <= cx
+                else 0.5 + 0.5 * (x - cx) / right_span
+            )
+            v = (
+                0.5 * (y - min_y) / lower_span
+                if y <= cy
+                else 0.5 + 0.5 * (y - cy) / upper_span
+            )
+            u = max(0.0, min(1.0, u))
+            v = max(0.0, min(1.0, v))
+            # Calibration targets live at 10% and 90% of the screen.
+            return (0.1 + 0.8 * u, 0.1 + 0.8 * v)
+
         u = (x - min_x) / max(max_x - min_x, 1e-4)
         v = (y - min_y) / max(max_y - min_y, 1e-4)
         u = max(0.0, min(1.0, u))

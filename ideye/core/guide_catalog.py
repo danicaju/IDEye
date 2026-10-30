@@ -83,7 +83,7 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "calibration",
                 "badge": "02",
                 "title": "Calibración 5 + 1",
-                "text": "Mira al centro y a las cuatro esquinas; el sexto paso mide tu MAR con 3 aperturas y cierres reales de boca, sin atajos automáticos.",
+                "text": "Mira al centro y a las cuatro esquinas; el mapeo se ancla al centro para que los bordes izquierdo y derecho sigan siendo alcanzables. El sexto paso mide tu MAR con 3 aperturas y cierres reales de boca.",
                 "chip": "Perfil por monitor",
             },
             {
@@ -324,7 +324,7 @@ PAGES: List[Dict[str, Any]] = [
                 "badge": "PROFILE",
                 "title": "Perfiles de Juego Din?micos",
                 "text": "game_profiles.json adapta el control al g?nero activo: sandbox 3D, twin-stick roguelike o estrategia/RPG con edge-scrolling y puntero t?ctico.",
-                "chip": "Cambio autom?tico",
+                "chip": "Cambios automáticos",
             },
             {
                 "icon": "wand",
@@ -557,7 +557,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "603 tests, 78 subtests, 31.74s",
+        "test_summary": "605 tests, 78 subtests, 17.35s",
     }
 
 

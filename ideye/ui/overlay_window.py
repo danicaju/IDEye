@@ -392,6 +392,9 @@ class OverlayWindow(QWidget):
         self.gaze_scroller = GazeScroller()
         self._gaze_scroll_enabled: bool = bool(getattr(config, "GAZE_SCROLL_ENABLED", True))
         self.ghost_peek_enabled: bool = bool(getattr(config, "GHOST_PEEK_ENABLED", True))
+        self.ghost_peek_idle_seconds: float = max(
+            30.0, float(getattr(config, "GHOST_PEEK_IDLE_SECONDS", 30.0))
+        )
         self._ghost_opacity: float = 1.0
         self._last_ghost_interaction: float = time.time()
         self._last_ghost_gaze: Tuple[float, float] = (0.5, 0.5)
@@ -3436,7 +3439,7 @@ class OverlayWindow(QWidget):
     def update_ghost_peek(
         self,
         now: Optional[float] = None,
-        idle_seconds: float = 4.0,
+        idle_seconds: Optional[float] = None,
         target_opacity: float = 0.15,
     ) -> float:
         """Advances the Ghost-Peek fade and wake animation."""
@@ -3444,8 +3447,13 @@ class OverlayWindow(QWidget):
             self._ghost_opacity = 1.0
             return 1.0
         timestamp = time.time() if now is None else float(now)
+        idle_threshold = (
+            self.ghost_peek_idle_seconds
+            if idle_seconds is None
+            else max(30.0, float(idle_seconds))
+        )
         idle = max(0.0, timestamp - self._last_ghost_interaction)
-        if idle >= max(0.0, float(idle_seconds)):
+        if idle >= idle_threshold:
             target = max(0.15, min(1.0, float(target_opacity)))
             if self._ghost_opacity > target:
                 self._ghost_opacity = max(target, self._ghost_opacity - 0.08)
@@ -3475,6 +3483,15 @@ class OverlayWindow(QWidget):
             self._last_ghost_interaction = time.time()
         if emit_signal:
             self.ghost_peek_toggled.emit(self.ghost_peek_enabled)
+
+    def set_ghost_peek_idle_seconds(self, seconds: float) -> float:
+        """Sets the minimum idle time before Ghost-Peek starts fading."""
+        try:
+            value = float(seconds)
+        except (TypeError, ValueError, OverflowError):
+            value = 30.0
+        self.ghost_peek_idle_seconds = max(30.0, value)
+        return self.ghost_peek_idle_seconds
         self.update()
 
     def toggle_ghost_peek(self) -> bool:

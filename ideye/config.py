@@ -470,6 +470,7 @@ CONTEXT_AUTO_SWITCH_ENABLED: bool = False
 # Phase 11: ergonomic reading, eco power and ghost-peek HUD
 ECO_SLEEP_ENABLED: bool = True
 GHOST_PEEK_ENABLED: bool = True
+GHOST_PEEK_IDLE_SECONDS: float = 30.0
 GAZE_SCROLL_ENABLED: bool = True
 
 # ==============================================================================

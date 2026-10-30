@@ -1,5 +1,6 @@
 {
   "eco_sleep_enabled": true,
   "ghost_peek_enabled": true,
+  "ghost_peek_idle_seconds": 30.0,
   "gaze_scroll_enabled": true
 }

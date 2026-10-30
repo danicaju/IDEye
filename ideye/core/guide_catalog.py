@@ -358,7 +358,7 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "mouse",
                 "badge": "GHOST",
                 "title": "Ghost-Peek HUD + System Tray",
-                "text": "El grid se atenúa al 15% tras cuatro segundos de lectura tranquila y reaparece al instante con un gesto o sácada. La bandeja nativa ofrece pausa, modos y calibración.",
+                "text": "El grid se atenúa al 15% tras 30 segundos de lectura tranquila (configurable en user_settings.json) y reaparece al instante con un gesto o sácada. La bandeja nativa ofrece pausa, modos y calibración.",
                 "chip": "HUD discreto",
             },
         ],
@@ -557,7 +557,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "594 tests, 78 subtests, 21.52s",
+        "test_summary": "594 tests, 78 subtests, 24.33s",
     }
 
 

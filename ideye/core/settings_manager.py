@@ -36,6 +36,7 @@ _FACTORY_DEFAULTS: Dict[str, Any] = {
     "auto_low_light_clahe": bool(getattr(config, "AUTO_LOW_LIGHT_CLAHE", True)),
     "eco_sleep_enabled": bool(getattr(config, "ECO_SLEEP_ENABLED", True)),
     "ghost_peek_enabled": bool(getattr(config, "GHOST_PEEK_ENABLED", True)),
+    "ghost_peek_idle_seconds": float(getattr(config, "GHOST_PEEK_IDLE_SECONDS", 30.0)),
     "gaze_scroll_enabled": bool(getattr(config, "GAZE_SCROLL_ENABLED", True)),
 }
 

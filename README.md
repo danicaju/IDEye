@@ -359,7 +359,7 @@ pytest -q
 ```
 
 ```text
-594 passed, 78 subtests, 21.52s
+594 passed, 78 subtests, 24.33s
 ```
 
 > [!NOTE]

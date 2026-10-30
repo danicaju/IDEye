@@ -96,10 +96,11 @@ class TestGhostPeek:
     def test_fades_after_idle_and_wakes_on_mar(self):
         overlay = OverlayWindow()
         overlay.set_ghost_peek_enabled(True, emit_signal=False)
+        assert overlay.ghost_peek_idle_seconds >= 30.0
         overlay._last_ghost_interaction = 0.0
         overlay._ghost_opacity = 1.0
         for _ in range(20):
-            overlay.update_ghost_peek(now=5.0)
+            overlay.update_ghost_peek(now=35.0)
         assert overlay._ghost_opacity == pytest.approx(0.15, abs=0.01)
         overlay.on_mar_updated(None, float(getattr(config, "MAR_REST_THRESHOLD", 0.20)) + 0.10)
         assert overlay._ghost_opacity == 1.0

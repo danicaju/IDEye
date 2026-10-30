@@ -939,6 +939,12 @@ class IDEyeApplication(QObject):
         low_light_enabled = bool(values.get("auto_low_light_clahe", True))
         eco_enabled = bool(values.get("eco_sleep_enabled", getattr(config, "ECO_SLEEP_ENABLED", True)))
         ghost_enabled = bool(values.get("ghost_peek_enabled", getattr(config, "GHOST_PEEK_ENABLED", True)))
+        ghost_idle = float(
+            values.get(
+                "ghost_peek_idle_seconds",
+                getattr(config, "GHOST_PEEK_IDLE_SECONDS", 30.0),
+            )
+        )
         gaze_scroll_enabled = bool(values.get("gaze_scroll_enabled", getattr(config, "GAZE_SCROLL_ENABLED", True)))
 
         if estimator is not None:
@@ -966,6 +972,7 @@ class IDEyeApplication(QObject):
         self.overlay.set_adaptive_ast_enabled(ast_enabled)
         self.overlay.toggle_auto_switch(auto_switch)
         self.overlay.set_ghost_peek_enabled(ghost_enabled, emit_signal=False)
+        self.overlay.set_ghost_peek_idle_seconds(ghost_idle)
         if getattr(self.overlay, "_gaze_scroll_enabled", None) != gaze_scroll_enabled:
             self.overlay.toggle_gaze_scroll(gaze_scroll_enabled)
         self.overlay.set_language(lang)

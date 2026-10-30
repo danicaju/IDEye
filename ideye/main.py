@@ -1037,7 +1037,7 @@ class IDEyeApplication(QObject):
         self.tracker.gaze_updated.connect(self.overlay.on_gaze_updated)
         self.tracker.gaze_updated.connect(self._on_gaze_for_screen_handover)
         self.tracker.gesture_triggered.connect(self.overlay.on_gesture_triggered)
-        self.tracker.face_lost.connect(self.overlay.release_all_game_keys)
+        self.tracker.face_lost.connect(self.overlay.reset_freelook_pointer)
         self.tracker.health_alert.connect(self.overlay.show_health_alert)
 
         # Tracker signals to DebugWidget

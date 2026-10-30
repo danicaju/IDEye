@@ -137,6 +137,26 @@ class TestFreeLookSafety(unittest.TestCase):
         self.overlay.on_gesture_triggered("BROW_RAISE")
         self.assertFalse(self.overlay.sniper_lens.active)
 
+    def test_jaw_lock_watchdog_releases_stuck_pointer(self):
+        self.overlay._jaw_locked = True
+        self.overlay._jaw_lock_pos = (100, 100)
+        self.overlay._jaw_lock_since = time.time() - 5.0
+        self.overlay.current_mar = 0.20
+        self.overlay.on_gaze_updated(0.5, 0.5)
+        self.assertFalse(self.overlay._jaw_locked)
+        self.assertIsNone(self.overlay._jaw_lock_pos)
+        self.overlay.mouse_controller.move_direct.assert_called()
+
+    def test_face_loss_recenters_freelook_pointer(self):
+        self.overlay._freelook_last_pos = (100, 100)
+        self.overlay.current_gaze = (1.0, 0.0)
+        self.overlay._jaw_locked = True
+        self.overlay._jaw_lock_pos = (100, 100)
+        self.overlay.reset_freelook_pointer()
+        self.assertEqual(self.overlay.current_gaze, (0.5, 0.5))
+        self.assertFalse(self.overlay._jaw_locked)
+        self.overlay.mouse_controller.move_direct.assert_called()
+
     def test_nan_gaze_does_not_crash_or_move_pointer(self):
         self.overlay.on_gaze_updated(float("nan"), float("inf"))
         self.overlay.mouse_controller.move_direct.assert_not_called()

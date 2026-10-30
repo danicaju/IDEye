@@ -294,6 +294,7 @@ class OverlayWindow(QWidget):
         self._lens_capture_target: Optional[tuple] = None
         self._lens_capture_in_progress: bool = False
         self._last_freelook_click_ts: float = 0.0
+        self._jaw_lock_since: float = 0.0
         self.mode_manager = mode_manager if mode_manager is not None else ModeManager(
             initial_mode="coding", language=self.current_language
         )
@@ -2012,16 +2013,28 @@ class OverlayWindow(QWidget):
         x, y = self._freelook_screen_coords(gx, gy, screen_w, screen_h)
         pre = self._freelook_prethreshold()
         jaw_threshold = self._freelook_jaw_threshold()
+        now = time.time()
+        max_lock = max(0.5, float(getattr(config, "FREELOOK_JAW_LOCK_MAX_SEC", 2.0)))
+
+        if self._jaw_locked and self._jaw_lock_since > 0.0 and now - self._jaw_lock_since > max_lock:
+            # Safety watchdog: a stuck jaw-lock must never leave the pointer
+            # frozen at a corner indefinitely.
+            self._jaw_locked = False
+            self._jaw_lock_pos = None
+            self._jaw_lock_since = 0.0
+            self._mouth_active = False
 
         if self.current_mar >= jaw_threshold:
             if not self._jaw_locked:
                 self._jaw_locked = True
                 self._jaw_lock_pos = self._freelook_last_pos
+                self._jaw_lock_since = now
             if self._jaw_lock_pos is not None:
                 x, y = self._jaw_lock_pos
         else:
             self._jaw_locked = False
             self._jaw_lock_pos = None
+            self._jaw_lock_since = 0.0
             self._freelook_last_pos = (x, y)
             controller = self.mouse_controller
             if controller is not None:
@@ -2105,6 +2118,10 @@ class OverlayWindow(QWidget):
         self._game_keys_down.clear()
         self._gaming_right_held = False
         self._hold_started = False
+        self._jaw_locked = False
+        self._jaw_lock_pos = None
+        self._jaw_lock_since = 0.0
+        self._mouth_active = False
         try:
             self.gaze_scroller.stop()
         except Exception:
@@ -2115,6 +2132,23 @@ class OverlayWindow(QWidget):
                 self.gaze_scroll_toggled.emit(False)
             except Exception:
                 pass
+
+    def reset_freelook_pointer(self) -> None:
+        """Centers FreeLook and clears any frozen pointer state after face loss."""
+        if self.current_context_mode_id != "sniper":
+            return
+        self.release_all_game_keys()
+        sw, sh = self._get_screen_size()
+        center = (max(0, sw // 2), max(0, sh // 2))
+        self._freelook_last_pos = center
+        self.current_gaze = (0.5, 0.5)
+        controller = self.mouse_controller
+        if controller is not None:
+            try:
+                controller.move_direct(*center)
+            except Exception:
+                pass
+        self.update()
 
     def _freelook_click(self) -> None:
         now = time.time()

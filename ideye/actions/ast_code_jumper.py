@@ -32,7 +32,7 @@ class _SymbolVisitor(ast.NodeVisitor):
         is_method = bool(self._classes)
         self.symbols.append({
             "name": node.name,
-            "type": "M?todo" if is_method else "Funci?n",
+            "type": "Método" if is_method else "Función",
             "line": int(node.lineno),
             "kind": "method" if is_method else "function",
         })
@@ -91,7 +91,7 @@ class ASTCodeJumper:
             items[slot] = MenuAction(
                 id=f"AST_SYMBOL_{symbol.get('line', 0)}_{index}",
                 label=f"{slot + 1}: {name}",
-                hint=f"{symbol.get('type', 'Funci?n')} - L{symbol.get('line', 0)}",
+                hint=f"{symbol.get('type', 'Función')} - L{symbol.get('line', 0)}",
                 action_type="AST_JUMP",
                 snippet=str(symbol.get("line", 1)),
                 icon="function",
@@ -101,7 +101,7 @@ class ASTCodeJumper:
             items[slot] = MenuAction(
                 id=f"AST_EMPTY_{page}_{index}",
                 label=f"{slot + 1}: ?",
-                hint="Sin s?mbolo en esta ranura",
+                hint="Sin símbolo en esta ranura",
                 action_type="NOOP",
                 snippet="",
             )
@@ -110,8 +110,8 @@ class ASTCodeJumper:
         if pages > 1 and page < pages - 1:
             items[8] = MenuAction(
                 id="AST_NEXT_PAGE",
-                label="9: Siguiente p?gina",
-                hint=f"S?mbolos {start + 7}-{min(len(symbols), start + 12)} de {len(symbols)}",
+                label="9: Siguiente página",
+                hint=f"Símbolos {start + 7}-{min(len(symbols), start + 12)} de {len(symbols)}",
                 action_type="AST_NEXT_PAGE",
                 snippet=str(page + 1),
                 icon="navigation",
@@ -127,7 +127,7 @@ class ASTCodeJumper:
             )
         return MenuNode(
             id="AST_SYMBOLS",
-            title="SALTAR A S?MBOLO",
+            title="SALTAR A SÍMBOLO",
             breadcrumb_label=f"AST {page + 1}/{pages}",
             items=[item for item in items if item is not None],
             parent_id=parent_id,

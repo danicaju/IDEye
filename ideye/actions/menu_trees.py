@@ -1144,7 +1144,7 @@ def _build_op_delim_items(lang: str) -> List[MenuAction]:
     pause_slot = create_pause_action("5")
     back_slot = create_back_action("OPERATORS", "7")
 
-    p0 = MenuAction("DELIM_PAREN", "1: ()", "Paréntesis con cursor centrado", "SNIPPET", snippet="()", cursor_offset_left=1, icon="operators")
+    p0 = MenuAction("DELIM_PAREN", "1: ()", "Paréntesis con cursor tras el cierre", "SNIPPET", snippet="()", cursor_offset_left=0, icon="operators")
     p1 = MenuAction("DELIM_BRACKET", "2: []", "Corchetes con cursor centrado", "SNIPPET", snippet="[]", cursor_offset_left=1, icon="operators")
     p2 = MenuAction("DELIM_BRACE", "3: {}", "Llaves con cursor centrado", "SNIPPET", snippet="{}", cursor_offset_left=1, icon="operators")
     p3 = MenuAction("DELIM_DQUOTE", '4: ""', "Comillas dobles centradas", "SNIPPET", snippet='""', cursor_offset_left=1, icon="operators")

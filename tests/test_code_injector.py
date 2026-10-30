@@ -18,6 +18,7 @@ for p in (_ROOT_DIR, _IDEYE_DIR):
         sys.path.insert(0, p)
 
 from ideye.actions.code_injector import CodeInjector
+from ideye.actions.menu_trees import build_menu_tree
 from ideye.actions.menu_trees import MenuAction
 
 try:
@@ -263,6 +264,18 @@ class TestCodeInjector(unittest.TestCase):
         self.assertTrue(injector.insert_snippet("()", cursor_offset_left=1, restore_clipboard=False))
         left_key = Key.left if Key is not None else "LEFT"
         self.assertEqual(len([k for k in mock_kb.tapped if k == left_key]), 1)
+
+    def test_paren_delimiter_action_places_cursor_after_pair(self):
+        """The () operator must finish after the pair so typing ':' works in Docs."""
+        tree = build_menu_tree("PYTHON")
+        action = next(
+            item
+            for node in tree.values()
+            for item in node.items
+            if item.id == "DELIM_PAREN"
+        )
+        self.assertEqual(action.snippet, "()")
+        self.assertEqual(action.cursor_offset_left, 0)
 
     def test_websocket_delimiter_uses_adjusted_cursor_offset(self):
         """VS Code bridge receives the same smart offset as the OS path."""

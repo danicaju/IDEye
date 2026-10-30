@@ -37,10 +37,10 @@ class TestASTCodeJumper(unittest.TestCase):
         names = [item["name"] for item in self.symbols]
         self.assertEqual(names, ["Alpha", "first", "second", "global_fn", "Beta", "third", "async_global"])
         self.assertEqual(self.symbols[0]["type"], "Clase")
-        self.assertEqual(self.symbols[1]["type"], "M?todo")
-        self.assertEqual(self.symbols[3]["type"], "Funci?n")
+        self.assertEqual(self.symbols[1]["type"], "Método")
+        self.assertEqual(self.symbols[3]["type"], "Función")
         self.assertEqual(self.symbols[0]["line"], 1)
-        self.assertEqual(self.symbols[6]["type"], "Funci?n")
+        self.assertEqual(self.symbols[6]["type"], "Función")
 
     def test_menu_has_nine_slots_and_invariants(self):
         node = self.jumper.get_symbols_menu_node(self.symbols, 0)

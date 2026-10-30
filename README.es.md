@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-619%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-622%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -64,6 +64,8 @@ La navegación y la activación están totalmente desacopladas: mirar solo ilumi
 
 ### 3. Motor de Estrategia de 6 Modos + Cambio Automático por WebSocket
 El `ModeManager` alberga seis modos especializados - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` - y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; Gaming usa un **joystick de cabeza con zona muerta central** para moverte con WASD, y un guiño derecho alterna el cursor de menú para botones del juego. El modo Redacción combina un **teclado de letras** accesible por mirada con un **Motor Predictivo de Palabras y Frases** que sugiere palabras y frases completas mientras escribes.
+
+Los snippets de delimitadores dejan el cursor tras el cierre, de modo que un nombre seguido de `()` queda como `func()` y el siguiente `:` cae en su sitio en Google Docs o cualquier editor externo. FreeLook adem?s libera un Jaw-Lock atascado tras dos segundos y recentra con seguridad al perder la cara.
 
 La detecci?n de gui?os aprende una l?nea base EAR por ojo, descarta parpadeos bilaterales, caras lejanas, giros extremos y cierres demasiado breves, y expone duraci?n, enfriamiento, margen y distancia en user_settings.json.
 
@@ -310,7 +312,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Diccionario español
 │   │   ├── defaults/ # Plantillas user_settings.json y custom_macros.json
 │   │   └── icons/ # Suite de iconos SVG/Lucide alta DPI
-└── tests/ # 619 pruebas de unidad e integración
+└── tests/ # 622 pruebas de unidad e integración
     ├── test_phase1.py # Visión y máquina MAR
     ├── test_phase2.py # QThread, no-focus y calibración
     ├── test_phase3.py # Árboles sintácticos e inyección
@@ -361,11 +363,11 @@ pytest -q
 ```
 
 ```text
-619 pruebas superadas, 78 subtests, 19.82s
+622 pruebas superadas, 78 subtests, 17.38s
 ```
 
 > [!NOTE]
-> Todos los 619 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
+> Todos los 622 tests se ejecutan de forma *headless* sin requerir cámara web física, servidor gráfico ni conexión a Internet. `testpaths=tests` está configurado en `pytest.ini`.
 
 ---
 

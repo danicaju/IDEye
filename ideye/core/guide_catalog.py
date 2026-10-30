@@ -148,7 +148,7 @@ PAGES: List[Dict[str, Any]] = [
             },
             {
                 "icon": "brow",
-                "badge": "?18?",
+                "badge": "18+",
                 "title": "Micro-gestos expresivos",
                 "text": "Levanta las cejas para abrir Auto-Fix o la IA. Inclina la cabeza a la derecha para indentar y a la izquierda para des-indentar.",
                 "chip": "Cejas + tilt",
@@ -288,7 +288,7 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "edit",
                 "badge": "FIX",
                 "title": "Auto-Fix de Errores",
-                "text": "Los diagn?sticos de VS Code se convierten en reparaciones de un solo gesto: imports, dos puntos, par?ntesis y sugerencias de IA.",
+                "text": "Los diagnósticos de VS Code se convierten en reparaciones de un solo gesto: imports, dos puntos, paréntesis y sugerencias de IA.",
                 "chip": "1 clic ocular",
             },
             {
@@ -301,8 +301,8 @@ PAGES: List[Dict[str, Any]] = [
             {
                 "icon": "eye",
                 "badge": "CLAHE",
-                "title": "Visi?n Nocturna Adaptativa",
-                "text": "Si la luz baja de 85 de luminancia, aplica CLAHE al canal L y una gamma suave. En buena luz no toca ni un p?xel.",
+                "title": "Visión Nocturna Adaptativa",
+                "text": "Si la luz baja de 85 de luminancia, aplica CLAHE al canal L y una gamma suave. En buena luz no toca ni un píxel.",
                 "chip": "Bajo consumo",
             },
             {
@@ -310,20 +310,20 @@ PAGES: List[Dict[str, Any]] = [
                 "badge": "3.5x",
                 "title": "Lupa Sniper Zoom",
                 "text": "Pulsa Ctrl+Alt+Z para ampliar 3.5x y reducir el cursor al 28% de velocidad. Se cierra con boca o guiño izquierdo; ya no se activa sola al fijar la mirada.",
-                "chip": "Precisi?n subp?xel",
+                "chip": "Precisión subpíxel",
             },
             {
                 "icon": "navigation",
                 "badge": "AST",
-                "title": "Salto Sem?ntico AST",
-                "text": "Ctrl+Alt+J extrae clases, m?todos y funciones del archivo activo y los reparte en una cuadr?cula 3x3 paginada. Un clic salta a la l?nea exacta.",
-                "chip": "3x3 s?mbolos",
+                "title": "Salto Semántico AST",
+                "text": "Ctrl+Alt+J extrae clases, métodos y funciones del archivo activo y los reparte en una cuadrícula 3x3 paginada. Un clic salta a la línea exacta.",
+                "chip": "3x3 símbolos",
             },
             {
                 "icon": "gamepad",
                 "badge": "PROFILE",
-                "title": "Perfiles de Juego Din?micos",
-                "text": "game_profiles.json adapta el control al g?nero activo: sandbox 3D, twin-stick roguelike o estrategia/RPG con edge-scrolling y puntero t?ctico.",
+                "title": "Perfiles de Juego Dinámicos",
+                "text": "game_profiles.json adapta el control al género activo: sandbox 3D, twin-stick roguelike o estrategia/RPG con edge-scrolling y puntero táctico.",
                 "chip": "Cambios automáticos",
             },
             {
@@ -564,7 +564,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "619 tests, 78 subtests, 19.82s",
+        "test_summary": "622 tests, 78 subtests, 17.38s",
     }
 
 

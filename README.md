@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-619%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-622%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -64,6 +64,8 @@ Navigation and activation are fully decoupled: looking only highlights, never cl
 
 ### 3. 6-Mode Strategy Engine + WebSocket Auto-Switch
 The `ModeManager` hosts six specialized modes - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE`, and `FREELOOK_GAMING_MODE` - and can switch automatically based on VS Code context received over the bidirectional WebSocket bridge. FreeLook delivers smooth 60 Hz camera/look control; Gaming uses a **head-joystick with a central deadzone** for WASD movement, while a right wink toggles a menu cursor for in-game buttons. Writing combines a gaze-friendly **letter keyboard** with a **Predictive Word & Phrase Engine** that suggests whole words and phrases as you type.
+
+Delimiter snippets leave the caret after the closing pair, so a typed name plus `()` becomes `func()` and the next `:` lands correctly in Google Docs or any external editor. FreeLook also releases a stuck Jaw-Lock after two seconds and recenters safely when the face is lost.
 
 Wink detection now learns per-eye EAR baselines, rejects bilateral blinks, far faces, extreme roll/yaw and twitch closures, and exposes hold, cooldown, margin and distance settings in user_settings.json.
 
@@ -312,7 +314,7 @@ IDEye/
 │   │   ├── data/es_common_words.txt # Spanish common-word dictionary
 │   │   ├── defaults/ # user_settings.json and custom_macros.json templates
 │   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 619 automated unit & integration tests
+└── tests/ # 622 automated unit & integration tests
     ├── test_phase1.py # Core CV and MAR state machine
     ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py # Syntax tree validation and code injection
@@ -363,11 +365,11 @@ pytest -q
 ```
 
 ```text
-619 passed, 78 subtests, 19.82s
+622 passed, 78 subtests, 17.38s
 ```
 
 > [!NOTE]
-> All 619 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
+> All 622 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
 
 ---
 

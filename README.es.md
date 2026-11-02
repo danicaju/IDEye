@@ -15,7 +15,7 @@
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
 
-[Descargas Rápidas](#-descargas-y-versiones-precompiladas) • [Inicio Rápido](#-inicio-rápido) • [Explorar Arquitectura](#-arquitectura-del-sistema) • [Cómo Funciona](#-innovaciones-principales) • [Controles en Vivo](#-controles-y-atajos-en-tiempo-real) • [Hoja de Ruta](#-hoja-de-ruta)
+[Descargas Rápidas](#-descargas-y-versiones-precompiladas) • [Inicio Rápido](#-inicio-rápido) • [Cómo Funciona](#-cómo-funciona-en-3-pasos-flujo-de-interacción) • [Explorar Arquitectura](#-arquitectura-del-sistema) • [Innovaciones](#-innovaciones-principales) • [Controles en Vivo](#-controles-y-atajos-en-tiempo-real) • [Hoja de Ruta](#-hoja-de-ruta)
 
 ---
 
@@ -47,6 +47,44 @@ Los desarrolladores que sufren lesiones graves por esfuerzos repetitivos (RSI), 
 | **OptiKey** | Parcial *(Se recomienda IR)* | Sí | No *(Carácter por carácter)* | No | No |
 | **Google Project Gameface** | Sí | Sí | No *(Solo controlador de ratón)* | No | No |
 | **IDEye (Vistax L2C)** | **Sí** | **Sí** | **Sí (Macro-HUD 3x3)** | **Sí (AST + IA)** | **Sí** |
+
+---
+
+### Cómo Funciona en 3 Pasos (Flujo de Interacción)
+
+```mermaid
+flowchart LR
+    classDef step1 fill:#0d233a,stroke:#38bdf8,stroke-width:2px,color:#e0f2fe;
+    classDef step2 fill:#062d22,stroke:#34d399,stroke-width:2px,color:#d1fae5;
+    classDef step3 fill:#271238,stroke:#c084fc,stroke-width:2px,color:#f3e8ff;
+    classDef actionNode fill:#1c2433,stroke:#64748b,stroke-width:1px,color:#f8fafc;
+
+    subgraph S1 ["PASO 1: MIRA (Navegación)"]
+        direction TB
+        A1["Mirada / Cabeza (Webcam $0)"]:::actionNode --> A2["Ilumina Macro-Zona 3x3"]:::actionNode
+        A2 --> A3["Sin Toque de Midas (Zero-Dwell)"]:::step1
+    end
+
+    subgraph S2 ["PASO 2: BOCA (Acción Instantánea)"]
+        direction TB
+        B1["Apertura breve de boca (MAR)"]:::actionNode --> B2["CLIC / Inyección de Código"]:::step2
+        B1 -.->|"Mantener boca abierta"| B3["Arrastre Jaw-Lock"]:::actionNode
+    end
+
+    subgraph S3 ["PASO 3: GUIÑOS (Control Global)"]
+        direction TB
+        C1["Guiño Derecho"]:::actionNode --> C2["Pausar / Ocultar HUD"]:::step3
+        C3["Guiño Izquierdo"]:::actionNode --> C4["Volver Atrás / Deshacer (Ctrl+Z)"]:::step3
+    end
+
+    S1 ==>|"1. Selecciona bloque"| S2
+    S2 -.->|"2. Corrige o pausa"| S3
+
+    class S1 step1;
+    class S2 step2;
+    class S3 step3;
+```
+
 
 ---
 

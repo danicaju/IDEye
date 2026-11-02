@@ -15,7 +15,7 @@
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
 
-[Pre-Built Releases](#-pre-built-releases--quick-downloads) • [Quick Start](#-quick-start) • [Explore Architecture](#-system-architecture) • [Core Innovations](#-core-innovations) • [Controls & Shortcuts](#-runtime-controls--shortcuts) • [Roadmap](#-roadmap)
+[Pre-Built Releases](#-pre-built-releases--quick-downloads) • [Quick Start](#-quick-start) • [How It Works](#-how-it-works-3-step-hands-free-interaction) • [Explore Architecture](#-system-architecture) • [Core Innovations](#-core-innovations) • [Controls & Shortcuts](#-runtime-controls--shortcuts) • [Roadmap](#-roadmap)
 
 ---
 
@@ -47,6 +47,44 @@ Developers experiencing severe RSI, carpal tunnel, motor disabilities, or tempor
 | **OptiKey** | Partial *(IR Recommended)* | Yes | No *(Char-by-char)* | No | No |
 | **Google Project Gameface** | Yes | Yes | No *(Mouse driver only)* | No | No |
 | **IDEye (Vistax L2C)** | **Yes** | **Yes** | **Yes (3x3 Macro-HUD)** | **Yes (AST + AI)** | **Yes** |
+
+---
+
+### How It Works: 3-Step Hands-Free Interaction
+
+```mermaid
+flowchart LR
+    classDef step1 fill:#0d233a,stroke:#38bdf8,stroke-width:2px,color:#e0f2fe;
+    classDef step2 fill:#062d22,stroke:#34d399,stroke-width:2px,color:#d1fae5;
+    classDef step3 fill:#271238,stroke:#c084fc,stroke-width:2px,color:#f3e8ff;
+    classDef actionNode fill:#1c2433,stroke:#64748b,stroke-width:1px,color:#f8fafc;
+
+    subgraph S1 ["STEP 1: LOOK (Navigation)"]
+        direction TB
+        A1["Gaze / Head Tracking (Standard Webcam)"]:::actionNode --> A2["Highlights 3x3 Macro-Zone"]:::actionNode
+        A2 --> A3["Decoupled Navigation (Zero-Dwell)"]:::step1
+    end
+
+    subgraph S2 ["STEP 2: MOUTH (Instant Action)"]
+        direction TB
+        B1["Slight mouth opening (MAR)"]:::actionNode --> B2["Instant CLICK / Code Injection"]:::step2
+        B1 -.->|"Hold mouth open"| B3["Jaw-Lock Drag Mode"]:::actionNode
+    end
+
+    subgraph S3 ["STEP 3: WINKS (Global Control)"]
+        direction TB
+        C1["Right Wink"]:::actionNode --> C2["Pause / Hide HUD"]:::step3
+        C3["Left Wink"]:::actionNode --> C4["Back / Undo (Ctrl+Z)"]:::step3
+    end
+
+    S1 ==>|"1. Focus block"| S2
+    S2 -.->|"2. Pause or undo"| S3
+
+    class S1 step1;
+    class S2 step2;
+    class S3 step3;
+```
+
 
 ---
 

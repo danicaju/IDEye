@@ -7,6 +7,7 @@
 [![Español](https://img.shields.io/badge/Idioma-Español-red?style=flat-square)](README.es.md)
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Lanzamiento: v0.5.0](https://img.shields.io/badge/Lanzamiento-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
 [![Pruebas](https://img.shields.io/badge/Pruebas-630%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
@@ -14,7 +15,7 @@
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
 
-[Explorar Arquitectura](#-arquitectura-del-sistema) • [Inicio Rápido](#-inicio-rápido) • [Cómo Funciona](#-innovaciones-principales) • [Controles en Vivo](#-controles-y-atajos-en-tiempo-real) • [Hoja de Ruta](#-hoja-de-ruta)
+[Descargas Rápidas](#-descargas-y-versiones-precompiladas) • [Inicio Rápido](#-inicio-rápido) • [Explorar Arquitectura](#-arquitectura-del-sistema) • [Cómo Funciona](#-innovaciones-principales) • [Controles en Vivo](#-controles-y-atajos-en-tiempo-real) • [Hoja de Ruta](#-hoja-de-ruta)
 
 ---
 
@@ -22,6 +23,12 @@
 ![Demostración de IDEye](https://via.placeholder.com/900x450/0d1117/58a6ff?text=Insertar+GIF+Demostracion:+HUD+3x3+IDEye+en+VS+Code)
 
 </div>
+> [!TIP]
+> **¿Solo quieres usar IDEye sin programar ni instalar Python?**
+> Descarga la versión portátil precompilada y la extensión de VS Code directamente desde **[GitHub Releases](https://github.com/danicaju/IDEye/releases)**:
+> * **`IDEye-Windows-v0.5.0.zip`** — Aplicación de escritorio para Windows (descomprimir y doble clic en `IDEye.exe`).
+> * **`ideye-vscode-bridge-0.5.0.vsix`** — Extensión nativa para VS Code (arrastrar y soltar dentro de VS Code).
+
 
 ## El Problema y por qué existe IDEye
 
@@ -149,6 +156,19 @@ La extensión de VS Code envía errores y warnings de la línea activa por WebSo
 ---
 
 ## Inicio Rápido
+
+### Descargas y Versiones Precompiladas (Opción Recomendada para Usuarios)
+
+No necesitas instalar Python, Git, ni usar la terminal:
+
+1. **Descarga `IDEye-Windows-v0.5.0.zip`** desde **[GitHub Releases](https://github.com/danicaju/IDEye/releases)** y descomprímelo en cualquier carpeta de tu PC.
+2. **Ejecuta `IDEye.exe`**: Incluye Python, OpenCV, MediaPipe y PyQt6 ya integrados sin dependencias externas.
+3. **Instala la extensión en VS Code**: Arrastra `ideye-vscode-bridge-0.5.0.vsix` dentro de la ventana de VS Code, o desde la pestaña de Extensiones (`Ctrl+Shift+X` ➔ `...` ➔ *Instalar desde VSIX...*).
+4. **Programa sin manos**: La cámara se calibrará automáticamente y se conectará con VS Code mediante WebSocket local (`ws://127.0.0.1:54321`).
+
+---
+
+### Instalación para Desarrolladores (Compilación desde Código Fuente)
 
 ### Prerrequisitos
 * **Python 3.10+** (Python 3.12 recomendado)

@@ -967,8 +967,13 @@ class IDEyeApplication(QObject):
             )
             estimator.set_anti_jitter_damping(level)
         if detector is not None:
-            detector.mar_threshold = mar
-            detector.release_threshold = max(0.20, mar - 0.10)
+            mar_calibrated = bool(values.get("mar_calibrated", False))
+            if hasattr(detector, "set_mar_calibration") and mar_calibrated:
+                detector.set_mar_calibration(mar)
+            else:
+                detector.mar_threshold = mar
+                detector.release_threshold = max(0.20, mar - 0.10)
+                detector.mar_calibrated = mar_calibrated
             detector.micro_gestures_enabled = micro_enabled
             if hasattr(detector, "configure_wink"):
                 detector.configure_wink(
@@ -1380,10 +1385,14 @@ class IDEyeApplication(QObject):
         mar = max(0.25, min(0.70, float(value)))
         config.MAR_THRESHOLD = mar
         if hasattr(self.tracker, "gesture_detector") and self.tracker.gesture_detector is not None:
-            self.tracker.gesture_detector.mar_threshold = mar
-            self.tracker.gesture_detector.release_threshold = max(0.20, mar - 0.10)
+            if hasattr(self.tracker.gesture_detector, "set_mar_calibration"):
+                self.tracker.gesture_detector.set_mar_calibration(mar)
+            else:
+                self.tracker.gesture_detector.mar_threshold = mar
+                self.tracker.gesture_detector.release_threshold = max(0.20, mar - 0.10)
         self.debug_widget.set_mar_threshold(mar, emit=False)
         self.settings_manager.set("mar_threshold", mar)
+        self.settings_manager.set("mar_calibrated", True)
         if self.overlay is not None:
             if hasattr(self.overlay, "set_mar_threshold"):
                 self.overlay.set_mar_threshold(mar)

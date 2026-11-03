@@ -105,7 +105,7 @@ Para estabilidad subpíxel, IDEye calcula un centroide craneal a partir de los l
 * **`HYBRID`** — fusiona señales de cabeza e iris con un coeficiente de sácada adaptativo que rampa de `0.08` a `0.55` para transiciones rápidas y estables.
 
 ### 2. Eliminación del "Toque de Midas" sin Tiempos de Espera + Jaw-Lock
-La navegación y la activación están totalmente desacopladas: mirar solo ilumina, nunca clica. Una breve apertura de boca realiza un clic/inyección instantáneo, mientras mantener la boca abierta por encima de tu umbral MAR de reposo activa el modo de arrastre **Jaw-Lock**. Sin temporizadores de fijación no hay clics Midas accidentales mientras se lee.
+La navegación y la activación están totalmente desacopladas: mirar solo ilumina, nunca clica. Una breve apertura de boca realiza un clic/inyección instantáneo, mientras mantener la boca abierta por encima de tu umbral MAR de reposo activa el modo de arrastre **Jaw-Lock**. El detector facial incorpora una **línea base adaptativa de MAR en reposo (Anti-Midas)** que aprende en tiempo real la apertura natural relajada del usuario para evitar falsos clics o bucles en reposo, incluso sin calibrar la boca o con un MAR natural alto (0.30–0.45). El Mini-Tutorial guiado de 3 pasos (F2 o botón en Ayuda) permite aprender la fijación, confirmación y reposo de forma segura. Sin temporizadores de fijación no hay clics Midas accidentales mientras se lee.
 
 ### 3. Motor de Estrategia de 6 Modos + Cambio Automático por WebSocket
 El `ModeManager` alberga seis modos especializados - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE` y `FREELOOK_GAMING_MODE` - y puede cambiar automáticamente según el contexto de VS Code recibido a través del puente WebSocket bidireccional. FreeLook ofrece control suave de cámara/mirada a 60 Hz; Gaming usa un **joystick de cabeza con zona muerta central** para moverte con WASD, y un guiño derecho alterna el cursor de menú para botones del juego. El modo Redacción combina un **teclado de letras** accesible por mirada con un **Motor Predictivo de Palabras y Frases** y un asistente de redacción con IA para reformular, corregir ortografía y expandir texto sin plantillas predeterminadas.
@@ -477,7 +477,8 @@ pytest -q
 - [x] **Fase 10.3:** Perfiles de juego dinámicos desde game_profiles.json, twin-stick y edge-scrolling de estrategia.
 - [x] **Fase 10.4:** Agentic Prompt Launcher para el chat de VS Code y la cola MCP de tareas oculares.
 - [x] **Fase 11:** Scroll ocular inercial, Eco-Sleep din?mico, Ghost-Peek HUD y bandeja nativa.
-- [x] **Fase 12:** Taxonom?a sem?ntica profunda, IA contextual en vivo para VS Code/Google Docs y modos Terminal, Navegaci?n y Debug conscientes del entorno.
+- [x] **Fase 12:** Taxonomía semántica profunda, IA contextual en vivo para VS Code/Google Docs y modos Terminal, Navegación y Debug conscientes del entorno.
+- [x] **Fase 12.1:** Fix de estabilidad en Onboarding Tutorial (renderizado tolerante a fallos, botón de cierre y alias) y motor biométrico MAR Anti-Midas con línea base adaptativa al reposo en tiempo real.
 
 > El enrutado por ventana no se limita a Roblox ni a unos pocos editores: reconoce listas amplias de juegos, terminales, apps de redacción/comunicación, navegadores e IDEs. También detecta juegos genéricos de Unreal `-Win64-Shipping.exe` y palabras clave configurables. Amplía `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` o `IDE_PROCESSES` en `ideye/config.py` para cualquier otra aplicación.
 

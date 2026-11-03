@@ -85,14 +85,14 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "calibration",
                 "badge": "02",
                 "title": "Calibración 5 + 1",
-                "text": "Mira al centro y a las cuatro esquinas; el mapeo se ancla al centro para que los bordes izquierdo y derecho sigan siendo alcanzables. El sexto paso mide tu MAR con 3 aperturas y cierres reales de boca.",
+                "text": "Mira al centro y a las cuatro esquinas; el mapeo se ancla al centro para que los bordes izquierdo y derecho sigan siendo alcanzables. El sexto paso mide tu MAR con 3 aperturas y cierres reales de boca o aprovecha la linea base adaptativa en reposo.",
                 "chip": "Perfil por monitor",
             },
             {
                 "icon": "mouth",
                 "badge": "03",
                 "title": "Abre la boca para confirmar",
-                "text": "Una apertura breve equivale a un clic. Mantenerla activa el arrastre Jaw-Lock. Nada de dwell-time accidental.",
+                "text": "Una apertura breve equivale a un clic con proteccion anti-Midas adaptativa al reposo. Mantenerla activa el arrastre Jaw-Lock. Nada de dwell-time accidental.",
                 "chip": "Clic sin manos",
             },
             {
@@ -448,7 +448,7 @@ GESTURES: List[Dict[str, str]] = [
     {
         "name": "Apertura de boca (MAR)",
         "action": "Clic / inyectar / navegar",
-        "description": "Abre la boca brevemente para activar la casilla enfocada.",
+        "description": "Abre la boca brevemente para activar la casilla enfocada. Proteccion adaptativa al reposo anti-Midas.",
         "icon": "mouth",
     },
     {

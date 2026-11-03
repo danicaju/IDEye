@@ -156,7 +156,11 @@ class GestureDetector:
         self.last_right_double_wink_time: float = 0.0
         self._apply_wink_difficulty()
 
-        # Mouth state tracking
+        # Mouth state tracking & adaptive resting baseline (Anti-Midas protection)
+        self.mar_auto_calibrate: bool = True
+        self.mar_calibrated: bool = False
+        self.mar_baseline: Optional[float] = None
+        self._mar_samples: deque = deque(maxlen=90)
         self.state: GestureState = GestureState.IDLE_CLOSED
         self.open_start_time: Optional[float] = None
         self.last_trigger_time: float = 0.0
@@ -359,6 +363,93 @@ class GestureDetector:
         if "wink_difficulty" in settings and settings["wink_difficulty"] is not None:
             self.wink_difficulty = str(settings["wink_difficulty"]).lower()
         self._apply_wink_difficulty()
+
+    def get_effective_mar_thresholds(self) -> Tuple[float, float]:
+        """
+        Calculates dynamic trigger and release thresholds relative to the user's
+        adaptive resting baseline (Anti-Midas protection).
+
+        Guarantees:
+        1. When mouth is at rest (even with high natural MAR 0.30-0.45), trigger
+           is always safely above rest (at least baseline + 0.14 and baseline * 1.40).
+        2. Strict hysteresis prevents noise jitter from causing click loops.
+        """
+        base = (
+            self.mar_baseline
+            if self.mar_baseline is not None
+            else 0.20
+        )
+
+        if self.mar_calibrated:
+            # Calibrated explicitly in Step 6
+            trigger = max(self.mar_threshold, base + 0.12, 0.30)
+            release = min(trigger - 0.08, max(self.release_threshold, base + 0.04))
+        else:
+            # Uncalibrated / auto-adaptive baseline
+            adaptive_trigger = max(base + 0.14, base * 1.40, 0.38)
+            trigger = max(self.mar_threshold, adaptive_trigger)
+            adaptive_release = max(base + 0.04, base * 1.15)
+            release = min(trigger - 0.08, max(self.release_threshold, adaptive_release))
+
+        # Enforce minimum hysteresis of 0.06
+        release = min(release, trigger - 0.06)
+        return float(trigger), float(release)
+
+    def _learn_mar_baseline(self, mar: float) -> None:
+        """
+        Learns the resting MAR of the user in real time from closed/relaxed mouth samples.
+        Prevents open mouth holds or intentional clicks from corrupting the baseline.
+        """
+        if not self.mar_auto_calibrate:
+            return
+        if mar <= 0.0 or not math.isfinite(mar):
+            return
+
+        # Determine if mouth is currently in an open/trigger state
+        curr_thresh = (
+            self.mar_threshold
+            if self.mar_baseline is None
+            else max(self.mar_threshold, self.mar_baseline + 0.12)
+        )
+
+        if mar < curr_thresh:
+            self._mar_samples.append(float(mar))
+            if len(self._mar_samples) >= 8:
+                sorted_samples = sorted(self._mar_samples)
+                # 15th percentile accurately isolates relaxed resting state
+                idx = max(0, int(len(sorted_samples) * 0.15))
+                candidate = sorted_samples[idx]
+                if self.mar_baseline is None:
+                    self.mar_baseline = max(0.08, min(0.60, float(candidate)))
+                else:
+                    if candidate < self.mar_baseline:
+                        self.mar_baseline = max(0.08, 0.80 * self.mar_baseline + 0.20 * candidate)
+                    else:
+                        self.mar_baseline = max(0.08, min(0.60, 0.96 * self.mar_baseline + 0.04 * candidate))
+
+    def set_mar_calibration(
+        self,
+        threshold: float,
+        baseline: Optional[float] = None,
+        release_threshold: Optional[float] = None,
+    ) -> bool:
+        """Applies explicit MAR threshold and baseline from calibration or user settings."""
+        try:
+            t = float(threshold)
+            if not math.isfinite(t) or t <= 0.0:
+                return False
+            self.mar_threshold = max(0.25, min(0.85, t))
+            if baseline is not None and math.isfinite(float(baseline)):
+                self.mar_baseline = max(0.08, min(0.60, float(baseline)))
+            if release_threshold is not None and math.isfinite(float(release_threshold)):
+                self.release_threshold = max(0.15, min(self.mar_threshold - 0.05, float(release_threshold)))
+            else:
+                base = self.mar_baseline if self.mar_baseline is not None else 0.20
+                self.release_threshold = max(0.15, min(self.mar_threshold - 0.08, base + 0.05))
+            self.mar_calibrated = True
+            return True
+        except (TypeError, ValueError, OverflowError):
+            return False
 
     def set_ear_calibration(self, profile: Optional[dict] = None) -> bool:
         """Applies per-eye open/closed EAR values from calibration or profile."""
@@ -629,14 +720,20 @@ class GestureDetector:
             return GestureResult(False, self.current_mar, self.hold_progress, [], self.last_gesture)
 
         # ----------------------------------------------------------------------
-        # 1. Mouth Aspect Ratio (MAR) State Machine
+        # 1. Mouth Aspect Ratio (MAR) State Machine with Adaptive Baseline
         # ----------------------------------------------------------------------
-        is_open = self.current_mar >= self.mar_threshold
-        is_closed = self.current_mar <= self.release_threshold
+        if self.state != GestureState.HOLDING_OPEN:
+            self._learn_mar_baseline(self.current_mar)
+
+        trigger_thresh, release_thresh = self.get_effective_mar_thresholds()
+        is_open = self.current_mar >= trigger_thresh
+        is_closed = self.current_mar <= release_thresh
         time_since_trigger = now - self.last_trigger_time
 
         if self.state == GestureState.IDLE_CLOSED:
             self.hold_progress = 0.0
+            if is_closed:
+                self.released_since_trigger = True
             if is_open:
                 if time_since_trigger >= self.cooldown_sec and self.released_since_trigger:
                     self.state = GestureState.HOLDING_OPEN
@@ -647,6 +744,8 @@ class GestureDetector:
                 self.state = GestureState.IDLE_CLOSED
                 self.open_start_time = None
                 self.hold_progress = 0.0
+                if is_closed:
+                    self.released_since_trigger = True
             else:
                 elapsed = now - (self.open_start_time or now)
                 self.hold_progress = min(1.0, max(0.0, elapsed / max(self.hold_time_sec, 1e-6)))

@@ -46,7 +46,7 @@ def compute_auto_mar_threshold(
 ) -> float:
     """Computes the 60% ergonomic MAR trigger point, clamped to [0.25, 0.70]."""
     try:
-        rest = float(np.median(rest_samples)) if rest_samples else float(config.MAR_THRESHOLD)
+        rest = float(np.median(rest_samples)) if rest_samples else float(getattr(config, "MAR_REST_THRESHOLD", 0.20))
         peaks = [float(p) for p in peak_samples if np.isfinite(float(p))]
         peak = float(np.median(peaks)) if peaks else rest + 0.20
         threshold = rest + 0.60 * (peak - rest)
@@ -317,6 +317,7 @@ class CalibrationUI(QWidget):
         if self.settings_manager is not None:
             try:
                 self.settings_manager.set("mar_threshold", threshold)
+                self.settings_manager.set("mar_calibrated", True)
             except Exception:
                 pass
         self._mar_phase = "done"
@@ -334,6 +335,11 @@ class CalibrationUI(QWidget):
         self._completion_timer.stop()
         self._mar_timeout_timer.stop()
         self._auto_mar_threshold = None
+        if self.settings_manager is not None:
+            try:
+                self.settings_manager.set("mar_calibrated", False)
+            except Exception:
+                pass
         self._mar_phase = "done"
         self._calibration_step = 6
         self._complete_calibration()

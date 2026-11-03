@@ -105,7 +105,7 @@ For sub-pixel stability, IDEye computes a cranial centroid from MediaPipe FaceMe
 * **`HYBRID`** — fuses head and iris signals with an adaptive saccade coefficient ramping `0.08 -> 0.55` for fast, stable transitions.
 
 ### 2. Zero-Dwell Midas Elimination + Jaw-Lock Gestures
-Navigation and activation are fully decoupled: looking only highlights, never clicks. A short mouth opening performs an instant click/inject, while a held open mouth above your adaptive resting-MAR threshold enters **Jaw-Lock** drag mode. No dwell timers means no accidental Midas clicks while reading.
+Navigation and activation are fully decoupled: looking only highlights, never clicks. A short mouth opening performs an instant click/inject, while a held open mouth above your adaptive resting-MAR threshold enters **Jaw-Lock** drag mode. The facial detector features an **adaptive resting MAR baseline (Anti-Midas protection)** that learns each user's natural mouth aperture in real time, preventing ghost clicks and click loops even without mouth calibration or with high natural resting MAR (0.30-0.45). The guided 3-step mini-tutorial (F2 or Help button) safely walks users through dwell, gesture confirmation, and resting zones. No dwell timers means no accidental Midas clicks while reading.
 
 ### 3. 6-Mode Strategy Engine + WebSocket Auto-Switch
 The `ModeManager` hosts six specialized modes - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE`, and `FREELOOK_GAMING_MODE` - and can switch automatically based on VS Code context received over the bidirectional WebSocket bridge. FreeLook delivers smooth 60 Hz camera/look control; Gaming uses a **head-joystick with a central deadzone** for WASD movement, while a right wink toggles a menu cursor for in-game buttons. Writing combines a gaze-friendly **letter keyboard** with a **Predictive Word & Phrase Engine** and an AI writing assistant to rephrase, correct spelling/grammar, or expand paragraphs without placeholder text.
@@ -480,6 +480,7 @@ pytest -q
 - [x] **Phase 10.4:** Agentic Prompt Launcher for VS Code chat and the local MCP gaze-task queue.
 - [x] **Phase 11:** Inertial gaze scroll, adaptive Eco-Sleep, Ghost-Peek HUD and native system tray.
 - [x] **Phase 12:** Deep semantic coding taxonomy, live VS Code/Google Docs context AI, and environment-aware Terminal, Navigation and Debug modes.
+- [x] **Phase 12.1:** Onboarding tutorial stability hotfix (crash-proof rendering, close button, aliases) and real-time adaptive resting MAR Anti-Midas engine.
 
 > Window routing is not limited to Roblox or a few editors: it recognizes broad built-in lists for games, terminals, writing/communication apps, browsers and IDEs. Generic Unreal `-Win64-Shipping.exe` games and configurable title keywords are also supported. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` or `IDE_PROCESSES` in `ideye/config.py` for any other application.
 

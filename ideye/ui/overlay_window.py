@@ -466,7 +466,7 @@ class OverlayWindow(QWidget):
         self._mar_rest_baseline: float = max(
             0.15,
             min(
-                0.30,
+                0.55,
                 max(
                     float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
                     self.mar_threshold - 0.18,
@@ -493,9 +493,11 @@ class OverlayWindow(QWidget):
 
         # Interactive 3-Step Guided Onboarding Mini-Tutorial
         self.show_tutorial_modal: bool = False
+        self.tutorial_modal_close_rect: QRectF = QRectF()
         self.tutorial_step: int = 1  # 1: Dwell, 2: MAR/Wink, 3: Rest, 4: Done
         self.tutorial_step_progress: float = 0.0
         self._tutorial_rest_start: float = 0.0
+        self._last_mouth_click_time: float = 0.0
 
         # Gaze Estimator reference for micro-recalibration
         self.gaze_estimator: Optional[Any] = None
@@ -1905,7 +1907,7 @@ class OverlayWindow(QWidget):
         self._mar_rest_baseline = max(
             0.15,
             min(
-                0.30,
+                0.55,
                 max(
                     float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
                     self.mar_threshold - 0.18,
@@ -2090,7 +2092,7 @@ class OverlayWindow(QWidget):
         self._mar_rest_baseline = max(
             0.15,
             min(
-                0.30,
+                0.55,
                 max(
                     float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
                     mar - 0.18,
@@ -3616,10 +3618,27 @@ class OverlayWindow(QWidget):
         self._play_sound("nav")
         self.update()
 
+    def start_tutorial(self) -> None:
+        """Alias for start_mini_tutorial for external callers and test runners."""
+        self.start_mini_tutorial()
+
     def close_mini_tutorial(self) -> None:
         """Closes the interactive tutorial modal."""
         self.show_tutorial_modal = False
         self.update()
+
+    def close_tutorial(self) -> None:
+        """Alias for close_mini_tutorial."""
+        self.close_mini_tutorial()
+
+    @property
+    def _tutorial_active(self) -> bool:
+        """True if the onboarding tutorial modal is currently displayed."""
+        return bool(getattr(self, "show_tutorial_modal", False))
+
+    @_tutorial_active.setter
+    def _tutorial_active(self, value: bool) -> None:
+        self.show_tutorial_modal = bool(value)
 
     def _update_mini_tutorial_gaze(self, gx: float, gy: float) -> None:
         """Tracks gaze and advances the 3-step interactive onboarding tutorial."""
@@ -3653,84 +3672,109 @@ class OverlayWindow(QWidget):
     def _paint_tutorial_modal(self, painter: QPainter, w: float, h: float) -> None:
         """Renders the high-contrast 3-step interactive onboarding tutorial modal."""
         painter.save()
-        modal_w = min(620.0, w - 40.0)
-        modal_h = 240.0
-        modal_x = (w - modal_w) * 0.5
-        modal_y = (h - modal_h) * 0.5
-        modal_rect = QRectF(modal_x, modal_y, modal_w, modal_h)
+        try:
+            modal_w = min(620.0, w - 40.0)
+            modal_h = 240.0
+            modal_x = (w - modal_w) * 0.5
+            modal_y = (h - modal_h) * 0.5
+            modal_rect = QRectF(modal_x, modal_y, modal_w, modal_h)
 
-        painter.setBrush(QBrush(QColor(11, 15, 25, 245)))
-        theme_col = QColor(self.theme_color or "#00F0FF")
-        painter.setPen(QPen(theme_col, 2.0))
-        painter.drawRoundedRect(modal_rect, 14.0, 14.0)
+            painter.setBrush(QBrush(QColor(11, 15, 25, 245)))
+            theme_col = QColor(self.theme_color or "#00F0FF")
+            painter.setPen(QPen(theme_col, 2.0))
+            painter.drawRoundedRect(modal_rect, 14.0, 14.0)
 
-        badge_text = f"PASO {self.tutorial_step} DE 3" if self.tutorial_step <= 3 else "TUTORIAL COMPLETADO"
-        badge_rect = QRectF(modal_x + 24.0, modal_y + 20.0, 180.0, 26.0)
-        painter.setBrush(QBrush(QColor(theme_col.red(), theme_col.green(), theme_col.blue(), 45)))
-        painter.setPen(QPen(theme_col, 1.2))
-        painter.drawRoundedRect(badge_rect, 6.0, 6.0)
-        painter.setPen(theme_col)
-        painter.setFont(self._font_header_bold_btn)
-        painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, badge_text)
+            # Close button in top-right of tutorial modal
+            self.tutorial_modal_close_rect = QRectF(modal_x + modal_w - 38.0, modal_y + 14.0, 24.0, 24.0)
+            painter.setBrush(QBrush(QColor(255, 255, 255, 20)))
+            painter.setPen(QPen(QColor(255, 255, 255, 120), 1.0))
+            painter.drawRoundedRect(self.tutorial_modal_close_rect, 4.0, 4.0)
+            painter.setPen(QColor(220, 220, 220))
+            painter.setFont(self._font_header_bold_btn)
+            painter.drawText(self.tutorial_modal_close_rect, Qt.AlignmentFlag.AlignCenter, "X")
 
-        titles = {
-            1: "1. Fijacion de la mirada (Adaptive Dwell)",
-            2: "2. Confirmacion por Gesto (MAR / Clic)",
-            3: "3. Zona de Reposo (Safe Rest Anti-Midas)",
-            4: "Listo para programar con IDEye!",
-        }
-        subtitles = {
-            1: "Posiciona tu mirada en cualquier celda para cargar el anillo de fijacion progresivo.",
-            2: "Abre levemente la boca o pulsa clic/Enter para confirmar una seleccion activa.",
-            3: "Coloca tu mirada en la celda central 5 o en el editor para reposar sin disparos accidentales.",
-            4: "Has completado los fundamentos de control ocular. Pulsa F2 o parpadea para cerrar.",
-        }
+            step = int(getattr(self, "tutorial_step", 1))
+            badge_text = f"PASO {step} DE 3" if step <= 3 else "TUTORIAL COMPLETADO"
+            badge_rect = QRectF(modal_x + 24.0, modal_y + 20.0, 180.0, 26.0)
+            painter.setBrush(QBrush(QColor(theme_col.red(), theme_col.green(), theme_col.blue(), 45)))
+            painter.setPen(QPen(theme_col, 1.2))
+            painter.drawRoundedRect(badge_rect, 6.0, 6.0)
+            painter.setPen(theme_col)
+            painter.setFont(self._font_header_bold_btn)
+            painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, badge_text)
 
-        title = titles.get(self.tutorial_step, "")
-        subtitle = subtitles.get(self.tutorial_step, "")
+            titles = {
+                1: "1. Fijacion de la mirada (Adaptive Dwell)",
+                2: "2. Confirmacion por Gesto (MAR / Clic)",
+                3: "3. Zona de Reposo (Safe Rest Anti-Midas)",
+                4: "Listo para programar con IDEye!",
+            }
+            subtitles = {
+                1: "Posiciona tu mirada en cualquier celda para cargar el anillo de fijacion progresivo.",
+                2: "Abre levemente la boca o pulsa clic/Enter para confirmar una seleccion activa.",
+                3: "Coloca tu mirada en la celda central 5 o en el editor para reposar sin disparos accidentales.",
+                4: "Has completado los fundamentos de control ocular. Pulsa F2 o parpadea para cerrar.",
+            }
 
-        painter.setPen(QColor(255, 255, 255))
-        painter.setFont(self._font_modal_title)
-        painter.drawText(
-            QRectF(modal_x + 24.0, modal_y + 58.0, modal_w - 48.0, 32.0),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            title,
-        )
+            title = titles.get(step, "")
+            subtitle = subtitles.get(step, "")
 
-        painter.setPen(QColor(203, 213, 225))
-        painter.setFont(self._font_modal_item_title)
-        painter.drawText(
-            QRectF(modal_x + 24.0, modal_y + 96.0, modal_w - 48.0, 52.0),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.TextWordWrap,
-            subtitle,
-        )
+            painter.setPen(QColor(255, 255, 255))
+            painter.setFont(self._font_modal_title)
+            painter.drawText(
+                QRectF(modal_x + 24.0, modal_y + 58.0, modal_w - 48.0, 32.0),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                title,
+            )
 
-        bar_x = modal_x + 24.0
-        bar_y = modal_y + 165.0
-        bar_w = modal_w - 48.0
-        bar_h = 10.0
-        painter.setBrush(QBrush(QColor(30, 41, 59, 200)))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), 5.0, 5.0)
+            painter.setPen(QColor(203, 213, 225))
+            painter.setFont(self._font_modal_item_title)
+            painter.drawText(
+                QRectF(modal_x + 24.0, modal_y + 96.0, modal_w - 48.0, 52.0),
+                Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap,
+                subtitle,
+            )
 
-        prog = max(0.0, min(1.0, float(self.tutorial_step_progress)))
-        if prog > 0.01:
-            painter.setBrush(QBrush(theme_col))
-            painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w * prog, bar_h), 5.0, 5.0)
+            bar_x = modal_x + 24.0
+            bar_y = modal_y + 165.0
+            bar_w = modal_w - 48.0
+            bar_h = 10.0
+            painter.setBrush(QBrush(QColor(30, 41, 59, 200)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), 5.0, 5.0)
 
-        painter.setPen(QColor(148, 163, 184))
-        painter.setFont(self._font_modal_item_desc)
-        painter.drawText(
-            QRectF(modal_x + 24.0, modal_y + 190.0, modal_w - 48.0, 24.0),
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
-            "Pulsa F2 o Escape para salir del tutorial",
-        )
-        painter.restore()
+            prog = max(0.0, min(1.0, float(getattr(self, "tutorial_step_progress", 0.0))))
+            if prog > 0.01:
+                painter.setBrush(QBrush(theme_col))
+                painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w * prog, bar_h), 5.0, 5.0)
+
+            painter.setPen(QColor(148, 163, 184))
+            painter.setFont(self._font_modal_item_desc)
+            painter.drawText(
+                QRectF(modal_x + 24.0, modal_y + 190.0, modal_w - 48.0, 24.0),
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+                "Pulsa F2 o Escape para salir del tutorial",
+            )
+        except Exception as exc:
+            logger.warning(f"Error rendering tutorial modal: {exc}")
+        finally:
+            painter.restore()
 
     def mousePressEvent(self, event) -> None:
         """Handles physical mouse clicks for testing, headless runners, and assistive caregivers."""
         pos = event.position() if hasattr(event, "position") else event.pos()
         px, py = float(pos.x()), float(pos.y())
+
+        # Check tutorial modal dismiss if active
+        if getattr(self, "show_tutorial_modal", False):
+            if (
+                hasattr(self, "tutorial_modal_close_rect")
+                and self.tutorial_modal_close_rect.isValid()
+                and self.tutorial_modal_close_rect.adjusted(-8.0, -8.0, 8.0, 8.0).contains(px, py)
+            ):
+                self.close_mini_tutorial()
+                event.accept()
+                return
 
         # Check the help modal actions if open.
         if self.show_help_modal:

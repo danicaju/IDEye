@@ -144,6 +144,10 @@ NOMINAL_INTEROCULAR_DIST: float = 0.28
 MAR_THRESHOLD: float = 0.45
 # Hysteresis: mouth must close below this to re-arm the trigger
 MAR_RELEASE_THRESHOLD: float = 0.35
+# Nominal resting mouth ratio baseline
+MAR_REST_THRESHOLD: float = 0.20
+# Real-time adaptive baseline learning to prevent ghost clicks (Anti-Midas)
+MAR_ADAPTIVE_BASELINE_ENABLED: bool = True
 # Duration (seconds) mouth must stay open continuously before firing CLICK
 CLICK_HOLD_TIME_SEC: float = 0.15
 # Cooldown duration (seconds) after a successful click before another can occur

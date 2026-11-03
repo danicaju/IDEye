@@ -370,29 +370,30 @@ class GestureDetector:
         adaptive resting baseline (Anti-Midas protection).
 
         Guarantees:
-        1. When mouth is at rest (even with high natural MAR 0.30-0.45), trigger
-           is always safely above rest (at least baseline + 0.14 and baseline * 1.40).
+        1. When mouth is at rest (even with high natural MAR 0.30-0.50), trigger
+           is always safely above rest (at least baseline + 0.15 and baseline * 1.50).
         2. Strict hysteresis prevents noise jitter from causing click loops.
+        3. Enforces safe minimum floor so uncalibrated startup never produces ghost clicks.
         """
         base = (
             self.mar_baseline
             if self.mar_baseline is not None
-            else 0.20
+            else 0.22
         )
 
         if self.mar_calibrated:
             # Calibrated explicitly in Step 6
-            trigger = max(self.mar_threshold, base + 0.12, 0.30)
-            release = min(trigger - 0.08, max(self.release_threshold, base + 0.04))
+            trigger = max(self.mar_threshold, base + 0.14, 0.36)
+            release = min(trigger - 0.08, max(self.release_threshold, base + 0.05))
         else:
             # Uncalibrated / auto-adaptive baseline
-            adaptive_trigger = max(base + 0.14, base * 1.40, 0.38)
+            adaptive_trigger = max(base + 0.15, base * 1.50, 0.42)
             trigger = max(self.mar_threshold, adaptive_trigger)
-            adaptive_release = max(base + 0.04, base * 1.15)
+            adaptive_release = max(base + 0.05, base * 1.15)
             release = min(trigger - 0.08, max(self.release_threshold, adaptive_release))
 
-        # Enforce minimum hysteresis of 0.06
-        release = min(release, trigger - 0.06)
+        # Enforce minimum hysteresis of 0.07
+        release = min(release, trigger - 0.07)
         return float(trigger), float(release)
 
     def _learn_mar_baseline(self, mar: float) -> None:
@@ -405,27 +406,32 @@ class GestureDetector:
         if mar <= 0.0 or not math.isfinite(mar):
             return
 
-        # Determine if mouth is currently in an open/trigger state
-        curr_thresh = (
-            self.mar_threshold
-            if self.mar_baseline is None
-            else max(self.mar_threshold, self.mar_baseline + 0.12)
-        )
+        # Phase 1: Bootstrapping before initial baseline is established
+        if self.mar_baseline is None:
+            if mar < 0.52:
+                self._mar_samples.append(float(mar))
+                sorted_samples = sorted(self._mar_samples)
+                idx = max(0, int(len(sorted_samples) * 0.15))
+                candidate = sorted_samples[idx]
+                self.mar_baseline = max(0.08, min(0.60, float(candidate)))
+            return
 
-        if mar < curr_thresh:
+        # Phase 2: Continual adaptation while baseline is established.
+        # Only accept samples when mouth is relaxed/closed (at or below release threshold)
+        # so open mouth postures, speech peaks, or intentional clicks do not elevate baseline.
+        _, release_thresh = self.get_effective_mar_thresholds()
+        if mar <= release_thresh:
             self._mar_samples.append(float(mar))
             if len(self._mar_samples) >= 8:
                 sorted_samples = sorted(self._mar_samples)
-                # 15th percentile accurately isolates relaxed resting state
                 idx = max(0, int(len(sorted_samples) * 0.15))
                 candidate = sorted_samples[idx]
-                if self.mar_baseline is None:
-                    self.mar_baseline = max(0.08, min(0.60, float(candidate)))
+                if candidate < self.mar_baseline:
+                    # Responsive downward adaptation when user mouth is more closed
+                    self.mar_baseline = max(0.08, 0.75 * self.mar_baseline + 0.25 * candidate)
                 else:
-                    if candidate < self.mar_baseline:
-                        self.mar_baseline = max(0.08, 0.80 * self.mar_baseline + 0.20 * candidate)
-                    else:
-                        self.mar_baseline = max(0.08, min(0.60, 0.96 * self.mar_baseline + 0.04 * candidate))
+                    # Slow, damped upward drift
+                    self.mar_baseline = max(0.08, min(0.60, 0.97 * self.mar_baseline + 0.03 * candidate))
 
     def set_mar_calibration(
         self,
@@ -441,6 +447,9 @@ class GestureDetector:
             self.mar_threshold = max(0.25, min(0.85, t))
             if baseline is not None and math.isfinite(float(baseline)):
                 self.mar_baseline = max(0.08, min(0.60, float(baseline)))
+            elif self.mar_baseline is None:
+                self.mar_baseline = max(0.12, min(0.55, self.mar_threshold - 0.18))
+
             if release_threshold is not None and math.isfinite(float(release_threshold)):
                 self.release_threshold = max(0.15, min(self.mar_threshold - 0.05, float(release_threshold)))
             else:

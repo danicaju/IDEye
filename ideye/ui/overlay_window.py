@@ -462,11 +462,12 @@ class OverlayWindow(QWidget):
         self._header_mode_w: float = 220.0
         self.current_mar: float = 0.0
         self.mar_threshold: float = float(getattr(config, "MAR_THRESHOLD", 0.55))
+        self.mar_calibrated: bool = True
         self._mar_rest_window: deque = deque(maxlen=90)
         self._mar_rest_baseline: float = max(
             0.15,
             min(
-                0.55,
+                0.60,
                 max(
                     float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
                     self.mar_threshold - 0.18,
@@ -1907,7 +1908,7 @@ class OverlayWindow(QWidget):
         self._mar_rest_baseline = max(
             0.15,
             min(
-                0.55,
+                0.60,
                 max(
                     float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
                     self.mar_threshold - 0.18,
@@ -2081,18 +2082,20 @@ class OverlayWindow(QWidget):
         minimum = float(getattr(config, "FREELOOK_JAW_LOCK_MIN_MAR", 0.27))
         return max(self._freelook_prethreshold(), rest + 0.08, minimum)
 
-    def set_mar_threshold(self, value: float) -> None:
+    def set_mar_threshold(self, value: float, calibrated: Optional[bool] = None) -> None:
         """Keeps FreeLook click thresholds aligned with calibration/settings."""
         try:
             mar = max(0.10, min(0.90, float(value)))
         except (TypeError, ValueError, OverflowError):
             return
         self.mar_threshold = mar
+        if calibrated is not None:
+            self.mar_calibrated = bool(calibrated)
         self._mar_rest_window.clear()
         self._mar_rest_baseline = max(
             0.15,
             min(
-                0.55,
+                0.60,
                 max(
                     float(getattr(config, "MAR_REST_THRESHOLD", 0.20)),
                     mar - 0.18,
@@ -2348,8 +2351,8 @@ class OverlayWindow(QWidget):
         )
         trigger_ratio = max(0.35, min(0.95, float(getattr(config, "FREELOOK_MOUTH_TRIGGER_RATIO", 0.78))))
         release_ratio = max(0.25, min(0.90, float(getattr(config, "FREELOOK_MOUTH_RELEASE_RATIO", 0.48))))
-        trigger = max(pre + 0.01, threshold * trigger_ratio, baseline + 0.10)
-        release = max(pre, baseline + 0.035, threshold * release_ratio)
+        trigger = max(pre + 0.01, threshold * trigger_ratio, baseline + 0.08)
+        release = max(pre, threshold * release_ratio, baseline + 0.035)
         release = min(trigger - 0.01, release)
         now = time.time()
 
@@ -2636,7 +2639,7 @@ class OverlayWindow(QWidget):
         if len(self._mar_rest_window) >= 20:
             values = sorted(self._mar_rest_window)
             baseline = values[max(0, int(len(values) * 0.10) - 1)]
-            self._mar_rest_baseline = max(0.10, min(0.40, float(baseline)))
+            self._mar_rest_baseline = max(0.10, min(0.60, float(baseline)))
         mouth_rest = max(0.0, float(getattr(config, "MAR_REST_THRESHOLD", 0.20)))
         if self.current_mar > mouth_rest + 0.04:
             self._wake_ghost_peek()
@@ -2776,6 +2779,7 @@ class OverlayWindow(QWidget):
         if gesture_name != "MOUTH_CLICK":
             return
 
+        self._last_mouth_click_time = time.time()
         self.mouth_clicked.emit(self.hovered_block if self.hovered_block is not None else -1)
 
         # Dismiss cheat sheet modal if open
@@ -3594,6 +3598,11 @@ class OverlayWindow(QWidget):
         item = node.items[block_idx] if (node and block_idx < len(node.items)) else None
         target_dwell = self.get_adaptive_dwell_time(item, block_idx)
 
+        # When mouth gesture is uncalibrated, require real deliberate dwell (minimum 0.70s)
+        # to prevent accidental entry into boxes simply by looking at them (Anti-Midas protection).
+        if not getattr(self, "mar_calibrated", True) and not math.isinf(target_dwell):
+            target_dwell = max(target_dwell, 0.70)
+
         if math.isinf(target_dwell):
             self._dwell_progress = 0.0
             return
@@ -3765,7 +3774,7 @@ class OverlayWindow(QWidget):
         pos = event.position() if hasattr(event, "position") else event.pos()
         px, py = float(pos.x()), float(pos.y())
 
-        # Check tutorial modal dismiss if active
+        # Check tutorial modal dismiss and step confirmation if active
         if getattr(self, "show_tutorial_modal", False):
             if (
                 hasattr(self, "tutorial_modal_close_rect")
@@ -3775,6 +3784,22 @@ class OverlayWindow(QWidget):
                 self.close_mini_tutorial()
                 event.accept()
                 return
+
+            if getattr(self, "tutorial_step", 1) == 2:
+                self.tutorial_step = 3
+                self.tutorial_step_progress = 0.0
+                self._tutorial_rest_start = time.time()
+                self._play_sound("confirm")
+                self.update()
+                event.accept()
+                return
+            elif getattr(self, "tutorial_step", 1) == 4:
+                self.close_mini_tutorial()
+                event.accept()
+                return
+
+            event.accept()
+            return
 
         # Check the help modal actions if open.
         if self.show_help_modal:
@@ -3868,6 +3893,17 @@ class OverlayWindow(QWidget):
             self.show_tutorial_modal = False
             self.update()
             event.accept()
+        elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space) and getattr(self, "show_tutorial_modal", False):
+            if getattr(self, "tutorial_step", 1) == 2:
+                self.tutorial_step = 3
+                self.tutorial_step_progress = 0.0
+                self._tutorial_rest_start = time.time()
+                self._play_sound("confirm")
+                self.update()
+                event.accept()
+            elif getattr(self, "tutorial_step", 1) == 4:
+                self.close_mini_tutorial()
+                event.accept()
         elif event.key() == Qt.Key.Key_F2:
             self.show_tutorial_modal = not getattr(self, "show_tutorial_modal", False)
             if self.show_tutorial_modal:

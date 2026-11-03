@@ -131,6 +131,58 @@ class TestTutorialCrashFixAndLifecycle(unittest.TestCase):
         self.assertTrue(evt.accepted)
         self.assertFalse(self.overlay.show_tutorial_modal)
 
+    def test_tutorial_step2_advances_on_click_and_enter(self):
+        """Clicking during step 2 or pressing Enter/Space advances to step 3 without leaking."""
+        self.overlay.start_tutorial()
+        self.overlay.tutorial_step = 2
+
+        class DummyKeyEvent:
+            def __init__(self, key):
+                self._key = key
+                self.accepted = False
+
+            def key(self):
+                return self._key
+
+            def accept(self):
+                self.accepted = True
+
+        # Enter key
+        evt = DummyKeyEvent(Qt.Key.Key_Return)
+        self.overlay.keyPressEvent(evt)
+        self.assertEqual(self.overlay.tutorial_step, 3)
+        self.assertTrue(evt.accepted)
+
+        # Step 4 dismiss via Space
+        self.overlay.tutorial_step = 4
+        evt_space = DummyKeyEvent(Qt.Key.Key_Space)
+        self.overlay.keyPressEvent(evt_space)
+        self.assertFalse(self.overlay.show_tutorial_modal)
+
+    def test_tutorial_absorbs_background_clicks(self):
+        """Clicks anywhere while tutorial is open are absorbed and do not trigger underlying actions."""
+        self.overlay.start_tutorial()
+        self.overlay.tutorial_step = 1
+
+        class DummyEvent:
+            def __init__(self, pt):
+                self._pt = pt
+                self.accepted = False
+
+            def pos(self):
+                return self._pt
+
+            def position(self):
+                return self._pt
+
+            def accept(self):
+                self.accepted = True
+
+        evt = DummyEvent(QPointF(100.0, 100.0))
+        self.overlay.mousePressEvent(evt)
+        self.assertTrue(evt.accepted)
+        self.assertTrue(self.overlay.show_tutorial_modal)
+
 
 class TestAdaptiveMARAntiMidas(unittest.TestCase):
     def test_high_resting_mar_does_not_ghost_click(self):
@@ -160,8 +212,34 @@ class TestAdaptiveMARAntiMidas(unittest.TestCase):
         self.assertGreater(eff_trigger, 0.50, "Trigger threshold must be safely elevated above resting MAR")
         self.assertGreaterEqual(eff_release, 0.38, "Release threshold must accommodate resting MAR")
 
+    def test_uncalibrated_startup_with_high_resting_mar_above_default_threshold(self):
+        """
+        Extreme scenario: User starts with resting MAR 0.48 (higher than default 0.45 threshold).
+        Adaptive baseline bootstrap must learn 0.48, elevate trigger to >= 0.65, and fire ZERO clicks.
+        """
+        detector = GestureDetector(mar_threshold=0.45, release_threshold=0.35)
+        self.assertFalse(detector.mar_calibrated)
+
+        high_face = create_face_with_mar(0.48)
+        t = 1000.0
+
+        clicks = 0
+        for _ in range(60):
+            t += 0.033
+            res = detector.process(high_face, current_time=t)
+            if res.clicked or "MOUTH_CLICK" in res.gestures:
+                clicks += 1
+
+        self.assertEqual(clicks, 0, "Resting mouth at MAR=0.48 MUST NOT trigger any ghost clicks on startup!")
+        self.assertIsNotNone(detector.mar_baseline)
+        self.assertAlmostEqual(detector.mar_baseline, 0.48, delta=0.03)
+
+        eff_trigger, eff_release = detector.get_effective_mar_thresholds()
+        self.assertGreater(eff_trigger, 0.65)
+        self.assertGreaterEqual(eff_release, 0.48)
+
     def test_deliberate_mouth_open_triggers_click(self):
-        """After establishing resting baseline at 0.36, opening mouth to 0.65 for 150ms fires click."""
+        """After establishing resting baseline at 0.36, opening mouth to 0.65 for 180ms fires click."""
         detector = GestureDetector(mar_threshold=0.45, release_threshold=0.35)
         resting_face = create_face_with_mar(0.36)
         t = 1000.0
@@ -172,7 +250,7 @@ class TestAdaptiveMARAntiMidas(unittest.TestCase):
 
         open_face = create_face_with_mar(0.65)
         clicks = 0
-        for _ in range(6):  # ~200ms hold (> 150ms hold_time)
+        for _ in range(8):  # ~260ms hold (> 180ms uncalibrated effective hold time)
             t += 0.033
             res = detector.process(open_face, current_time=t)
             if res.clicked or "MOUTH_CLICK" in res.gestures:
@@ -208,6 +286,45 @@ class TestAdaptiveMARAntiMidas(unittest.TestCase):
         self.assertGreaterEqual(trigger, 0.22 + 0.12, "Trigger threshold must enforce safe margin above resting baseline!")
         self.assertLess(release, trigger)
         self.assertGreater(trigger - release, 0.05, "Hysteresis must be enforced!")
+
+    def test_uncalibrated_requires_deliberate_dwell_in_overlay(self):
+        """When MAR is uncalibrated, OverlayWindow enforces a safe deliberate dwell floor (>=0.70s)."""
+        app = QApplication.instance() or QApplication([])
+        overlay = OverlayWindow()
+        overlay.mar_calibrated = False
+
+        # Initialize dwell on block 0 (nav item with 0.30s nominal dwell)
+        overlay._update_adaptive_dwell(0)
+        # Advance dwell start time by 0.35s (would fire calibrated 0.30s item)
+        overlay._dwell_start_time = time.time() - 0.35
+        overlay._update_adaptive_dwell(0)
+
+        self.assertFalse(overlay._dwell_fired, "Uncalibrated dwell must NOT fire after only 350ms!")
+        self.assertLess(overlay._dwell_progress, 0.60, "Uncalibrated dwell progress must reflect >= 0.70s requirement!")
+
+        # With calibrated MAR, 350ms exceeds the 0.30s requirement
+        overlay.mar_calibrated = True
+        overlay._dwell_fired = False
+        overlay._dwell_start_time = time.time() - 0.35
+        overlay._update_adaptive_dwell(0)
+        self.assertTrue(overlay._dwell_fired, "Calibrated MAR dwell must fire once nominal dwell is reached!")
+        overlay.close()
+
+    def test_freelook_does_not_hold_left_mouse_down_at_resting_mar(self):
+        """In FreeLook mode, resting MAR does not activate mouth active or left mouse down."""
+        app = QApplication.instance() or QApplication([])
+        overlay = OverlayWindow()
+        overlay.mar_threshold = 0.45
+        overlay._mar_rest_baseline = 0.38
+        overlay._mouth_active = False
+
+        # Simulate 30 frames of resting face at 0.38
+        for _ in range(30):
+            overlay._update_freelook_mouth(0.38)
+
+        self.assertFalse(overlay._mouth_active, "Resting mouth must not activate FreeLook mouth active drag!")
+        self.assertFalse(overlay._hold_started, "Resting mouth must not start mouse hold down!")
+        overlay.close()
 
 
 if __name__ == "__main__":

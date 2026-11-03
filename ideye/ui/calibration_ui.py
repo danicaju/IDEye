@@ -313,10 +313,12 @@ class CalibrationUI(QWidget):
             self._rest_mar_samples, self._peak_mar_samples
         )
         self._auto_mar_threshold = threshold
+        rest_val = float(np.median(self._rest_mar_samples)) if self._rest_mar_samples else float(getattr(config, "MAR_REST_THRESHOLD", 0.20))
         self.mar_threshold_calibrated.emit(threshold)
         if self.settings_manager is not None:
             try:
                 self.settings_manager.set("mar_threshold", threshold)
+                self.settings_manager.set("mar_baseline", rest_val)
                 self.settings_manager.set("mar_calibrated", True)
             except Exception:
                 pass
@@ -338,6 +340,7 @@ class CalibrationUI(QWidget):
         if self.settings_manager is not None:
             try:
                 self.settings_manager.set("mar_calibrated", False)
+                self.settings_manager.set("mar_baseline", None)
             except Exception:
                 pass
         self._mar_phase = "done"

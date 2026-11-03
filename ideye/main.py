@@ -968,8 +968,9 @@ class IDEyeApplication(QObject):
             estimator.set_anti_jitter_damping(level)
         if detector is not None:
             mar_calibrated = bool(values.get("mar_calibrated", False))
+            baseline_val = values.get("mar_baseline", None)
             if hasattr(detector, "set_mar_calibration") and mar_calibrated:
-                detector.set_mar_calibration(mar)
+                detector.set_mar_calibration(mar, baseline=baseline_val)
             else:
                 detector.mar_threshold = mar
                 detector.release_threshold = max(0.20, mar - 0.10)
@@ -987,7 +988,7 @@ class IDEyeApplication(QObject):
                     wink_distance_compensation=wink_distance,
                 )
         if hasattr(self.overlay, "set_mar_threshold"):
-            self.overlay.set_mar_threshold(mar)
+            self.overlay.set_mar_threshold(mar, calibrated=mar_calibrated)
         if hasattr(self.tracker, "health_guard"):
             self.tracker.health_guard.enabled = health_enabled
         if hasattr(self.tracker, "lighting"):
@@ -1395,7 +1396,7 @@ class IDEyeApplication(QObject):
         self.settings_manager.set("mar_calibrated", True)
         if self.overlay is not None:
             if hasattr(self.overlay, "set_mar_threshold"):
-                self.overlay.set_mar_threshold(mar)
+                self.overlay.set_mar_threshold(mar, calibrated=True)
             self.overlay.last_action_desc = f"Umbral MAR: {mar:.2f}"
             self.overlay.update()
 

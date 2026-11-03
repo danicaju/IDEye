@@ -40,6 +40,8 @@ HOTKEY_ACTIONS = {
     "<ctrl>+<alt>+j": "_on_ast_jump",
     "<ctrl>+<alt>+i": "_on_agentic_launcher",
     "<ctrl>+<alt>+w": "_on_gaze_scroll_toggle",
+    "<ctrl>+<alt>+d": "_on_layout_toggle_anywhere",
+    "<ctrl>+<alt>+o": "_on_theme_toggle_anywhere",
 }
 
 
@@ -80,6 +82,8 @@ class GlobalHotkeyManager(QObject):
     clipboard_history_anywhere_requested = pyqtSignal()
     language_cycle_requested = pyqtSignal()
     help_toggle_requested = pyqtSignal()
+    layout_toggle_requested = pyqtSignal()
+    theme_toggle_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -239,3 +243,11 @@ class GlobalHotkeyManager(QObject):
     def _on_clipboard_history_anywhere(self) -> None:
         """Callback for Ctrl+Alt+B clipboard history."""
         self.clipboard_history_anywhere_requested.emit()
+
+    def _on_layout_toggle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+D layout toggle (Full Grid vs Right Dock)."""
+        self.layout_toggle_requested.emit()
+
+    def _on_theme_toggle_anywhere(self) -> None:
+        """Callback for Ctrl+Alt+O visual theme cycling."""
+        self.theme_toggle_requested.emit()

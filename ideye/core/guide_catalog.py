@@ -60,6 +60,8 @@ SHORTCUT_LABELS = {
     "g": ("Gaming", "Entra en el perfil Gaming con head-joystick."),
     "i": ("Agentic Launcher", "Ctrl+Alt+I abre las seis órdenes de ingeniería para VS Code y la cola MCP."),
     "w": ("Scroll ocular", "Ctrl+Alt+W activa o desactiva la rueda de scroll inercial por mirada."),
+    "d": ("Dock 30% / 100%", "Ctrl+Alt+D alterna la columna lateral derecha 30% y la cuadrícula completa."),
+    "o": ("Tema visual", "Ctrl+Alt+O alterna entre Cyber Glass, OLED Black y Solarized Dark."),
 }
 
 PAGES: List[Dict[str, Any]] = [

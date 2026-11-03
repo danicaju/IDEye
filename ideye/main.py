@@ -805,6 +805,8 @@ class IDEyeApplication(QObject):
         self.hotkey_manager.clipboard_history_anywhere_requested.connect(
             self._on_clipboard_shortcut_anywhere
         )
+        self.hotkey_manager.layout_toggle_requested.connect(self.overlay.toggle_hud_layout)
+        self.hotkey_manager.theme_toggle_requested.connect(self.overlay.toggle_theme)
 
         self._setup_connections()
         self._configure_geometry()
@@ -1524,6 +1526,19 @@ class IDEyeApplication(QObject):
     def _on_calibration_frame(self, _frame: Any, mar: float) -> None:
         if self.calibration_ui is not None:
             self.calibration_ui.on_mar_updated(mar)
+            if _frame is not None and hasattr(_frame, "mean"):
+                try:
+                    luma = float(np.mean(_frame))
+                    self.calibration_ui.on_lighting_updated(luma)
+                except Exception:
+                    pass
+            if self.tracker is not None and hasattr(self.tracker, "get_latest_landmarks"):
+                try:
+                    lm = self.tracker.get_latest_landmarks()
+                    if lm is not None:
+                        self.calibration_ui.on_landmarks_updated(lm)
+                except Exception:
+                    pass
 
     def _on_calibration_finished(self, succeeded: bool) -> None:
         """Handles calibration completion/cancellation and restores overlay and debug widget."""

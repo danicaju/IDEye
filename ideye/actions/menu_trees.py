@@ -1578,6 +1578,18 @@ def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
         sticky=False,
     )
 
+    # =========================================================================
+    # 13. GAZE COMMAND PALETTE (SPOTLIGHT)
+    # =========================================================================
+    tree["COMMAND_PALETTE"] = MenuNode(
+        id="COMMAND_PALETTE",
+        title="PALETA DE COMANDOS",
+        breadcrumb_label="SPOTLIGHT",
+        items=populate_command_palette_items(parent_id="ROOT"),
+        parent_id="ROOT",
+        sticky=False,
+    )
+
     return tree
 
 
@@ -1586,7 +1598,7 @@ def populate_command_palette_items(parent_id: str = "ROOT") -> List[MenuAction]:
     return [
         MenuAction("CMD_SAVE", "1: Guardar", "Ctrl+S", "KEY", key_name="SAVE", icon="edit"),
         MenuAction("CMD_FORMAT", "2: Formatear", "Shift+Alt+F", "KEY", key_name="FORMAT", icon="format"),
-        MenuAction("CMD_VSCODE_PALETTE", "3: Paleta VS Code", "Ctrl+Shift+P", "KEY", key_name="COMMAND_PALETTE", icon="wand"),
+        MenuAction("CMD_TOGGLE_THEME", "3: Tema HUD", "Conmutar tema", "ACTION", icon="palette"),
         MenuAction("CMD_UNDO", "4: Deshacer", "Ctrl+Z", "KEY", key_name="UNDO", sticky=True, icon="edit"),
         create_pause_action("5"),
         MenuAction("CMD_TERMINAL", "6: Terminal", "Ctrl+`", "KEY", key_name="TERMINAL", icon="terminal"),

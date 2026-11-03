@@ -79,6 +79,12 @@ class TestErgonomicsAndLayout(unittest.TestCase):
         self.overlay.on_gaze_updated(0.85, 0.50)
         self.assertIsNotNone(self.overlay.hovered_block)
 
+    def test_right_dock_header_alignment(self):
+        self.overlay.set_hud_layout("RIGHT_DOCK")
+        card_2 = self.overlay.get_block_rect(2)
+        header_rect = self.overlay.header_rect
+        self.assertAlmostEqual(header_rect.right(), card_2.right(), delta=1.0)
+
 
 class TestSmartGhostMode(unittest.TestCase):
     """Tests Smart Ghost Mode smooth dimming and 0ms instant wake."""
@@ -106,6 +112,23 @@ class TestSmartGhostMode(unittest.TestCase):
     def test_ghost_mode_instant_0ms_wake_on_hud_gaze(self):
         self.overlay._ghost_opacity = 0.15
         self.overlay._wake_ghost_peek()
+        self.assertEqual(self.overlay._ghost_opacity, 1.0)
+
+    def test_ghost_mode_does_not_wake_while_reading_editor_in_right_dock(self):
+        self.overlay.set_hud_layout("RIGHT_DOCK")
+        self.overlay._ghost_opacity = 0.15
+        self.overlay._last_ghost_interaction = time.time() - 50.0
+
+        # Looking at editor on the left (e.g. x=0.25, y=0.50)
+        self.overlay.on_gaze_updated(0.25, 0.50)
+        self.assertIsNone(self.overlay.hovered_block)
+        # Opacity remains dimmed
+        self.assertEqual(self.overlay._ghost_opacity, 0.15)
+
+        # Looking into HUD dock (e.g. x=0.85, y=0.50)
+        self.overlay.on_gaze_updated(0.85, 0.50)
+        self.assertIsNotNone(self.overlay.hovered_block)
+        # Opacity wakes instantly to 1.0 (0ms)
         self.assertEqual(self.overlay._ghost_opacity, 1.0)
 
 
@@ -239,6 +262,50 @@ class TestUniversalUndoAndCommandPalette(unittest.TestCase):
         act_if = get_dynamic_ast_action_for_context("IF_BLOCK", "PYTHON", "9")
         self.assertIn("elif", act_if.label.lower())
 
+    def test_universal_undo_execute_action_variants(self):
+        undo_calls = []
+        self.overlay.undo_requested.connect(lambda: undo_calls.append("UNDO"))
+
+        # Test execute_action with EDIT_UNDO
+        edit_undo = MenuAction("EDIT_UNDO", "4: Deshacer", "Ctrl+Z", "KEY", key_name="UNDO")
+        self.overlay.execute_action(edit_undo, target_block=3)
+        self.assertEqual(len(undo_calls), 1)
+
+        # Test execute_action with CMD_UNDO
+        cmd_undo = MenuAction("CMD_UNDO", "4: Deshacer", "Ctrl+Z", "KEY", key_name="UNDO")
+        self.overlay.execute_action(cmd_undo, target_block=3)
+        self.assertEqual(len(undo_calls), 2)
+
+    def test_universal_undo_wink_left_gesture_at_root(self):
+        undo_calls = []
+        self.overlay.undo_requested.connect(lambda: undo_calls.append("UNDO"))
+
+        self.overlay.current_node_id = "ROOT"
+        self.overlay.on_gesture_triggered("WINK_LEFT")
+        self.assertEqual(undo_calls, ["UNDO"])
+
+    def test_root_card_9_behavior_general_and_ast_context(self):
+        self.overlay.current_node_id = "ROOT"
+        self.overlay.current_context_mode_id = "coding"
+        self.overlay._cached_adaptive_node = None
+        self.overlay._last_ast_eval_time = 0.0
+
+        # General context -> Card 9 is MENU_SNIPPETS
+        node_gen = self.overlay.current_node
+        self.assertEqual(node_gen.items[8].id, "MENU_SNIPPETS")
+        self.assertEqual(node_gen.items[8].submenu_id, "SNIPPETS")
+
+        # Mock AST context -> Card 9 becomes immediate dynamic AST snippet
+        class MockReader:
+            def detect_syntactic_context(self, language="PYTHON"):
+                return {"context": "FUNCTION_SIGNATURE", "line": "def hello():"}
+
+        self.overlay.context_reader = MockReader()
+        self.overlay._cached_adaptive_node = None
+        self.overlay._last_ast_eval_time = 0.0
+        node_ast = self.overlay.current_node
+        self.assertIn("docstring", node_ast.items[8].label.lower())
+
 
 class TestHighContrastThemesAndSoundscape(unittest.TestCase):
     """Tests WCAG AAA OLED Black, Solarized Dark themes, and procedural sound earcons."""
@@ -270,6 +337,16 @@ class TestHighContrastThemesAndSoundscape(unittest.TestCase):
         # Toggle back to CYBER_GLASS
         t3 = self.overlay.toggle_theme()
         self.assertEqual(t3, "CYBER_GLASS")
+
+    def test_theme_color_sync_and_dwell_accent(self):
+        self.overlay.set_theme("OLED_BLACK")
+        self.assertEqual(self.overlay.theme_color, "#00FF66")
+
+        self.overlay.set_theme("SOLARIZED_DARK")
+        self.assertEqual(self.overlay.theme_color, "#268BD2")
+
+        self.overlay.set_theme("CYBER_GLASS")
+        self.assertEqual(self.overlay.theme_color, "#00F0FF")
 
     def test_sound_feedback_aliases_and_earcons(self):
         snd = SoundFeedbackManager(enabled=False)  # muted for headless runner
@@ -321,6 +398,24 @@ class TestGuidedMiniTutorial(unittest.TestCase):
         # Close
         self.overlay.close_mini_tutorial()
         self.assertFalse(self.overlay.show_tutorial_modal)
+
+    def test_tutorial_launch_from_help_modal(self):
+        self.overlay.show_help_modal = True
+        self.overlay._update_header_exit_rect()
+        tut_rect = getattr(self.overlay, "help_modal_tutorial_rect", None)
+        self.assertIsNotNone(tut_rect)
+        self.assertTrue(tut_rect.isValid())
+
+        # Gaze hover over tutorial button
+        pt = tut_rect.center()
+        self.overlay.on_gaze_updated(pt.x() / 1920.0, pt.y() / 1080.0)
+        self.assertTrue(self.overlay.hovered_help_modal_tutorial)
+
+        # Gesture click to activate tutorial
+        self.overlay.on_gesture_triggered("MOUTH_CLICK")
+        self.assertFalse(self.overlay.show_help_modal)
+        self.assertTrue(self.overlay.show_tutorial_modal)
+        self.assertEqual(self.overlay.tutorial_step, 1)
 
 
 if __name__ == "__main__":

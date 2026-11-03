@@ -432,8 +432,10 @@ class OverlayWindow(QWidget):
         self.help_modal_rect: QRectF = QRectF()
         self.help_modal_close_rect: QRectF = QRectF()
         self.help_modal_guide_rect: QRectF = QRectF()
+        self.help_modal_tutorial_rect: QRectF = QRectF()
         self.hovered_help_modal_close: bool = False
         self.hovered_help_modal_guide: bool = False
+        self.hovered_help_modal_tutorial: bool = False
 
         # Hands-free header language button state
         self.hovered_header_lang: bool = False
@@ -692,7 +694,8 @@ class OverlayWindow(QWidget):
 
     def _set_theme_color(self, theme_color: str) -> None:
         """Updates the cached active-card and mode-button colors for a mode."""
-        color = QColor(theme_color or "#00F0FF")
+        self.theme_color = str(theme_color or "#00F0FF")
+        color = QColor(self.theme_color)
         self._pen_card_active = QPen(color, 2.5)
         self._pen_mode_idle = QPen(color, 1.0)
         glow = QColor(color)
@@ -841,7 +844,8 @@ class OverlayWindow(QWidget):
                     w * float(getattr(self, "right_dock_ratio", 0.30)),
                 ),
             )
-            left = w - self.margin - dock_w
+            dock_w = min(dock_w, max(120.0, w - 2.0 * self.margin))
+            left = max(self.margin, w - self.margin - dock_w)
             right = w - self.margin
         else:
             right_margin = self._get_effective_right_margin(w)
@@ -933,15 +937,19 @@ class OverlayWindow(QWidget):
         close_btn_h = 42.0
         button_gap = 12.0
         row_margin = 24.0
-        available = max(200.0, card.width() - row_margin * 2.0 - button_gap)
-        guide_btn_w = min(330.0, available * 0.52)
-        close_btn_w = min(300.0, available - guide_btn_w)
+        available = max(300.0, card.width() - row_margin * 2.0 - 2.0 * button_gap)
+        guide_btn_w = min(280.0, available * 0.36)
+        tutorial_btn_w = min(230.0, available * 0.28)
+        close_btn_w = max(160.0, available - guide_btn_w - tutorial_btn_w)
         row_y = card.y() + card.height() - close_btn_h - 14.0
         self.help_modal_guide_rect = QRectF(
             card.x() + row_margin, row_y, guide_btn_w, close_btn_h
         )
+        self.help_modal_tutorial_rect = QRectF(
+            self.help_modal_guide_rect.right() + button_gap, row_y, tutorial_btn_w, close_btn_h
+        )
         self.help_modal_close_rect = QRectF(
-            card.right() - row_margin - close_btn_w, row_y, close_btn_w, close_btn_h
+            self.help_modal_tutorial_rect.right() + button_gap, row_y, close_btn_w, close_btn_h
         )
 
     def _should_show_last_action(self) -> bool:
@@ -967,8 +975,9 @@ class OverlayWindow(QWidget):
                     w * float(getattr(self, "right_dock_ratio", 0.30)),
                 ),
             )
-            grid_left = w - self.margin - dock_w
-            right_margin = self.margin
+            dock_w = min(dock_w, max(120.0, w - 2.0 * self.margin))
+            grid_left = max(self.margin, w - self.margin - dock_w)
+            right_margin = 0.0
         else:
             right_margin = self._get_effective_right_margin(w)
             grid_left = self._get_grid_left(w, right_margin)
@@ -1397,13 +1406,6 @@ class OverlayWindow(QWidget):
         if not (math.isfinite(gx) and math.isfinite(gy)):
             return
         self.current_gaze = (gx, gy)
-        try:
-            old_x, old_y = self._last_ghost_gaze
-            if abs(float(gx) - old_x) + abs(float(gy) - old_y) >= 0.10:
-                self._wake_ghost_peek()
-        except Exception:
-            pass
-        self._last_ghost_gaze = (float(gx), float(gy))
         self._apply_gaze_scroll(gy)
 
         # FreeLook: header remains interactive; the rest of the screen moves
@@ -1439,6 +1441,7 @@ class OverlayWindow(QWidget):
                     for other, _ in header_targets:
                         setattr(self, other, other == attr)
                     self.hovered_block = None
+                    self._wake_ghost_peek()
                     self.update()
                     return
             for attr, _ in header_targets:
@@ -1458,25 +1461,34 @@ class OverlayWindow(QWidget):
         py = gy * h
         px = gx * w
 
-        # If cheat sheet modal is open, hit test its close button
+        # If cheat sheet modal is open, hit test its buttons (Guide, Tutorial, Close)
         if self.show_help_modal:
             guide_hit = (
                 self.help_modal_guide_rect.isValid()
                 and self.help_modal_guide_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
+            )
+            tutorial_hit = (
+                hasattr(self, "help_modal_tutorial_rect")
+                and self.help_modal_tutorial_rect.isValid()
+                and self.help_modal_tutorial_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
             )
             close_hit = (
                 self.help_modal_close_rect.isValid()
                 and self.help_modal_close_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
             )
             self.hovered_help_modal_guide = bool(guide_hit)
-            self.hovered_help_modal_close = bool(close_hit and not guide_hit)
+            self.hovered_help_modal_tutorial = bool(tutorial_hit and not guide_hit)
+            self.hovered_help_modal_close = bool(close_hit and not guide_hit and not tutorial_hit)
             self.hovered_header_exit = False
             self.hovered_header_help = False
             self.hovered_block = None
+            if guide_hit or tutorial_hit or close_hit:
+                self._wake_ghost_peek()
             self.update()
             return
 
         self.hovered_help_modal_close = False
+        self.hovered_help_modal_tutorial = False
 
         # Check if gaze is targeting the prominent header exit button (+15px buffer)
         if not self.reading_mode and self.header_exit_rect.isValid():
@@ -1485,6 +1497,7 @@ class OverlayWindow(QWidget):
                 self.hovered_header_exit = True
                 self.hovered_header_help = False
                 self.hovered_block = None
+                self._wake_ghost_peek()
                 self.update()
                 return
 
@@ -1497,6 +1510,7 @@ class OverlayWindow(QWidget):
                 self.hovered_header_help = True
                 self.hovered_header_exit = False
                 self.hovered_block = None
+                self._wake_ghost_peek()
                 self.update()
                 return
 
@@ -1511,6 +1525,7 @@ class OverlayWindow(QWidget):
                 self.hovered_header_help = False
                 self.hovered_header_lang = False
                 self.hovered_block = None
+                self._wake_ghost_peek()
                 self.update()
                 return
 
@@ -1524,6 +1539,7 @@ class OverlayWindow(QWidget):
                 self.hovered_header_exit = False
                 self.hovered_header_help = False
                 self.hovered_block = None
+                self._wake_ghost_peek()
                 self.update()
                 return
 
@@ -1537,6 +1553,7 @@ class OverlayWindow(QWidget):
         ):
             self.hovered_header_screen = True
             self.hovered_block = None
+            self._wake_ghost_peek()
             self.update()
             return
         self.hovered_header_screen = False
@@ -1549,6 +1566,7 @@ class OverlayWindow(QWidget):
         ):
             self.hovered_sniper_action = True
             self.hovered_block = None
+            self._wake_ghost_peek()
             self.update()
             return
         self.hovered_sniper_action = False
@@ -1571,7 +1589,8 @@ class OverlayWindow(QWidget):
                         w * float(getattr(self, "right_dock_ratio", 0.30)),
                     ),
                 )
-                dock_left = w - self.margin - dock_w
+                dock_w = min(dock_w, max(120.0, w - 2.0 * self.margin))
+                dock_left = max(self.margin, w - self.margin - dock_w)
                 if px < dock_left - 15.0:
                     self.hovered_block = None
                     self._dwell_block = None
@@ -2660,12 +2679,16 @@ class OverlayWindow(QWidget):
         if self.show_help_modal and gesture_name == "MOUTH_CLICK":
             self.mouth_clicked.emit(self.hovered_block if self.hovered_block is not None else -1)
             open_guide = bool(getattr(self, "hovered_help_modal_guide", False))
+            start_tut = bool(getattr(self, "hovered_help_modal_tutorial", False))
             self.show_help_modal = False
             self.hovered_help_modal_guide = False
+            self.hovered_help_modal_tutorial = False
             self.hovered_help_modal_close = False
             if open_guide:
                 self.last_action_desc = "Abriendo Manual Interactivo"
                 self.interactive_guide_requested.emit()
+            elif start_tut:
+                self.start_mini_tutorial()
             else:
                 self.last_action_desc = "Cerrar Ayuda"
             self.update()
@@ -2744,20 +2767,8 @@ class OverlayWindow(QWidget):
             else:
                 if self.code_injector.is_busy:
                     return
-                undo_action = MenuAction(
-                    id="ACTION_UNDO",
-                    label="Deshacer",
-                    hint="Ctrl+Z",
-                    action_type="KEY",
-                    key_name="UNDO",
-                    sticky=True,
-                    icon="↶",
-                )
-                self.code_injector.execute_action(undo_action)
-                self.last_action_desc = "Deshacer (Ctrl+Z)"
-                self.action_executed.emit("ACTION_UNDO", "Deshacer (Ctrl+Z)")
+                self.trigger_undo()
                 self.block_activated.emit(0, "ACTION_UNDO")
-                self.update()
                 return
 
         if gesture_name != "MOUTH_CLICK":
@@ -3379,8 +3390,15 @@ class OverlayWindow(QWidget):
             self.block_activated.emit(target_block, item.id)
             return
 
-        if item.id == "CMD_UNDO":
-            self.trigger_undo()
+        if item.id in ("CMD_UNDO", "EDIT_UNDO", "ACTION_UNDO") or getattr(item, "key_name", "") == "UNDO":
+            self.trigger_undo(item.id)
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.id == "CMD_TUTORIAL":
+            self.start_mini_tutorial()
+            self.last_action_desc = "Tutorial guiado de inicio"
+            self.action_executed.emit(item.id, self.last_action_desc)
             self.block_activated.emit(target_block, item.id)
             return
 
@@ -3419,13 +3437,13 @@ class OverlayWindow(QWidget):
             self.block_activated.emit(target_block, item.id)
             return
 
-    def trigger_undo(self) -> None:
+    def trigger_undo(self, action_id: str = "ACTION_UNDO") -> None:
         """Triggers Universal Undo (Ctrl+Z) in the active editor."""
         self._play_sound("undo")
         self.code_injector.send_key("UNDO")
         self.last_action_desc = "Deshacer (Ctrl+Z)"
         self.undo_requested.emit()
-        self.action_executed.emit("UNDO", self.last_action_desc)
+        self.action_executed.emit(action_id, self.last_action_desc)
         self.update()
 
     def set_gaze_estimator(self, estimator: Any) -> None:
@@ -3720,12 +3738,20 @@ class OverlayWindow(QWidget):
                 self.help_modal_guide_rect.isValid()
                 and self.help_modal_guide_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
             )
+            start_tutorial = (
+                hasattr(self, "help_modal_tutorial_rect")
+                and self.help_modal_tutorial_rect.isValid()
+                and self.help_modal_tutorial_rect.adjusted(-12.0, -12.0, 12.0, 12.0).contains(px, py)
+            )
             self.show_help_modal = False
             self.hovered_help_modal_guide = False
+            self.hovered_help_modal_tutorial = False
             self.hovered_help_modal_close = False
             if open_guide:
                 self.last_action_desc = "Abriendo Manual Interactivo"
                 self.interactive_guide_requested.emit()
+            elif start_tutorial:
+                self.start_mini_tutorial()
             self.update()
             event.accept()
             return
@@ -4775,7 +4801,8 @@ class OverlayWindow(QWidget):
                 and i != 4
             ):
                 dwell_rect = number_rect.adjusted(-3.0, -3.0, 3.0, 3.0)
-                dwell_pen = QPen(QColor(0, 240, 255, 230), 2.5)
+                theme_accent = QColor(self.theme_color or "#00F0FF")
+                dwell_pen = QPen(QColor(theme_accent.red(), theme_accent.green(), theme_accent.blue(), 230), 2.5)
                 if is_danger:
                     dwell_pen.setColor(QColor(239, 68, 68, 230))
                 painter.setPen(dwell_pen)
@@ -5069,19 +5096,7 @@ class OverlayWindow(QWidget):
 
         painter.restore()
 
-        close_btn_h = 42.0
-        button_gap = 12.0
-        row_margin = 24.0
-        available = max(200.0, card.width() - row_margin * 2.0 - button_gap)
-        guide_btn_w = min(330.0, available * 0.52)
-        close_btn_w = min(300.0, available - guide_btn_w)
-        row_y = card.y() + card.height() - close_btn_h - 14.0
-        self.help_modal_guide_rect = QRectF(
-            card.x() + row_margin, row_y, guide_btn_w, close_btn_h
-        )
-        self.help_modal_close_rect = QRectF(
-            card.right() - row_margin - close_btn_w, row_y, close_btn_w, close_btn_h
-        )
+        self._update_help_modal_rect()
         if getattr(self, "hovered_help_modal_guide", False):
             painter.setBrush(QBrush(QColor(124, 58, 237, 90)))
             painter.setPen(Qt.PenStyle.NoPen)
@@ -5100,6 +5115,26 @@ class OverlayWindow(QWidget):
             self.help_modal_guide_rect,
             Qt.AlignmentFlag.AlignCenter,
             " ABRIR MANUAL INTERACTIVO",
+        )
+
+        if getattr(self, "hovered_help_modal_tutorial", False):
+            painter.setBrush(QBrush(QColor(14, 165, 233, 90)))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(self.help_modal_tutorial_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
+            tut_brush = QBrush(QColor(2, 132, 199, 245))
+            tut_pen = QPen(QColor(224, 242, 254), 2.8)
+        else:
+            tut_brush = QBrush(QColor(12, 74, 110, 230))
+            tut_pen = QPen(QColor(56, 189, 248, 210), 1.6)
+        painter.setBrush(tut_brush)
+        painter.setPen(tut_pen)
+        painter.drawRoundedRect(self.help_modal_tutorial_rect, 8.0, 8.0)
+        painter.setFont(self._font_modal_close)
+        painter.setPen(QColor(240, 249, 255))
+        painter.drawText(
+            self.help_modal_tutorial_rect,
+            Qt.AlignmentFlag.AlignCenter,
+            "INICIAR TUTORIAL (F2)",
         )
 
         if getattr(self, "hovered_help_modal_close", False):

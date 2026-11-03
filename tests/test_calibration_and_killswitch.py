@@ -329,6 +329,7 @@ class TestEmergencyKillswitchAndSafety(unittest.TestCase):
         expected = {
             "q", "r", "v", "k", "s", "f", "g", "m",
             "a", "b", "t", "c", "p", "l", "h", "n", "z", "j", "i", "w",
+            "d", "o",
         }
         actual = {spec.rsplit("+", 1)[-1] for spec in HOTKEY_ACTIONS}
         self.assertEqual(actual, expected)

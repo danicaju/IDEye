@@ -274,6 +274,8 @@ class OverlayWindow(QWidget):
         self.clipboard_manager: Optional[Any] = None
         self.menu_tree: Dict[str, MenuNode] = menu_tree if menu_tree is not None else build_menu_tree(self.current_language)
         self.context_reader: ContextReader = context_reader if context_reader is not None else ContextReader()
+        if hasattr(self.code_injector, "set_context_reader"):
+            self.code_injector.set_context_reader(self.context_reader)
         self.diagnostics_fixer = DiagnosticsFixer(self.context_reader)
         self.ast_code_jumper = ASTCodeJumper(self.context_reader)
         self.agentic_launcher = AgenticPromptLauncher(
@@ -1234,9 +1236,20 @@ class OverlayWindow(QWidget):
         self.ai_status_updated.emit("Buscando sugerencias...")
         self.update()
 
+        editor_ctx = self.context_reader.get_editor_context() if self.context_reader else {}
+        pref = editor_ctx.get("prefix_lines") or []
+        curr = editor_ctx.get("current_line") or ""
+        live_context = ""
+        if pref or curr:
+            combo = list(pref[-30:])
+            if curr:
+                combo.append(curr)
+            live_context = "\n".join(combo)
+        live_symbols = editor_ctx.get("local_symbols") or []
+
         self.ai_predictor_worker = AIPredictorWorker(
-            context_text="",
-            local_symbols=[],
+            context_text=live_context,
+            local_symbols=live_symbols,
             provider=getattr(config, "LLM_PROVIDER", "ollama"),
             endpoint=getattr(config, "LLM_ENDPOINT", "http://localhost:11434/api/generate"),
             model=getattr(config, "LLM_MODEL", "codellama"),
@@ -2873,6 +2886,7 @@ class OverlayWindow(QWidget):
             "WRITING_SPACE",
             "WRITING_BACKSPACE",
             "WRITING_CASE",
+            "WRITING_AI",
         }:
             # Selecting a whole phrase also starts a new word context.
             if self.current_node_id == "WRITING_WORDS" and action_type == "SNIPPET":
@@ -2885,6 +2899,11 @@ class OverlayWindow(QWidget):
         mode = self._writing_mode()
         if mode is None:
             return False
+
+        if action_type == "WRITING_AI":
+            cmd = getattr(item, "snippet", "") or "rephrase"
+            self._execute_writing_ai(cmd, item, target_block)
+            return True
 
         if action_type == "WRITING_LETTER":
             text = mode.record_letter(item.snippet or "")
@@ -2941,6 +2960,60 @@ class OverlayWindow(QWidget):
             return True
 
         return False
+
+    def _execute_writing_ai(self, cmd: str, item: MenuAction, target_block: int = 0) -> None:
+        """Executes real AI writing assist (rephrase, correct, summarize, etc.) hands-free."""
+        try:
+            from ideye.modes.writing_mode import WRITING_AI_PROMPTS, correct_writing_text
+        except ImportError:
+            WRITING_AI_PROMPTS = {}
+            correct_writing_text = lambda s: s
+
+        target_text = ""
+        if self._vscode_editor_state:
+            target_text = str(self._vscode_editor_state.get("selection") or "").strip()
+        if not target_text and self.context_reader:
+            ctx = self.context_reader.get_editor_context()
+            target_text = str(ctx.get("active_selection") or "").strip()
+            if not target_text:
+                target_text = str(ctx.get("current_line") or "").strip()
+        if not target_text and self.context_reader:
+            target_text = self.context_reader.get_last_line()
+        if not target_text:
+            mode = self._writing_mode()
+            target_text = getattr(mode, "_prefix", "") if mode else ""
+
+        if cmd == "correct" and target_text:
+            corrected = correct_writing_text(target_text)
+            if corrected and corrected != target_text and not (self.code_injector and self.code_injector.has_native_websocket):
+                self.code_injector.insert_snippet(corrected)
+                self.last_action_desc = "Texto corregido"
+                self.action_executed.emit(item.id, self.last_action_desc)
+                self.block_activated.emit(target_block, item.id)
+                self.update()
+                return
+
+        sample = target_text or "el texto seleccionado"
+        template = WRITING_AI_PROMPTS.get(cmd, "Reformula o asiste en la redacción del siguiente texto:\n\n{text}")
+        prompt = template.format(text=sample)
+
+        ws = getattr(self.code_injector, "websocket_bridge", None)
+        if ws is not None and getattr(ws, "is_connected", False):
+            if hasattr(self, "agentic_launcher") and self.agentic_launcher is not None:
+                self.agentic_launcher.dispatch(cmd, prompt, bridge=ws, selection_only=bool(target_text))
+            elif hasattr(ws, "send_trigger_agent_prompt"):
+                ws.send_trigger_agent_prompt(action_id=cmd, prompt=prompt, selection_only=bool(target_text))
+            self.last_action_desc = f"IA: {item.hint} enviado a VS Code"
+        else:
+            if hasattr(self, "copy_agentic_prompt"):
+                self.copy_agentic_prompt(prompt)
+            elif hasattr(self.code_injector, "clipboard") and hasattr(self.code_injector.clipboard, "copy"):
+                self.code_injector.clipboard.copy(prompt)
+            self.last_action_desc = f"Prompt de {item.hint} en portapapeles"
+
+        self.action_executed.emit(item.id, self.last_action_desc)
+        self.block_activated.emit(target_block, item.id)
+        self.update()
 
     def _restore_autofix_slot(self) -> None:
         saved = self._autofix_slot8_saved

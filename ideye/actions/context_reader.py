@@ -311,8 +311,18 @@ class ContextReader:
     def get_recent_context(self, max_lines: int = 40, file_path: Optional[str] = None) -> str:
         """
         Returns the last `max_lines` from the active file.
+        Prioritizes live editor snapshot (VS Code / shadow buffer) when active.
         Safe against empty files, syntax errors, and missing files.
         """
+        if file_path is None and self.editor_state:
+            prefix = self.editor_state.get("prefix_lines") or self.editor_state.get("prefixLines") or []
+            curr = self.editor_state.get("current_line") or self.editor_state.get("lineText") or ""
+            combo = list(prefix)
+            if curr:
+                combo.append(curr)
+            if combo:
+                return "\n".join(combo[-max_lines:])
+
         content = self.read_file_content(file_path)
         if not content:
             return ""
@@ -322,7 +332,11 @@ class ContextReader:
         return "\n".join(recent_lines)
 
     def get_last_line(self, file_path: Optional[str] = None) -> str:
-        """Returns the last non-empty stripped line from the active file."""
+        """Returns the last non-empty stripped line from the active file or live editor state."""
+        if file_path is None and self.editor_state:
+            curr = (self.editor_state.get("current_line") or self.editor_state.get("lineText") or "").strip()
+            if curr and not curr.startswith("#"):
+                return curr
         context = self.get_recent_context(max_lines=20, file_path=file_path)
         if not context:
             return ""
@@ -345,7 +359,14 @@ class ContextReader:
         Extracts variables, arguments, functions, and classes across
         Python, TypeScript, Rust, C++, and Go.
         Returns up to `max_symbols` (default 12) unique symbols, prioritized by recency.
+        Prioritizes live VS Code editor state symbols when available.
         """
+        if source_code is None and file_path is None and self.editor_state:
+            live = self.editor_state.get("local_symbols") or self.editor_state.get("localSymbols") or []
+            if live and isinstance(live, list):
+                valid_live = [s for s in live if isinstance(s, str) and s.isidentifier()]
+                if valid_live:
+                    return valid_live[:max_symbols]
         try:
             content = source_code if source_code is not None else self.read_file_content(file_path)
         except (FileNotFoundError, PermissionError, OSError):

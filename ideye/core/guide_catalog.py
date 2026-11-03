@@ -168,15 +168,15 @@ PAGES: List[Dict[str, Any]] = [
                 "icon": "code",
                 "badge": "01",
                 "title": "Código",
-                "text": "Árboles AST, snippets y operadores con cursor inteligente: al completar `func` + `()` el cursor queda tras `func()`; en pares vacíos queda dentro. Predicción IA para programar sin teclear.",
+                "text": "Árboles AST, snippets y operadores con cursor inteligente: al insertar condicionales como if () el cursor se posiciona dentro de los paréntesis para escribir la condición al momento; al seleccionar una sugerencia relacionada con if, el prefijo previo se sustituye automáticamente.",
                 "chip": "AST + IA",
             },
             {
                 "icon": "writing",
                 "badge": "02",
                 "title": "Redacción",
-                "text": "Teclado de letras con ñ y acentos, predicción de palabras y frases completas para documentar.",
-                "chip": "Letras + palabras",
+                "text": "Teclado T9 con ñ, acentos y mayúsculas, predicción de palabras y asistente de redacción con IA para reformular, corregir ortografía/puntuación o expandir párrafos sin texto predeterminado.",
+                "chip": "T9 + Asistencia IA",
             },
             {
                 "icon": "terminal",

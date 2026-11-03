@@ -134,6 +134,8 @@ class CodeInjector:
 
         # Phase 7.5: prefix tracker for Smart Prefix Deduplication.
         self._current_word_prefix: str = ""
+        self._last_statement_prefix: str = ""
+        self._context_reader: Optional[Any] = None
         self._prefix_lock = threading.Lock()
 
         # Background worker thread & FIFO task queue
@@ -268,12 +270,21 @@ class CodeInjector:
                     pass
 
     # ------------------------------------------------------------------ #
-    # Phase 7.5: Smart Prefix Deduplication
+    # Phase 7.5: Smart Prefix Deduplication & Statement Replacement
     # ------------------------------------------------------------------ #
+    def set_context_reader(self, reader: Optional[Any]) -> None:
+        """Assigns the ContextReader instance for live editor context awareness."""
+        self._context_reader = reader
+
     def set_current_word_prefix(self, prefix: str) -> None:
         """Allows the overlay/ContextReader to seed the physical-typing prefix."""
         with self._prefix_lock:
             self._current_word_prefix = (prefix or "")[-64:]
+
+    def set_last_statement_prefix(self, prefix: str) -> None:
+        """Seeds the recent control-flow statement prefix (e.g. 'if ()')."""
+        with self._prefix_lock:
+            self._last_statement_prefix = str(prefix or "").strip()
 
     def prepare_insert_text(self, text: str) -> Tuple[str, int]:
         """Returns (text_to_insert, backspaces_needed) and advances the prefix tracker.
@@ -281,6 +292,9 @@ class CodeInjector:
         If the user already typed "h" and then selects "hola", this returns
         ("ola", 0). If the selected word changes case ("Hola"), it returns
         ("Hola", 1) so the injector can erase the stale prefix first.
+        If the user typed or inserted 'if ()', 'if (', or 'if', and then selects
+        an if-suggestion ('if condition:', 'if (x):', 'elif condition:'), this
+        returns ('if condition:', backspaces) so the typed if() is replaced.
         """
         if not text:
             return "", 0
@@ -289,6 +303,32 @@ class CodeInjector:
             prepared = text
             backspaces = 0
             stripped = text.strip()
+
+            # Statement-level replacement for if/while/for/elif suggestions
+            is_if_suggestion = stripped.startswith(("if ", "if(", "elif ", "elif("))
+            if is_if_suggestion:
+                target_erasure = ""
+                if self._last_statement_prefix in {"if ()", "if()", "if (", "if(", "if :", "if ():", "if"}:
+                    target_erasure = self._last_statement_prefix
+                elif prefix.lower() in {"if", "if()", "if ()", "if("}:
+                    target_erasure = prefix
+                elif self._context_reader is not None:
+                    try:
+                        ctx = self._context_reader.get_editor_context() if hasattr(self._context_reader, "get_editor_context") else {}
+                        curr_line = str(ctx.get("current_line") or "").strip()
+                        for cand in ("if ()", "if()", "if (", "if(", "if :", "if"):
+                            if curr_line.endswith(cand):
+                                target_erasure = cand
+                                break
+                    except Exception:
+                        pass
+                if target_erasure:
+                    backspaces = len(target_erasure)
+                    self._last_statement_prefix = ""
+                    self._current_word_prefix = ""
+                    self._update_prefix_after_insert(text)
+                    return prepared, backspaces
+
             if prefix and stripped:
                 if stripped.lower().startswith(prefix.lower()):
                     if len(stripped) > len(prefix):
@@ -311,6 +351,12 @@ class CodeInjector:
     def _update_prefix_after_insert(self, text: str) -> None:
         if not text:
             return
+        clean = text.strip()
+        if clean in {"if ()", "if()", "if (", "if(", "if", "if :", "if ():"}:
+            self._last_statement_prefix = clean
+        elif not clean.startswith(("if", "elif", "while", "for")):
+            self._last_statement_prefix = ""
+
         if any(ch.isspace() for ch in text) or not all(
             ch.isalnum() or ch == "_" for ch in text
         ):
@@ -327,8 +373,10 @@ class CodeInjector:
         with self._prefix_lock:
             if norm in {"BACKSPACE"}:
                 self._current_word_prefix = self._current_word_prefix[:-1]
+                self._last_statement_prefix = self._last_statement_prefix[:-1]
             else:
                 self._current_word_prefix = ""
+                self._last_statement_prefix = ""
 
     def _effective_cursor_offset_left(
         self,
@@ -342,8 +390,13 @@ class CodeInjector:
         cursor after ``func()`` so the next token (for example ``:``) is
         appended in the right place. When the pair is inserted at an empty
         position, keep the historical centered cursor.
+        For control flow structures (if, while, for, elif), the cursor must land
+        inside the pair so the condition can be written immediately: if (|).
         """
         pairs = {"()", "[]", "{}", '""', "''"}
+        control_flow = {"if", "elif", "while", "for", "switch", "catch", "assert"}
+        if prefix_before and prefix_before.strip().lower() in control_flow:
+            return max(1, int(offset_left)) if offset_left else 1
         if prefix_before and prepared in pairs:
             return 0
         try:
@@ -650,6 +703,25 @@ class CodeInjector:
     def has_native_websocket(self) -> bool:
         """Returns True if a WebSocketBridge is assigned and currently has connected clients."""
         return self.websocket_bridge is not None and getattr(self.websocket_bridge, "is_connected", False)
+
+    @staticmethod
+    def embed_vscode_snippet_cursor(snippet: str, offset_left: int = 0, offset_up: int = 0) -> str:
+        """Embeds $0 in a snippet for VS Code if tabstops are not already defined."""
+        if not snippet or "$0" in snippet or "$1" in snippet or (offset_left == 0 and offset_up == 0):
+            return snippet
+        lines = snippet.splitlines(keepends=True)
+        if not lines:
+            return snippet
+        target_line_idx = len(lines) - 1 - max(0, offset_up)
+        if 0 <= target_line_idx < len(lines):
+            line = lines[target_line_idx]
+            nl = "\n" if line.endswith("\n") else ("\r\n" if line.endswith("\r\n") else "")
+            raw_line = line[:-len(nl)] if nl else line
+            target_char_idx = max(0, len(raw_line) - max(0, offset_left))
+            lines[target_line_idx] = raw_line[:target_char_idx] + "$0" + raw_line[target_char_idx:] + nl
+            return "".join(lines)
+        return snippet
+
 
     def execute_action(self, action: Any, async_exec: Optional[bool] = None) -> bool:
         """

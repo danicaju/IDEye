@@ -311,7 +311,43 @@ class TestCodeInjector(unittest.TestCase):
         )
         self.assertTrue(injector.execute_action(action))
         self.assertEqual(bridge.inserts[0][0], "()")
-        self.assertEqual(bridge.inserts[0][1], 0)
+    def test_delimiter_after_if_places_cursor_inside_parens(self):
+        """After typing 'if', inserting () must leave the cursor inside: if (|)."""
+        mock_kb = MockRecorderKeyboard()
+        injector = CodeInjector(
+            async_mode=False,
+            paste_delay=0.001,
+            keyboard_controller=mock_kb,
+            clipboard_module=MockClipboard(),
+        )
+        injector.set_current_word_prefix("if")
+        self.assertTrue(injector.insert_snippet("()", cursor_offset_left=1, restore_clipboard=False))
+        left_key = Key.left if Key is not None else "LEFT"
+        # Must tap left key so cursor lands inside the parens
+        self.assertEqual(len([k for k in mock_kb.tapped if k == left_key]), 1)
+
+    def test_if_suggestion_erases_typed_if_parens(self):
+        """Selecting an if-suggestion when 'if ()' is typed replaces the typed 'if ()' cleanly."""
+        injector = CodeInjector(
+            async_mode=False,
+            paste_delay=0.001,
+            keyboard_controller=MockRecorderKeyboard(),
+            clipboard_module=MockClipboard(),
+        )
+        injector.set_last_statement_prefix("if ()")
+        prepared, backspaces = injector.prepare_insert_text("if valid:")
+        self.assertEqual(prepared, "if valid:")
+        self.assertEqual(backspaces, len("if ()"))
+
+    def test_embed_vscode_snippet_cursor(self):
+        """Embeds $0 for VS Code snippets accurately."""
+        # Single line centered pair
+        res1 = CodeInjector.embed_vscode_snippet_cursor("()", offset_left=1, offset_up=0)
+        self.assertEqual(res1, "($0)")
+
+        # Multiline if block
+        res2 = CodeInjector.embed_vscode_snippet_cursor("if () {\n    \n}", offset_left=3, offset_up=2)
+        self.assertEqual(res2, "if ($0) {\n    \n}")
 
 
 if __name__ == "__main__":

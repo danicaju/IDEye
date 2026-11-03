@@ -4,6 +4,7 @@ IDEye - Writing / Documentation Context Mode (Phase 6)
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional
 
 from ideye.actions.menu_trees import (
@@ -20,6 +21,48 @@ except ImportError:  # pragma: no cover
     from modes._helpers import make_root, make_submenu
 
 from .base_mode import BaseMode
+
+
+WRITING_AI_PROMPTS = {
+    "continue": "Continúa de forma natural, fluida y coherente la siguiente frase o texto:\n\n{text}",
+    "close_paragraph": "Añade una frase de cierre concisa y adecuada para concluir el párrafo actual:\n\n{text}",
+    "rephrase": "Reformula el siguiente texto para que sea más claro, fluido, conciso y profesional, manteniendo su significado original:\n\n{text}",
+    "summarize": "Sintetiza el siguiente texto en una o dos frases claras con los puntos esenciales:\n\n{text}",
+    "expand": "Desarrolla y expande el siguiente texto con más detalle, argumentos y claridad explicativa:\n\n{text}",
+    "correct": "Corrige la ortografía, puntuación, acentuación y gramática del siguiente texto sin alterar su sentido ni estilo:\n\n{text}",
+    "translate_en": "Traduce el siguiente texto al inglés de manera natural, idiomática y profesional:\n\n{text}",
+}
+
+
+def correct_writing_text(text: str) -> str:
+    """Corrects common punctuation, spacing, and capitalization flaws in Spanish/English text."""
+    if not text:
+        return ""
+    res = text
+    # Fix spaces before punctuation
+    res = re.sub(r'\s+([,.:;?!])', r'\1', res)
+    # Ensure a single space after punctuation if followed by a word character
+    res = re.sub(r'([,.:;?!])([^\s0-9])', r'\1 \2', res)
+    lines = res.splitlines()
+    corrected_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            corrected_lines.append(line)
+            continue
+        first_char = stripped[0]
+        if first_char.isalpha():
+            stripped = first_char.upper() + stripped[1:]
+        elif len(stripped) > 1 and stripped[0] in {"¿", "¡", '"', "'"} and stripped[1].isalpha():
+            stripped = stripped[0] + stripped[1].upper() + stripped[2:]
+
+        if stripped.endswith("?") and "¿" not in stripped:
+            stripped = "¿" + stripped
+        elif stripped.endswith("!") and "¡" not in stripped:
+            stripped = "¡" + stripped
+
+        corrected_lines.append(stripped)
+    return "\n".join(corrected_lines)
 
 
 def _act(slot: str, aid: str, label: str, snippet: str, key_name: Optional[str] = None, action_type: str = "SNIPPET") -> MenuAction:
@@ -284,13 +327,13 @@ class WritingMode(BaseMode):
         tree["WRITING_JUMP"] = make_submenu("WRITING_JUMP", "SALTO / PÁRRAFO", jump)
 
         ai = [
-            _act("1", "W_AI_1", "Continuar frase", "continuar la frase actual"),
-            _act("2", "W_AI_2", "Cerrar párrafo", "cerrar el párrafo actual"),
-            _act("3", "W_AI_3", "Reformular", "reformular de forma más clara"),
-            _act("4", "W_AI_4", "Resumir", "resumir el texto anterior"),
-            _act("6", "W_AI_5", "Expandir", "expandir con más detalle"),
-            _act("8", "W_AI_6", "Corregir", "corregir ortografía y gramática"),
-            _act("9", "W_AI_7", "Traducir EN", "traducir al inglés"),
+            _act("1", "W_AI_1", "Continuar frase", "continue", action_type="WRITING_AI"),
+            _act("2", "W_AI_2", "Cerrar párrafo", "close_paragraph", action_type="WRITING_AI"),
+            _act("3", "W_AI_3", "Reformular", "rephrase", action_type="WRITING_AI"),
+            _act("4", "W_AI_4", "Resumir", "summarize", action_type="WRITING_AI"),
+            _act("6", "W_AI_5", "Expandir", "expand", action_type="WRITING_AI"),
+            _act("8", "W_AI_6", "Corregir", "correct", action_type="WRITING_AI"),
+            _act("9", "W_AI_7", "Traducir EN", "translate_en", action_type="WRITING_AI"),
         ]
         tree["WRITING_AI"] = make_submenu("WRITING_AI", "SUGERENCIAS DE REDACCIÓN", ai)
 

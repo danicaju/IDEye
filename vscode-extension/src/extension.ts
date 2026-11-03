@@ -429,9 +429,43 @@ async function handleInsertSnippet(msg: any) {
     }
 
     try {
-        const snippetText = msg.snippet || '';
+        let snippetText = msg.snippet || '';
+        const offsetLeft = Number(msg.cursorOffsetLeft || 0);
+        const offsetUp = Number(msg.cursorOffsetUp || 0);
+
+        if (!snippetText.includes('$0') && !snippetText.includes('$1') && (offsetLeft > 0 || offsetUp > 0)) {
+            const lines = snippetText.split('\n');
+            const targetLineIdx = lines.length - 1 - Math.max(0, offsetUp);
+            if (targetLineIdx >= 0 && targetLineIdx < lines.length) {
+                const targetLine = lines[targetLineIdx];
+                const charIdx = Math.max(0, targetLine.length - Math.max(0, offsetLeft));
+                lines[targetLineIdx] = targetLine.substring(0, charIdx) + '$0' + targetLine.substring(charIdx);
+                snippetText = lines.join('\n');
+            }
+        }
+
+        const doc = editor.document;
+        const pos = editor.selection.active;
+        const lineTextBefore = doc.lineAt(pos.line).text.substring(0, pos.character);
+        const lineTextAfter = doc.lineAt(pos.line).text.substring(pos.character);
+        const isIfSnippet = /^\s*(?:if|elif)\b/.test(snippetText);
+        let replaceRange: vscode.Range | null = null;
+
+        if (isIfSnippet) {
+            if (/if\s*\(\s*\)$/.test(lineTextBefore.trimEnd())) {
+                const startChar = lineTextBefore.lastIndexOf('if');
+                replaceRange = new vscode.Range(new vscode.Position(pos.line, startChar), pos);
+            } else if (/if\s*\($/.test(lineTextBefore.trimEnd()) && lineTextAfter.startsWith(')')) {
+                // cursor inside if (|)
+                const startChar = lineTextBefore.lastIndexOf('if');
+                replaceRange = new vscode.Range(new vscode.Position(pos.line, startChar), new vscode.Position(pos.line, pos.character + 1));
+            }
+        }
+
         const snippetString = new vscode.SnippetString(snippetText);
-        const success = await editor.insertSnippet(snippetString);
+        const success = replaceRange
+            ? await editor.insertSnippet(snippetString, replaceRange)
+            : await editor.insertSnippet(snippetString);
 
         sendMessage({
             type: 'ACK',

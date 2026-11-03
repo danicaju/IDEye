@@ -91,15 +91,30 @@ def generate_heuristic_predictions(
         ]
 
     # Heuristic 3: If / Elif statement
-    elif last_line.startswith("if ") or last_line.startswith("elif "):
-        suggestions = [
-            f"{v2} = {v1}",
-            f"print(f'{v1}: {{{v1}}}')",
-            f"return {v1}",
-            f"raise ValueError('Error con {v1}')",
-            "return True",
-            "pass",
-        ]
+    elif last_line.startswith("if ") or last_line.startswith("elif ") or last_line.startswith("if(") or last_line.startswith("elif("):
+        clean_header = last_line.rstrip()
+        # Case A: Inside parentheses or incomplete condition (e.g. `if ()`, `if (`, `if `)
+        if clean_header.endswith("()") or clean_header.endswith("(") or not (clean_header.endswith(":") or clean_header.endswith("{")):
+            cond_var = v1
+            cond_target = v2 if v2 != v1 else "None"
+            suggestions = [
+                f"{cond_var} is not None",
+                f"len({cond_var}) > 0",
+                f"not {cond_var}",
+                f"{cond_var} == {cond_target}",
+                f"{cond_var} > 0",
+                f"{v3} in {cond_var}",
+            ]
+        else:
+            # Case B: Header completed (ends with : or {), suggest block body
+            suggestions = [
+                f"return {v1}",
+                f"{v2} = {v1}",
+                f"print(f'{v1}: {{{v1}}}')",
+                f"raise ValueError('Error con {v1}')",
+                "return True",
+                "pass",
+            ]
 
     # Heuristic 4: For loop header
     elif last_line.startswith("for "):
@@ -194,12 +209,15 @@ def generate_heuristic_predictions(
 
     # General Fallback: Smart statements using actual local symbols
     if len(suggestions) < 6:
+        # Avoid self-loops and self-assignments (e.g. for item in item, result = result)
+        loop_target = v1 if v3 != v1 else (v2 if v2 != v3 else "items")
+        assign_source = v1 if v2 != v1 else (v3 if v3 != v2 else "val")
         defaults = [
-            f"print({v1})",
             f"if {v1}:",
-            f"for {v3} in {v1}:",
-            f"{v2} = {v1}",
+            f"for {v3} in {loop_target}:",
+            f"{v2} = {assign_source}",
             f"return {v1}",
+            f"print({v1})",
             f"self.{v1} = {v1}",
         ]
         for d in defaults:

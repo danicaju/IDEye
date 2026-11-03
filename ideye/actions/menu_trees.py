@@ -816,14 +816,14 @@ def _build_flow_items(lang: str) -> List[MenuAction]:
     """Builds the 9 items for the FLOW submenu for the specified language."""
     if lang == LANG_TYPESCRIPT:
         return [
-            MenuAction("FLOW_IF", "1: if () {", "Condicional if", "SNIPPET", snippet="if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
-            MenuAction("FLOW_ELIF", "2: else if () {", "Condicional else if", "SNIPPET", snippet="else if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_IF", "1: if () {", "Condicional if", "SNIPPET", snippet="if () {\n    \n}", cursor_offset_up=2, cursor_offset_left=3, icon="flow"),
+            MenuAction("FLOW_ELIF", "2: else if () {", "Condicional else if", "SNIPPET", snippet="else if () {\n    \n}", cursor_offset_up=2, cursor_offset_left=3, icon="flow"),
             MenuAction("FLOW_ELSE", "3: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
             MenuAction("FLOW_FOR_RANGE", "4: for (let i = 0...)", "Bucle indexado", "SNIPPET", snippet="for (let i = 0; i < ; i++) {\n    \n}", cursor_offset_up=1, cursor_offset_left=11, icon="flow"),
             create_pause_action("5"),
             MenuAction("FLOW_FOR_LIST", "6: for (const x of )", "Iterador de colección", "SNIPPET", snippet="for (const item of ) {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
             create_back_action("ROOT", "7"),
-            MenuAction("FLOW_WHILE", "8: while () {", "Bucle while", "SNIPPET", snippet="while () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_WHILE", "8: while () {", "Bucle while", "SNIPPET", snippet="while () {\n    \n}", cursor_offset_up=2, cursor_offset_left=3, icon="flow"),
             MenuAction("FLOW_TRY_RET_SUB", "9: TRY / CATCH / RET", "try-catch, return, throw", "SUBMENU", submenu_id="FLOW_TRY_RET", icon="flow"),
         ]
     elif lang == LANG_RUST:
@@ -840,14 +840,14 @@ def _build_flow_items(lang: str) -> List[MenuAction]:
         ]
     elif lang == LANG_CPP:
         return [
-            MenuAction("FLOW_IF", "1: if () {", "Condicional if", "SNIPPET", snippet="if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
-            MenuAction("FLOW_ELIF", "2: else if () {", "Condicional else if", "SNIPPET", snippet="else if () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_IF", "1: if () {", "Condicional if", "SNIPPET", snippet="if () {\n    \n}", cursor_offset_up=2, cursor_offset_left=3, icon="flow"),
+            MenuAction("FLOW_ELIF", "2: else if () {", "Condicional else if", "SNIPPET", snippet="else if () {\n    \n}", cursor_offset_up=2, cursor_offset_left=3, icon="flow"),
             MenuAction("FLOW_ELSE", "3: else {", "Rama else", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow"),
             MenuAction("FLOW_FOR_RANGE", "4: for (int i = 0...)", "Bucle numérico", "SNIPPET", snippet="for (int i = 0; i < ; ++i) {\n    \n}", cursor_offset_up=1, cursor_offset_left=12, icon="flow"),
             create_pause_action("5"),
             MenuAction("FLOW_FOR_LIST", "6: for (auto& x : )", "Range-based for", "SNIPPET", snippet="for (const auto& item : ) {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
             create_back_action("ROOT", "7"),
-            MenuAction("FLOW_WHILE", "8: while () {", "Bucle while", "SNIPPET", snippet="while () {\n    \n}", cursor_offset_up=1, cursor_offset_left=4, icon="flow"),
+            MenuAction("FLOW_WHILE", "8: while () {", "Bucle while", "SNIPPET", snippet="while () {\n    \n}", cursor_offset_up=2, cursor_offset_left=3, icon="flow"),
             MenuAction("FLOW_TRY_RET_SUB", "9: TRY / CATCH / RET", "try-catch, return, throw", "SUBMENU", submenu_id="FLOW_TRY_RET", icon="flow"),
         ]
     elif lang == LANG_GO:

@@ -98,12 +98,12 @@ def generate_heuristic_predictions(
             cond_var = v1
             cond_target = v2 if v2 != v1 else "None"
             suggestions = [
-                f"{cond_var} is not None",
-                f"len({cond_var}) > 0",
-                f"not {cond_var}",
-                f"{cond_var} == {cond_target}",
-                f"{cond_var} > 0",
-                f"{v3} in {cond_var}",
+                f"if {cond_var} is not None:",
+                f"if len({cond_var}) > 0:",
+                f"if not {cond_var}:",
+                f"if {cond_var} == {cond_target}:",
+                f"if {cond_var} > 0:",
+                f"if {v3} in {cond_var}:",
             ]
         else:
             # Case B: Header completed (ends with : or {), suggest block body

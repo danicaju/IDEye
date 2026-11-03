@@ -448,17 +448,23 @@ async function handleInsertSnippet(msg: any) {
         const pos = editor.selection.active;
         const lineTextBefore = doc.lineAt(pos.line).text.substring(0, pos.character);
         const lineTextAfter = doc.lineAt(pos.line).text.substring(pos.character);
-        const isIfSnippet = /^\s*(?:if|elif)\b/.test(snippetText);
+        const isIfSnippet = /^\s*(?:if|elif|while)\b/.test(snippetText);
         let replaceRange: vscode.Range | null = null;
 
         if (isIfSnippet) {
-            if (/if\s*\(\s*\)$/.test(lineTextBefore.trimEnd())) {
-                const startChar = lineTextBefore.lastIndexOf('if');
-                replaceRange = new vscode.Range(new vscode.Position(pos.line, startChar), pos);
-            } else if (/if\s*\($/.test(lineTextBefore.trimEnd()) && lineTextAfter.startsWith(')')) {
+            const beforeParenMatch = lineTextBefore.match(/(?:if|elif|while)\s*\(\s*$/);
+            const afterParenMatch = lineTextAfter.match(/^\s*\)/);
+            if (beforeParenMatch && afterParenMatch) {
                 // cursor inside if (|)
-                const startChar = lineTextBefore.lastIndexOf('if');
-                replaceRange = new vscode.Range(new vscode.Position(pos.line, startChar), new vscode.Position(pos.line, pos.character + 1));
+                const startChar = pos.character - beforeParenMatch[0].length;
+                const endChar = pos.character + afterParenMatch[0].length;
+                replaceRange = new vscode.Range(new vscode.Position(pos.line, startChar), new vscode.Position(pos.line, endChar));
+            } else {
+                const beforeFullMatch = lineTextBefore.match(/(?:if|elif|while)\s*(?:\(\s*\)|\(\s*)$/);
+                if (beforeFullMatch) {
+                    const startChar = pos.character - beforeFullMatch[0].length;
+                    replaceRange = new vscode.Range(new vscode.Position(pos.line, startChar), pos);
+                }
             }
         }
 

@@ -349,6 +349,22 @@ class TestCodeInjector(unittest.TestCase):
         res2 = CodeInjector.embed_vscode_snippet_cursor("if () {\n    \n}", offset_left=3, offset_up=2)
         self.assertEqual(res2, "if ($0) {\n    \n}")
 
+    def test_if_replacement_inside_parens_taps_right_before_backspacing(self):
+        """When replacing if () from inside parens, injector moves right past ')' before backspacing."""
+        mock_kb = MockRecorderKeyboard()
+        injector = CodeInjector(
+            async_mode=False,
+            paste_delay=0.001,
+            keyboard_controller=mock_kb,
+            clipboard_module=MockClipboard(),
+        )
+        injector.set_last_statement_prefix("if ()")
+        injector.insert_snippet("if valid:")
+        right_key = Key.right if Key is not None else "RIGHT"
+        backspace_key = Key.backspace if Key is not None else "BACKSPACE"
+        self.assertIn(right_key, mock_kb.tapped)
+        self.assertEqual(mock_kb.tapped.count(backspace_key), len("if ()"))
+
 
 if __name__ == "__main__":
     unittest.main()

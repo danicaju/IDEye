@@ -135,6 +135,7 @@ class CodeInjector:
         # Phase 7.5: prefix tracker for Smart Prefix Deduplication.
         self._current_word_prefix: str = ""
         self._last_statement_prefix: str = ""
+        self._last_statement_inside_parens: bool = False
         self._context_reader: Optional[Any] = None
         self._prefix_lock = threading.Lock()
 
@@ -308,10 +309,15 @@ class CodeInjector:
             is_if_suggestion = stripped.startswith(("if ", "if(", "elif ", "elif("))
             if is_if_suggestion:
                 target_erasure = ""
+                inside_parens = False
                 if self._last_statement_prefix in {"if ()", "if()", "if (", "if(", "if :", "if ():", "if"}:
                     target_erasure = self._last_statement_prefix
+                    if target_erasure in {"if ()", "if()"}:
+                        inside_parens = True
                 elif prefix.lower() in {"if", "if()", "if ()", "if("}:
                     target_erasure = prefix
+                    if target_erasure in {"if ()", "if()"}:
+                        inside_parens = True
                 elif self._context_reader is not None:
                     try:
                         ctx = self._context_reader.get_editor_context() if hasattr(self._context_reader, "get_editor_context") else {}
@@ -319,11 +325,14 @@ class CodeInjector:
                         for cand in ("if ()", "if()", "if (", "if(", "if :", "if"):
                             if curr_line.endswith(cand):
                                 target_erasure = cand
+                                if cand in {"if ()", "if()"}:
+                                    inside_parens = True
                                 break
                     except Exception:
                         pass
                 if target_erasure:
                     backspaces = len(target_erasure)
+                    self._last_statement_inside_parens = inside_parens
                     self._last_statement_prefix = ""
                     self._current_word_prefix = ""
                     self._update_prefix_after_insert(text)
@@ -395,6 +404,34 @@ class CodeInjector:
         """
         pairs = {"()", "[]", "{}", '""', "''"}
         control_flow = {"if", "elif", "while", "for", "switch", "catch", "assert"}
+
+        # 1. Condition parens after control-flow: place caret inside parens so condition can be typed
+        if prepared == "()":
+            p_strip = prefix_before.strip().lower() if prefix_before else ""
+            last_stmt = self._last_statement_prefix.strip().lower() if self._last_statement_prefix else ""
+            ctx_line = ""
+            if self._context_reader and hasattr(self._context_reader, "get_last_line"):
+                try:
+                    ctx_line = str(self._context_reader.get_last_line() or "").strip().lower()
+                except Exception:
+                    pass
+            is_cf = (
+                p_strip in control_flow or
+                last_stmt in control_flow or
+                any(ctx_line.endswith(cf) or ctx_line.endswith(f"{cf} ") for cf in control_flow)
+            )
+            if is_cf:
+                return 1
+            if prefix_before and prepared in pairs:
+                return 0
+
+        # 2. Control flow statements with empty parens
+        prep_strip = prepared.strip()
+        if prep_strip.startswith(("if ()", "if()", "elif ()", "elif()", "while ()", "while()")):
+            if prep_strip.endswith(":"):
+                return 2  # inside if (|):
+            return 1      # inside if (|)
+
         if prefix_before and prefix_before.strip().lower() in control_flow:
             return max(1, int(offset_left)) if offset_left else 1
         if prefix_before and prepared in pairs:
@@ -526,7 +563,13 @@ class CodeInjector:
 
         success = False
         try:
-            # 2b. Erase a stale prefix when the selected word changes case.
+            # 2b. Erase a stale prefix when the selected word changes case or replaces if().
+            if getattr(self, "_last_statement_inside_parens", False):
+                right_key = Key.right if Key is not None else "RIGHT"
+                self.keyboard.tap(right_key)
+                time.sleep(0.005)
+                self._last_statement_inside_parens = False
+
             if backspaces > 0:
                 backspace_key = Key.backspace if Key is not None else "BACKSPACE"
                 for _ in range(backspaces):
@@ -747,8 +790,10 @@ class CodeInjector:
                     offset_left,
                     prefix_before,
                 )
-                for _ in range(backspaces):
-                    ws.send_execute_command("deleteLeft")
+                is_statement_replacement = prepared.strip().startswith(("if ", "if(", "elif ", "elif("))
+                if not is_statement_replacement:
+                    for _ in range(backspaces):
+                        ws.send_execute_command("deleteLeft")
                 if prepared:
                     sent = ws.send_insert_snippet(
                         snippet=prepared,

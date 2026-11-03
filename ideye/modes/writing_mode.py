@@ -39,6 +39,21 @@ def correct_writing_text(text: str) -> str:
     if not text:
         return ""
     res = text
+    # Fix duplicate adjacent words (e.g. "de de" -> "de", "la la" -> "la")
+    res = re.sub(r'\b([A-Za-zñáéíóúÁÉÍÓÚ]+)\s+\1\b', r'\1', res, flags=re.IGNORECASE)
+    # Common Spanish accent fixes
+    accent_map = {
+        r'\btambien\b': 'también',
+        r'\bdespues\b': 'después',
+        r'\bademas\b': 'además',
+        r'\bfacil\b': 'fácil',
+        r'\bdificil\b': 'difícil',
+        r'\bestaria\b': 'estaría',
+        r'\bhabria\b': 'habría',
+        r'\bseria\b': 'sería',
+    }
+    for pat, rep in accent_map.items():
+        res = re.sub(pat, rep, res, flags=re.IGNORECASE)
     # Fix spaces before punctuation
     res = re.sub(r'\s+([,.:;?!])', r'\1', res)
     # Ensure a single space after punctuation if followed by a word character
@@ -63,6 +78,25 @@ def correct_writing_text(text: str) -> str:
 
         corrected_lines.append(stripped)
     return "\n".join(corrected_lines)
+
+
+def rephrase_writing_text(text: str, style: str = "clear") -> str:
+    """Rephrases conversational or informal Spanish text into clear, professional prose."""
+    if not text:
+        return ""
+    cleaned = text.strip()
+    # Spanish conversational cleanup
+    replacements = [
+        (r'\bqueria saber si\b', 'quisiera consultar si'),
+        (r'\ba ver si podemos\b', 'para confirmar si es posible'),
+        (r'\bte escribo para decirte que\b', 'te escribo para informarte de que'),
+        (r'\bo sea\b', 'es decir'),
+        (r'\bmas o menos\b', 'aproximadamente'),
+        (r'\bporfa\b', 'por favor'),
+    ]
+    for pat, rep in replacements:
+        cleaned = re.sub(pat, rep, cleaned, flags=re.IGNORECASE)
+    return correct_writing_text(cleaned)
 
 
 def _act(slot: str, aid: str, label: str, snippet: str, key_name: Optional[str] = None, action_type: str = "SNIPPET") -> MenuAction:

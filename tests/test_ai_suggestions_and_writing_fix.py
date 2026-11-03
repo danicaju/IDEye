@@ -97,5 +97,35 @@ class TestAISuggestionsAndWritingFix(unittest.TestCase):
         self.assertEqual(if_action.cursor_offset_left, 3)
 
 
+    def test_rephrase_writing_text(self):
+        """rephrase_writing_text improves conversational phrases and applies punctuation correction."""
+        from ideye.modes.writing_mode import rephrase_writing_text
+        raw = "hola queria saber si podemos vernos mañana"
+        rephrased = rephrase_writing_text(raw)
+        self.assertIn("quisiera consultar si", rephrased)
+        self.assertTrue(rephrased.startswith("Hola"))
+
+    def test_delimiter_after_if_space_places_cursor_inside_parens(self):
+        """When the line contains 'if ', inserting () must position caret inside: if (|)."""
+        reader = ContextReader()
+        reader.update_editor_snapshot({
+            "current_line": "if ",
+            "prefix_lines": ["x = 10"],
+        })
+        injector = CodeInjector()
+        injector.set_context_reader(reader)
+        offset = injector._effective_cursor_offset_left("()", 0, prefix_before="")
+        self.assertEqual(offset, 1)
+
+    def test_prepare_insert_if_suggestion_marks_inside_parens(self):
+        """Selecting an if-suggestion when 'if ()' was typed marks inside_parens for clean erasure."""
+        injector = CodeInjector()
+        injector.set_last_statement_prefix("if ()")
+        prepared, backspaces = injector.prepare_insert_text("if count > 0:")
+        self.assertEqual(prepared, "if count > 0:")
+        self.assertEqual(backspaces, len("if ()"))
+        self.assertTrue(injector._last_statement_inside_parens)
+
+
 if __name__ == "__main__":
     unittest.main()

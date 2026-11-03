@@ -2964,18 +2964,24 @@ class OverlayWindow(QWidget):
     def _execute_writing_ai(self, cmd: str, item: MenuAction, target_block: int = 0) -> None:
         """Executes real AI writing assist (rephrase, correct, summarize, etc.) hands-free."""
         try:
-            from ideye.modes.writing_mode import WRITING_AI_PROMPTS, correct_writing_text
+            from ideye.modes.writing_mode import WRITING_AI_PROMPTS, correct_writing_text, rephrase_writing_text
         except ImportError:
             WRITING_AI_PROMPTS = {}
             correct_writing_text = lambda s: s
+            rephrase_writing_text = lambda s: s
 
         target_text = ""
+        has_active_selection = False
         if self._vscode_editor_state:
             target_text = str(self._vscode_editor_state.get("selection") or "").strip()
+            if target_text:
+                has_active_selection = True
         if not target_text and self.context_reader:
             ctx = self.context_reader.get_editor_context()
             target_text = str(ctx.get("active_selection") or "").strip()
-            if not target_text:
+            if target_text:
+                has_active_selection = True
+            elif ctx.get("current_line"):
                 target_text = str(ctx.get("current_line") or "").strip()
         if not target_text and self.context_reader:
             target_text = self.context_reader.get_last_line()
@@ -2983,11 +2989,24 @@ class OverlayWindow(QWidget):
             mode = self._writing_mode()
             target_text = getattr(mode, "_prefix", "") if mode else ""
 
-        if cmd == "correct" and target_text:
-            corrected = correct_writing_text(target_text)
-            if corrected and corrected != target_text and not (self.code_injector and self.code_injector.has_native_websocket):
-                self.code_injector.insert_snippet(corrected)
-                self.last_action_desc = "Texto corregido"
+        ws = getattr(self.code_injector, "websocket_bridge", None)
+        ws_connected = ws is not None and getattr(ws, "is_connected", False)
+
+        if cmd in ("correct", "rephrase") and target_text:
+            transformed = correct_writing_text(target_text) if cmd == "correct" else rephrase_writing_text(target_text)
+            if transformed and transformed != target_text:
+                if ws_connected:
+                    if has_active_selection:
+                        ws.send_insert_snippet(snippet=transformed)
+                    else:
+                        line_no = 1
+                        if self._vscode_editor_state and isinstance(self._vscode_editor_state.get("cursor"), dict):
+                            line_no = max(1, int(self._vscode_editor_state["cursor"].get("line", 0)) + 1)
+                        ws.send_apply_line_fix(line=line_no, replacement=transformed)
+                else:
+                    self.code_injector.insert_snippet(transformed)
+
+                self.last_action_desc = "Texto corregido" if cmd == "correct" else "Texto reformulado"
                 self.action_executed.emit(item.id, self.last_action_desc)
                 self.block_activated.emit(target_block, item.id)
                 self.update()
@@ -2997,8 +3016,7 @@ class OverlayWindow(QWidget):
         template = WRITING_AI_PROMPTS.get(cmd, "Reformula o asiste en la redacción del siguiente texto:\n\n{text}")
         prompt = template.format(text=sample)
 
-        ws = getattr(self.code_injector, "websocket_bridge", None)
-        if ws is not None and getattr(ws, "is_connected", False):
+        if ws_connected:
             if hasattr(self, "agentic_launcher") and self.agentic_launcher is not None:
                 self.agentic_launcher.dispatch(cmd, prompt, bridge=ws, selection_only=bool(target_text))
             elif hasattr(ws, "send_trigger_agent_prompt"):
@@ -3689,7 +3707,7 @@ class OverlayWindow(QWidget):
         idle_threshold = (
             self.ghost_peek_idle_seconds
             if idle_seconds is None
-            else max(30.0, float(idle_seconds))
+            else max(2.0, float(idle_seconds))
         )
         idle = max(0.0, timestamp - self._last_ghost_interaction)
         if idle >= idle_threshold:
@@ -3729,9 +3747,9 @@ class OverlayWindow(QWidget):
             value = float(seconds)
         except (TypeError, ValueError, OverflowError):
             value = 30.0
-        self.ghost_peek_idle_seconds = max(30.0, value)
-        return self.ghost_peek_idle_seconds
+        self.ghost_peek_idle_seconds = max(2.0, value)
         self.update()
+        return self.ghost_peek_idle_seconds
 
     def toggle_ghost_peek(self) -> bool:
         self.set_ghost_peek_enabled(not self.ghost_peek_enabled)

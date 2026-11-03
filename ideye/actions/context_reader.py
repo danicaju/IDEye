@@ -257,7 +257,11 @@ class ContextReader:
                     ext = os.path.splitext(f)[1].lower()
                     if ext in LANGUAGE_EXTENSIONS:
                         f_lower = f.lower()
-                        if f_lower.startswith("test_") or f_lower.endswith("_test.go") or f_lower == "conftest.py":
+                        ignored_root_files = {
+                            "build_app.py", "create_desktop_shortcut.py", "setup.py",
+                            "conftest.py", "main.py", "config.py",
+                        }
+                        if f_lower in ignored_root_files or f_lower.startswith("test_") or f_lower.endswith("_test.go") or f_lower == "conftest.py":
                             continue
 
                         full_path = os.path.join(root, f)
@@ -367,6 +371,18 @@ class ContextReader:
                 valid_live = [s for s in live if isinstance(s, str) and s.isidentifier()]
                 if valid_live:
                     return valid_live[:max_symbols]
+            # When live editor state is active but no symbols were passed by extension,
+            # extract symbols from the active buffer lines
+            buf_lines = (
+                (self.editor_state.get("prefix_lines") or self.editor_state.get("prefixLines") or []) +
+                [self.editor_state.get("current_line") or self.editor_state.get("lineText") or ""] +
+                (self.editor_state.get("suffix_lines") or self.editor_state.get("suffixLines") or [])
+            )
+            buf_text = "\n".join(l for l in buf_lines if l)
+            if buf_text.strip():
+                source_code = buf_text
+            elif self.editor_state.get("filePath") or self.editor_state.get("hasActiveEditor"):
+                return []
         try:
             content = source_code if source_code is not None else self.read_file_content(file_path)
         except (FileNotFoundError, PermissionError, OSError):

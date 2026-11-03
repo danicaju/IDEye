@@ -1039,6 +1039,8 @@ class IDEyeApplication(QObject):
         self.tracker.gesture_triggered.connect(self.overlay.on_gesture_triggered)
         self.tracker.face_lost.connect(self.overlay.reset_freelook_pointer)
         self.tracker.health_alert.connect(self.overlay.show_health_alert)
+        if hasattr(self.tracker, "gaze_estimator") and self.tracker.gaze_estimator is not None:
+            self.overlay.set_gaze_estimator(self.tracker.gaze_estimator)
 
         # Tracker signals to DebugWidget
         self.tracker.frame_ready.connect(self.debug_widget.on_frame_ready)

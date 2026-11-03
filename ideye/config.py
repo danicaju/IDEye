@@ -551,3 +551,32 @@ WEBSOCKET_RECONNECT_INTERVAL_SEC: float = 2.0
 # ==============================================================================
 SOUND_ENABLED: bool = True
 SOUND_VOLUME: float = 0.5
+
+# ==============================================================================
+# User-Friendly Ergonomics, Layouts, Themes & Onboarding
+# ==============================================================================
+# Flexible HUD Layouts (Full Screen 100% vs Right Dock 30%)
+HUD_LAYOUT_FULL: str = "FULL_GRID"
+HUD_LAYOUT_RIGHT_DOCK: str = "RIGHT_DOCK"
+DEFAULT_HUD_LAYOUT: str = HUD_LAYOUT_FULL
+RIGHT_DOCK_WIDTH_RATIO: float = 0.30
+RIGHT_DOCK_MIN_WIDTH: float = 460.0
+RIGHT_DOCK_MAX_WIDTH: float = 500.0
+
+# Accessibility & High-Contrast Themes (WCAG AAA)
+THEME_CYBER_GLASS: str = "CYBER_GLASS"
+THEME_OLED_BLACK: str = "OLED_BLACK"
+THEME_SOLARIZED_DARK: str = "SOLARIZED_DARK"
+DEFAULT_THEME: str = THEME_CYBER_GLASS
+
+# Visual Posture & Distance (Optimal Green Range 50-70 cm)
+POSTURE_DISTANCE_MIN_CM: float = 50.0
+POSTURE_DISTANCE_MAX_CM: float = 70.0
+POSTURE_OPTIMAL_DISTANCE_CM: float = 60.0
+
+# Adaptive Dwell-Time Parameters (Dynamic & Safe)
+ADAPTIVE_DWELL_ENABLED: bool = True
+DWELL_TIME_NAV_SEC: float = 0.30        # Fast dwell for navigation / repeated keys
+DWELL_TIME_STANDARD_SEC: float = 0.45   # Standard dwell for snippets and menus
+DWELL_TIME_DANGER_SEC: float = 0.85     # Safe dwell for destructive actions (exit/close)
+

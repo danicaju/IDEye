@@ -40,6 +40,19 @@ class SoundFeedbackManager:
         self._wav_paths: Dict[str, Path] = {}
         self._build_cache()
 
+    _ALIASES: Dict[str, str] = {
+        "nav": "mode",
+        "navigation": "mode",
+        "hover": "mode",
+        "confirm": "click",
+        "confirmation": "click",
+        "retroceso": "back",
+        "undo": "back",
+        "error": "pause",
+        "alert": "pause",
+        "fail": "pause",
+    }
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -47,7 +60,8 @@ class SoundFeedbackManager:
         """Play a cached WAV asynchronously; never blocks the UI."""
         if not self._enabled:
             return
-        path = self._wav_paths.get(name)
+        canonical = self._ALIASES.get(name, name)
+        path = self._wav_paths.get(canonical)
         if path is None:
             return
         try:

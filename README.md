@@ -143,6 +143,17 @@ The `WebSocketBridge` exchanges editor state, diagnostics, and selection info wi
 
 The VS Code extension streams active-line errors and warnings over WebSocket. `DiagnosticsFixer` generates imports, missing colons, delimiter closures, indentation repairs and AI suggestions in a 3x3 Auto-Fix menu. `HealthGuard` warns after 28 s without blinking or when eye distance exceeds 138% of baseline. Optional micro-gestures open Auto-Fix with a brow raise and indent/outdent with a head tilt. The header and favicon embed the official app icon as a base64 data URI.
 
+### 13. Flexible HUD Dock, Pre-Flight Ergonomics & Gaze Spotlight
+
+- **Flexible HUD Layouts**: Toggle between Full Grid (100%) and Right Dock (30% column, ~460-480px width) with key `D` or Spotlight, leaving the left 70% completely clear for VS Code editor reading with pass-through gaze.
+- **Smart Ghost Mode**: Automatically dims HUD cards to 15% opacity on idle while reading code in editor, instantly waking in 0ms when looking back at HUD cards.
+- **Pre-Flight Posture & Illumination Checks**: Real-time distance verification (50-70cm green badge) and lighting luma checks in Calibration UI before calibrating.
+- **1-Point Micro-Recalibration ("Snap to Caret")**: Quickly re-centers gaze offset with key `C` or Spotlight without repeating the full 5-point polynomial calibration.
+- **Adaptive Dwell & Safe Rest**: Fast 300ms dwell for navigation/keys, safe 850ms for critical exits, and dwell disabled (infinite) in center cell 5 with expanded magnetic capture to completely eliminate Midas Touch.
+- **Gaze Command Palette (Spotlight)**: Instant 3x3 modal accessed by gaze or key `P` for save, format, terminal, universal undo (Ctrl+Z), snap caret, and layout switching.
+- **High-Contrast Themes**: Switch with key `O` between Cyber Glass, OLED Black (WCAG AAA with absolute black background for OLED displays), and Solarized Dark.
+- **Interactive 3-Step Guided Mini-Tutorial**: In-app guided onboarding (`F2`) teaching dwell fixation, facial gesture confirmation, and safe resting.
+
 ---
 
 ## System Architecture
@@ -201,7 +212,7 @@ No Python installation, compiler, Git, or terminal commands needed:
 
 1. **Download `IDEye-Windows-v0.5.0.zip`** from **[GitHub Releases](https://github.com/danicaju/IDEye/releases)** and extract it anywhere on your PC.
 2. **Launch `IDEye.exe`**: Contains bundled Python, OpenCV, MediaPipe, and PyQt6 runtimes.
-3. **Install the Companion VS Code Extension**: Drag `ideye-vscode-bridge-0.5.0.vsix` into VS Code, or install via Extensions view (`Ctrl+Shift+X` ➔ `...` ➔ *Install from VSIX...*).
+3. **Install the Companion VS Code Extension**: Drag `ideye-vscode-bridge-0.5.0.vsix` into VS Code, or install via Extensions view (`Ctrl+Shift+X` -> `...` -> *Install from VSIX...*).
 4. **Code hands-free**: Your webcam calibrates automatically and pairs with VS Code over local WebSocket (`ws://127.0.0.1:54321`).
 
 ---
@@ -292,6 +303,12 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 | **`Ctrl+Alt+J`** | **Semantic AST Jump** | Opens the 3x3 symbol map for the active file |
 | **`Ctrl+Alt+I`** | **Agentic Prompt Launcher** | Opens six engineering prompts for VS Code chat or the local MCP queue |
 | **`Ctrl+Alt+W`** | **Inertial Gaze Scroll** | Proportional vertical/horizontal wheel with central deadzone and soft braking |
+| **`D`** | **Toggle Right Dock** | Switch between Full Grid (100%) and Right Dock (30% column ~460-480px) |
+| **`P`** | **Gaze Spotlight** | Open the 3x3 Gaze Command Palette modal |
+| **`Z`** | **Universal Undo** | Instant Undo (Ctrl+Z) in the active editor |
+| **`C`** | **Snap to Caret** | 1-point micro-recalibration re-centering gaze to editor cursor |
+| **`O`** | **Toggle Theme** | Cycle between Cyber Glass, OLED Black (WCAG AAA), and Solarized Dark |
+| **`F2`** | **Mini-Tutorial** | Open/close the 3-step interactive onboarding guide |
 | **Eye Exit** | **[X EXIT] Hands-Free** | Gaze at the top-right header `[X EXIT]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
 
 ---

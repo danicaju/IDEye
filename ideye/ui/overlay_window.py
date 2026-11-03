@@ -67,6 +67,8 @@ try:
         create_back_action,
         get_adaptive_context_node,
         create_adaptive_menu_action,
+        get_dynamic_ast_action_for_context,
+        populate_command_palette_items,
     )
     from ideye.actions.context_reader import ContextReader, detect_syntactic_context
     from ideye.actions.ai_predictor import AIPredictorWorker
@@ -106,6 +108,8 @@ except ImportError:
         create_back_action,
         get_adaptive_context_node,
         create_adaptive_menu_action,
+        get_dynamic_ast_action_for_context,
+        populate_command_palette_items,
     )
     from actions.context_reader import ContextReader, detect_syntactic_context
     from actions.ai_predictor import AIPredictorWorker
@@ -234,6 +238,10 @@ class OverlayWindow(QWidget):
     agentic_prompt_requested = pyqtSignal(str, str, bool)  # action_id, prompt, queue_only
     ghost_peek_toggled = pyqtSignal(bool)
     gaze_scroll_toggled = pyqtSignal(bool)
+    micro_recalibration_requested = pyqtSignal(float, float)
+    layout_changed = pyqtSignal(str)
+    theme_changed = pyqtSignal(str)
+    undo_requested = pyqtSignal()
     mode_changed = context_mode_changed
 
     def __init__(
@@ -464,6 +472,31 @@ class OverlayWindow(QWidget):
             ),
         )
         self.resize(1920, 1080)
+
+        # Flexible HUD Layout (Full Grid 100% vs Right Dock 30% Column)
+        self.hud_layout_mode: str = getattr(config, "DEFAULT_HUD_LAYOUT", "FULL_GRID")
+        self.right_dock_ratio: float = getattr(config, "RIGHT_DOCK_WIDTH_RATIO", 0.30)
+        self.right_dock_min_w: float = getattr(config, "RIGHT_DOCK_MIN_WIDTH", 460.0)
+        self.right_dock_max_w: float = getattr(config, "RIGHT_DOCK_MAX_WIDTH", 500.0)
+
+        # Adaptive Dwell-Time Engine
+        self.adaptive_dwell_enabled: bool = getattr(config, "ADAPTIVE_DWELL_ENABLED", True)
+        self._dwell_block: Optional[int] = None
+        self._dwell_start_time: float = 0.0
+        self._dwell_progress: float = 0.0
+        self._dwell_fired: bool = False
+
+        # Visual Theme Support (OLED Black WCAG AAA, Solarized Dark, Cyber Glass)
+        self.current_theme: str = getattr(config, "DEFAULT_THEME", "CYBER_GLASS")
+
+        # Interactive 3-Step Guided Onboarding Mini-Tutorial
+        self.show_tutorial_modal: bool = False
+        self.tutorial_step: int = 1  # 1: Dwell, 2: MAR/Wink, 3: Rest, 4: Done
+        self.tutorial_step_progress: float = 0.0
+        self._tutorial_rest_start: float = 0.0
+
+        # Gaze Estimator reference for micro-recalibration
+        self.gaze_estimator: Optional[Any] = None
 
         # Window title for identification
         self.setWindowTitle("IDEye - Gaze Macro Grid HUD (Phase 5)")
@@ -800,9 +833,20 @@ class OverlayWindow(QWidget):
         """Computes the QRectF for a 3x3 card with 12px padding and 10px gaps."""
         w = float(self.width()) if self.width() > 0 else 1920.0
         h = float(self.height()) if self.height() > 0 else 1080.0
-        right_margin = self._get_effective_right_margin(w)
-        left = self._get_grid_left(w, right_margin)
-        right = w - self.margin - right_margin
+        if getattr(self, "hud_layout_mode", "FULL_GRID") == "RIGHT_DOCK":
+            dock_w = max(
+                float(getattr(self, "right_dock_min_w", 460.0)),
+                min(
+                    float(getattr(self, "right_dock_max_w", 500.0)),
+                    w * float(getattr(self, "right_dock_ratio", 0.30)),
+                ),
+            )
+            left = w - self.margin - dock_w
+            right = w - self.margin
+        else:
+            right_margin = self._get_effective_right_margin(w)
+            left = self._get_grid_left(w, right_margin)
+            right = w - self.margin - right_margin
         top = self.margin + self.breadcrumb_height + self.gap
         bottom = h - self.margin
         avail_w = max(1.0, right - left)
@@ -915,8 +959,19 @@ class OverlayWindow(QWidget):
     def _update_header_exit_rect(self) -> None:
         """Computes the unified floating command bar and its interactive targets."""
         w = float(self.width()) if self.width() > 0 else 1920.0
-        right_margin = self._get_effective_right_margin(w)
-        grid_left = self._get_grid_left(w, right_margin)
+        if getattr(self, "hud_layout_mode", "FULL_GRID") == "RIGHT_DOCK":
+            dock_w = max(
+                float(getattr(self, "right_dock_min_w", 460.0)),
+                min(
+                    float(getattr(self, "right_dock_max_w", 500.0)),
+                    w * float(getattr(self, "right_dock_ratio", 0.30)),
+                ),
+            )
+            grid_left = w - self.margin - dock_w
+            right_margin = self.margin
+        else:
+            right_margin = self._get_effective_right_margin(w)
+            grid_left = self._get_grid_left(w, right_margin)
         brand_w = float(QFontMetrics(self._font_header_bold_btn).horizontalAdvance("IDEye"))
         ws_full_w = float(QFontMetrics(self._font_header_left).horizontalAdvance("VS Code")) + 11.0
         layout = HeaderLayout.compute(
@@ -1098,6 +1153,22 @@ class OverlayWindow(QWidget):
                 self._last_detected_context_name = ctx_name
                 self.ast_context_detected.emit(ctx_name)
             node = get_adaptive_context_node(ctx_info, std_root, language=self.current_language)
+            if ctx_name != "GENERAL":
+                try:
+                    dyn_action = get_dynamic_ast_action_for_context(ctx_info, self.current_language, "9")
+                    if len(node.items) > 8:
+                        items_copy = list(node.items)
+                        items_copy[8] = dyn_action
+                        node = MenuNode(
+                            id=node.id,
+                            title=node.title,
+                            breadcrumb_label=node.breadcrumb_label,
+                            items=items_copy,
+                            parent_id=node.parent_id,
+                            sticky=node.sticky,
+                        )
+                except Exception:
+                    pass
             if self.macro_manager is not None:
                 try:
                     node = self.macro_manager.apply_overrides(node, "coding")
@@ -1491,6 +1562,25 @@ class OverlayWindow(QWidget):
                 block_idx = candidate
                 break
         if block_idx is None:
+            if getattr(self, "hud_layout_mode", "FULL_GRID") == "RIGHT_DOCK":
+                w = float(self.width()) if self.width() > 0 else 1920.0
+                dock_w = max(
+                    float(getattr(self, "right_dock_min_w", 460.0)),
+                    min(
+                        float(getattr(self, "right_dock_max_w", 500.0)),
+                        w * float(getattr(self, "right_dock_ratio", 0.30)),
+                    ),
+                )
+                dock_left = w - self.margin - dock_w
+                if px < dock_left - 15.0:
+                    self.hovered_block = None
+                    self._dwell_block = None
+                    self._dwell_progress = 0.0
+                    self._dwell_fired = False
+                    if getattr(self, "show_tutorial_modal", False):
+                        self._update_mini_tutorial_gaze(gx, gy)
+                    self.update()
+                    return
             nearest = min(
                 range(9),
                 key=lambda idx: (
@@ -1512,6 +1602,17 @@ class OverlayWindow(QWidget):
                 self.hovered_block = None
         else:
             self.hovered_block = block_idx
+
+        # Wake ghost mode instantly when interacting with HUD
+        if self.hovered_block is not None:
+            self._wake_ghost_peek()
+
+        # Update adaptive dwell engine
+        self._update_adaptive_dwell(self.hovered_block)
+
+        # Update mini-tutorial gaze
+        if getattr(self, "show_tutorial_modal", False):
+            self._update_mini_tutorial_gaze(gx, gy)
 
         self.update()
 
@@ -1541,13 +1642,17 @@ class OverlayWindow(QWidget):
         px, py = gx * self.width(), gy * self.height()
         rel_x = (px - rect.left()) / rect.width()
         rel_y = (py - rect.top()) / rect.height()
-        if not (0.18 <= rel_x <= 0.82 and 0.18 <= rel_y <= 0.82):
-            self._gravity_since = now
-            return gx, gy
-        if now - self._gravity_since < float(getattr(config, "CELL_MAGNETISM_DWELL", 0.15)):
-            return gx, gy
-
-        strength = float(getattr(config, "CELL_MAGNETISM_STRENGTH", 0.15))
+        # Block 5 (index 4) has an expanded magnetic capture zone for safe rest
+        if block_idx == 4:
+            if not (0.10 <= rel_x <= 0.90 and 0.10 <= rel_y <= 0.90):
+                self._gravity_since = now
+                return gx, gy
+            strength = float(getattr(config, "CELL_MAGNETISM_STRENGTH", 0.15)) * 1.8
+        else:
+            if not (0.18 <= rel_x <= 0.82 and 0.18 <= rel_y <= 0.82):
+                self._gravity_since = now
+                return gx, gy
+            strength = float(getattr(config, "CELL_MAGNETISM_STRENGTH", 0.15))
         center = rect.center()
         cx = center.x() / max(1.0, self.width())
         cy = center.y() / max(1.0, self.height())
@@ -2539,6 +2644,19 @@ class OverlayWindow(QWidget):
             if self._gaze_scroll_enabled:
                 self._gaze_scroll_enabled = False
                 self.gaze_scroll_toggled.emit(False)
+        if getattr(self, "show_tutorial_modal", False):
+            if self.tutorial_step == 2:
+                self.tutorial_step = 3
+                self.tutorial_step_progress = 0.0
+                self._tutorial_rest_start = time.time()
+                self._play_sound("confirm")
+                self.update()
+                return
+            elif self.tutorial_step == 4:
+                self.show_tutorial_modal = False
+                self.update()
+                return
+
         if self.show_help_modal and gesture_name == "MOUTH_CLICK":
             self.mouth_clicked.emit(self.hovered_block if self.hovered_block is not None else -1)
             open_guide = bool(getattr(self, "hovered_help_modal_guide", False))
@@ -3261,6 +3379,32 @@ class OverlayWindow(QWidget):
             self.block_activated.emit(target_block, item.id)
             return
 
+        if item.id == "CMD_UNDO":
+            self.trigger_undo()
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.id == "CMD_SNAP_CARET":
+            self.snap_to_caret()
+            self.last_action_desc = "Snap Caret: Micro-recalibrado"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.id == "CMD_TOGGLE_DOCK":
+            new_layout = self.toggle_hud_layout()
+            self.last_action_desc = f"Layout: {new_layout}"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
+        if item.id == "CMD_TOGGLE_THEME":
+            new_theme = self.toggle_theme()
+            self.last_action_desc = f"Tema: {new_theme}"
+            self.action_executed.emit(item.id, self.last_action_desc)
+            self.block_activated.emit(target_block, item.id)
+            return
+
         if item.action_type in ("SNIPPET", "KEY"):
             self.code_injector.execute_action(item)
             if item.action_type == "SNIPPET":
@@ -3274,6 +3418,296 @@ class OverlayWindow(QWidget):
             self.exit_requested.emit()
             self.block_activated.emit(target_block, item.id)
             return
+
+    def trigger_undo(self) -> None:
+        """Triggers Universal Undo (Ctrl+Z) in the active editor."""
+        self._play_sound("undo")
+        self.code_injector.send_key("UNDO")
+        self.last_action_desc = "Deshacer (Ctrl+Z)"
+        self.undo_requested.emit()
+        self.action_executed.emit("UNDO", self.last_action_desc)
+        self.update()
+
+    def set_gaze_estimator(self, estimator: Any) -> None:
+        """Connects the GazeEstimator for 1-point micro-recalibration ('Snap to Caret')."""
+        self.gaze_estimator = estimator
+
+    def snap_to_caret(
+        self,
+        target_x: Optional[float] = None,
+        target_y: Optional[float] = None,
+    ) -> Tuple[float, float]:
+        """
+        Micro-recalibration 1-point ('Snap to Caret'):
+        Re-centers gaze estimate without requiring a full 5-point recalibration.
+        If target coordinates are not provided, aims at editor caret (0.35, 0.50) in
+        RIGHT_DOCK or screen center (0.50, 0.50) in FULL_GRID.
+        """
+        if target_x is None:
+            target_x = 0.35 if getattr(self, "hud_layout_mode", "FULL_GRID") == "RIGHT_DOCK" else 0.50
+        if target_y is None:
+            target_y = 0.50
+
+        offset = (0.0, 0.0)
+        if self.gaze_estimator is not None and hasattr(self.gaze_estimator, "micro_recalibrate"):
+            offset = self.gaze_estimator.micro_recalibrate(target_x, target_y)
+
+        self.micro_recalibration_requested.emit(target_x, target_y)
+        self._play_sound("confirm")
+        self.last_action_desc = "Snap Caret: Micro-recalibrado"
+        self.update()
+        return offset
+
+    def set_hud_layout(self, layout: str) -> None:
+        """Sets the HUD layout mode ('FULL_GRID' 100% or 'RIGHT_DOCK' 30% column)."""
+        normalized = layout.upper().strip()
+        if normalized in ("RIGHT_DOCK", "DOCK", "SIDE"):
+            self.hud_layout_mode = "RIGHT_DOCK"
+        else:
+            self.hud_layout_mode = "FULL_GRID"
+        self._update_header_exit_rect()
+        self.layout_changed.emit(self.hud_layout_mode)
+        self.update()
+
+    def toggle_hud_layout(self) -> str:
+        """Toggles between FULL_GRID (100%) and RIGHT_DOCK (30% column)."""
+        if self.hud_layout_mode == "RIGHT_DOCK":
+            self.set_hud_layout("FULL_GRID")
+        else:
+            self.set_hud_layout("RIGHT_DOCK")
+        self._play_sound("nav")
+        return self.hud_layout_mode
+
+    def set_theme(self, theme_name: str) -> None:
+        """Applies a visual theme (CYBER_GLASS, OLED_BLACK, SOLARIZED_DARK)."""
+        normalized = theme_name.upper().strip()
+        if "OLED" in normalized:
+            self.current_theme = "OLED_BLACK"
+            self._brush_header_bg = QBrush(QColor(0, 0, 0, 250))
+            self._brush_card_inactive = QBrush(QColor(0, 0, 0, 240))
+            self._brush_card_active = QBrush(QColor(15, 15, 15, 245))
+            self._brush_band_inactive = QBrush(QColor(12, 12, 12, 255))
+            self._brush_band_active = QBrush(QColor(20, 20, 20, 255))
+            self._pen_card_inactive = QPen(QColor(255, 255, 255, 90), 1.5)
+            self._color_card_text_active = QColor(255, 255, 255, 255)
+            self._color_card_text_inactive = QColor(240, 240, 240, 255)
+            self._color_card_subtitle = QColor(200, 200, 200, 240)
+            self._color_card_subtitle_inactive = QColor(180, 180, 180, 240)
+            self._set_theme_color("#00FF66")
+        elif "SOLARIZED" in normalized:
+            self.current_theme = "SOLARIZED_DARK"
+            self._brush_header_bg = QBrush(QColor(0, 43, 54, 245))
+            self._brush_card_inactive = QBrush(QColor(0, 43, 54, 210))
+            self._brush_card_active = QBrush(QColor(7, 54, 66, 235))
+            self._brush_band_inactive = QBrush(QColor(7, 54, 66, 245))
+            self._brush_band_active = QBrush(QColor(14, 65, 78, 250))
+            self._pen_card_inactive = QPen(QColor(88, 110, 117, 120), 1.2)
+            self._color_card_text_active = QColor(253, 246, 227, 255)
+            self._color_card_text_inactive = QColor(147, 161, 161, 255)
+            self._color_card_subtitle = QColor(131, 148, 150, 240)
+            self._color_card_subtitle_inactive = QColor(101, 123, 131, 240)
+            self._set_theme_color("#268BD2")
+        else:
+            self.current_theme = "CYBER_GLASS"
+            self._brush_header_bg = QBrush(QColor(11, 15, 25, 235))
+            self._brush_card_inactive = QBrush(QColor(15, 23, 42, 18))
+            self._brush_card_active = QBrush(QColor(15, 23, 42, 115))
+            self._brush_band_inactive = QBrush(QColor(11, 15, 25, 230))
+            self._brush_band_active = QBrush(QColor(11, 15, 25, 225))
+            self._pen_card_inactive = QPen(QColor(255, 255, 255, 28), 1.0)
+            self._color_card_text_active = QColor(248, 250, 252, 255)
+            self._color_card_text_inactive = QColor(226, 232, 240, 255)
+            self._color_card_subtitle = QColor(148, 163, 184, 220)
+            self._color_card_subtitle_inactive = QColor(148, 163, 184, 255)
+            self._set_theme_color("#00F0FF")
+        self.theme_changed.emit(self.current_theme)
+        self.update()
+
+    def toggle_theme(self) -> str:
+        """Cycles between CYBER_GLASS -> OLED_BLACK -> SOLARIZED_DARK."""
+        cycle = ["CYBER_GLASS", "OLED_BLACK", "SOLARIZED_DARK"]
+        curr = self.current_theme if self.current_theme in cycle else "CYBER_GLASS"
+        nxt = cycle[(cycle.index(curr) + 1) % len(cycle)]
+        self.set_theme(nxt)
+        self._play_sound("nav")
+        return self.current_theme
+
+    def open_command_palette(self) -> None:
+        """Navigates to the Gaze Command Palette (Spotlight)."""
+        self.navigate_to("COMMAND_PALETTE")
+        self._play_sound("nav")
+
+    def get_adaptive_dwell_time(self, item: Any, block_idx: int) -> float:
+        """Computes the required dwell time in seconds based on action ergonomics."""
+        if block_idx == 4 or (item is not None and getattr(item, "action_type", "") == "PAUSE"):
+            return float("inf")  # Safe Rest Zone: Midas Touch immune
+        if item is None:
+            return float(getattr(config, "DWELL_TIME_STANDARD_SEC", 0.45))
+        atype = getattr(item, "action_type", "")
+        item_id = str(getattr(item, "id", ""))
+        if atype == "EXIT" or item_id in ("CONFIRM_EXIT", "ACTION_EXIT") or "DELETE" in item_id:
+            return float(getattr(config, "DWELL_TIME_DANGER_SEC", 0.85))
+        if atype in ("BACK", "KEY", "SUBMENU") or item_id.startswith(("NAV_", "CMD_")):
+            return float(getattr(config, "DWELL_TIME_NAV_SEC", 0.30))
+        return float(getattr(config, "DWELL_TIME_STANDARD_SEC", 0.45))
+
+    def _update_adaptive_dwell(self, block_idx: Optional[int]) -> None:
+        """Advances the adaptive dwell-time accumulator and triggers activation when complete."""
+        if not getattr(self, "adaptive_dwell_enabled", True) or block_idx is None:
+            self._dwell_block = None
+            self._dwell_progress = 0.0
+            self._dwell_fired = False
+            return
+
+        now = time.time()
+        if self._dwell_block != block_idx:
+            self._dwell_block = block_idx
+            self._dwell_start_time = now
+            self._dwell_progress = 0.0
+            self._dwell_fired = False
+            return
+
+        if self._dwell_fired:
+            return
+
+        node = self.current_node
+        item = node.items[block_idx] if (node and block_idx < len(node.items)) else None
+        target_dwell = self.get_adaptive_dwell_time(item, block_idx)
+
+        if math.isinf(target_dwell):
+            self._dwell_progress = 0.0
+            return
+
+        elapsed = now - self._dwell_start_time
+        progress = max(0.0, min(1.0, elapsed / max(0.05, target_dwell)))
+        self._dwell_progress = progress
+
+        if progress >= 1.0:
+            self._dwell_fired = True
+            self.trigger_click_flash(block_idx)
+            if item is not None:
+                self._play_sound("confirm")
+                self.execute_action(item, target_block=block_idx)
+
+    def start_mini_tutorial(self) -> None:
+        """Starts the interactive 3-step mini-tutorial for gaze onboarding."""
+        self.show_tutorial_modal = True
+        self.tutorial_step = 1
+        self.tutorial_step_progress = 0.0
+        self._tutorial_rest_start = 0.0
+        self._play_sound("nav")
+        self.update()
+
+    def close_mini_tutorial(self) -> None:
+        """Closes the interactive tutorial modal."""
+        self.show_tutorial_modal = False
+        self.update()
+
+    def _update_mini_tutorial_gaze(self, gx: float, gy: float) -> None:
+        """Tracks gaze and advances the 3-step interactive onboarding tutorial."""
+        if not getattr(self, "show_tutorial_modal", False):
+            return
+
+        now = time.time()
+        if self.tutorial_step == 1:
+            if self.hovered_block is not None and self.hovered_block != 4:
+                self.tutorial_step_progress = min(1.0, getattr(self, "_dwell_progress", 0.0))
+                if self.tutorial_step_progress >= 0.95 or getattr(self, "_dwell_fired", False):
+                    self.tutorial_step = 2
+                    self.tutorial_step_progress = 0.0
+                    self._play_sound("confirm")
+            else:
+                self.tutorial_step_progress = 0.0
+        elif self.tutorial_step == 3:
+            if self.hovered_block == 4 or self.hovered_block is None:
+                if self._tutorial_rest_start == 0.0:
+                    self._tutorial_rest_start = now
+                elapsed = now - self._tutorial_rest_start
+                self.tutorial_step_progress = min(1.0, elapsed / 1.0)
+                if self.tutorial_step_progress >= 1.0:
+                    self.tutorial_step = 4
+                    self.tutorial_step_progress = 1.0
+                    self._play_sound("confirm")
+            else:
+                self._tutorial_rest_start = 0.0
+                self.tutorial_step_progress = 0.0
+
+    def _paint_tutorial_modal(self, painter: QPainter, w: float, h: float) -> None:
+        """Renders the high-contrast 3-step interactive onboarding tutorial modal."""
+        painter.save()
+        modal_w = min(620.0, w - 40.0)
+        modal_h = 240.0
+        modal_x = (w - modal_w) * 0.5
+        modal_y = (h - modal_h) * 0.5
+        modal_rect = QRectF(modal_x, modal_y, modal_w, modal_h)
+
+        painter.setBrush(QBrush(QColor(11, 15, 25, 245)))
+        theme_col = QColor(self.theme_color or "#00F0FF")
+        painter.setPen(QPen(theme_col, 2.0))
+        painter.drawRoundedRect(modal_rect, 14.0, 14.0)
+
+        badge_text = f"PASO {self.tutorial_step} DE 3" if self.tutorial_step <= 3 else "TUTORIAL COMPLETADO"
+        badge_rect = QRectF(modal_x + 24.0, modal_y + 20.0, 180.0, 26.0)
+        painter.setBrush(QBrush(QColor(theme_col.red(), theme_col.green(), theme_col.blue(), 45)))
+        painter.setPen(QPen(theme_col, 1.2))
+        painter.drawRoundedRect(badge_rect, 6.0, 6.0)
+        painter.setPen(theme_col)
+        painter.setFont(self._font_header_bold_btn)
+        painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, badge_text)
+
+        titles = {
+            1: "1. Fijacion de la mirada (Adaptive Dwell)",
+            2: "2. Confirmacion por Gesto (MAR / Clic)",
+            3: "3. Zona de Reposo (Safe Rest Anti-Midas)",
+            4: "Listo para programar con IDEye!",
+        }
+        subtitles = {
+            1: "Posiciona tu mirada en cualquier celda para cargar el anillo de fijacion progresivo.",
+            2: "Abre levemente la boca o pulsa clic/Enter para confirmar una seleccion activa.",
+            3: "Coloca tu mirada en la celda central 5 o en el editor para reposar sin disparos accidentales.",
+            4: "Has completado los fundamentos de control ocular. Pulsa F2 o parpadea para cerrar.",
+        }
+
+        title = titles.get(self.tutorial_step, "")
+        subtitle = subtitles.get(self.tutorial_step, "")
+
+        painter.setPen(QColor(255, 255, 255))
+        painter.setFont(self._font_modal_title)
+        painter.drawText(
+            QRectF(modal_x + 24.0, modal_y + 58.0, modal_w - 48.0, 32.0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            title,
+        )
+
+        painter.setPen(QColor(203, 213, 225))
+        painter.setFont(self._font_modal_item_title)
+        painter.drawText(
+            QRectF(modal_x + 24.0, modal_y + 96.0, modal_w - 48.0, 52.0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.TextWordWrap,
+            subtitle,
+        )
+
+        bar_x = modal_x + 24.0
+        bar_y = modal_y + 165.0
+        bar_w = modal_w - 48.0
+        bar_h = 10.0
+        painter.setBrush(QBrush(QColor(30, 41, 59, 200)))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), 5.0, 5.0)
+
+        prog = max(0.0, min(1.0, float(self.tutorial_step_progress)))
+        if prog > 0.01:
+            painter.setBrush(QBrush(theme_col))
+            painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w * prog, bar_h), 5.0, 5.0)
+
+        painter.setPen(QColor(148, 163, 184))
+        painter.setFont(self._font_modal_item_desc)
+        painter.drawText(
+            QRectF(modal_x + 24.0, modal_y + 190.0, modal_w - 48.0, 24.0),
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+            "Pulsa F2 o Escape para salir del tutorial",
+        )
+        painter.restore()
 
     def mousePressEvent(self, event) -> None:
         """Handles physical mouse clicks for testing, headless runners, and assistive caregivers."""
@@ -3359,6 +3793,31 @@ class OverlayWindow(QWidget):
             event.accept()
         elif event.key() == Qt.Key.Key_S:
             self.toggle_sound_feedback()
+            event.accept()
+        elif event.key() == Qt.Key.Key_Escape and getattr(self, "show_tutorial_modal", False):
+            self.show_tutorial_modal = False
+            self.update()
+            event.accept()
+        elif event.key() == Qt.Key.Key_F2:
+            self.show_tutorial_modal = not getattr(self, "show_tutorial_modal", False)
+            if self.show_tutorial_modal:
+                self.start_mini_tutorial()
+            self.update()
+            event.accept()
+        elif event.key() == Qt.Key.Key_D:
+            self.toggle_hud_layout()
+            event.accept()
+        elif event.key() == Qt.Key.Key_P:
+            self.open_command_palette()
+            event.accept()
+        elif event.key() == Qt.Key.Key_Z:
+            self.trigger_undo()
+            event.accept()
+        elif event.key() == Qt.Key.Key_C:
+            self.snap_to_caret()
+            event.accept()
+        elif event.key() == Qt.Key.Key_O:
+            self.toggle_theme()
             event.accept()
         elif event.key() == Qt.Key.Key_F:
             self.toggle_sniper_mode()
@@ -3519,6 +3978,17 @@ class OverlayWindow(QWidget):
                 title="CONFIRMAR SALIDA",
                 breadcrumb_label="SALIR",
                 items=populate_exit_confirm_items(parent_id="ROOT"),
+                parent_id="ROOT",
+                sticky=False,
+            )
+
+        # Gaze Command Palette (Spotlight) auxiliary node
+        if "COMMAND_PALETTE" not in self.menu_tree:
+            self.menu_tree["COMMAND_PALETTE"] = MenuNode(
+                id="COMMAND_PALETTE",
+                title="PALETA DE COMANDOS",
+                breadcrumb_label="SPOTLIGHT",
+                items=populate_command_palette_items(parent_id="ROOT"),
                 parent_id="ROOT",
                 sticky=False,
             )
@@ -4297,6 +4767,22 @@ class OverlayWindow(QWidget):
             painter.setFont(self._font_card_number)
             painter.drawText(number_rect, Qt.AlignmentFlag.AlignCenter, str(number))
 
+            # Adaptive dwell radial progress indicator
+            if (
+                getattr(self, "adaptive_dwell_enabled", True)
+                and getattr(self, "_dwell_progress", 0.0) > 0.0
+                and i == getattr(self, "_dwell_block", None)
+                and i != 4
+            ):
+                dwell_rect = number_rect.adjusted(-3.0, -3.0, 3.0, 3.0)
+                dwell_pen = QPen(QColor(0, 240, 255, 230), 2.5)
+                if is_danger:
+                    dwell_pen.setColor(QColor(239, 68, 68, 230))
+                painter.setPen(dwell_pen)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                span_angle = int(-self._dwell_progress * 360 * 16)
+                painter.drawArc(dwell_rect, 90 * 16, span_angle)
+
             # Status badge (right side of the band)
             badge_text = ""
             badge_color = self._color_badge_default
@@ -4439,6 +4925,10 @@ class OverlayWindow(QWidget):
             painter.setBrush(self._brush_pointer_dot)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawEllipse(center, 3.0, 3.0)
+
+        # 5. Interactive 3-step onboarding mini-tutorial modal
+        if getattr(self, "show_tutorial_modal", False):
+            self._paint_tutorial_modal(painter, w, h)
 
         painter.end()
     def _paint_gaze_scroll_indicators(self, painter: QPainter, w: float, h: float) -> None:

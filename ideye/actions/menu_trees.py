@@ -386,6 +386,64 @@ def create_adaptive_menu_action(key_num: str = "9") -> MenuAction:
     )
 
 
+def get_dynamic_ast_action_for_context(
+    context_info: Union[Dict[str, Any], str],
+    language: str = "PYTHON",
+    key_num: str = "9",
+) -> MenuAction:
+    """
+    Returns an immediate dynamic AST action for Block 9 based on real-time cursor context.
+    Provides 1-dwell activation of the most relevant syntax construct or spotlight.
+    """
+    lang = normalize_language(language)
+    if isinstance(context_info, str):
+        ctx_type = context_info.upper()
+    elif isinstance(context_info, dict):
+        ctx_type = str(context_info.get("context", "GENERAL")).upper()
+    else:
+        ctx_type = "GENERAL"
+
+    if ctx_type == "FUNCTION_SIGNATURE":
+        if lang == LANG_TYPESCRIPT:
+            return MenuAction("DYN_TS_RETURN", f"{key_num}: return", "Sentencia return", "SNIPPET", snippet="return ", icon="flow")
+        elif lang == LANG_RUST:
+            return MenuAction("DYN_RS_OK", f"{key_num}: Ok(())", "Resultado exitoso", "SNIPPET", snippet="Ok(())", icon="flow")
+        return MenuAction("DYN_PY_DOCSTRING", f"{key_num}: docstring", "Documentar función", "SNIPPET", snippet='"""\nArgs:\n    \nReturns:\n    \n"""\n', icon="function")
+
+    elif ctx_type == "TRY_BLOCK":
+        if lang == LANG_TYPESCRIPT:
+            return MenuAction("DYN_TS_CATCH", f"{key_num}: catch (err)", "Capturar error", "SNIPPET", snippet="catch (error) {\n    console.error(error);\n}", icon="flow")
+        elif lang == LANG_RUST:
+            return MenuAction("DYN_RS_MATCH", f"{key_num}: match res", "Coincidencia de patrones", "SNIPPET", snippet="match res {\n    Ok(val) => val,\n    Err(e) => return Err(e),\n}", icon="flow")
+        return MenuAction("DYN_PY_EXCEPT", f"{key_num}: except Exception", "Captura segura", "SNIPPET", snippet="except Exception as exc:\n    logger.error(f'Error: {exc}')\n    raise", icon="flow")
+
+    elif ctx_type == "LOOP_BLOCK":
+        return MenuAction("DYN_LOOP_BREAK", f"{key_num}: break / cont", "Control de bucle", "SNIPPET", snippet="break;", icon="flow")
+
+    elif ctx_type == "IF_BLOCK":
+        if lang == LANG_TYPESCRIPT:
+            return MenuAction("DYN_TS_ELSE", f"{key_num}: else", "Rama alternativa", "SNIPPET", snippet="else {\n    \n}", cursor_offset_up=1, icon="flow")
+        return MenuAction("DYN_PY_ELIF", f"{key_num}: elif / else", "Rama condicional", "SNIPPET", snippet="elif :\n    pass", cursor_offset_up=1, cursor_offset_left=5, icon="flow")
+
+    elif ctx_type == "CLASS_BODY":
+        if lang == LANG_TYPESCRIPT:
+            return MenuAction("DYN_TS_CTOR", f"{key_num}: constructor()", "Constructor de clase", "SNIPPET", snippet="constructor() {\n    super();\n}", icon="function")
+        elif lang == LANG_RUST:
+            return MenuAction("DYN_RS_NEW", f"{key_num}: pub fn new()", "Constructor new", "SNIPPET", snippet="pub fn new() -> Self {\n    Self {}\n}", icon="function")
+        return MenuAction("DYN_PY_INIT", f"{key_num}: def __init__", "Constructor Python", "SNIPPET", snippet="def __init__(self) -> None:\n    super().__init__()\n", icon="function")
+
+    # Default fallback: Gaze Command Palette / Spotlight
+    return MenuAction(
+        id="SWITCH_COMMAND_PALETTE",
+        label=f"{key_num}: SPOTLIGHT",
+        hint="Paleta de comandos por mirada",
+        action_type="SUBMENU",
+        submenu_id="COMMAND_PALETTE",
+        icon="wand",
+        sticky=False,
+    )
+
+
 def get_adaptive_context_node(
     context_info: Union[Dict[str, Any], str],
     standard_root: Optional[MenuNode] = None,
@@ -1521,6 +1579,21 @@ def build_menu_tree(language: str = "PYTHON") -> Dict[str, MenuNode]:
     )
 
     return tree
+
+
+def populate_command_palette_items(parent_id: str = "ROOT") -> List[MenuAction]:
+    """Populates the 9 items for the 3x3 Gaze Command Palette (Spotlight)."""
+    return [
+        MenuAction("CMD_SAVE", "1: Guardar", "Ctrl+S", "KEY", key_name="SAVE", icon="edit"),
+        MenuAction("CMD_FORMAT", "2: Formatear", "Shift+Alt+F", "KEY", key_name="FORMAT", icon="format"),
+        MenuAction("CMD_VSCODE_PALETTE", "3: Paleta VS Code", "Ctrl+Shift+P", "KEY", key_name="COMMAND_PALETTE", icon="wand"),
+        MenuAction("CMD_UNDO", "4: Deshacer", "Ctrl+Z", "KEY", key_name="UNDO", sticky=True, icon="edit"),
+        create_pause_action("5"),
+        MenuAction("CMD_TERMINAL", "6: Terminal", "Ctrl+`", "KEY", key_name="TERMINAL", icon="terminal"),
+        create_back_action(parent_id=parent_id, key_num="7"),
+        MenuAction("CMD_SNAP_CARET", "8: Snap Caret", "Micro-calibrar", "ACTION", icon="calibration"),
+        MenuAction("CMD_TOGGLE_DOCK", "9: Dock 30% / 100%", "Conmutar layout", "ACTION", icon="grid"),
+    ]
 
 
 def validate_menu_tree(tree: Dict[str, MenuNode]) -> Tuple[bool, List[str]]:

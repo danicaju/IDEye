@@ -723,6 +723,15 @@ class CodeInjector:
             elif aliases & {"CUT", "CTRL+X", "CTRL_X", "CMD+X"}:
                 with self.hold_modifiers(self.primary_modifier):
                     self.keyboard.tap('x')
+            elif aliases & {"FORMAT", "SHIFT+ALT+F", "SHIFT_ALT_F"}:
+                with self.hold_modifiers(Key.shift, Key.alt):
+                    self.keyboard.tap('f')
+            elif aliases & {"COMMAND_PALETTE", "VSCODE_PALETTE", "CTRL+SHIFT+P", "CTRL_SHIFT_P"}:
+                with self.hold_modifiers(self.primary_modifier, Key.shift):
+                    self.keyboard.tap('p')
+            elif aliases & {"TERMINAL", "CTRL+`", "CTRL_BACKTICK"}:
+                with self.hold_modifiers(self.primary_modifier):
+                    self.keyboard.tap('`')
             elif aliases & {"SELECT_ALL", "CTRL+A", "CTRL_A", "CMD+A"}:
                 with self.hold_modifiers(self.primary_modifier):
                     self.keyboard.tap('a')
@@ -826,6 +835,8 @@ class CodeInjector:
                     "SHIFT_TAB": "outdent",
                     "ENTER": "type",
                     "SPACE": "type",
+                    "COMMAND_PALETTE": "workbench.action.showCommands",
+                    "TERMINAL": "workbench.action.terminal.toggleTerminal",
                 }
                 cmd = ws_key_map.get(kname)
                 if cmd:

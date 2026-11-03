@@ -19,6 +19,7 @@ import json
 import os
 import sys
 import time
+import math
 import numpy as np
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QRectF, QPointF
@@ -106,6 +107,12 @@ class CalibrationUI(QWidget):
         self._finished_emitted: bool = False
         self.status_message: str = "Mire al punto central y abra la boca para registrar"
 
+        # Pre-flight Posture & Illumination Assistant state
+        self.current_distance_cm: float = float(getattr(config, "POSTURE_OPTIMAL_DISTANCE_CM", 60.0))
+        self.current_luma: float = 120.0
+        self.posture_optimal: bool = True
+        self.lighting_optimal: bool = True
+
         # Animation timer for target pulsing
         self._pulse_phase: float = 0.0
         self._anim_timer = QTimer(self)
@@ -166,6 +173,46 @@ class CalibrationUI(QWidget):
         # Only fallback to (gx, gy) if raw_gaze_updated hasn't set latest_raw_gaze
         if not getattr(self, "_has_raw_signal", False):
             self.latest_raw_gaze = (gx, gy)
+
+    @pyqtSlot(float)
+    def on_distance_updated(self, dist_cm: float) -> None:
+        """Updates pre-flight head distance in cm."""
+        try:
+            val = float(dist_cm)
+            if np.isfinite(val):
+                self.current_distance_cm = max(20.0, min(150.0, val))
+                self.posture_optimal = (50.0 <= self.current_distance_cm <= 70.0)
+                self.update()
+        except (TypeError, ValueError):
+            pass
+
+    @pyqtSlot(float)
+    def on_lighting_updated(self, luma: float) -> None:
+        """Updates pre-flight lighting luma level (0-255)."""
+        try:
+            val = float(luma)
+            if np.isfinite(val):
+                self.current_luma = max(0.0, min(255.0, val))
+                self.lighting_optimal = (80.0 <= self.current_luma <= 220.0)
+                self.update()
+        except (TypeError, ValueError):
+            pass
+
+    def on_landmarks_updated(self, landmarks: Any) -> None:
+        """Calculates pre-flight posture distance directly from landmarks."""
+        if landmarks is None:
+            return
+        try:
+            lm = getattr(landmarks, "landmark", landmarks)
+            p1 = lm[33]
+            p2 = lm[263]
+            dx = float(p1.x - p2.x)
+            dy = float(p1.y - p2.y)
+            span = math.hypot(dx, dy)
+            dist_cm = GazeEstimator.calculate_posture_distance_cm(span)
+            self.on_distance_updated(dist_cm)
+        except Exception:
+            pass
 
     def on_gesture_triggered(self, gesture_name: str) -> None:
         """Slot for facial gestures from tracker."""
@@ -575,6 +622,54 @@ class CalibrationUI(QWidget):
         painter.setFont(font_sub)
         painter.setPen(QColor(160, 170, 190))
         painter.drawText(0, 95, w, 30, Qt.AlignmentFlag.AlignCenter, self.status_message)
+
+        # Pre-flight Posture & Illumination assistant pills
+        preflight_y = 132
+        pill_w = 220
+        pill_h = 28
+        gap = 14
+        total_pills_w = 2 * pill_w + gap
+        pill_start_x = (w - total_pills_w) / 2
+
+        # Posture Pill
+        posture_rect = QRectF(pill_start_x, preflight_y, pill_w, pill_h)
+        if self.posture_optimal:
+            p_bg = QColor(16, 60, 36, 200)
+            p_border = QColor(52, 211, 153)
+            p_text = f"Distancia: {self.current_distance_cm:.0f} cm [Optima]"
+        else:
+            p_bg = QColor(60, 40, 16, 200)
+            p_border = QColor(251, 146, 60)
+            p_text = f"Distancia: {self.current_distance_cm:.0f} cm [50-70 cm]"
+
+        painter.setBrush(QBrush(p_bg))
+        painter.setPen(QPen(p_border, 1.5))
+        painter.drawRoundedRect(posture_rect, 6.0, 6.0)
+        painter.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
+        painter.setPen(QColor(230, 245, 235) if self.posture_optimal else QColor(255, 220, 180))
+        painter.drawText(posture_rect, Qt.AlignmentFlag.AlignCenter, p_text)
+
+        # Lighting Pill
+        light_rect = QRectF(pill_start_x + pill_w + gap, preflight_y, pill_w, pill_h)
+        if self.lighting_optimal:
+            l_bg = QColor(16, 60, 36, 200)
+            l_border = QColor(52, 211, 153)
+            l_text = f"Luz: {self.current_luma:.0f} lx [Optima]"
+        elif self.current_luma < 80.0:
+            l_bg = QColor(60, 40, 16, 200)
+            l_border = QColor(251, 146, 60)
+            l_text = f"Luz: {self.current_luma:.0f} lx [Baja luz]"
+        else:
+            l_bg = QColor(60, 20, 20, 200)
+            l_border = QColor(248, 113, 113)
+            l_text = f"Luz: {self.current_luma:.0f} lx [Alta]"
+
+        painter.setBrush(QBrush(l_bg))
+        painter.setPen(QPen(l_border, 1.5))
+        painter.drawRoundedRect(light_rect, 6.0, 6.0)
+        painter.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
+        painter.setPen(QColor(230, 245, 235) if self.lighting_optimal else QColor(255, 200, 200))
+        painter.drawText(light_rect, Qt.AlignmentFlag.AlignCenter, l_text)
 
         font_hint = QFont("Segoe UI", 10)
         painter.setFont(font_hint)

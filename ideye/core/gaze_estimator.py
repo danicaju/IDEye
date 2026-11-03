@@ -317,6 +317,9 @@ class GazeEstimator:
         self.calib_iris_linear_x: Optional[Tuple[float, float]] = None
         self.calib_iris_linear_y: Optional[Tuple[float, float]] = None
         self.has_dual_calibration: bool = False
+        # 1-Point Micro-Recalibration ("Snap to Caret" / Offset Adjustment)
+        self.micro_offset_x: float = 0.0
+        self.micro_offset_y: float = 0.0
         self._lock = threading.RLock()
 
     @staticmethod
@@ -1175,6 +1178,11 @@ class GazeEstimator:
                     target_x = float(np.clip(raw_target_x, 0.0, 1.0))
                     target_y = float(np.clip(raw_target_y, 0.0, 1.0))
 
+            # Apply 1-point micro-recalibration offset ("Snap to Caret" / drift correction)
+            if self.micro_offset_x != 0.0 or self.micro_offset_y != 0.0:
+                target_x = float(np.clip(target_x + self.micro_offset_x, 0.0, 1.0))
+                target_y = float(np.clip(target_y + self.micro_offset_y, 0.0, 1.0))
+
             # 6. Adaptive Fixation Deadzone (I-VT velocity/distance filtering with sliding leash)
             dist_to_anchor = math.hypot(target_x - self.fixation_anchor_x, target_y - self.fixation_anchor_y)
             if dist_to_anchor <= self.fixation_deadzone:
@@ -1249,6 +1257,7 @@ class GazeEstimator:
                 "effective_iris_weight": self._effective_iris_weight,
                 "has_5_point_calibration": self.has_5_point_calibration,
                 "calibration_rmse": self.calibration_rmse,
+                "micro_offset": (self.micro_offset_x, self.micro_offset_y),
             })
 
             return self._finite_unit(self.smoothed_x), self._finite_unit(self.smoothed_y), True, debug_info
@@ -1845,3 +1854,51 @@ class GazeEstimator:
             self.has_dual_calibration = False
             self.last_head_yaw = 0.0
             self.active_monitor_calibrated = False
+            self.micro_offset_x = 0.0
+            self.micro_offset_y = 0.0
+
+    def micro_recalibrate(
+        self,
+        target_x: float = 0.5,
+        target_y: float = 0.5,
+    ) -> Tuple[float, float]:
+        """
+        Micro-recalibration of 1 point ('Snap to Caret' / Snap to Center):
+        Quickly re-centers gaze to the active editor caret or resting center without
+        discarding or repeating the 5-point regularized polynomial mapping.
+        """
+        with self._lock:
+            target_x = float(np.clip(target_x, 0.0, 1.0))
+            target_y = float(np.clip(target_y, 0.0, 1.0))
+            # Current unshifted estimated gaze before micro offset:
+            current_x = self.smoothed_x - self.micro_offset_x
+            current_y = self.smoothed_y - self.micro_offset_y
+            self.micro_offset_x = float(np.clip(target_x - current_x, -0.40, 0.40))
+            self.micro_offset_y = float(np.clip(target_y - current_y, -0.40, 0.40))
+            self.smoothed_x = target_x
+            self.smoothed_y = target_y
+            self.fixation_anchor_x = target_x
+            self.fixation_anchor_y = target_y
+            now = time.perf_counter()
+            self.one_euro_x.reset(now, target_x)
+            self.one_euro_y.reset(now, target_y)
+            return self.micro_offset_x, self.micro_offset_y
+
+    def reset_micro_recalibration(self) -> None:
+        """Resets the 1-point micro offset back to zero."""
+        with self._lock:
+            self.micro_offset_x = 0.0
+            self.micro_offset_y = 0.0
+
+    @staticmethod
+    def calculate_posture_distance_cm(eye_span: float, nominal_interocular: float = 0.28) -> float:
+        """Estimates head-to-screen distance in cm based on outer canthi landmark span."""
+        try:
+            span = float(eye_span)
+        except (TypeError, ValueError):
+            return 60.0
+        if not np.isfinite(span) or span <= 1e-4:
+            return 60.0
+        dist_cm = (float(nominal_interocular) / span) * 60.0
+        return float(np.clip(dist_cm, 20.0, 150.0))
+

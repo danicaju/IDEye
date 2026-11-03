@@ -143,6 +143,17 @@ El `WebSocketBridge` intercambia estado del editor, diagnósticos e información
 
 La extensión de VS Code envía errores y warnings de la línea activa por WebSocket. `DiagnosticsFixer` genera imports, dos puntos, cierres de paréntesis, sangrías y sugerencias de IA, y los expone en un menú 3x3 de Auto-Fix. `HealthGuard` avisa tras 28 s sin parpadear o si la distancia ocular supera el 138% de la base. Los micro-gestos opcionales permiten abrir Auto-Fix con las cejas e indentar/des-indentar inclinando la cabeza.
 
+### 13. Dock Lateral Flexible, Ergonomía Pre-Vuelo y Gaze Spotlight
+
+- **Layouts Flexibles de HUD**: Alterna entre cuadrícula completa (100%) y Right Dock (columna lateral derecha del 30%, ~460-480px de ancho) mediante la tecla `D` o Spotlight, liberando el 70% izquierdo de pantalla para leer en VS Code con paso transparente de mirada.
+- **Smart Ghost Mode**: Atenúa automáticamente las tarjetas al 15% de opacidad tras inactividad mientras lees código en el editor, reactivándose instantáneamente en 0 ms al volver a mirar hacia el HUD.
+- **Asistente Pre-Vuelo de Postura e Iluminación**: Verificación biométrica en tiempo real de la distancia óptima (50-70 cm con distintivo verde) y nivel de luz ambiental en la UI de calibración.
+- **Micro-Recalibración de 1 Punto ("Snap to Caret")**: Reajusta de inmediato el offset de la mirada al cursor activo con la tecla `C` o Spotlight sin necesidad de repetir los 5 puntos de calibración.
+- **Dwell Adaptativo y Safe Rest**: Fijación ágil de 300 ms en navegación/teclas, segura de 850 ms en salidas críticas, y completamente desactivada (infinita) en la celda central 5 con captura magnética ampliada para eliminar el Toque de Midas.
+- **Gaze Command Palette (Spotlight)**: Menú modal 3x3 accesible por mirada o tecla `P` para guardar, formatear código, abrir terminal, deshacer universal (Ctrl+Z), micro-recalibrar y conmutar el Dock.
+- **Temas de Alto Contraste**: Alterna con la tecla `O` entre Cyber Glass, OLED Black (WCAG AAA con fondo negro absoluto para paneles OLED) y Solarized Dark.
+- **Mini-Tutorial Guiado de 3 Pasos**: Mini-guía interactiva en pantalla (`F2`) para dominar la fijación progresiva, la confirmación gestual y el reposo seguro.
+
 ---
 
 ## Arquitectura del Sistema
@@ -201,7 +212,7 @@ No necesitas instalar Python, Git, ni usar la terminal:
 
 1. **Descarga `IDEye-Windows-v0.5.0.zip`** desde **[GitHub Releases](https://github.com/danicaju/IDEye/releases)** y descomprímelo en cualquier carpeta de tu PC.
 2. **Ejecuta `IDEye.exe`**: Incluye Python, OpenCV, MediaPipe y PyQt6 ya integrados sin dependencias externas.
-3. **Instala la extensión en VS Code**: Arrastra `ideye-vscode-bridge-0.5.0.vsix` dentro de la ventana de VS Code, o desde la pestaña de Extensiones (`Ctrl+Shift+X` ➔ `...` ➔ *Instalar desde VSIX...*).
+3. **Instala la extensión en VS Code**: Arrastra `ideye-vscode-bridge-0.5.0.vsix` dentro de la ventana de VS Code, o desde la pestaña de Extensiones (`Ctrl+Shift+X` -> `...` -> *Instalar desde VSIX...*).
 4. **Programa sin manos**: La cámara se calibrará automáticamente y se conectará con VS Code mediante WebSocket local (`ws://127.0.0.1:54321`).
 
 ---
@@ -290,6 +301,12 @@ En el primer inicio (o con `--recalibrate`), IDEye abrirá la **Pantalla de Cali
 | **`Ctrl+Alt+Z`** | **Lupa Sniper x3.5** | Activa la lupa de precisión y el slow-mo en FreeLook |
 | **`Ctrl+Alt+I`** | **Agentic Prompt Launcher** | Abre seis órdenes de ingeniería para el chat de VS Code o la cola MCP local |
 | **`Ctrl+Alt+W`** | **Scroll ocular inercial** | Rueda vertical/horizontal proporcional con zona muerta central y frenado suave |
+| **`D`** | **Conmutar Right Dock** | Alterna entre cuadrícula completa (100%) y columna derecha (30%, ~460-480px) |
+| **`P`** | **Gaze Spotlight** | Abre el menú modal 3x3 de la Paleta de Comandos por mirada |
+| **`Z`** | **Deshacer Universal** | Ejecuta Deshacer (Ctrl+Z) de inmediato en el editor activo |
+| **`C`** | **Snap to Caret** | Micro-recalibración de 1 punto re-centrando el offset al cursor |
+| **`O`** | **Conmutar Tema** | Cicla entre Cyber Glass, OLED Black (WCAG AAA) y Solarized Dark |
+| **`F2`** | **Mini-Tutorial** | Abre/cierra la guía interactiva en 3 pasos |
 | **Salida Ocular** | **[X SALIR] Manos Libres** | Mira a la esquina superior derecha `[X SALIR]` y abre la boca; despliega un diálogo de confirmación 100% asistivo |
 
 ---

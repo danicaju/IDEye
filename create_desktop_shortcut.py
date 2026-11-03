@@ -48,7 +48,14 @@ def create_shortcuts():
     $Shortcut.Save()
     '''
 
-    res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
+    subp_kwargs = {"capture_output": True, "text": True}
+    if sys.platform == "win32":
+        subp_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 1)
+        si.wShowWindow = 0
+        subp_kwargs["startupinfo"] = si
+    res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], **subp_kwargs)
     if res.returncode == 0 and os.path.exists(desktop_lnk):
         print(f"[SUCCESS] Desktop shortcut created at:\n  {desktop_lnk}")
         return True

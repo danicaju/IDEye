@@ -7,12 +7,18 @@ from ideye.actions.ai_predictor import (
     generate_heuristic_predictions,
 )
 from ideye.actions.context_reader import ContextReader, DocumentShadowBuffer
+import subprocess
+import sys
+from unittest.mock import MagicMock, patch
+
 from ideye.actions.semantic_taxonomy import (
     CATEGORY_SPECS,
     build_debug_semantic_tree,
     build_navigation_dual_tree,
     build_semantic_coding_tree,
     build_terminal_semantic_tree,
+    clear_project_context_cache,
+    detect_project_context,
 )
 
 LANGUAGES = ("python", "c", "java", "javascript", "sql", "gdscript", "lua")
@@ -56,6 +62,35 @@ class TestSemanticCodingTaxonomy(unittest.TestCase):
         tree = build_semantic_coding_tree("python", ai_suggestions=suggestions)
         values = [item.snippet for item in tree["SEM_AI"].items if item.snippet]
         self.assertEqual(values, suggestions)
+
+    def test_detect_project_context_caching_and_windows_no_window(self):
+        clear_project_context_cache()
+        mock_proc = MagicMock()
+        mock_proc.stdout = "main\n"
+        with patch("ideye.actions.semantic_taxonomy.subprocess.run", return_value=mock_proc) as mock_run:
+            ctx1 = detect_project_context()
+            self.assertEqual(ctx1["branch"], "main")
+            call_count_1 = mock_run.call_count
+
+            # Second call must hit cache without invoking subprocess again
+            ctx2 = detect_project_context()
+            self.assertEqual(ctx2["branch"], "main")
+            self.assertEqual(mock_run.call_count, call_count_1)
+
+            # force_refresh=True must bypass cache
+            ctx3 = detect_project_context(force_refresh=True)
+            self.assertEqual(mock_run.call_count, call_count_1 * 2)
+
+            # On Windows, verify CREATE_NO_WINDOW and hidden STARTUPINFO
+            if sys.platform == "win32":
+                for call_args in mock_run.call_args_list:
+                    kwargs = call_args.kwargs
+                    self.assertIn("creationflags", kwargs)
+                    self.assertEqual(kwargs["creationflags"], getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000))
+                    self.assertIn("startupinfo", kwargs)
+                    si = kwargs["startupinfo"]
+                    self.assertEqual(si.wShowWindow, 0)
+        clear_project_context_cache()
 
     def test_other_mode_trees_are_valid(self):
         terminal = build_terminal_semantic_tree(

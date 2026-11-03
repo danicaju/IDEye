@@ -10,7 +10,9 @@ from __future__ import annotations
 import os
 import re
 import subprocess
-from typing import Any, Dict, List, Optional, Sequence
+import sys
+import time
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 try:
     from ideye.actions.menu_trees import (
@@ -380,9 +382,31 @@ def build_semantic_coding_tree(
     return tree
 
 
-def detect_project_context(workspace_dir: Optional[str] = None) -> Dict[str, Any]:
-    """Safe, bounded inspection of the current repository for Terminal mode."""
+_PROJECT_CONTEXT_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+_CACHE_TTL_SEC: float = 5.0
+
+
+def clear_project_context_cache() -> None:
+    """Clears the cached git project context (useful for testing or manual refresh)."""
+    _PROJECT_CONTEXT_CACHE.clear()
+
+
+def detect_project_context(
+    workspace_dir: Optional[str] = None, force_refresh: bool = False
+) -> Dict[str, Any]:
+    """Safe, bounded inspection of the current repository for Terminal mode.
+
+    Caches results per workspace root to avoid repeated git execution.
+    On Windows, uses CREATE_NO_WINDOW and hidden STARTUPINFO to prevent
+    console window popups.
+    """
     root = os.path.abspath(workspace_dir or os.getcwd())
+    now = time.time()
+    if not force_refresh and root in _PROJECT_CONTEXT_CACHE:
+        cached_time, cached_val = _PROJECT_CONTEXT_CACHE[root]
+        if now - cached_time < _CACHE_TTL_SEC:
+            return dict(cached_val)
+
     result: Dict[str, Any] = {
         "root": root,
         "branch": "",
@@ -390,31 +414,49 @@ def detect_project_context(workspace_dir: Optional[str] = None) -> Dict[str, Any
         "project_type": "generic",
         "files": [],
     }
-    for marker, kind in (("pyproject.toml", "python"), ("package.json", "node"), ("Cargo.toml", "rust"), ("Makefile", "make"), ("pom.xml", "java"), ("build.gradle", "java")):
+    for marker, kind in (
+        ("pyproject.toml", "python"),
+        ("package.json", "node"),
+        ("Cargo.toml", "rust"),
+        ("Makefile", "make"),
+        ("pom.xml", "java"),
+        ("build.gradle", "java"),
+    ):
         if os.path.isfile(os.path.join(root, marker)):
             result["project_type"] = kind
             result["files"].append(marker)
+
+    subp_kwargs: Dict[str, Any] = {
+        "cwd": root,
+        "capture_output": True,
+        "text": True,
+        "timeout": 2,
+        "check": False,
+    }
+    if sys.platform == "win32":
+        subp_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 1)
+        si.wShowWindow = 0  # SW_HIDE
+        subp_kwargs["startupinfo"] = si
+
     try:
         branch = subprocess.run(
             ["git", "branch", "--show-current"],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=2,
-            check=False,
+            **subp_kwargs,
         )
         result["branch"] = (branch.stdout or "").strip()
         status = subprocess.run(
             ["git", "status", "--short"],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=2,
-            check=False,
+            **subp_kwargs,
         )
-        result["status"] = [line for line in (status.stdout or "").splitlines() if line.strip()][:12]
+        result["status"] = [
+            line for line in (status.stdout or "").splitlines() if line.strip()
+        ][:12]
     except (OSError, subprocess.SubprocessError):
         pass
+
+    _PROJECT_CONTEXT_CACHE[root] = (now, dict(result))
     return result
 
 

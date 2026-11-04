@@ -209,6 +209,16 @@ class CameraTracker(QThread):
             self._last_power_state = state
             self.power_state_changed.emit(state)
 
+    def set_cap_mode(self, enabled: bool) -> None:
+        """Propagates cap-safe mode to gaze estimator, gesture detector, and lighting compensator."""
+        self._cap_mode = bool(enabled)
+        if hasattr(self.gaze_estimator, "set_cap_mode"):
+            self.gaze_estimator.set_cap_mode(self._cap_mode)
+        if hasattr(self.gesture_detector, "set_cap_mode"):
+            self.gesture_detector.set_cap_mode(self._cap_mode)
+        if hasattr(self.lighting, "set_cap_mode"):
+            self.lighting.set_cap_mode(self._cap_mode)
+
     def is_alive(self) -> bool:
         """Phase 1 compatibility method."""
         return self.isRunning()
@@ -414,7 +424,7 @@ class CameraTracker(QThread):
         if self.mirror:
             frame = cv2.flip(frame, 1)
         if self.lighting is not None:
-            frame = self.lighting.process(frame)
+            frame = self.lighting.process(frame, landmarks=self._latest_landmarks)
             frame = self._ensure_bgr(frame)
         if frame is None:
             return None, None

@@ -97,6 +97,7 @@ class DebugWidget(QWidget):
     health_guard_toggled = pyqtSignal(bool)
     micro_gestures_toggled = pyqtSignal(bool)
     low_light_toggled = pyqtSignal(bool)
+    cap_mode_toggled = pyqtSignal(bool)
     eco_sleep_toggled = pyqtSignal(bool)
     ghost_peek_toggled = pyqtSignal(bool)
     winks_toggled = pyqtSignal(bool)
@@ -518,6 +519,12 @@ class DebugWidget(QWidget):
         self.chk_low_light.toggled.connect(self.low_light_toggled.emit)
         content_layout.addWidget(self.chk_low_light)
 
+        self.chk_cap_mode = QCheckBox("Modo Gorra: anclaje nasal y anti-sombra", self)
+        self.chk_cap_mode.setChecked(bool(getattr(config, "CAP_MODE_ENABLED", False)))
+        self.chk_cap_mode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_cap_mode.toggled.connect(self.cap_mode_toggled.emit)
+        content_layout.addWidget(self.chk_cap_mode)
+
         self.chk_eco_sleep = QCheckBox("Eco-Sleep: 10/2 FPS en reposo", self)
         self.chk_eco_sleep.setChecked(bool(getattr(config, "ECO_SLEEP_ENABLED", True)))
         self.chk_eco_sleep.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -809,6 +816,12 @@ class DebugWidget(QWidget):
             self.chk_micro_gestures.blockSignals(True)
             self.chk_micro_gestures.setChecked(bool(enabled))
             self.chk_micro_gestures.blockSignals(False)
+
+    def set_cap_mode_enabled(self, enabled: bool) -> None:
+        if hasattr(self, "chk_cap_mode"):
+            self.chk_cap_mode.blockSignals(True)
+            self.chk_cap_mode.setChecked(bool(enabled))
+            self.chk_cap_mode.blockSignals(False)
 
     def set_low_light_enabled(self, enabled: bool) -> None:
         if hasattr(self, "chk_low_light"):

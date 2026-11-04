@@ -103,6 +103,7 @@ Para estabilidad subpíxel, IDEye calcula un centroide craneal a partir de los l
 * **`HEAD_PRIMARY`** — seguimiento suave basado en cabeza por defecto.
 * **`PURE_IRIS`** — mediana de 5 muestras de iris más compensación de rol con anclajes orbitales múltiples para control exclusivo con los ojos.
 * **`HYBRID`** — fusiona señales de cabeza e iris con un coeficiente de sácada adaptativo que rampa de `0.08` a `0.55` para transiciones rápidas y estables.
+* **Tolerancia a Gorras y Viseras** — anclajes subnasales rígidos (`[1, 4, 195, 197]`), supresión de falsos disparos de cejas y compensación adaptativa de sombras oculares (`Eye ROI CLAHE`) para usar el sistema con gorra sin pérdida de seguimiento ni bugs.
 
 ### 2. Eliminación del "Toque de Midas" sin Tiempos de Espera + Jaw-Lock
 La navegación y la activación están totalmente desacopladas: mirar solo ilumina, nunca clica. Una breve apertura de boca realiza un clic/inyección instantáneo, mientras mantener la boca abierta por encima de tu umbral MAR de reposo activa el modo de arrastre **Jaw-Lock**. El detector facial incorpora una **línea base adaptativa de MAR en reposo (Anti-Midas)** que aprende en tiempo real la apertura natural relajada del usuario para evitar falsos clics o bucles en reposo, incluso sin calibrar la boca o con un MAR natural alto (0.30–0.45). El Mini-Tutorial guiado de 3 pasos (F2 o botón en Ayuda) permite aprender la fijación, confirmación y reposo de forma segura. Sin temporizadores de fijación no hay clics Midas accidentales mientras se lee.

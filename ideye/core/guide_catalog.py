@@ -308,6 +308,13 @@ PAGES: List[Dict[str, Any]] = [
                 "chip": "Bajo consumo",
             },
             {
+                "icon": "shield-lock",
+                "badge": "CAP",
+                "title": "Modo Gorra y Visera",
+                "text": "Activa anclajes subnasales rígidos y compensación de sombras oculares (Eye ROI CLAHE). Permite programar con viseras o sombreros sin perder el iris ni sufrir falsos clics de cejas.",
+                "chip": "Anti-sombra",
+            },
+            {
                 "icon": "cursor",
                 "badge": "3.5x",
                 "title": "Lupa Sniper Zoom",
@@ -636,7 +643,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
-        "test_summary": "630 tests, 85 subtests, 18.70s",
+        "test_summary": "691 tests, 89 subtests, 17.40s",
     }
 
 

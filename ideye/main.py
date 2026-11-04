@@ -939,6 +939,7 @@ class IDEyeApplication(QObject):
         health_enabled = bool(values.get("health_guard_enabled", True))
         micro_enabled = bool(values.get("micro_gestures_enabled", True))
         low_light_enabled = bool(values.get("auto_low_light_clahe", True))
+        cap_mode = bool(values.get("cap_mode_enabled", getattr(config, "CAP_MODE_ENABLED", False)))
         eco_enabled = bool(values.get("eco_sleep_enabled", getattr(config, "ECO_SLEEP_ENABLED", True)))
         ghost_enabled = bool(values.get("ghost_peek_enabled", getattr(config, "GHOST_PEEK_ENABLED", True)))
         ghost_idle = float(
@@ -993,6 +994,8 @@ class IDEyeApplication(QObject):
             self.tracker.health_guard.enabled = health_enabled
         if hasattr(self.tracker, "lighting"):
             self.tracker.lighting.enabled = low_light_enabled
+        if hasattr(self.tracker, "set_cap_mode"):
+            self.tracker.set_cap_mode(cap_mode)
         if hasattr(self.tracker, "set_eco_enabled"):
             self.tracker.set_eco_enabled(eco_enabled)
         config.MAR_THRESHOLD = mar
@@ -1012,6 +1015,7 @@ class IDEyeApplication(QObject):
         self.debug_widget.set_health_guard_enabled(health_enabled)
         self.debug_widget.set_micro_gestures_enabled(micro_enabled)
         self.debug_widget.set_low_light_enabled(low_light_enabled)
+        self.debug_widget.set_cap_mode_enabled(cap_mode)
         self.debug_widget.set_eco_sleep_enabled(eco_enabled)
         self.debug_widget.set_ghost_peek_enabled(ghost_enabled)
         self.debug_widget.set_winks_enabled(wink_enabled)
@@ -1171,6 +1175,7 @@ class IDEyeApplication(QObject):
         self.debug_widget.health_guard_toggled.connect(self._on_health_guard_toggled)
         self.debug_widget.micro_gestures_toggled.connect(self._on_micro_gestures_toggled)
         self.debug_widget.low_light_toggled.connect(self._on_low_light_toggled)
+        self.debug_widget.cap_mode_toggled.connect(self._on_cap_mode_toggled)
         self.tracker.frame_ready.connect(self._on_lighting_frame)
         self.overlay.interactive_guide_requested.connect(self._open_interactive_guide)
         self.window_watcher.foreground_changed.connect(self.debug_widget.set_foreground_window)
@@ -1330,6 +1335,13 @@ class IDEyeApplication(QObject):
         self.overlay.last_action_desc = (
             f"Auto-Fix aplicado: {fix.get('label', '')}" if ok else "Auto-Fix no disponible"
         )
+        self.overlay.update()
+
+    def _on_cap_mode_toggled(self, enabled: bool) -> None:
+        if hasattr(self.tracker, "set_cap_mode"):
+            self.tracker.set_cap_mode(bool(enabled))
+        self.settings_manager.set("cap_mode_enabled", bool(enabled))
+        self.overlay.last_action_desc = "Modo Gorra: ACTIVADO" if enabled else "Modo Gorra: DESACTIVADO"
         self.overlay.update()
 
     def _on_low_light_toggled(self, enabled: bool) -> None:

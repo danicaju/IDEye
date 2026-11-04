@@ -5,7 +5,7 @@ gesture trigger thresholds, and UI display parameters.
 """
 
 import os
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 # ==============================================================================
 # Camera & Video Capture Settings
@@ -268,6 +268,11 @@ GAMING_DEADZONE: float = 0.14
 HEALTH_GUARD_ENABLED: bool = True
 MICRO_GESTURES_ENABLED: bool = True
 AUTO_LOW_LIGHT_CLAHE: bool = True
+AUTO_EYE_ROI_CLAHE: bool = True
+CAP_MODE_ENABLED: bool = False
+CAP_SAFE_ANCHOR_WEIGHTS: Tuple[float, ...] = (0.35, 0.35, 0.05, 0.00, 0.15, 0.10)
+CAP_MODE_MIN_DETECTION_CONFIDENCE: float = 0.42
+EYE_SHADOW_DELTA_THRESHOLD: float = 20.0
 SNIPER_LENS_ZOOM: float = 3.5
 SNIPER_LENS_SLOWMO: float = 0.28
 # Brow raises happen naturally while looking up; keep them from opening the

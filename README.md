@@ -103,6 +103,7 @@ For sub-pixel stability, IDEye computes a cranial centroid from MediaPipe FaceMe
 * **`HEAD_PRIMARY`** — default smooth head-weighted tracking.
 * **`PURE_IRIS`** — median-of-5 iris samples plus orbital multi-anchor roll compensation for pure eye control.
 * **`HYBRID`** — fuses head and iris signals with an adaptive saccade coefficient ramping `0.08 -> 0.55` for fast, stable transitions.
+* **Cap & Visor Resilience** — rigid subnasal anchors (`[1, 4, 195, 197]`), brow-raise micro-gesture gating, and adaptive ocular shadow piercing (`Eye ROI CLAHE`) allowing seamless use while wearing caps, hats, or glasses without tracking drops.
 
 ### 2. Zero-Dwell Midas Elimination + Jaw-Lock Gestures
 Navigation and activation are fully decoupled: looking only highlights, never clicks. A short mouth opening performs an instant click/inject, while a held open mouth above your adaptive resting-MAR threshold enters **Jaw-Lock** drag mode. The facial detector features an **adaptive resting MAR baseline (Anti-Midas protection)** that learns each user's natural mouth aperture in real time, preventing ghost clicks and click loops even without mouth calibration or with high natural resting MAR (0.30-0.45). The guided 3-step mini-tutorial (F2 or Help button) safely walks users through dwell, gesture confirmation, and resting zones. No dwell timers means no accidental Midas clicks while reading.

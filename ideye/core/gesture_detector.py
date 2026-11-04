@@ -106,6 +106,7 @@ class GestureDetector:
         head_tilt_deg: float = 18.0,
         head_tilt_hold_sec: float = 0.30,
         head_tilt_cooldown_sec: float = 0.90,
+        cap_mode: bool = False,
     ):
         self.mar_threshold = float(mar_threshold)
         self.release_threshold = float(release_threshold)
@@ -186,6 +187,7 @@ class GestureDetector:
         self.triggered_gestures: List[str] = []
         self.last_gesture: Optional[str] = None
         self.micro_gestures_enabled = bool(micro_gestures_enabled)
+        self.cap_mode: bool = bool(cap_mode)
         self.brow_raise_ratio = float(brow_raise_ratio)
         self.brow_hold_sec = float(brow_hold_sec)
         self.brow_cooldown_sec = float(brow_cooldown_sec)
@@ -654,8 +656,14 @@ class GestureDetector:
         self._update_wink_candidate("left", now, left_closed and right_open)
         self._update_wink_candidate("right", now, right_closed and left_open)
 
+    def set_cap_mode(self, enabled: bool) -> None:
+        """Toggles cap mode, which suppresses brow-raise micro-gestures to prevent visor artifacts."""
+        self.cap_mode = bool(enabled)
+
     def compute_brow_raise(self, face_landmarks: Any) -> float:
         """Scale-invariant eyebrow height relative to the eye line."""
+        if self.cap_mode:
+            return 0.0
         if face_landmarks is None:
             return 0.0
         try:

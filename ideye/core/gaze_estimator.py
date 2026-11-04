@@ -234,7 +234,14 @@ class GazeEstimator:
 
         # Phase 7.6: rigid 6-point cranial head anchor.
         self.head_anchor_indices: Tuple[int, ...] = (1, 4, 6, 168, 195, 197)
-        self.head_anchor_weights: Tuple[float, ...] = (0.10, 0.10, 0.20, 0.20, 0.20, 0.20)
+        self._default_head_anchor_weights: Tuple[float, ...] = (0.10, 0.10, 0.20, 0.20, 0.20, 0.20)
+        self._cap_safe_head_anchor_weights: Tuple[float, ...] = getattr(
+            config, "CAP_SAFE_ANCHOR_WEIGHTS", (0.35, 0.35, 0.05, 0.00, 0.15, 0.10)
+        ) if config else (0.35, 0.35, 0.05, 0.00, 0.15, 0.10)
+        self.cap_mode: bool = bool(getattr(config, "CAP_MODE_ENABLED", False)) if config else False
+        self.head_anchor_weights: Tuple[float, ...] = (
+            self._cap_safe_head_anchor_weights if self.cap_mode else self._default_head_anchor_weights
+        )
 
         # Phase 7.6: static hysteresis pinning (Schmitt trigger).
         self.static_lock_radius: float = float(getattr(config, "STATIC_LOCK_RADIUS", 0.0035))
@@ -591,6 +598,19 @@ class GazeEstimator:
         except (IndexError, AttributeError, TypeError):
             return self.last_valid_iris_x, self.last_valid_iris_y
 
+    def set_cap_mode(self, enabled: bool) -> None:
+        """
+        Toggles cap/visor-safe cranial head tracking.
+        Shifts weights entirely to subnasal landmarks (nose tip & columella)
+        eliminating dependence on the glabella/forehead.
+        """
+        self.cap_mode = bool(enabled)
+        with self._lock:
+            if self.cap_mode:
+                self.head_anchor_weights = self._cap_safe_head_anchor_weights
+            else:
+                self.head_anchor_weights = self._default_head_anchor_weights
+
     def _extract_head_pos(self, landmarks: Any) -> Tuple[float, float]:
         """Weighted centroid of six rigid nasal/glabellar landmarks.
 
@@ -602,9 +622,12 @@ class GazeEstimator:
             populated = sum(1 for p in points if p != (0.5, 0.5))
             if populated < 4:
                 return self._safe_coord(landmarks[self.nose_tip_idx])
-            total = max(sum(self.head_anchor_weights), 1e-6)
-            x = sum(p[0] * w for p, w in zip(points, self.head_anchor_weights)) / total
-            y = sum(p[1] * w for p, w in zip(points, self.head_anchor_weights)) / total
+            weights = self.head_anchor_weights
+            if not self.cap_mode and points[3] == (0.5, 0.5):
+                weights = self._cap_safe_head_anchor_weights
+            total = max(sum(weights), 1e-6)
+            x = sum(p[0] * w for p, w in zip(points, weights)) / total
+            y = sum(p[1] * w for p, w in zip(points, weights)) / total
             return float(x), float(y)
         except (IndexError, AttributeError, TypeError):
             return 0.5, 0.5

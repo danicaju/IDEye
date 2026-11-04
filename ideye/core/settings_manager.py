@@ -35,6 +35,7 @@ _FACTORY_DEFAULTS: Dict[str, Any] = {
     "health_guard_enabled": bool(getattr(config, "HEALTH_GUARD_ENABLED", True)),
     "micro_gestures_enabled": bool(getattr(config, "MICRO_GESTURES_ENABLED", True)),
     "auto_low_light_clahe": bool(getattr(config, "AUTO_LOW_LIGHT_CLAHE", True)),
+    "cap_mode_enabled": bool(getattr(config, "CAP_MODE_ENABLED", False)),
     "eco_sleep_enabled": bool(getattr(config, "ECO_SLEEP_ENABLED", True)),
     "ghost_peek_enabled": bool(getattr(config, "GHOST_PEEK_ENABLED", True)),
     "ghost_peek_idle_seconds": float(getattr(config, "GHOST_PEEK_IDLE_SECONDS", 30.0)),

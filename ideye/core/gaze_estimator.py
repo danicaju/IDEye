@@ -602,7 +602,7 @@ class GazeEstimator:
             populated = sum(1 for p in points if p != (0.5, 0.5))
             if populated < 4:
                 return self._safe_coord(landmarks[self.nose_tip_idx])
-            total = sum(self.head_anchor_weights)
+            total = max(sum(self.head_anchor_weights), 1e-6)
             x = sum(p[0] * w for p, w in zip(points, self.head_anchor_weights)) / total
             y = sum(p[1] * w for p, w in zip(points, self.head_anchor_weights)) / total
             return float(x), float(y)

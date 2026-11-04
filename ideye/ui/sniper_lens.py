@@ -57,7 +57,7 @@ class SniperLens:
 
     def update_gaze(self, x: float, y: float, now: Optional[float] = None, reading: bool = False) -> bool:
         """Updates micro-fixation; returns True when the lens is active."""
-        timestamp = time.time() if now is None else float(now)
+        timestamp = time.perf_counter() if now is None else float(now)
         point = (float(x), float(y))
         if reading:
             self._anchor = point

@@ -21,6 +21,15 @@ except ImportError:  # pragma: no cover
     )
 
 
+def _safe_int_line(value: Any, default: int = 1) -> int:
+    try:
+        if value is None:
+            return default
+        return max(1, int(float(value)))
+    except (ValueError, TypeError, OverflowError):
+        return default
+
+
 class DiagnosticsFixer:
     """Turns editor diagnostics into low-latency, gaze-friendly fixes."""
 
@@ -93,7 +102,7 @@ class DiagnosticsFixer:
         context = dict(context_data or {})
         message = str(diagnostic.get("message", ""))
         line_text = str(diagnostic.get("code_line", context.get("line_text", "")) or "")
-        line = max(1, int(diagnostic.get("line", context.get("cursor_line", 1)) or 1))
+        line = _safe_int_line(diagnostic.get("line"), default=_safe_int_line(context.get("cursor_line"), 1))
         symbols = [str(s) for s in context.get("symbols", []) if s]
         fixes: List[Dict[str, Any]] = []
 

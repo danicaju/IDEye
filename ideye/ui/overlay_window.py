@@ -376,7 +376,10 @@ class OverlayWindow(QWidget):
         self._cached_adaptive_node: Optional[MenuNode] = None
         if "MENU_STANDARD" not in self.menu_tree and "ROOT" in self.menu_tree:
             std_items = list(self.menu_tree["ROOT"].items)
-            std_items[8] = create_adaptive_menu_action("9")
+            if len(std_items) > 8:
+                std_items[8] = create_adaptive_menu_action("9")
+            else:
+                std_items.append(create_adaptive_menu_action("9"))
             self.menu_tree["MENU_STANDARD"] = MenuNode(
                 id="MENU_STANDARD",
                 title="MENÚ ESTÁNDAR",
@@ -1312,7 +1315,7 @@ class OverlayWindow(QWidget):
             "Analizando...",
             "Analizando...",
         ]
-        if "SNIPPETS" in self.menu_tree:
+        if self.menu_tree and "SNIPPETS" in self.menu_tree:
             self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(loading_preds, parent_id="ROOT")
         self.is_ai_predicting = True
         self.last_action_desc = "Buscando sugerencias..."
@@ -1353,7 +1356,7 @@ class OverlayWindow(QWidget):
     @pyqtSlot(list)
     def _on_ai_predictions_ready(self, predictions: List[str]) -> None:
         """Called when AIPredictorWorker finishes with 6 suggestions."""
-        if "SNIPPETS" in self.menu_tree:
+        if self.menu_tree and "SNIPPETS" in self.menu_tree:
             self.menu_tree["SNIPPETS"].items = populate_ai_prediction_items(predictions, parent_id="ROOT")
         self.diagnostics_fixer.set_ai_suggestions(predictions)
         if self._active_diagnostics:
@@ -3957,7 +3960,10 @@ class OverlayWindow(QWidget):
             self.menu_tree = build_menu_tree(self.current_language)
             if "MENU_STANDARD" not in self.menu_tree and "ROOT" in self.menu_tree:
                 std_items = list(self.menu_tree["ROOT"].items)
-                std_items[8] = create_adaptive_menu_action("9")
+                if len(std_items) > 8:
+                    std_items[8] = create_adaptive_menu_action("9")
+                else:
+                    std_items.append(create_adaptive_menu_action("9"))
                 self.menu_tree["MENU_STANDARD"] = MenuNode(
                     id="MENU_STANDARD",
                     title="MENÚ ESTÁNDAR",
@@ -4013,7 +4019,10 @@ class OverlayWindow(QWidget):
             self.menu_tree = build_menu_tree(self.current_language)
             if "MENU_STANDARD" not in self.menu_tree and "ROOT" in self.menu_tree:
                 std_items = list(self.menu_tree["ROOT"].items)
-                std_items[8] = create_adaptive_menu_action("9")
+                if len(std_items) > 8:
+                    std_items[8] = create_adaptive_menu_action("9")
+                else:
+                    std_items.append(create_adaptive_menu_action("9"))
                 self.menu_tree["MENU_STANDARD"] = MenuNode(
                     id="MENU_STANDARD",
                     title="MENÚ ESTÁNDAR",

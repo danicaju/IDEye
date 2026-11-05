@@ -8,9 +8,9 @@
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Release: v0.5.0](https://img.shields.io/badge/Release-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
-[![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20468-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
+[![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-630%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-691%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -23,11 +23,13 @@
 ![IDEye Demo Placeholder](https://via.placeholder.com/900x450/0d1117/58a6ff?text=Insert+GIF+Demo:+IDEye+3x3+HUD+Injecting+Code+into+VS+Code)
 
 </div>
+
 > [!TIP]
 > **Just want to use IDEye without installing Python or touching a terminal?**
+>
 > Download the pre-compiled portable bundle and the official VS Code companion extension directly from **[GitHub Releases](https://github.com/danicaju/IDEye/releases)**:
-> * **`IDEye-Windows-v0.5.0.zip`** — Standalone Windows desktop app (unzip and double-click `IDEye.exe`).
-> * **`ideye-vscode-bridge-0.5.0.vsix`** — Native VS Code extension (drag & drop directly into your VS Code window).
+> - **`IDEye-Windows-v0.5.0.zip`** — Standalone Windows desktop app (unzip and double-click `IDEye.exe`).
+> - **`ideye-vscode-bridge-0.5.0.vsix`** — Native VS Code companion extension (drag & drop directly into your VS Code window).
 
 
 ## The Problem & Why IDEye Exists
@@ -318,119 +320,124 @@ On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual C
 
 ```text
 IDEye/
-├── main.py # Root launcher (`python main.py`)
-├── config.py # Root configuration wrapper
-├── requirements.txt # Project dependencies
-├── pytest.ini # Pytest configuration
-├── build_app.py # Cross-platform PyInstaller onedir build
-├── create_desktop_shortcut.py # Windows shortcut helper
-├── IDEye.bat / IDEye.vbs / IDEye_debug.bat # Windows launchers
-├── ideye.ico # Application icon
-├── .github/workflows/build.yml # Windows/macOS/Linux CI matrix
-├── docs/MULTI_MONITOR_VALIDATION.md # Multi-monitor validation guide
-?   ??? guia_interactiva.html # Interactive Game Manual
-├── tools/ideye-mcp/ # MCP development tools server
-├── vscode-extension/ # VS Code WebSocket bridge extension
+├── main.py                          # Root launcher (`python main.py`)
+├── config.py                        # Root configuration wrapper
+├── requirements.txt                 # Project dependencies
+├── pytest.ini                       # Pytest configuration
+├── build_app.py                     # Cross-platform PyInstaller onedir builder
+├── create_desktop_shortcut.py       # Windows desktop shortcut generator
+├── IDEye.bat / IDEye.vbs            # Windows launchers (silent / console)
+├── IDEye_debug.bat                  # Windows diagnostic launcher
+├── ideye.ico                        # Application icon
+├── .github/workflows/build.yml      # Windows / macOS / Linux CI matrix
+├── docs/
+│   ├── MULTI_MONITOR_VALIDATION.md  # Multi-monitor validation guide
+│   └── guia_interactiva.html        # Interactive Game Manual
+├── tools/ideye-mcp/                 # MCP developer diagnostic tools
+├── vscode-extension/                # VS Code WebSocket companion extension
 ├── ideye/
-│   ├── config.py # Tracking, MAR, HUD, LLM, routing and gaming settings
-│   ├── main.py # PyQt6 lifecycle, managers and signal dispatcher
+│   ├── config.py                    # Central tracking, HUD, LLM and gesture settings
+│   ├── main.py                      # PyQt6 lifecycle, subsystems and signal dispatcher
 │   ├── core/
-│   │   ├── camera_tracker.py # QThread OpenCV + MediaPipe FaceMesh (468 pts)
-│   │   ├── gaze_estimator.py # Hybrid gaze math, per-monitor calibration and fusion
-│   │   ├── gaze_scroller.py # Inertial proportional gaze scroll
-│   │   ├── eco_power_manager.py # Eco-Sleep 30/10/2 FPS governor
-│   │   ├── gesture_detector.py # MAR, wink detection and debounced state machine
-│   │   ├── hotkey_manager.py # Global Ctrl+Alt+letter OS hotkeys
-│   │   ├── mouse_controller.py # OS mouse injection and gaming key release
-│   │   ├── screen_manager.py # Multi-monitor handover and per-monitor binding
-│   │   ├── bezel_crossing.py # Configurable yaw/hold/cooldown detector
-│   │   ├── window_watcher.py # Foreground-window mode routing
-│   │   ├── telemetry_manager.py # Look-To-Code stats and JSON history
-│   │   ├── settings_manager.py # Atomic debounced user_settings.json
-│   │   ├── macro_manager.py # Custom macro persistence and HUD overrides
-│   │   ├── logging_config.py # Structured logging bootstrap
-│   │   ├── sound_feedback.py # numpy WAV synthesis + temp cache playback
-?   ?   ??? lighting_compensator.py # Low-light CLAHE compensator
-?   ?   ??? health_guard.py # Blink, distance and cervical posture guard
-?   ?   ??? diagnostics_fixer.py # Live diagnostics auto-fix
-?   ?   ??? ast_code_jumper.py # 3x3 AST symbol map
-?   ?   ??? game_profiles.py # Per-game control profile manager
-?   ?   ??? guide_catalog.py # Interactive guide single source of truth
-?   ?   ??? guide_builder.py # Self-contained offline HTML renderer
-│   │   └── websocket_bridge.py # Bidirectional VS Code WebSocket bridge
+│   │   ├── camera_tracker.py        # QThread OpenCV + MediaPipe FaceMesh (478 pts)
+│   │   ├── gaze_estimator.py        # Hybrid gaze math, calibration and fusion
+│   │   ├── gaze_scroller.py         # Inertial proportional gaze scroll
+│   │   ├── eco_power_manager.py     # Eco-Sleep 30/10/2 FPS governor
+│   │   ├── gesture_detector.py      # MAR mouth clicks and debounced winks
+│   │   ├── hotkey_manager.py        # Global Ctrl+Alt+letter OS hotkeys
+│   │   ├── mouse_controller.py      # OS mouse injection and virtual inputs
+│   │   ├── screen_manager.py        # Multi-monitor handover and bounds binding
+│   │   ├── bezel_crossing.py        # Configurable yaw/hold/cooldown detector
+│   │   ├── window_watcher.py        # Foreground-window mode routing
+│   │   ├── telemetry_manager.py     # Look-To-Code stats and JSON history
+│   │   ├── settings_manager.py      # Atomic debounced user_settings.json
+│   │   ├── macro_manager.py         # Custom macro persistence and HUD overrides
+│   │   ├── logging_config.py        # Structured logging bootstrap
+│   │   ├── sound_feedback.py        # Synthesized procedural audio feedback
+│   │   ├── lighting_compensator.py  # Low-light & Eye ROI CLAHE compensator
+│   │   ├── health_guard.py          # Blink, distance and cervical posture guard
+│   │   ├── game_profiles.py         # Per-game control profile manager
+│   │   ├── guide_catalog.py         # Interactive guide single source of truth
+│   │   ├── guide_builder.py         # Self-contained offline HTML renderer
+│   │   └── websocket_bridge.py      # Bidirectional VS Code WebSocket bridge
 │   ├── modes/
-│   │   ├── base_mode.py # Abstract mode interface
-│   │   ├── mode_manager.py # 6-mode strategy engine and auto-context switching
-│   │   ├── coding_mode.py # Coding menu trees and snippet injection
-?   ?   ??? debug_mode.py # Phase 12 local-variable debug inspector
-│   │   ├── writing_mode.py # Letter keyboard, word/phrase predictions and Markdown
-│   │   ├── terminal_git_mode.py # Terminal / Git command palette
-│   │   ├── data_math_mode.py # Data/math symbol entry
-│   │   ├── ide_nav_mode.py # IDE navigation and file explorer
-│   │   ├── sniper_mouse_mode.py # FreeLook, Jaw-Lock and head-joystick gaming
-│   │   └── _helpers.py # Shared menu helpers
+│   │   ├── base_mode.py             # Abstract mode interface
+│   │   ├── mode_manager.py          # 6-mode strategy engine and auto-context switching
+│   │   ├── coding_mode.py           # Coding menu trees and snippet injection
+│   │   ├── debug_mode.py            # Local-variable AST debug inspector
+│   │   ├── writing_mode.py          # Letter keyboard, word/phrase predictions and Markdown
+│   │   ├── terminal_git_mode.py     # Terminal / Git command palette
+│   │   ├── data_math_mode.py        # Data/math symbol entry
+│   │   ├── ide_nav_mode.py          # IDE navigation and file explorer
+│   │   ├── sniper_mouse_mode.py     # FreeLook, Jaw-Lock and head-joystick gaming
+│   │   └── _helpers.py              # Shared menu helpers
 │   ├── ui/
-│   │   ├── overlay_window.py # Transparent No-Focus PyQt6 HUD
-│   │   ├── header_layout.py # Pure command-bar geometry
-│   │   ├── calibration_ui.py # Fullscreen calibration wizard
-│   │   ├── debug_widget.py # Mini camera feed, telemetry card and controls
-│   │   ├── macro_editor_dialog.py # 3x3 macro editor dialog
-│   │   ├── icon_manager.py # High-DPI Lucide/SVG icons
-│   │   ├── system_tray.py # Native tray with power-state badge
-│   │   └── sniper_lens.py # Circular lens, micro-fixation and slow-mo
+│   │   ├── overlay_window.py        # Transparent No-Focus PyQt6 HUD
+│   │   ├── header_layout.py         # Command-bar geometry and mode indicators
+│   │   ├── calibration_ui.py        # 5-point + 1 MAR fullscreen calibration wizard
+│   │   ├── debug_widget.py          # Mini camera feed, telemetry card and controls
+│   │   ├── macro_editor_dialog.py   # 3x3 macro editor dialog
+│   │   ├── icon_manager.py          # High-DPI Lucide/SVG icon manager
+│   │   ├── system_tray.py           # Native tray icon with power-state badges
+│   │   └── sniper_lens.py           # Circular zoom lens, micro-fixation and slow-mo
 │   ├── actions/
-│   │   ├── menu_trees.py # 3x3 hierarchical trees and sticky nodes
-│   │   ├── context_reader.py # Fault-tolerant AST + Regex extractor
-│   │   ├── ai_predictor.py # Async LLM worker + heuristic fallback
-│   │   ├── code_injector.py # Atomic clipboard injection and cursor offsets
-│   │   ├── clipboard_history.py # 6-slot MTF clipboard time-machine
-│   │   ├── language_support.py # Multi-language syntax definitions
-?   ?   ??? semantic_taxonomy.py # Phase 12 multi-language semantic trees
-│   │   ├── agentic_launcher.py # Six gaze-fired engineering prompts + MCP queue
-│   │   └── text_predictor.py # Local word prediction engine
+│   │   ├── menu_trees.py            # 3x3 hierarchical trees and sticky nodes
+│   │   ├── context_reader.py        # Fault-tolerant AST + Regex extractor
+│   │   ├── ai_predictor.py          # Async LLM worker + heuristic fallback
+│   │   ├── code_injector.py         # Atomic clipboard injection and cursor offsets
+│   │   ├── clipboard_history.py     # 6-slot MTF clipboard time-machine
+│   │   ├── language_support.py      # Multi-language syntax definitions
+│   │   ├── diagnostics_fixer.py     # Live LSP diagnostics auto-fixer
+│   │   ├── ast_code_jumper.py       # 3x3 AST symbol map and line navigation
+│   │   ├── semantic_taxonomy.py     # Multi-language semantic code trees
+│   │   ├── agentic_launcher.py      # Gaze-fired engineering prompts + MCP queue
+│   │   └── text_predictor.py        # Local word and phrase prediction engine
 │   └── assets/
-│   │   ├── data/es_common_words.txt # Spanish common-word dictionary
-│   │   ├── defaults/ # user_settings.json and custom_macros.json templates
-│   │   └── icons/ # High-DPI neon SVG/Lucide icon suite
-└── tests/ # 630 automated unit & integration tests
-    ├── test_phase1.py # Core CV and MAR state machine
-    ├── test_phase2.py # PyQt6 QThread, no-focus flags and calibration
-    ├── test_phase3.py # Syntax tree validation and code injection
-    ├── test_phase4.py # ContextReader AST/Regex and AIPredictorWorker
+│       ├── data/es_common_words.txt # Spanish dictionary for word prediction
+│       ├── defaults/                # Default templates for settings and profiles
+│       └── icons/                   # High-DPI neon SVG/Lucide icon suite
+└── tests/                           # 691 automated unit & integration tests
+    ├── test_phase1.py               # Core CV and MAR state machine
+    ├── test_phase2.py               # PyQt6 QThread, no-focus flags and calibration
+    ├── test_phase3.py               # Syntax tree validation and code injection
+    ├── test_phase4.py               # ContextReader AST/Regex and AIPredictorWorker
     ├── test_phase5_multilang_and_websocket.py # Multi-language trees and WebSocket bridge
-    ├── test_phase6_modes.py # 6-mode engine and auto-context switching
-    ├── test_phase6_6_lucide_ui.py # Lucide/SVG icon manager
+    ├── test_phase6_modes.py         # 6-mode engine and auto-context switching
+    ├── test_phase6_6_lucide_ui.py   # Lucide/SVG icon manager
     ├── test_phase7_sniper_and_sound.py # FreeLook, gaming gestures and audio
     ├── test_phase7_6_gaze_stability.py # Stability, hysteresis and saccade fusion
     ├── test_phase8_settings_and_auto_mar.py # Settings and 6th-step MAR calibration
     ├── test_phase8_2_custom_macros.py # Macro persistence and 3x3 editor
     ├── test_phase8_3_multimonitor.py # Screen handover, bounds and build command
-    ├── test_phase8_4_refactor.py # Bezel detector, header layout and logging
+    ├── test_phase8_4_refactor.py    # Bezel detector, header layout and logging
     ├── test_phase9_os_intelligence.py # Clipboard, window routing and telemetry
     ├── test_phase9_5_biometrics_and_autofix.py # Auto-Fix, Health Guard and micro-gestures
-    ├── test_phase10_1_lighting_and_sniper_lens.py # CLAHE and Sniper Lens
+    ├── test_phase10_1_lighting_and_sniper_lens.py # CLAHE, eye ROI and Sniper Lens
     ├── test_phase10_2_ast_code_jumper.py # AST extraction and symbol menu
     ├── test_phase10_3_game_profiles.py # Profiles, twin-stick and edge-scroll
     ├── test_phase10_4_agentic_launcher.py # Prompt builder, 3x3 menu, MCP queue
-        ├── test_phase11_scroll_eco_and_ghost_hud.py # Scroll, Eco-Sleep, Ghost-Peek and tray
-    ??? test_phase12_semantic_coding_and_live_context.py # Semantic taxonomy and live context
+    ├── test_phase11_scroll_eco_and_ghost_hud.py # Scroll, Eco-Sleep, Ghost-Peek and tray
+    ├── test_phase12_semantic_coding_and_live_context.py # Semantic taxonomy and live context
     ├── test_hotfix_ui_and_gaming.py # Head-joystick, audio cache and help layout
     ├── test_writing_words_and_letters.py # Letter keyboard, predictions and word/phrase menus
-    ├── test_interactive_guide.py # Guide catalog, generation and entry points
+    ├── test_interactive_guide.py    # Guide catalog, generation and entry points
     ├── test_interactive_guide_sync.py # UTF-8 and Nintendo theme sync
     ├── test_freelook_edge_scroll.py # FreeLook edge-scroll behavior
     ├── test_freelook_top_and_safe_clicks.py # Top reach, mouth click and lens flicker
-    ├── test_glass_focus_ui.py # Glass/Focus HUD widgets
+    ├── test_glass_focus_ui.py       # Glass/Focus HUD widgets
     ├── test_help_ui_and_card_layout.py # Help card and gesture guide layout
-    ├── test_menu_integrity.py # Recursive 9-cell tree verification
-    ├── test_code_injector.py # Modifier recovery and clipboard safety
-    ├── test_context_and_ai.py # Syntax-error tolerance and LLM JSON resilience
+    ├── test_menu_integrity.py       # Recursive 9-cell tree verification
+    ├── test_code_injector.py        # Modifier recovery and clipboard safety
+    ├── test_context_and_ai.py       # Syntax-error tolerance and LLM JSON resilience
     ├── test_calibration_and_killswitch.py # Regularized mapping and global hotkeys
     ├── test_tracking_modes_and_handsfree_exit.py # Iris modes, VOR and hands-free exit
-    ├── test_adaptive_ast_menus.py # Adaptive AST menus and [A] shortcut
-    ├── test_vision_math.py # Gaze clipping and zero-division audits
-    └── test_wink_gestures_and_hud_hide.py # Wink gestures and HUD visibility
-    ├── test_wink_robustness.py # Per-eye EAR, gates, timing and double wink
+    ├── test_adaptive_ast_menus.py   # Adaptive AST menus and [A] shortcut
+    ├── test_vision_math.py          # Gaze clipping and zero-division audits
+    ├── test_wink_gestures_and_hud_hide.py # Wink gestures and HUD visibility
+    ├── test_wink_robustness.py      # Per-eye EAR, gates, timing and double wink
+    ├── test_cap_mode_and_eye_roi_clahe.py # Cap/visor resilience, Eye ROI CLAHE and anchors
+    ├── test_audit_hardening_and_resilience.py # Fault resilience and monotonic time audits
+    └── test_tutorial_and_mar_anti_midas.py # Guided onboarding and resting MAR baseline
 ```
 
 ---
@@ -444,11 +451,11 @@ pytest -q
 ```
 
 ```text
-630 passed, 85 subtests, 18.70s
+691 passed, 89 subtests in 17.40s
 ```
 
 > [!NOTE]
-> All 630 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
+> All 691 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
 
 ---
 

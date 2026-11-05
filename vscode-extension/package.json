@@ -4,6 +4,7 @@
   "description": "Native WebSocket Bridge connecting VS Code to the IDEye Look-To-Code engine for hands-free eye/head programming.",
   "version": "0.5.0",
   "publisher": "danicaju",
+  "license": "AGPL-3.0-or-later",
   "engines": {
     "vscode": "^1.80.0"
   },

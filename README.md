@@ -10,8 +10,8 @@
 [![Release: v0.5.0](https://img.shields.io/badge/Release-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-701%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/Tests-702%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=for-the-badge)](LICENSE)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
 
@@ -324,6 +324,7 @@ IDEye/
 ├── config.py                        # Root configuration wrapper
 ├── requirements.txt                 # Project dependencies
 ├── pytest.ini                       # Pytest configuration
+├── LICENSE                          # GNU AGPLv3 copyleft license
 ├── build_app.py                     # Cross-platform PyInstaller onedir builder
 ├── create_desktop_shortcut.py       # Windows desktop shortcut generator
 ├── IDEye.bat / IDEye.vbs            # Windows launchers (silent / console)
@@ -396,7 +397,7 @@ IDEye/
 │       ├── data/es_common_words.txt # Spanish dictionary for word prediction
 │       ├── defaults/                # Default templates for settings and profiles
 │       └── icons/                   # High-DPI neon SVG/Lucide icon suite
-└── tests/                           # 701 automated unit & integration tests
+└── tests/                           # 702 automated unit & integration tests
     ├── test_phase1.py               # Core CV and MAR state machine
     ├── test_phase2.py               # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py               # Syntax tree validation and code injection
@@ -452,11 +453,11 @@ pytest -q
 ```
 
 ```text
-701 passed, 89 subtests in 22.73s
+702 passed, 89 subtests in 22.15s
 ```
 
 > [!NOTE]
-> All 701 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
+> All 702 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
 
 ---
 
@@ -510,7 +511,11 @@ Gaming Mode uses OS-level synthetic input injection (`Win32 API` / `pynput`) for
 
 ## Contributing & License
 
-Contributions, accessibility feedback, and PRs are welcome! Licensed under the **MIT License**.
+Contributions, accessibility feedback, and PRs are welcome!
+
+IDEye is distributed under the terms of the **GNU Affero General Public License v3.0 (AGPL-3.0-or-later)**. Any modification, redistribution, or deployment as a network service (SaaS) must remain free and open source under the same license, ensuring full copyleft protection and compatibility with PyQt6 (GPLv3).
+
+See the [LICENSE](LICENSE) file for the full legal text.
 
 <div align="center">
   <sub>Built by <b>Daniel Casado Juan</b></sub>

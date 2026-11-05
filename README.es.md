@@ -10,8 +10,8 @@
 [![Lanzamiento: v0.5.0](https://img.shields.io/badge/Lanzamiento-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-701%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
-[![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Pruebas](https://img.shields.io/badge/Pruebas-702%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Licencia: AGPL v3](https://img.shields.io/badge/Licencia-AGPL_v3-blue.svg?style=for-the-badge)](LICENSE)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
 
@@ -322,6 +322,7 @@ IDEye/
 ├── config.py                        # Wrapper de configuración
 ├── requirements.txt                 # Dependencias
 ├── pytest.ini                       # Configuración de Pytest
+├── LICENSE                          # Licencia legal GNU AGPLv3
 ├── build_app.py                     # Build PyInstaller onedir multiplataforma
 ├── create_desktop_shortcut.py       # Acceso directo Windows
 ├── IDEye.bat / IDEye.vbs            # Lanzadores Windows (silencioso / consola)
@@ -394,7 +395,7 @@ IDEye/
 │       ├── data/es_common_words.txt # Diccionario español para predicción
 │       ├── defaults/                # Plantillas de configuración y macros
 │       └── icons/                   # Suite de iconos SVG/Lucide alta DPI
-└── tests/                           # 701 pruebas de unidad e integración
+└── tests/                           # 702 pruebas de unidad e integración
     ├── test_phase1.py               # Visión y máquina MAR
     ├── test_phase2.py               # QThread, no-focus y calibración
     ├── test_phase3.py               # Árboles sintácticos e inyección
@@ -508,7 +509,11 @@ El Modo Gaming utiliza inyección de entrada sintética a nivel de sistema opera
 
 ## Contribuciones y Licencia
 
-¡Las contribuciones, sugerencias de accesibilidad y pull requests son bienvenidas! Bajo los términos de la **Licencia MIT**.
+¡Las contribuciones, sugerencias de accesibilidad y pull requests son bienvenidas!
+
+IDEye se distribuye bajo los términos de la licencia **GNU Affero General Public License v3.0 (AGPL-3.0-or-later)**. Cualquier modificación, redistribución o despliegue como servicio en red (SaaS) debe permanecer libre y de código abierto bajo esta misma licencia, garantizando una protección copyleft integral y plena compatibilidad con PyQt6 (GPLv3).
+
+Consulta el archivo [LICENSE](LICENSE) para ver el texto legal completo.
 
 <div align="center">
   <sub>Desarrollado por <b>Daniel Casado Juan</b></sub>

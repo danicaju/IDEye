@@ -87,6 +87,32 @@ class TestInteractiveGuideSync(unittest.TestCase):
             self.assertNotIn("autom?ticos", decoded)
             self.assertEqual(result, target)
 
+    def test_license_and_readme_agpl_compliance(self):
+        """Verifies full migration from MIT to GNU AGPLv3 across repo assets."""
+        license_path = Path("LICENSE")
+        self.assertTrue(license_path.exists(), "LICENSE file must exist in root")
+        license_text = license_path.read_text(encoding="utf-8")
+        self.assertIn("GNU AFFERO GENERAL PUBLIC LICENSE", license_text)
+        self.assertIn("Version 3, 19 November 2007", license_text)
+        self.assertIn("Daniel Casado Juan", license_text)
+        self.assertIn("IDEye", license_text)
+
+        readme_en = Path("README.md").read_text(encoding="utf-8")
+        readme_es = Path("README.es.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("License-MIT", readme_en, "README.md contains residual License-MIT badge")
+        self.assertNotIn("Licencia-MIT", readme_es, "README.es.md contains residual Licencia-MIT badge")
+        self.assertIn("badge/License-AGPL_v3-blue.svg", readme_en)
+        self.assertIn("badge/Licencia-AGPL_v3-blue.svg", readme_es)
+        self.assertIn("GNU Affero General Public License v3.0", readme_en)
+        self.assertIn("GNU Affero General Public License v3.0", readme_es)
+
+        # Manifest metadata verification
+        vscode_pkg = Path("vscode-extension/package.json").read_text(encoding="utf-8")
+        mcp_pkg = Path("tools/ideye-mcp/package.json").read_text(encoding="utf-8")
+        self.assertIn('"license": "AGPL-3.0-or-later"', vscode_pkg)
+        self.assertIn('"license": "AGPL-3.0-or-later"', mcp_pkg)
+
 
 if __name__ == "__main__":
     unittest.main()

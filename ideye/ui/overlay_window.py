@@ -487,6 +487,10 @@ class OverlayWindow(QWidget):
 
         # Adaptive Dwell-Time Engine
         self.adaptive_dwell_enabled: bool = getattr(config, "ADAPTIVE_DWELL_ENABLED", True)
+        self.dwell_click_enabled: bool = bool(
+            getattr(config, "DWELL_CLICK_ENABLED", False)
+            or getattr(config, "ADAPTIVE_DWELL_CLICK_ENABLED", False)
+        )
         self._dwell_block: Optional[int] = None
         self._dwell_start_time: float = 0.0
         self._dwell_progress: float = 0.0
@@ -1392,6 +1396,9 @@ class OverlayWindow(QWidget):
             self._last_ast_eval_time = 0.0
             if node_id in ("SNIPPETS", "AI_PREDICT"):
                 self._trigger_ai_prediction()
+            self._dwell_start_time = time.time()
+            self._dwell_progress = 0.0
+            self._dwell_fired = False
             self.menu_navigated.emit(node_id)
             self.update()
             return True
@@ -3616,10 +3623,18 @@ class OverlayWindow(QWidget):
 
         if progress >= 1.0:
             self._dwell_fired = True
-            self.trigger_click_flash(block_idx)
-            if item is not None:
-                self._play_sound("confirm")
-                self.execute_action(item, target_block=block_idx)
+            # Dwell auto-click is an opt-in accessibility feature (disabled by default).
+            # By default (Zero-Dwell), looking at a box only focuses/highlights it.
+            # Intentional confirmation via mouth click (MAR) or physical click is required.
+            if getattr(self, "dwell_click_enabled", False) and not getattr(self, "show_tutorial_modal", False):
+                self.trigger_click_flash(block_idx)
+                if item is not None:
+                    self._play_sound("confirm")
+                    self.execute_action(item, target_block=block_idx)
+
+    def set_dwell_click_enabled(self, enabled: bool) -> None:
+        """Enables or disables auto-triggering actions on gaze dwell (accessibility fallback)."""
+        self.dwell_click_enabled = bool(enabled)
 
     def start_mini_tutorial(self) -> None:
         """Starts the interactive 3-step mini-tutorial for gaze onboarding."""
@@ -4047,6 +4062,9 @@ class OverlayWindow(QWidget):
             self.current_node_id = "MODE_SELECT"
         else:
             self.current_node_id = "ROOT"
+        self._dwell_start_time = time.time()
+        self._dwell_progress = 0.0
+        self._dwell_fired = False
         self._cached_adaptive_node = None
         self._last_ast_eval_time = 0.0
         self.last_action_desc = f"Modo: {display_name}"
@@ -4381,8 +4399,14 @@ class OverlayWindow(QWidget):
             self.gaze_scroller.stop()
             self._gaze_scroll_enabled = False
             self.hovered_block = None
+            self._dwell_block = None
+            self._dwell_progress = 0.0
+            self._dwell_fired = False
             self.hide()
         else:
+            self._dwell_start_time = time.time()
+            self._dwell_progress = 0.0
+            self._dwell_fired = False
             self.show()
             self.raise_()
             self._wake_ghost_peek()

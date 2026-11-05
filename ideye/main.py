@@ -957,6 +957,7 @@ class IDEyeApplication(QObject):
         wink_cooldown = float(values.get("wink_cooldown_sec", getattr(config, "WINK_COOLDOWN_SEC", 0.65)))
         wink_margin = float(values.get("wink_opposite_margin", getattr(config, "WINK_OPPOSITE_EYE_MARGIN", 0.035)))
         wink_distance = bool(values.get("wink_distance_compensation", getattr(config, "WINK_DISTANCE_COMPENSATION", True)))
+        dwell_click_enabled = bool(values.get("dwell_click_enabled", getattr(config, "DWELL_CLICK_ENABLED", False)))
 
         if estimator is not None:
             estimator.set_tracking_mode(mode)
@@ -1002,6 +1003,8 @@ class IDEyeApplication(QObject):
 
         self.sound_feedback.set_enabled(sound_enabled)
         self.overlay.set_adaptive_ast_enabled(ast_enabled)
+        if hasattr(self.overlay, "set_dwell_click_enabled"):
+            self.overlay.set_dwell_click_enabled(dwell_click_enabled)
         self.overlay.toggle_auto_switch(auto_switch)
         self.overlay.set_ghost_peek_enabled(ghost_enabled, emit_signal=False)
         self.overlay.set_ghost_peek_idle_seconds(ghost_idle)

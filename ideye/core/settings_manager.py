@@ -27,6 +27,7 @@ _FACTORY_DEFAULTS: Dict[str, Any] = {
     "one_euro_level": 6,
     "mar_threshold": float(getattr(config, "MAR_THRESHOLD", 0.45)),
     "mar_calibrated": False,
+    "dwell_click_enabled": bool(getattr(config, "DWELL_CLICK_ENABLED", False)),
     "sound_enabled": bool(getattr(config, "SOUND_ENABLED", True)),
     "auto_switch_enabled": bool(getattr(config, "CONTEXT_AUTO_SWITCH_ENABLED", False)),
     "adaptive_ast_enabled": bool(getattr(config, "ENABLE_ADAPTIVE_AST_MENUS", True)),

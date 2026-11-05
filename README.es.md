@@ -10,7 +10,7 @@
 [![Lanzamiento: v0.5.0](https://img.shields.io/badge/Lanzamiento-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-691%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-701%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -394,7 +394,7 @@ IDEye/
 │       ├── data/es_common_words.txt # Diccionario español para predicción
 │       ├── defaults/                # Plantillas de configuración y macros
 │       └── icons/                   # Suite de iconos SVG/Lucide alta DPI
-└── tests/                           # 691 pruebas de unidad e integración
+└── tests/                           # 701 pruebas de unidad e integración
     ├── test_phase1.py               # Visión y máquina MAR
     ├── test_phase2.py               # QThread, no-focus y calibración
     ├── test_phase3.py               # Árboles sintácticos e inyección
@@ -435,7 +435,8 @@ IDEye/
     ├── test_wink_robustness.py      # EAR por ojo, filtros, tiempos y doble guiño
     ├── test_cap_mode_and_eye_roi_clahe.py # Tolerancia a gorra, Eye ROI CLAHE y anclaje nasal
     ├── test_audit_hardening_and_resilience.py # Resiliencia ante fallos y reloj monotónico
-    └── test_tutorial_and_mar_anti_midas.py # Onboarding guiado y línea base MAR de reposo
+    ├── test_tutorial_and_mar_anti_midas.py # Onboarding guiado y línea base MAR de reposo
+    └── test_zero_dwell_grid_selection.py # Eliminación de efecto Midas Zero-Dwell y selección intencional
 ```
 
 ---

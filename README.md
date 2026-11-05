@@ -10,7 +10,7 @@
 [![Release: v0.5.0](https://img.shields.io/badge/Release-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-691%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-701%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -396,7 +396,7 @@ IDEye/
 │       ├── data/es_common_words.txt # Spanish dictionary for word prediction
 │       ├── defaults/                # Default templates for settings and profiles
 │       └── icons/                   # High-DPI neon SVG/Lucide icon suite
-└── tests/                           # 691 automated unit & integration tests
+└── tests/                           # 701 automated unit & integration tests
     ├── test_phase1.py               # Core CV and MAR state machine
     ├── test_phase2.py               # PyQt6 QThread, no-focus flags and calibration
     ├── test_phase3.py               # Syntax tree validation and code injection
@@ -437,7 +437,8 @@ IDEye/
     ├── test_wink_robustness.py      # Per-eye EAR, gates, timing and double wink
     ├── test_cap_mode_and_eye_roi_clahe.py # Cap/visor resilience, Eye ROI CLAHE and anchors
     ├── test_audit_hardening_and_resilience.py # Fault resilience and monotonic time audits
-    └── test_tutorial_and_mar_anti_midas.py # Guided onboarding and resting MAR baseline
+    ├── test_tutorial_and_mar_anti_midas.py # Guided onboarding and resting MAR baseline
+    └── test_zero_dwell_grid_selection.py # Zero-Dwell Midas elimination and intentional selection
 ```
 
 ---
@@ -451,11 +452,11 @@ pytest -q
 ```
 
 ```text
-691 passed, 89 subtests in 17.40s
+701 passed, 89 subtests in 22.73s
 ```
 
 > [!NOTE]
-> All 691 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
+> All 701 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
 
 ---
 

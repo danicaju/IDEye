@@ -326,6 +326,30 @@ class TestAdaptiveMARAntiMidas(unittest.TestCase):
         self.assertFalse(overlay._hold_started, "Resting mouth must not start mouse hold down!")
         overlay.close()
 
+    def test_mode_switch_and_reading_mode_reset_dwell_state(self):
+        """Mode switches and reading mode toggle cleanly reset dwell accumulators."""
+        app = QApplication.instance() or QApplication([])
+        overlay = OverlayWindow()
+
+        overlay._dwell_block = 1
+        overlay._dwell_progress = 0.9
+        overlay._dwell_fired = True
+
+        overlay._on_context_mode_changed("terminal", "Terminal", "#10B981")
+        self.assertEqual(overlay._dwell_progress, 0.0)
+        self.assertFalse(overlay._dwell_fired)
+
+        overlay._dwell_progress = 0.7
+        overlay._dwell_fired = True
+        overlay.toggle_reading_mode()
+        self.assertEqual(overlay._dwell_progress, 0.0)
+        self.assertFalse(overlay._dwell_fired)
+
+        overlay.toggle_reading_mode()
+        self.assertEqual(overlay._dwell_progress, 0.0)
+        self.assertFalse(overlay._dwell_fired)
+        overlay.close()
+
 
 if __name__ == "__main__":
     unittest.main()

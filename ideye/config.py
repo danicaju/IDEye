@@ -585,6 +585,8 @@ POSTURE_OPTIMAL_DISTANCE_CM: float = 60.0
 
 # Adaptive Dwell-Time Parameters (Dynamic & Safe)
 ADAPTIVE_DWELL_ENABLED: bool = True
+DWELL_CLICK_ENABLED: bool = False
+ADAPTIVE_DWELL_CLICK_ENABLED: bool = False
 DWELL_TIME_NAV_SEC: float = 0.30        # Fast dwell for navigation / repeated keys
 DWELL_TIME_STANDARD_SEC: float = 0.45   # Standard dwell for snippets and menus
 DWELL_TIME_DANGER_SEC: float = 0.85     # Safe dwell for destructive actions (exit/close)

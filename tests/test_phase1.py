@@ -360,7 +360,7 @@ class TestBlock9AndMiniFeedLayout(unittest.TestCase):
 
 
 class TestResourceLifecycleAndThreading(unittest.TestCase):
-    """Audits QA requirement 3 & AGENTS.md: Clean resource cleanup and threading."""
+    """Audits QA requirement 3: Clean resource cleanup and threading."""
 
     def test_idempotent_release_no_double_close_error(self):
         """Verifies calling release() multiple times never crashes with ValueError."""

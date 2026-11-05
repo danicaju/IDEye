@@ -401,7 +401,7 @@ server.tool(
 // Tool 6: Read the latest gaze-fired agentic task for external AI agents
 server.tool(
   "get_pending_gaze_task",
-  "Returns the latest engineering prompt that the IDEye user launched with their eyes (Agentic Prompt Launcher). External agents such as Claude Code, OpenCode or Antigravity can read and execute it. Set consume=true to remove the task atomically from the queue.",
+  "Returns the latest engineering prompt that the IDEye user launched with their eyes (Agentic Prompt Launcher). External tools such as VS Code Copilot or command-line developer assistants can read and execute it. Set consume=true to remove the task atomically from the queue.",
   {
     consume: z.boolean().default(false).describe("Remove the returned task from agentic_task_queue.json")
   },

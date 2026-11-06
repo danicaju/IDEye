@@ -30,3 +30,5 @@ telemetry_stats.json
 telemetry_stats.json.tmp
 AGENTS.md
 .agents/
+
+*.zip

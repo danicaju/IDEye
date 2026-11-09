@@ -3,8 +3,10 @@
 # IDEye (Vistax L2C Engine)
 **The Look-To-Code (L2C) Engine for Hands-Free, Silent Software Engineering**
 
-[![English](https://img.shields.io/badge/Language-English-blue?style=flat-square)](README.md)
-[![Español](https://img.shields.io/badge/Idioma-Español-red?style=flat-square)](README.es.md)
+<p align="right">
+  <strong>Language:</strong>
+  <b>English</b> | <a href="README.es.md">Español</a>
+</p>
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Release: v0.5.0](https://img.shields.io/badge/Release-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
@@ -15,12 +17,9 @@
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
 
-[Pre-Built Releases](#-pre-built-releases--quick-downloads) • [Quick Start](#-quick-start) • [How It Works](#-how-it-works-3-step-hands-free-interaction) • [Explore Architecture](#-system-architecture) • [Core Innovations](#-core-innovations) • [Controls & Shortcuts](#-runtime-controls--shortcuts) • [Roadmap](#-roadmap)
+[Quick Downloads](#-pre-built-releases--quick-downloads) • [How It Works](#-how-it-works-3-step-interaction) • [Core Innovations](#-core-innovations) • [Quick Start](#-quick-start) • [Controls & Shortcuts](#-runtime-controls--shortcuts) • [Architecture](#-system-architecture) • [Roadmap](#-roadmap)
 
 ---
-
-<!-- TODO: Replace with a 15-second GIF recorded with OBS showing you coding in VS Code with the HUD overlay -->
-![IDEye Demo Placeholder](https://via.placeholder.com/900x450/0d1117/58a6ff?text=Insert+GIF+Demo:+IDEye+3x3+HUD+Injecting+Code+into+VS+Code)
 
 </div>
 
@@ -31,28 +30,29 @@
 > - **`IDEye-Windows-v0.5.0.zip`** — Standalone Windows desktop app (unzip and double-click `IDEye.exe`).
 > - **`ideye-vscode-bridge-0.5.0.vsix`** — Native VS Code companion extension (drag & drop directly into your VS Code window).
 
+---
 
 ## The Problem & Why IDEye Exists
 
-Developers experiencing severe RSI, carpal tunnel, motor disabilities, or temporary injuries face a major barrier when trying to write code:
-1. **Voice-coding tools (Talon, Cursorless)** are amazing, but require constant vocalization—failing in shared offices, libraries, late-night sessions, or for users with speech impairments.
-2. **On-screen keyboards (OptiKey)** force letter-by-letter typing (`f`-`o`-`r`-`space`...) and practically require $300–$1,000 specialized infrared eye-trackers (Tobii) because standard webcams suffer from a 100–150px dispersion jitter.
-3. **Webcam mouse drivers (Project Gameface, eViacam)** only move the OS cursor; clicking tiny 15px IDE symbols or suffering from the *"Midas Touch" problem* (dwell-time clicking fatigue) makes programming agonizingly slow.
+Developers experiencing severe RSI, carpal tunnel, motor disabilities, or temporary injuries face major barriers when coding:
+1. **Voice-coding tools (Talon, Cursorless)** require constant vocalization, which fails in shared offices, libraries, late-night sessions, or for developers with speech impairments.
+2. **On-screen keyboards (OptiKey)** force letter-by-letter typing and practically require $300–$1,000 specialized infrared hardware (Tobii) due to webcam jitter.
+3. **Webcam mouse drivers (Project Gameface, eViacam)** only move the OS cursor, suffering from the painful *"Midas Touch" problem* (dwelling fatigue).
 
-**IDEye (Vistax)** solves this by rethinking the programming interface from first principles: combining a **3x3 Macro-Zone AST HUD**, **hybrid head+iris webcam tracking**, **instant zero-dwell facial-gesture triggers**, **bidirectional VS Code WebSocket integration**, and **live AST/LLM context prediction**.
+**IDEye (Vistax)** solves this from first principles: combining a **3x3 Macro-Zone AST HUD**, **hybrid head+iris webcam tracking**, **instant zero-dwell facial gesture triggers**, **bidirectional VS Code WebSocket integration**, and **live AST context prediction**.
 
 ### State-of-the-Art Comparison
 
-| Feature / Tool | Standard Webcam ($0) | 100% Silent (No Voice) | AST / Macro Code Injection | Live Local Variable Awareness | Bidirectional VS Code WebSocket + Auto-Context Modes + 60 Hz FreeLook & Gaming |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Talon Voice / Cursorless** | No | No | Yes | Yes | No |
-| **OptiKey** | Partial *(IR Recommended)* | Yes | No *(Char-by-char)* | No | No |
-| **Google Project Gameface** | Yes | Yes | No *(Mouse driver only)* | No | No |
-| **IDEye (Vistax L2C)** | **Yes** | **Yes** | **Yes (3x3 Macro-HUD)** | **Yes (AST + AI)** | **Yes** |
+| Feature / Capability | Standard Webcam ($0) | 100% Silent (No Voice) | AST / Macro Code Injection | Live Local Variable Awareness | Bidirectional VS Code WebSocket | 60 Hz FreeLook & Gaming |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Talon Voice / Cursorless** | No | No | Yes | Yes | No | No |
+| **OptiKey** | Partial *(IR Rec.)* | Yes | No *(Char-by-char)* | No | No | No |
+| **Google Project Gameface** | Yes | Yes | No *(Mouse driver)* | No | No | Yes |
+| **IDEye (Vistax L2C)** | **Yes** | **Yes** | **Yes (3x3 Macro-HUD)** | **Yes (AST + AI)** | **Yes** | **Yes** |
 
 ---
 
-### How It Works: 3-Step Hands-Free Interaction
+## How It Works: 3-Step Interaction
 
 ```mermaid
 flowchart LR
@@ -87,75 +87,99 @@ flowchart LR
     class S3 step3;
 ```
 
-
 ---
 
 ## Core Innovations
 
-### 1. Sub-Pixel Cranial Centroid & Multi-Mode Tracking
+The system is structured across four foundational architectural pillars:
+
+### 1. Sub-Pixel Hybrid Tracking & Cranial Centroid
 Standard webcam pupil tracking lacks dynamic range at normal monitor distances. IDEye fuses the normalized iris offset with the 3D nose-tip anchor vector:
-
 $$\mathbf{P}_{raw} = \alpha_{head} \cdot \mathbf{V}_{nose} + (1 - \alpha_{head}) \cdot \mathbf{V}_{iris}$$
+Weighted cranial landmarks from MediaPipe FaceMesh (`[1, 4, 6, 168, 195, 197]`) with an adaptive hysteresis gate (`STATIC_LOCK_RADIUS=0.0035`, `0.0px` drift) eliminate micro-tremor during fixations without adding latency to saccades. Includes cap/visor resilience and low-light Eye ROI CLAHE compensation.
 
-$$\mathbf{S}_t = \gamma \cdot \mathbf{P}_{raw} + (1 - \gamma) \cdot \mathbf{S}_{t-1}$$
+### 2. Zero-Dwell Midas Elimination & Biometric Gestures
+Navigation and activation are completely decoupled: looking only highlights, never clicks. A slight mouth opening (Mouth Aspect Ratio, MAR) performs an instant click or snippet injection. Holding the mouth open enters **Jaw-Lock** drag mode. An **adaptive resting-MAR baseline** continuously learns the user's resting posture, preventing ghost clicks and dwelling fatigue. Independent winks handle instant Undo (left wink) and Pause/Hide (right wink).
 
-Where $\alpha_{head} \approx 0.60$ provides macro stability across screen corners and $1 - \alpha_{head} \approx 0.40$ allows fast micro-adjustments with the eyes.
+### 3. Bidirectional VS Code WebSocket Bridge & Fault-Tolerant Live AST
+The `WebSocketBridge` synchronizes editor diagnostics, active selections, and syntax trees in real time (`ws://127.0.0.1:54321`). `ContextReader` extracts local variables, signatures, and imports even when code has syntax errors (`ast.walk` + regex fallback). Features **6 operating modes**: `CODING`, `WRITING` (letter keyboard with word predictions), `TERMINAL_GIT`, `DATA_MATH`, `NAVIGATION`, and `FREELOOK_GAMING` (60 Hz head-joystick with central deadzone).
 
-For sub-pixel stability, IDEye computes a cranial centroid from MediaPipe FaceMesh landmarks `[1,4,6,168,195,197]` with higher weights on the stable anchors `6`, `168`, and `197`. A hysteresis gate (`STATIC_LOCK_RADIUS=0.0035`, `STATIC_BREAKOUT_RADIUS=0.0085`, 3-frame confirmation, `0.0px` drift) suppresses micro-tremor during fixations without adding lag to saccades. Three tracking modes are provided:
-* **`HEAD_PRIMARY`** — default smooth head-weighted tracking.
-* **`PURE_IRIS`** — median-of-5 iris samples plus orbital multi-anchor roll compensation for pure eye control.
-* **`HYBRID`** — fuses head and iris signals with an adaptive saccade coefficient ramping `0.08 -> 0.55` for fast, stable transitions.
-* **Cap & Visor Resilience** — rigid subnasal anchors (`[1, 4, 195, 197]`), brow-raise micro-gesture gating, and adaptive ocular shadow piercing (`Eye ROI CLAHE`) allowing seamless use while wearing caps, hats, or glasses without tracking drops.
+### 4. Non-Intrusive PyQt6 HUD, Ergonomics & Multi-Monitor
+The HUD runs via PyQt6 with `WindowDoesNotAcceptFocus` and native `WS_EX_TRANSPARENT`, allowing OS clicks to pass through without stealing keyboard focus or editor cursor state. Supports **Right Dock layout** (30% column), **Ghost Mode** (auto-dims to 15% opacity while reading), **Multi-Monitor gaze handover**, and procedural offline sound synthesis via `numpy` and native `winsound`.
 
-### 2. Zero-Dwell Midas Elimination + Jaw-Lock Gestures
-Navigation and activation are fully decoupled: looking only highlights, never clicks. A short mouth opening performs an instant click/inject, while a held open mouth above your adaptive resting-MAR threshold enters **Jaw-Lock** drag mode. The facial detector features an **adaptive resting MAR baseline (Anti-Midas protection)** that learns each user's natural mouth aperture in real time, preventing ghost clicks and click loops even without mouth calibration or with high natural resting MAR (0.30-0.45). The guided 3-step mini-tutorial (F2 or Help button) safely walks users through dwell, gesture confirmation, and resting zones. No dwell timers means no accidental Midas clicks while reading.
+---
 
-### 3. 6-Mode Strategy Engine + WebSocket Auto-Switch
-The `ModeManager` hosts six specialized modes - `CODING_MODE`, `WRITING_MODE`, `TERMINAL_GIT_MODE`, `DATA_MATH_MODE`, `NAVIGATION_READ_MODE`, and `FREELOOK_GAMING_MODE` - and can switch automatically based on VS Code context received over the bidirectional WebSocket bridge. FreeLook delivers smooth 60 Hz camera/look control; Gaming uses a **head-joystick with a central deadzone** for WASD movement, while a right wink toggles a menu cursor for in-game buttons. Writing combines a gaze-friendly **letter keyboard** with a **Predictive Word & Phrase Engine** and an AI writing assistant to rephrase, correct spelling/grammar, or expand paragraphs without placeholder text.
+## Quick Start
 
-Delimiter snippets leave the caret after the closing pair for call names like `func()`, while for conditionals (`if ()`, `while ()`) the caret lands inside the parentheses to write the condition immediately. FreeLook also releases a stuck Jaw-Lock after two seconds and recenters safely when the face is lost.
+### Pre-Built Releases & Quick Downloads (Recommended for End-Users)
+1. **Download `IDEye-Windows-v0.5.0.zip`** from **[GitHub Releases](https://github.com/danicaju/IDEye/releases)** and extract it.
+2. **Launch `IDEye.exe`** (pre-bundled with Python, OpenCV, MediaPipe, and PyQt6 runtimes).
+3. **Install the Companion VS Code Extension**: Drag `ideye-vscode-bridge-0.5.0.vsix` into VS Code.
+4. **Code hands-free**: Your webcam calibrates automatically and connects to VS Code over local WebSocket.
 
-Wink detection now learns per-eye EAR baselines, rejects bilateral blinks, far faces, extreme roll/yaw and twitch closures, and exposes hold, cooldown, margin and distance settings in user_settings.json.
+### Developer Installation (Build from Source)
+```bash
+# 1. Clone the repository
+git clone https://github.com/danicaju/IDEye.git
+cd IDEye
 
-### 4. Smart Prefix Deduplication & Statement Replacement
-The writing pipeline deduplicates repeated prefix strokes: `h+hola` becomes `ola`, and `h+Hola` becomes a backspace followed by `Hola`. When writing a conditional structure like `if ()` and subsequently selecting a code suggestion related to that `if`, the previous typed expression is erased and cleanly replaced by the full suggestion. It tracks spaces, punctuation, arrow keys, and backspace state identically in OS virtual input and over the VS Code WebSocket bridge.
+# 2. Set up virtual environment
+python -m venv venv
+venv\Scripts\activate      # On Linux/macOS: source venv/bin/activate
 
-### 5. Glass & Focus HUD + High-DPI Lucide + Procedural Audio
-The HUD renders Glass and Focus panels with high-DPI Lucide/SVG icons. Sound feedback is synthesized procedurally with `numpy` and cached as small WAV files under `tempfile.gettempdir()/ideye_audio_cache`; playback uses the native async `winsound` backend, so the bundle carries no external audio assets and remains fully offline.
+# 3. Install dependencies & launch
+pip install -r requirements.txt
+python main.py
+```
 
-### 6. Fault-Tolerant Live AST + Async AI Predictor
-Half-written code rarely compiles. `ContextReader` combines Python's native `ast.walk()` with a line-ordered regex fallback engine to extract local variables, function arguments, and classes from your active file — even when a `SyntaxError` is present. It feeds them into an asynchronous worker (`Ollama` / OpenAI API / Local Heuristics) to populate one-click completions while preserving emergency Pause and Back buttons.
+---
 
-### 7. Non-Intrusive `WindowDoesNotAcceptFocus` HUD + Calibration
-Built with `PyQt6`, the transparent overlay stays on top of VS Code, PyCharm, or any IDE using `Qt.WindowType.WindowDoesNotAcceptFocus` and native `WS_EX_TRANSPARENT`. Your editor never loses keyboard focus or cursor blinking, and physical mouse clicks pass seamlessly through the transparent grid to the code beneath. The 5-point visual calibration wizard stores the mapping in `calibration_profile.json`.
+## Runtime Controls & Shortcuts
 
-### 8. Bidirectional VS Code Bridge + Multilingual Menus
-The `WebSocketBridge` exchanges editor state, diagnostics, and selection info with the VS Code extension in real time, enabling context-aware mode switching and snippet injection. Syntax trees are available in multiple languages, including a Spanish common-word dictionary and localized menu labels.
+### Essential Everyday Controls
 
-### 9. Clipboard Time-Machine & OS Foreground Intelligence
-`ClipboardHistory` keeps the six most recent user copies in a 3x3 HUD grid and excludes IDEye's own atomic writes, so re-injection never pollutes the history. `WindowWatcher` polls the foreground window every 500 ms, debounces transient focus changes, and routes games, terminals, writing apps, browsers and IDEs using configurable process/title lists. `TelemetryManager` records mouth clicks, injected characters, keystrokes saved, efficiency ratio and per-cell heatmaps into `telemetry_stats.json`.
+| Action | Input / Shortcut | Description |
+| :--- | :--- | :--- |
+| **Emergency Killswitch** | **`Ctrl+Alt+Q`** | Global OS-wide hotkey: immediately shuts down IDEye from anywhere |
+| **Emergency Reset** | **`Ctrl+Alt+R`** | Immediately clears calibration weights and resets to neutral mapping |
+| **Pause / Reading Mode** | **`Ctrl+Alt+P`** / **Right Wink** | Hides the HUD completely so you can read code without clicks |
+| **Snap to Caret** | **`C`** | 1-point micro-recalibration centering gaze to the active editor cursor |
+| **Toggle Right Dock** | **`D`** | Toggles between Full Grid (100%) and Right Dock (30% column, 460px width) |
+| **Inject / Click** | **Mouth Click** | Short mouth opening (MAR) triggers instant zero-dwell click or injection |
+| **Drag / Jaw-Lock** | **Held Mouth** | Holding mouth open engages adaptive drag mode without timer fatigue |
+| **Universal Undo** | **`Z`** / **Left Wink** | Navigates back in menus or sends instant Undo (Ctrl+Z) |
 
-### 10. Multi-Monitor Handover & Per-Monitor Calibration
-`ScreenManager` moves the HUD and debug panel between displays, rebinds normalized gaze bounds per monitor, and supports manual `Ctrl+Alt+N` handover plus automatic bezel crossing after a sustained head-yaw gesture. Calibration profiles store the screen aspect ratio and a per-monitor key under `calibration_profiles/`, so 1080p, 4K and ultrawide layouts keep their own mapping.
+<details>
+<summary><b>View all 34 shortcuts, mode controls & gaming mappings</b></summary>
 
-### 11. Interactive Game Manual (Living Documentation)
+<br>
 
-`docs/guia_interactiva.html` is a self-contained, offline "Nintendo Game Manual meets Cyber-Glass" guide: five tabbed pages, illustrated action cards with inline SVG, a live 3x3 mode simulator, a shortcut cheatsheet and A4 landscape PDF export. Open it from the **Abrir Manual Interactivo** button in the debug panel or the help modal. Its single source of truth is `ideye/core/guide_catalog.py`, regenerated with `generate_interactive_guide()`.
+| Key | Action | Description |
+| :--- | :--- | :--- |
+| **`Ctrl+Alt+A`** | **Toggle Smart Menus** | Auto-adapts 9 HUD blocks to function signatures, try blocks, and loops |
+| **`Ctrl+Alt+B`** | **Clipboard History** | Opens the last 6 user copies in a 3x3 grid for instant re-injection |
+| **`Ctrl+Alt+L`** | **Change Language** | Cycles Python, TypeScript, Rust, C++, Go syntax definitions |
+| **`Ctrl+Alt+V`** | **Open Mode Selector** | Opens the 6-mode switcher anywhere in the OS |
+| **`Ctrl+Alt+K`** | **Toggle Auto-Switching**| Enables/disables automatic mode routing based on editor context |
+| **`Ctrl+Alt+F`** | **FreeLook Mode** | Grid-free 60 Hz mouse gaze navigation with top magnetic command bar |
+| **`Edge Scroll`** | **Web Scroll** | Rest gaze on top/bottom display edge for ~0.3 s to scroll |
+| **`Ctrl+Alt+G`** | **Gaming Mode** | Head-joystick for WASD movement; left wink jumps; right wink toggles cursor |
+| **`Ctrl+Alt+S`** | **Toggle Audio** | Enables/disables procedural audio feedback |
+| **`Ctrl+Alt+H`** | **Help & Gesture Guide**| Opens in-app gesture cheatsheet and calibration modal |
+| **`Ctrl+Alt+T`** | **Cycle Tracking Mode** | Cycles `HEAD_PRIMARY`, `PURE_IRIS`, and `HYBRID` tracking algorithms |
+| **`Ctrl+Alt+C`** | **Center Calibration** | Look at screen center and press to reset neutral anchor |
+| **`Ctrl+Alt+M`** | **Toggle Mini-Feed** | Shows/hides real-time tracking metrics and camera monitor panel |
+| **`Ctrl+Alt+N`** | **Multi-Monitor Handover**| Moves the HUD and gaze bounds to the next display |
+| **`Ctrl+Alt+Z`** | **Sniper Lens x3.5** | Activates precision zoom lens and slow-motion in FreeLook |
+| **`Ctrl+Alt+J`** | **Semantic AST Jump** | Opens 3x3 symbol map for active file and teleports caret |
+| **`Ctrl+Alt+I`** | **Agentic Prompt Launcher**| Opens 6 engineering prompts for VS Code chat or local MCP queue |
+| **`Ctrl+Alt+W`** | **Inertial Gaze Scroll** | Proportional vertical/horizontal wheel with deadzone and soft braking |
+| **`P`** | **Gaze Spotlight** | Opens the 3x3 Gaze Command Palette modal |
+| **`O`** | **Toggle Theme** | Cycles between Cyber Glass, OLED Black (WCAG AAA), and Solarized Dark |
+| **`F2`** | **Mini-Tutorial** | In-app 3-step interactive onboarding guide |
+| **Eye Exit** | **[X EXIT] Hands-Free** | Gaze at top-right `[X EXIT]` and mouth-click for eye-accessible exit dialog |
 
-### 12. Live Diagnostics, Health Guard & Micro-Gestures
-
-The VS Code extension streams active-line errors and warnings over WebSocket. `DiagnosticsFixer` generates imports, missing colons, delimiter closures, indentation repairs and AI suggestions in a 3x3 Auto-Fix menu. `HealthGuard` warns after 28 s without blinking or when eye distance exceeds 138% of baseline. Optional micro-gestures open Auto-Fix with a brow raise and indent/outdent with a head tilt. The header and favicon embed the official app icon as a base64 data URI.
-
-### 13. Flexible HUD Dock, Pre-Flight Ergonomics & Gaze Spotlight
-
-- **Flexible HUD Layouts**: Toggle between Full Grid (100%) and Right Dock (30% column, ~460-480px width) with key `D` or Spotlight, leaving the left 70% completely clear for VS Code editor reading with pass-through gaze.
-- **Smart Ghost Mode**: Automatically dims HUD cards to 15% opacity on idle while reading code in editor, instantly waking in 0ms when looking back at HUD cards.
-- **Pre-Flight Posture & Illumination Checks**: Real-time distance verification (50-70cm green badge) and lighting luma checks in Calibration UI before calibrating.
-- **1-Point Micro-Recalibration ("Snap to Caret")**: Quickly re-centers gaze offset with key `C` or Spotlight without repeating the full 5-point polynomial calibration.
-- **Adaptive Dwell & Safe Rest**: Fast 300ms dwell for navigation/keys, safe 850ms for critical exits, and dwell disabled (infinite) in center cell 5 with expanded magnetic capture to completely eliminate Midas Touch.
-- **Gaze Command Palette (Spotlight)**: Instant 3x3 modal accessed by gaze or key `P` for save, format, terminal, universal undo (Ctrl+Z), snap caret, and layout switching.
-- **High-Contrast Themes**: Switch with key `O` between Cyber Glass, OLED Black (WCAG AAA with absolute black background for OLED displays), and Solarized Dark.
-- **Interactive 3-Step Guided Mini-Tutorial**: In-app guided onboarding (`F2`) teaching dwell fixation, facial gesture confirmation, and safe resting.
+</details>
 
 ---
 
@@ -164,7 +188,7 @@ The VS Code extension streams active-line errors and warnings over WebSocket. `D
 ```text
 +-------------------------------------------------------------------------+
 | CAMERA TRACKER (QThread)                                                |
-| OpenCV Capture -> MediaPipe FaceMesh (468 pts) -> Iris + Rigid Cranial Centroid |
+| OpenCV Capture -> MediaPipe FaceMesh (478 pts) -> Iris + Cranial Centroid|
 +------------------------------------+------------------------------------+
  | pyqtSignal(x, y)                  | pyqtSignal("GESTURE")
  v                                   v
@@ -177,27 +201,18 @@ The VS Code extension streams active-line errors and warnings over WebSocket. `D
  |                                   |
  v                                   v
 +-------------------------------+  +--------------------------------------+
-| MODE MANAGER & VS CODE        |  | CONTEXT & AI ENGINE (QThread)        |
-| WEBSOCKET BRIDGE              |  | - Live AST + Regex Symbol Parse      |
-| - CODING / WRITING / TERMINAL |  | - Async Ollama / OpenAI Client       |
-| - DATA / NAVIGATION / FREELOOK|  | - Zero-Latency Heuristic Backup      |
-| - GAMING                      |  |                                      |
+| MODE MANAGER & VS CODE BRIDGE |  | CONTEXT & AI ENGINE (QThread)        |
+| - CODING / WRITING / TERMINAL |  | - Live AST + Regex Symbol Parse      |
+| - DATA / NAVIGATION / FREELOOK|  | - Async Ollama / OpenAI Client       |
+| - GAMING                      |  | - Zero-Latency Heuristic Fallback    |
 +-------------------------------+  +--------------------------------------+
  |                                   |
  v                                   v
 +-------------------------------+  +--------------------------------------+
 | CODE INJECTOR ENGINE          |  | PROCEDURAL SOUND ENGINE              |
 | - Clipboard Atomic Swap       |  | - numpy WAV synthesis                |
-| - Auto Cursor Offset Reposition|  | - temp cache + async winsound        |
-| - Sticky vs. Auto-Return Nodes|  |                                      |
+| - Cursor Offset Reposition    |  | - Async winsound / offline cache     |
 +-------------------------------+  +--------------------------------------+
- |                                   |
- v                                   v
-+-------------------------------------------------------------------------+
-| OS MOUSE & GAMING CONTROLLER                                            |
-| - SetCursorPos gaze cursor    | - Adaptive Jaw-Lock drag                 |
-| - Head-joystick WASD / jump  | - FreeLook 60 Hz / right-wink cursor    |
-+-------------------------------+-----------------------------------------+
  |
  v
 +---------------------------------+
@@ -207,316 +222,90 @@ The VS Code extension streams active-line errors and warnings over WebSocket. `D
 
 ---
 
-## Quick Start
-
-### Pre-Built Releases & Quick Downloads (Recommended for End-Users)
-
-No Python installation, compiler, Git, or terminal commands needed:
-
-1. **Download `IDEye-Windows-v0.5.0.zip`** from **[GitHub Releases](https://github.com/danicaju/IDEye/releases)** and extract it anywhere on your PC.
-2. **Launch `IDEye.exe`**: Contains bundled Python, OpenCV, MediaPipe, and PyQt6 runtimes.
-3. **Install the Companion VS Code Extension**: Drag `ideye-vscode-bridge-0.5.0.vsix` into VS Code, or install via Extensions view (`Ctrl+Shift+X` -> `...` -> *Install from VSIX...*).
-4. **Code hands-free**: Your webcam calibrates automatically and pairs with VS Code over local WebSocket (`ws://127.0.0.1:54321`).
-
----
-
-### Developer Installation (Build from Source)
-
-### Prerequisites
-* **Python 3.10+** (Python 3.12 recommended)
-* A standard webcam (720p/30fps or higher)
-* *Optional:* [Ollama](https://ollama.com/) installed locally (`ollama run qwen2.5-coder:1.5b` or `codellama`) for offline neural line completions.
-
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/danicaju/IDEye.git
-cd IDEye
-
-# 2. Create and activate a virtual environment
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Launch IDEye
-python main.py
-```
-
-### Desktop Application Launchers
-
-IDEye includes native Windows desktop launchers with custom high-DPI branding:
-
-* **Desktop Shortcut (`IDEye.lnk`)**: Direct double-clickable icon on your Windows Desktop with the official `{ IDEye }` branding.
-* **Silent Launcher (`IDEye.vbs`)**: Launches IDEye immediately with zero command-line console flash.
-* **Batch Launcher (`IDEye.bat`)**: Quick launcher for standard execution.
-* **Debug Launcher (`IDEye_debug.bat`)**: Launches with live terminal output for parameter tuning and tracking metrics.
-* **Standalone Native Executable (`build_app.py`)**: Compiles IDEye into a self-contained `dist/IDEye/IDEye.exe` with bundled MediaPipe, PyQt6, and asset models.
-
-### CLI Arguments
-
-```bash
-python main.py # Standard launch with camera & saved calibration
-python main.py --recalibrate # Force the 5-point visual calibration wizard on startup
-python main.py --camera synthetic # Run headlessly with synthetic face landmarks (for testing/demo)
-```
-
-### 5-Point Quick Calibration
-On first launch (or with `--recalibrate`), IDEye launches the **5-Point Visual Calibration Screen**:
-1. Look at the glowing target in the **Center** and slightly open your mouth.
-2. Repeat for the **4 screen corners** (Top-Left, Top-Right, Bottom-Left, Bottom-Right).
-3. The bilinear mapping matrix is calculated and saved to `calibration_profile.json`. Open VS Code, place your cursor in any `.py` file, and start coding!
-4. **Step 6 (MAR):** open and close your mouth **3 complete times**. The step never advances by timeout: all 3 dots must turn green and the threshold is confirmed 650 ms after 3/3. Use `ESC` or `Space` only for an explicit manual skip.
-
-> Calibration is stored with the screen aspect ratio. Switching to a display with a very different aspect ratio (for example 16:9 to 21:9) applies an automatic horizontal correction; if precision degrades, run `--recalibrate` on the target monitor.
-
----
-
-## Runtime Controls & Shortcuts
-
-| Key | Action | Description |
-| :--- | :--- | :--- |
-| **`Ctrl+Alt+Q`** | **Emergency Killswitch** | **Global OS-wide hotkey**: cleanly shuts down IDEye from anywhere in the OS, even when VS Code has focus |
-| **`Ctrl+Alt+R`** | **Emergency Reset** | Immediately clears calibration weights and reverts to safe neutral mapping |
-| **`Ctrl+Alt+A`** | **Toggle Smart Menus** | Toggle real-time context-adaptive menus (auto-adapts 9 blocks to function signatures, try blocks, loops, etc.) |
-| **`Ctrl+Alt+B`** | **Clipboard Time-Machine** | Opens the last six user copies in a 3x3 grid for instant re-injection; internal CodeInjector writes are excluded |
-| **`Ctrl+Alt+L`** | **Change Language** | Cycles Python, TypeScript, Rust, C++, Go from anywhere |
-| **`Ctrl+Alt+V`** | **Open Mode Selector** | Opens the 6-mode selector; press `Ctrl+Alt+V` anywhere |
-| **`Ctrl+Alt+K`** | **Toggle Auto Mode Switching** | Enables/disables automatic mode changes based on editor context via WebSocket. Use `Ctrl+Alt+K` anywhere |
-| **`Ctrl+Alt+F`** | **FreeLook Mode** | Press `Ctrl+Alt+F` anywhere; a top magnet pulls the cursor into the command bar, and mouth-click is accepted as a fallback gesture |
-| **Edge Scroll** | **Web scroll in FreeLook** | Rest your gaze on the top or bottom edge for ~0.3 s to scroll the page; return to the center to stop |
-| **`Ctrl+Alt+G`** | **Gaming Mode** | Head-joystick for WASD; right wink toggles menu cursor; left wink jumps. Use `Ctrl+Alt+G` anywhere |
-| **`Ctrl+Alt+S`** | **Toggle Sound Feedback** | Press `Ctrl+Alt+S` anywhere |
-| **`Ctrl+Alt+H`** | **Help & Gesture Guide** | Open/close the in-app gesture and shortcut cheat sheet modal |
-| **Mouth Click** | **Inject / Click** | Short mouth opening (MAR) triggers a zero-dwell click or snippet injection; in FreeLook it also works as a confirmed gesture fallback |
-| **Held Mouth** | **Drag / Jaw-Lock** | Holding the mouth open adapts to your resting MAR instead of using a fixed 55% threshold |
-| **Right Wink** | **Pause / Gaming Joystick → Cursor** | Pauses/hides HUD in normal modes; in Gaming switches between head-joystick and menu cursor |
-| **Left Wink** | **Back / Undo / Jump** | Navigates back in menus or triggers Undo; makes the character jump in Gaming mode |
-| **`Ctrl+Alt+T`** | **Cycle Tracking Mode** | Switch between **`HEAD_PRIMARY`**, **`PURE_IRIS`**, and **`HYBRID`** |
-| **`Ctrl+Alt+C`** | **Center Recalibration** | Look at the screen center and press `Ctrl+Alt+C` to reset your neutral anchor |
-| **`Ctrl+Alt+P`** | **Pause / Reading Mode** | Hides the HUD completely so you can read code without accidental clicks; use the same shortcut or a right wink to restore |
-| **`Ctrl+Alt+M`** | **Toggle Mini-Feed** | Press `Ctrl+Alt+M` anywhere; toggles the monitor panel |
-| **`Ctrl+Alt+N`** | **Multi-Monitor Handover** | Moves the HUD and gaze mapping to the next connected display |
-| **`Ctrl+Alt+Z`** | **Sniper Lens x3.5** | Activates the precision lens and slow-mo in FreeLook |
-| **`Ctrl+Alt+J`** | **Semantic AST Jump** | Opens the 3x3 symbol map for the active file |
-| **`Ctrl+Alt+I`** | **Agentic Prompt Launcher** | Opens six engineering prompts for VS Code chat or the local MCP queue |
-| **`Ctrl+Alt+W`** | **Inertial Gaze Scroll** | Proportional vertical/horizontal wheel with central deadzone and soft braking |
-| **`D`** | **Toggle Right Dock** | Switch between Full Grid (100%) and Right Dock (30% column ~460-480px) |
-| **`P`** | **Gaze Spotlight** | Open the 3x3 Gaze Command Palette modal |
-| **`Z`** | **Universal Undo** | Instant Undo (Ctrl+Z) in the active editor |
-| **`C`** | **Snap to Caret** | 1-point micro-recalibration re-centering gaze to editor cursor |
-| **`O`** | **Toggle Theme** | Cycle between Cyber Glass, OLED Black (WCAG AAA), and Solarized Dark |
-| **`F2`** | **Mini-Tutorial** | Open/close the 3-step interactive onboarding guide |
-| **Eye Exit** | **[X EXIT] Hands-Free** | Gaze at the top-right header `[X EXIT]` and mouth-click; brings up a 100% eye-accessible confirmation dialogue |
-
----
-
 ## Project Structure
 
 ```text
 IDEye/
 ├── main.py                          # Root launcher (`python main.py`)
-├── config.py                        # Root configuration wrapper
-├── requirements.txt                 # Project dependencies
-├── pytest.ini                       # Pytest configuration
-├── LICENSE                          # GNU AGPLv3 copyleft license
-├── build_app.py                     # Cross-platform PyInstaller onedir builder
-├── create_desktop_shortcut.py       # Windows desktop shortcut generator
-├── IDEye.bat / IDEye.vbs            # Windows launchers (silent / console)
-├── IDEye_debug.bat                  # Windows diagnostic launcher
-├── ideye.ico                        # Application icon
-├── .github/workflows/build.yml      # Windows / macOS / Linux CI matrix
-├── docs/
-│   ├── MULTI_MONITOR_VALIDATION.md  # Multi-monitor validation guide
-│   └── guia_interactiva.html        # Interactive Game Manual
-├── tools/ideye-mcp/                 # MCP developer diagnostic tools
-├── vscode-extension/                # VS Code WebSocket companion extension
+├── config.py                        # Central configuration defaults
+├── requirements.txt                 # Dependencies (MediaPipe, PyQt6, OpenCV, numpy)
+├── build_app.py                     # Standalone PyInstaller onedir builder
+├── IDEye.bat / IDEye.vbs            # Windows quick / silent launchers
+├── docs/guia_interactiva.html       # Self-contained offline Interactive Guide
+├── vscode-extension/                # Official VS Code WebSocket companion extension
 ├── ideye/
-│   ├── config.py                    # Central tracking, HUD, LLM and gesture settings
-│   ├── main.py                      # PyQt6 lifecycle, subsystems and signal dispatcher
-│   ├── core/
-│   │   ├── camera_tracker.py        # QThread OpenCV + MediaPipe FaceMesh (478 pts)
-│   │   ├── gaze_estimator.py        # Hybrid gaze math, calibration and fusion
-│   │   ├── gaze_scroller.py         # Inertial proportional gaze scroll
-│   │   ├── eco_power_manager.py     # Eco-Sleep 30/10/2 FPS governor
-│   │   ├── gesture_detector.py      # MAR mouth clicks and debounced winks
-│   │   ├── hotkey_manager.py        # Global Ctrl+Alt+letter OS hotkeys
-│   │   ├── mouse_controller.py      # OS mouse injection and virtual inputs
-│   │   ├── screen_manager.py        # Multi-monitor handover and bounds binding
-│   │   ├── bezel_crossing.py        # Configurable yaw/hold/cooldown detector
-│   │   ├── window_watcher.py        # Foreground-window mode routing
-│   │   ├── telemetry_manager.py     # Look-To-Code stats and JSON history
-│   │   ├── settings_manager.py      # Atomic debounced user_settings.json
-│   │   ├── macro_manager.py         # Custom macro persistence and HUD overrides
-│   │   ├── logging_config.py        # Structured logging bootstrap
-│   │   ├── sound_feedback.py        # Synthesized procedural audio feedback
-│   │   ├── lighting_compensator.py  # Low-light & Eye ROI CLAHE compensator
-│   │   ├── health_guard.py          # Blink, distance and cervical posture guard
-│   │   ├── game_profiles.py         # Per-game control profile manager
-│   │   ├── guide_catalog.py         # Interactive guide single source of truth
-│   │   ├── guide_builder.py         # Self-contained offline HTML renderer
-│   │   └── websocket_bridge.py      # Bidirectional VS Code WebSocket bridge
-│   ├── modes/
-│   │   ├── base_mode.py             # Abstract mode interface
-│   │   ├── mode_manager.py          # 6-mode strategy engine and auto-context switching
-│   │   ├── coding_mode.py           # Coding menu trees and snippet injection
-│   │   ├── debug_mode.py            # Local-variable AST debug inspector
-│   │   ├── writing_mode.py          # Letter keyboard, word/phrase predictions and Markdown
-│   │   ├── terminal_git_mode.py     # Terminal / Git command palette
-│   │   ├── data_math_mode.py        # Data/math symbol entry
-│   │   ├── ide_nav_mode.py          # IDE navigation and file explorer
-│   │   ├── sniper_mouse_mode.py     # FreeLook, Jaw-Lock and head-joystick gaming
-│   │   └── _helpers.py              # Shared menu helpers
-│   ├── ui/
-│   │   ├── overlay_window.py        # Transparent No-Focus PyQt6 HUD
-│   │   ├── header_layout.py         # Command-bar geometry and mode indicators
-│   │   ├── calibration_ui.py        # 5-point + 1 MAR fullscreen calibration wizard
-│   │   ├── debug_widget.py          # Mini camera feed, telemetry card and controls
-│   │   ├── macro_editor_dialog.py   # 3x3 macro editor dialog
-│   │   ├── icon_manager.py          # High-DPI Lucide/SVG icon manager
-│   │   ├── system_tray.py           # Native tray icon with power-state badges
-│   │   └── sniper_lens.py           # Circular zoom lens, micro-fixation and slow-mo
-│   ├── actions/
-│   │   ├── menu_trees.py            # 3x3 hierarchical trees and sticky nodes
-│   │   ├── context_reader.py        # Fault-tolerant AST + Regex extractor
-│   │   ├── ai_predictor.py          # Async LLM worker + heuristic fallback
-│   │   ├── code_injector.py         # Atomic clipboard injection and cursor offsets
-│   │   ├── clipboard_history.py     # 6-slot MTF clipboard time-machine
-│   │   ├── language_support.py      # Multi-language syntax definitions
-│   │   ├── diagnostics_fixer.py     # Live LSP diagnostics auto-fixer
-│   │   ├── ast_code_jumper.py       # 3x3 AST symbol map and line navigation
-│   │   ├── semantic_taxonomy.py     # Multi-language semantic code trees
-│   │   ├── agentic_launcher.py      # Gaze-fired engineering prompts + MCP queue
-│   │   └── text_predictor.py        # Local word and phrase prediction engine
-│   └── assets/
-│       ├── data/es_common_words.txt # Spanish dictionary for word prediction
-│       ├── defaults/                # Default templates for settings and profiles
-│       └── icons/                   # High-DPI neon SVG/Lucide icon suite
-└── tests/                           # 702 automated unit & integration tests
-    ├── test_phase1.py               # Core CV and MAR state machine
-    ├── test_phase2.py               # PyQt6 QThread, no-focus flags and calibration
-    ├── test_phase3.py               # Syntax tree validation and code injection
-    ├── test_phase4.py               # ContextReader AST/Regex and AIPredictorWorker
-    ├── test_phase5_multilang_and_websocket.py # Multi-language trees and WebSocket bridge
-    ├── test_phase6_modes.py         # 6-mode engine and auto-context switching
-    ├── test_phase6_6_lucide_ui.py   # Lucide/SVG icon manager
-    ├── test_phase7_sniper_and_sound.py # FreeLook, gaming gestures and audio
-    ├── test_phase7_6_gaze_stability.py # Stability, hysteresis and saccade fusion
-    ├── test_phase8_settings_and_auto_mar.py # Settings and 6th-step MAR calibration
-    ├── test_phase8_2_custom_macros.py # Macro persistence and 3x3 editor
-    ├── test_phase8_3_multimonitor.py # Screen handover, bounds and build command
-    ├── test_phase8_4_refactor.py    # Bezel detector, header layout and logging
-    ├── test_phase9_os_intelligence.py # Clipboard, window routing and telemetry
-    ├── test_phase9_5_biometrics_and_autofix.py # Auto-Fix, Health Guard and micro-gestures
-    ├── test_phase10_1_lighting_and_sniper_lens.py # CLAHE, eye ROI and Sniper Lens
-    ├── test_phase10_2_ast_code_jumper.py # AST extraction and symbol menu
-    ├── test_phase10_3_game_profiles.py # Profiles, twin-stick and edge-scroll
-    ├── test_phase10_4_agentic_launcher.py # Prompt builder, 3x3 menu, MCP queue
-    ├── test_phase11_scroll_eco_and_ghost_hud.py # Scroll, Eco-Sleep, Ghost-Peek and tray
-    ├── test_phase12_semantic_coding_and_live_context.py # Semantic taxonomy and live context
-    ├── test_hotfix_ui_and_gaming.py # Head-joystick, audio cache and help layout
-    ├── test_writing_words_and_letters.py # Letter keyboard, predictions and word/phrase menus
-    ├── test_interactive_guide.py    # Guide catalog, generation and entry points
-    ├── test_interactive_guide_sync.py # UTF-8 and Nintendo theme sync
-    ├── test_freelook_edge_scroll.py # FreeLook edge-scroll behavior
-    ├── test_freelook_top_and_safe_clicks.py # Top reach, mouth click and lens flicker
-    ├── test_glass_focus_ui.py       # Glass/Focus HUD widgets
-    ├── test_help_ui_and_card_layout.py # Help card and gesture guide layout
-    ├── test_menu_integrity.py       # Recursive 9-cell tree verification
-    ├── test_code_injector.py        # Modifier recovery and clipboard safety
-    ├── test_context_and_ai.py       # Syntax-error tolerance and LLM JSON resilience
-    ├── test_calibration_and_killswitch.py # Regularized mapping and global hotkeys
-    ├── test_tracking_modes_and_handsfree_exit.py # Iris modes, VOR and hands-free exit
-    ├── test_adaptive_ast_menus.py   # Adaptive AST menus and [A] shortcut
-    ├── test_vision_math.py          # Gaze clipping and zero-division audits
-    ├── test_wink_gestures_and_hud_hide.py # Wink gestures and HUD visibility
-    ├── test_wink_robustness.py      # Per-eye EAR, gates, timing and double wink
-    ├── test_cap_mode_and_eye_roi_clahe.py # Cap/visor resilience, Eye ROI CLAHE and anchors
-    ├── test_audit_hardening_and_resilience.py # Fault resilience and monotonic time audits
-    ├── test_tutorial_and_mar_anti_midas.py # Guided onboarding and resting MAR baseline
-    └── test_zero_dwell_grid_selection.py # Zero-Dwell Midas elimination and intentional selection
+│   ├── core/                        # Tracking, biometrics, audio, and WebSocket bridge
+│   ├── modes/                       # 6-mode strategy engine (Coding, Writing, Gaming...)
+│   ├── ui/                          # Transparent PyQt6 overlay, calibration & icons
+│   ├── actions/                     # AST extractor, AI predictor, and code injector
+│   └── assets/                      # High-DPI neon SVG icons & word prediction data
+└── tests/                           # 42 automated test suites (702 tests, hardware-mocked)
 ```
 
 ---
 
 ## Testing & QA
 
-IDEye includes a comprehensive hardware-mocked test suite covering mathematical edge cases, recursive menu tree integrity, modifier-key safety, AST fault tolerance, WebSocket messaging, 6-mode strategy engine, and gaze stability:
+IDEye features an automated hardware-mocked test suite covering mathematical edge cases, recursive menu tree integrity, AST fault tolerance, and gaze stability:
 
 ```bash
 pytest -q
 ```
-
 ```text
 702 passed, 89 subtests in 22.15s
 ```
 
 > [!NOTE]
-> All 702 tests run headlessly without requiring a physical webcam, display server, or active internet connection. `testpaths=tests` is configured in `pytest.ini`.
+> All 702 tests execute headlessly without requiring a physical webcam, display server, or network connection.
 
 ---
 
 ## Roadmap
 
+### Current Version (`v0.5.0`)
+- [x] Full production release: standalone Windows portable bundle + native VS Code extension.
+- [x] 6-mode strategy engine with automated WebSocket context detection.
+- [x] Adaptive resting MAR baseline (anti-Midas protection) and 60 Hz FreeLook gaming.
+
+### Upcoming Milestones
+- [ ] Native Linux Wayland overlay backend (`wlr-layer-shell` support).
+- [ ] macOS Apple Silicon universal binary packaging.
+- [ ] On-device quantized local eye-model acceleration with ONNX Runtime.
+
+<details>
+<summary><b>Historical Engineering Roadmap (Phases 1–12.1 Completed)</b></summary>
+
+<br>
+
 - [x] **Phase 1:** Hybrid Iris + Head tracking with EMA smoothing & MAR mouth-click trigger.
 - [x] **Phase 2:** PyQt6 `WindowDoesNotAcceptFocus` transparent HUD & 5-point JSON calibration.
 - [x] **Phase 3:** 3x3 Hierarchical syntax trees & atomic clipboard code injection with cursor offsets.
 - [x] **Phase 4:** Live AST/Regex symbol extraction & asynchronous AI/Heuristic code prediction.
-- [x] **Phase Extra:** Forensic code audit, memory leak elimination, and hardware-mocked regression coverage.
-- [x] **Phase 5:** Multi-language syntax trees (TypeScript/JS, Rust, C++, Go) & native VS Code WebSocket extension.
-- [x] **Phase 6:** 6-mode strategy engine (Coding, Writing, Terminal/Git, Data/Math, Navigation, FreeLook/Gaming) & auto-context switching.
-- [x] **Phase 6.5:** Glass & Focus HUD: taskbar-safe layout, high-contrast command bar, preview chips, and neutral/active card hierarchy.
-- [x] **Phase 6.6:** High-DPI Lucide icon suite, tinted SVG rendering, wider AYUDA button, and help-card layout.
-- [x] **Phase 7:** Procedural numpy WAV synthesis with temp-file cache and OS mouse foundation (click, drag, scroll).
-- [x] **Phase 7.5:** Grid-free FreeLook at 60 Hz, Jaw-Lock, Gaming/Roblox profile, and Smart Prefix Deduplication (`h + hola` -> `ola`).
-- [x] **Phase 7.6:** Sub-pixel cranial centroid stability, PURE_IRIS orbital multi-anchor + median, HYBRID saccade fusion, and bidirectional VS Code WebSocket auto-context.
-- [x] **Phase 7.7:** Full-screen FreeLook mapping, comfortable edge overscan, and Windows taskbar magnetic rail.
-- [x] **Phase 7.9:** FreeLook top magnet, reliable mouth-click fallback and flicker-free Sniper Lens capture.
-- [x] **Phase 8.1:** Persistent `user_settings.json`, live debounced settings sync, 6th-step biometric MAR calibration, and live MAR slider.
-- [x] **Phase 8.2:** Custom Macro Builder: persistent `custom_macros.json`, 3x3 slot editor, snippets/commands/OS keys, and live HUD tree patching.
-- [x] **Phase 8.3:** Multi-monitor gaze handover, bezel crossing, per-screen calibration bounds, and cross-platform PyInstaller packaging.
-- [x] **Phase 8.4:** True per-monitor calibration profiles, extracted `BezelCrossingDetector`/`HeaderLayout`, structured logging, configurable handover thresholds, and a Windows/macOS/Linux CI build matrix.
-- [x] **Phase 9:** Clipboard Time-Machine (6-slot 3x3 history), OS foreground window auto-switch, and Look-To-Code telemetry with persisted effort savings.
-- [x] **Phase 9.5:** Stability hotfix: letter keyboard with word predictions, wrapped help modal, cached-file audio, and head-joystick Gaming with joystick/cursor switching.
-- [x] **Phase 9.6:** Live VS Code diagnostics Auto-Fix, biometric Health Guard, and optional brow/tilt micro-gestures.
-- [x] **Phase 10.1:** Adaptive low-light CLAHE and Sniper Lens x3.5 with slow-mo.
-- [x] **Phase 10.2:** Semantic AST Jump with 3x3 symbol map and VS Code cursor teleport.
-- [x] **Phase 10.3:** Dynamic game profiles from game_profiles.json, twin-stick and strategy edge-scrolling.
-- [x] **Phase 10.4:** Agentic Prompt Launcher for VS Code chat and the local MCP gaze-task queue.
-- [x] **Phase 11:** Inertial gaze scroll, adaptive Eco-Sleep, Ghost-Peek HUD and native system tray.
-- [x] **Phase 12:** Deep semantic coding taxonomy, live VS Code/Google Docs context AI, and environment-aware Terminal, Navigation and Debug modes.
-- [x] **Phase 12.1:** Onboarding tutorial stability hotfix (crash-proof rendering, close button, aliases) and real-time adaptive resting MAR Anti-Midas engine.
+- [x] **Phase 5:** Multi-language syntax trees (TypeScript, Rust, C++, Go) & native VS Code WebSocket extension.
+- [x] **Phase 6:** 6-mode strategy engine (Coding, Writing, Terminal, Data, Navigation, FreeLook/Gaming).
+- [x] **Phase 6.5 - 6.6:** Glass & Focus HUD, high-DPI Lucide icons, and help modal layout.
+- [x] **Phase 7 - 7.9:** Procedural numpy audio, FreeLook 60 Hz, Jaw-Lock drag, and sub-pixel cranial centroid.
+- [x] **Phase 8.1 - 8.4:** Persistent user settings, custom macro builder, multi-monitor gaze handover, and CI matrix.
+- [x] **Phase 9 - 9.6:** Clipboard time-machine, OS window routing, diagnostics Auto-Fix, and Health Guard.
+- [x] **Phase 10 - 11:** Adaptive CLAHE low-light, Semantic AST Jump, dynamic game profiles, and inertial gaze scroll.
+- [x] **Phase 12 - 12.1:** Deep semantic coding taxonomy, interactive tutorial onboarding, and adaptive resting MAR engine.
 
-> Window routing is not limited to Roblox or a few editors: it recognizes broad built-in lists for games, terminals, writing/communication apps, browsers and IDEs. Generic Unreal `-Win64-Shipping.exe` games and configurable title keywords are also supported. Extend `GAMING_PROCESSES`, `GAMING_TITLE_KEYWORDS`, `GAMING_PROCESS_SUFFIXES`, `TERMINAL_PROCESSES`, `WRITING_PROCESSES`, `BROWSER_PROCESSES` or `IDE_PROCESSES` in `ideye/config.py` for any other application.
+</details>
 
 ---
 
 ## Privacy, Safety & Legal Disclaimers
 
-### 100% Local Biometric Processing (Privacy First)
-All webcam video frames and MediaPipe 3D facial landmarks are processed strictly in volatile local RAM. IDEye never records, stores, or transmits video feeds or biometric data over the network.
-
-### Ergonomic & Non-Medical Notice
-IDEye is an assistive productivity tool, not a certified medical device. It is not intended to diagnose, treat, cure, or prevent any medical condition (such as RSI or carpal tunnel syndrome). Users should take regular breaks and stop use immediately if they experience jaw (TMJ), neck, or ocular fatigue.
-
-### Online Gaming & Anti-Cheat Notice
-Gaming Mode uses OS-level synthetic input injection (`Win32 API` / `pynput`) for accessibility. While safe for single-player titles and standard sandbox games, users should verify compatibility before using synthetic input tools in competitive multiplayer games with strict kernel-level anti-cheat systems.
+- **100% Local Biometric Processing**: All webcam video frames and 3D facial landmarks are processed exclusively in volatile local RAM. IDEye never records, stores, or transmits biometric data over any network.
+- **Ergonomic Notice**: IDEye is an assistive productivity tool, not a certified medical device. Users should take regular breaks to avoid facial or cervical fatigue.
+- **Online Gaming Notice**: Gaming Mode uses OS-level synthetic input injection (`Win32 API` / `pynput`) for accessibility. Verify compatibility before using in competitive multiplayer games with kernel-level anti-cheat.
 
 ---
 
 ## Contributing & License
 
-Contributions, accessibility feedback, and PRs are welcome!
-
-IDEye is distributed under the terms of the **GNU Affero General Public License v3.0 (AGPL-3.0-or-later)**. Any modification, redistribution, or deployment as a network service (SaaS) must remain free and open source under the same license, ensuring full copyleft protection and compatibility with PyQt6 (GPLv3).
-
-See the [LICENSE](LICENSE) file for the full legal text.
+IDEye is distributed under the terms of the **GNU Affero General Public License v3.0 (AGPL-3.0-or-later)**. Any modification, redistribution, or deployment as a network service must remain open source under the same license.
 
 <div align="center">
-  <sub>Built by <b>Daniel Casado Juan</b></sub>
+  <sub>Developed by <b>Daniel Casado Juan</b> &middot; Universitat de les Illes Balears (UIB)</sub>
 </div>

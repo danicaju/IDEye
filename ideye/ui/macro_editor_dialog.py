@@ -54,21 +54,69 @@ class CustomMacroDialog(QDialog):
         self.setMinimumSize(680, 520)
         self.setStyleSheet(
             """
-            QDialog { background: #0b0f19; color: #e2e8f0; }
-            QLabel { color: #cbd5e1; }
+            QDialog {
+                background-color: #0a0f1d;
+                color: #e2e8f0;
+                font-family: 'Segoe UI', -apple-system, sans-serif;
+            }
+            QLabel {
+                color: #94a3b8;
+                font-size: 11px;
+                font-weight: 500;
+            }
             QLineEdit, QTextEdit, QComboBox {
-                background: #111827; color: #f8fafc; border: 1px solid #334155;
-                border-radius: 6px; padding: 6px;
+                background: #081026;
+                color: #f8fafc;
+                border: 1px solid #1e293b;
+                border-radius: 8px;
+                padding: 7px 10px;
+                font-size: 11px;
+                selection-background-color: #2563eb;
             }
-            QComboBox QAbstractItemView { background: #111827; color: #f8fafc; }
+            QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
+                border: 1px solid #3b82f6;
+                background: #0c142b;
+            }
+            QComboBox QAbstractItemView {
+                background: #081026;
+                color: #f8fafc;
+                border: 1px solid #1e293b;
+                selection-background-color: #1d4ed8;
+            }
             QPushButton {
-                background: #1e293b; color: #e2e8f0; border: 1px solid #475569;
-                border-radius: 6px; padding: 8px;
+                background: rgba(30, 41, 59, 0.6);
+                color: #e2e8f0;
+                border: 1px solid #1e293b;
+                border-radius: 8px;
+                padding: 8px 12px;
+                font-weight: 600;
+                font-size: 11px;
             }
-            QPushButton:hover { border-color: #38bdf8; }
-            QPushButton#cellActive { border: 2px solid #f43f5e; background: #2a1018; }
-            QPushButton#cellProtected { color: #64748b; }
-            QPushButton#saveButton { background: #065f46; border-color: #10b981; font-weight: bold; }
+            QPushButton:hover {
+                background: rgba(37, 99, 235, 0.2);
+                border-color: #3b82f6;
+                color: #ffffff;
+            }
+            QPushButton#cellActive {
+                border: 2px solid #3b82f6;
+                background: rgba(37, 99, 235, 0.35);
+                color: #ffffff;
+            }
+            QPushButton#cellProtected {
+                color: #475569;
+                background: rgba(15, 23, 42, 0.4);
+                border-color: #1e293b;
+            }
+            QPushButton#saveButton {
+                background: #1d4ed8;
+                border: 1px solid #3b82f6;
+                color: #ffffff;
+                font-weight: bold;
+            }
+            QPushButton#saveButton:hover {
+                background: #2563eb;
+                border-color: #60a5fa;
+            }
             """
         )
 
@@ -77,7 +125,7 @@ class CustomMacroDialog(QDialog):
         root.setSpacing(10)
 
         title = QLabel("EDITOR DE MACROS PERSONALIZADAS")
-        title.setStyleSheet("font-size: 16px; font-weight: bold; color: #38bdf8;")
+        title.setStyleSheet("font-size: 15px; font-weight: bold; color: #3b82f6; letter-spacing: 0.5px;")
         root.addWidget(title)
 
         mode_row = QHBoxLayout()

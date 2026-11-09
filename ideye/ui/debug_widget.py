@@ -159,11 +159,11 @@ class DebugWidget(QWidget):
         main_layout.setContentsMargins(14, 14, 14, 14)
         main_layout.setSpacing(10)
 
-        # 1. Dark theme stylesheet
+        # 1. Dark theme stylesheet (Sleek Cyber-Glass)
         self.setStyleSheet("""
             QWidget#DebugWidget {
-                background-color: #0b0f19;
-                border: 1px solid rgba(255, 255, 255, 28);
+                background-color: #0a0f1d;
+                border: 1px solid #1e293b;
                 border-radius: 14px;
             }
             QWidget {
@@ -177,9 +177,9 @@ class DebugWidget(QWidget):
                 color: #94a3b8;
             }
             QProgressBar {
-                border: 1px solid rgba(255, 255, 255, 28);
-                border-radius: 5px;
-                background-color: #070a12;
+                border: 1px solid #1e293b;
+                border-radius: 6px;
+                background-color: #081026;
                 text-align: center;
                 height: 16px;
                 font-size: 10px;
@@ -187,33 +187,33 @@ class DebugWidget(QWidget):
                 color: #f8fafc;
             }
             QProgressBar::chunk {
-                background-color: #22d3ee;
-                border-radius: 4px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1d4ed8, stop:1 #3b82f6);
+                border-radius: 5px;
             }
             QSlider::groove:horizontal {
                 height: 6px;
-                background: #111827;
-                border: 1px solid rgba(255, 255, 255, 24);
+                background: #081026;
+                border: 1px solid #1e293b;
                 border-radius: 3px;
             }
             QSlider::sub-page:horizontal {
-                background: #0891b2;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1d4ed8, stop:1 #3b82f6);
                 border-radius: 3px;
             }
             QSlider::handle:horizontal {
-                background: #67e8f9;
-                border: 1px solid #ecfeff;
+                background: #3b82f6;
+                border: 1px solid #93c5fd;
                 width: 14px;
                 margin-top: -4px;
                 margin-bottom: -4px;
                 border-radius: 7px;
             }
             QSlider::handle:horizontal:hover {
-                background: #a5f3fc;
+                background: #60a5fa;
             }
             QPushButton {
-                background-color: rgba(255, 255, 255, 8);
-                border: 1px solid rgba(255, 255, 255, 32);
+                background-color: rgba(30, 41, 59, 0.6);
+                border: 1px solid #1e293b;
                 border-radius: 7px;
                 padding: 6px 10px;
                 font-size: 11px;
@@ -221,29 +221,36 @@ class DebugWidget(QWidget):
                 color: #e2e8f0;
             }
             QPushButton:hover {
-                background-color: rgba(255, 255, 255, 16);
-                border-color: rgba(255, 255, 255, 55);
+                background-color: rgba(37, 99, 235, 0.2);
+                border-color: #3b82f6;
+                color: #ffffff;
             }
             QPushButton:pressed {
-                background-color: #070a12;
+                background-color: #081026;
             }
             QPushButton#btnReset {
-                background-color: rgba(14, 165, 233, 34);
-                border-color: rgba(56, 189, 248, 120);
+                background-color: rgba(37, 99, 235, 0.22);
+                border: 1px solid #2563eb;
+                color: #93c5fd;
             }
             QPushButton#btnReset:hover {
-                background-color: rgba(14, 165, 233, 60);
+                background-color: rgba(37, 99, 235, 0.42);
+                border-color: #3b82f6;
+                color: #ffffff;
             }
             QPushButton#btnExit {
-                background-color: rgba(239, 68, 68, 30);
-                border-color: rgba(239, 68, 68, 110);
+                background-color: rgba(239, 68, 68, 0.18);
+                border: 1px solid rgba(239, 68, 68, 0.55);
+                color: #fca5a5;
             }
             QPushButton#btnExit:hover {
-                background-color: rgba(239, 68, 68, 58);
+                background-color: rgba(239, 68, 68, 0.38);
+                border-color: #ef4444;
+                color: #ffffff;
             }
             QFrame#cardFrame {
-                background-color: rgba(15, 23, 42, 170);
-                border: 1px solid rgba(255, 255, 255, 22);
+                background-color: rgba(10, 15, 29, 0.85);
+                border: 1px solid #1e293b;
                 border-radius: 10px;
                 padding: 6px;
             }
@@ -301,7 +308,7 @@ class DebugWidget(QWidget):
         self.video_label = QLabel(self)
         self.video_label.setFixedSize(config.DEBUG_FEED_WIDTH, config.DEBUG_FEED_HEIGHT)
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.video_label.setStyleSheet("background-color: #070a12; border: 1px solid #1e293b; border-radius: 6px;")
+        self.video_label.setStyleSheet("background-color: #081026; border: 1px solid #1e293b; border-radius: 12px;")
         self.video_label.setText("Iniciando cámara...")
         content_layout.addWidget(self.video_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -338,7 +345,7 @@ class DebugWidget(QWidget):
         mode_layout.setSpacing(4)
 
         lbl_mode = QLabel("MODO DE SEGUIMIENTO (Ctrl+Alt+T)", mode_frame)
-        lbl_mode.setStyleSheet("font-size: 10px; font-weight: bold; color: #38bdf8;")
+        lbl_mode.setStyleSheet("font-size: 10px; font-weight: bold; color: #3b82f6;")
         mode_layout.addWidget(lbl_mode)
 
         # Live segmented quick-toggle buttons
@@ -372,9 +379,9 @@ class DebugWidget(QWidget):
         self.combo_mode.addItem("Solo Cabeza (Recomendado)", "HEAD_PRIMARY")
         self.combo_mode.setStyleSheet("""
             QComboBox {
-                background-color: #1e293b;
-                border: 1px solid #38bdf8;
-                border-radius: 4px;
+                background-color: #081026;
+                border: 1px solid #1e293b;
+                border-radius: 6px;
                 padding: 4px 8px;
                 font-size: 11px;
                 font-weight: 600;
@@ -385,11 +392,11 @@ class DebugWidget(QWidget):
                 width: 20px;
             }
             QComboBox QAbstractItemView {
-                background-color: #0f172a;
+                background-color: #0a0f1d;
                 color: #f8fafc;
-                selection-background-color: #0284c7;
+                selection-background-color: #1d4ed8;
                 selection-color: #ffffff;
-                border: 1px solid #334155;
+                border: 1px solid #1e293b;
             }
         """)
         self.combo_mode.currentIndexChanged.connect(self._on_combo_mode_changed)
@@ -906,7 +913,7 @@ class DebugWidget(QWidget):
         else:
             self.mar_bar.setStyleSheet("""
                 QProgressBar::chunk {
-                    background-color: #38bdf8;
+                    background-color: #3b82f6;
                 }
             """)
 
@@ -915,28 +922,28 @@ class DebugWidget(QWidget):
         frame.setObjectName("cardFrame")
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(3)
+        layout.setSpacing(4)
 
         title = QLabel("MÉTRICAS DE EFICIENCIA (LOOK-TO-CODE)", frame)
-        title.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
+        title.setStyleSheet("font-size: 11px; font-weight: bold; color: #3b82f6; letter-spacing: 0.5px;")
         layout.addWidget(title)
 
         self.lbl_telemetry_saved = QLabel("Ahorro Físico: 0 teclas (0% menos esfuerzo)", frame)
-        self.lbl_telemetry_saved.setStyleSheet("font-size: 10px; color: #d1fae5;")
+        self.lbl_telemetry_saved.setStyleSheet("font-size: 10px; color: #93c5fd; padding: 1px 0;")
         self.lbl_telemetry_saved.setWordWrap(True)
         self.lbl_telemetry_saved.setMinimumWidth(0)
         self.lbl_telemetry_saved.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         layout.addWidget(self.lbl_telemetry_saved)
 
         self.lbl_telemetry_injected = QLabel("Inyectado: 0 chars en 0 clics", frame)
-        self.lbl_telemetry_injected.setStyleSheet("font-size: 10px; color: #bae6fd;")
+        self.lbl_telemetry_injected.setStyleSheet("font-size: 10px; color: #60a5fa; padding: 1px 0;")
         self.lbl_telemetry_injected.setWordWrap(True)
         self.lbl_telemetry_injected.setMinimumWidth(0)
         self.lbl_telemetry_injected.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         layout.addWidget(self.lbl_telemetry_injected)
 
         self.lbl_foreground = QLabel("Ventana activa: —", frame)
-        self.lbl_foreground.setStyleSheet("font-size: 9px; color: #94a3b8;")
+        self.lbl_foreground.setStyleSheet("font-size: 9px; color: #94a3b8; padding: 1px 0;")
         self.lbl_foreground.setWordWrap(True)
         self.lbl_foreground.setMinimumWidth(0)
         self.lbl_foreground.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
@@ -944,6 +951,21 @@ class DebugWidget(QWidget):
 
         reset = QPushButton("Reset métricas", frame)
         reset.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        reset.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(30, 41, 59, 0.7);
+                border: 1px solid #1e293b;
+                border-radius: 5px;
+                padding: 4px 8px;
+                font-size: 10px;
+                color: #cbd5e1;
+            }
+            QPushButton:hover {
+                background-color: rgba(37, 99, 235, 0.25);
+                border-color: #3b82f6;
+                color: #ffffff;
+            }
+        """)
         reset.clicked.connect(self.telemetry_reset_requested.emit)
         layout.addWidget(reset)
         return frame

@@ -24,7 +24,7 @@ MODE_LABELS = (
 )
 
 POWER_COLORS = {
-    "ACTIVE": QColor(34, 211, 238),
+    "ACTIVE": QColor(59, 130, 246),  # Cyber Sapphire Core (#3b82f6)
     "PAUSED_ECO": QColor(245, 158, 11),
     "AWAY_DEEP_SLEEP": QColor(148, 163, 184),
 }
@@ -47,6 +47,37 @@ class IDEyeSystemTray(QSystemTrayIcon):
         self._ghost_action: Optional[QAction] = None
         self._icon_base = IconManager.instance().get_app_icon()
         self._menu = QMenu()
+        self._menu.setStyleSheet(
+            """
+            QMenu {
+                background-color: #0a0f1d;
+                color: #e2e8f0;
+                border: 1px solid #1e293b;
+                border-radius: 8px;
+                padding: 6px;
+            }
+            QMenu::item {
+                background-color: transparent;
+                padding: 6px 24px 6px 12px;
+                border-radius: 4px;
+                font-family: 'Segoe UI', Arial, sans-serif;
+                font-size: 11px;
+            }
+            QMenu::item:selected {
+                background-color: #1d4ed8;
+                color: #ffffff;
+            }
+            QMenu::item:disabled {
+                color: #64748b;
+                font-weight: bold;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #1e293b;
+                margin: 4px 8px;
+            }
+            """
+        )
         self._build_menu()
         self.setContextMenu(self._menu)
         self.set_power_state("ACTIVE")

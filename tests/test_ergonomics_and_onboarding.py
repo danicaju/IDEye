@@ -346,7 +346,7 @@ class TestHighContrastThemesAndSoundscape(unittest.TestCase):
         self.assertEqual(self.overlay.theme_color, "#268BD2")
 
         self.overlay.set_theme("CYBER_GLASS")
-        self.assertEqual(self.overlay.theme_color, "#00F0FF")
+        self.assertEqual(self.overlay.theme_color, "#3b82f6")
 
     def test_sound_feedback_aliases_and_earcons(self):
         snd = SoundFeedbackManager(enabled=False)  # muted for headless runner

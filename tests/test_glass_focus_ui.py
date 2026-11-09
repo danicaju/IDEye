@@ -77,10 +77,10 @@ class TestGlassFocusLayout(unittest.TestCase):
     def test_card_style_hierarchy_is_neutral_except_active_theme(self):
         self.overlay._set_theme_color("#10B981")
         self.assertEqual(self.overlay._pen_card_active.color().name(), "#10b981")
-        self.assertEqual(self.overlay._pen_card_inactive.color().alpha(), 28)
-        self.assertEqual(self.overlay._brush_card_inactive.color().alpha(), 18)
-        self.assertEqual(self.overlay._brush_card_active.color().alpha(), 115)
-        self.assertEqual(self.overlay._brush_band_active.color().alpha(), 225)
+        self.assertEqual(self.overlay._pen_card_inactive.color().alpha(), 180)
+        self.assertEqual(self.overlay._brush_card_inactive.color().alpha(), 220)
+        self.assertEqual(self.overlay._brush_card_active.color().alpha(), 235)
+        self.assertEqual(self.overlay._brush_band_active.color().alpha(), 240)
         self.assertEqual(self.overlay._brush_band_inactive.color().alpha(), 230)
 
     def test_mar_updates_reticle_progress_state(self):

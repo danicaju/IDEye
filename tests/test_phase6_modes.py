@@ -87,7 +87,7 @@ def test_manual_cycle(qapp):
     received = []
     mm.mode_changed.connect(lambda mid, name, color: received.append((mid, name, color)))
     expected_colors = {
-        "coding": "#00F0FF",
+        "coding": "#3b82f6",
         "writing": "#10B981",
         "terminal": "#A855F7",
         "data_math": "#F59E0B",

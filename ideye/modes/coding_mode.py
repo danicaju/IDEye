@@ -23,7 +23,7 @@ from .base_mode import BaseMode
 class CodingMode(BaseMode):
     mode_id = "coding"
     display_name = "Código"
-    theme_color = "#00F0FF"
+    theme_color = "#3b82f6"
 
     def __init__(self, language: str = "PYTHON") -> None:
         super().__init__(language)

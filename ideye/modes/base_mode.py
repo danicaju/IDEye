@@ -35,7 +35,7 @@ class BaseMode(ABC):
 
     mode_id: str = "coding"
     display_name: str = "CÓDIGO (AST)"
-    theme_color: str = "#00F0FF"
+    theme_color: str = "#3b82f6"
 
     # Canonical order used by ModeManager.cycle_next_mode()
     MODE_ORDER: List[str] = ["coding", "writing", "terminal", "data_math", "navigation"]

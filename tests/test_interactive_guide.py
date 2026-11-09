@@ -24,7 +24,7 @@ class TestGuideCatalog(unittest.TestCase):
         self.assertEqual(len(catalog["pages"]), 5)
         self.assertEqual(
             set(catalog["simulator"]),
-            {"coding", "writing", "terminal", "sniper"},
+            {"coding", "writing", "terminal", "sniper", "data_math"},
         )
         self.assertEqual(len(catalog["modes"]), 6)
         self.assertTrue(catalog["gestures"])

@@ -117,6 +117,20 @@ PAGES: List[Dict[str, Any]] = [
                 "text": "En FreeLook, deja la mirada en el borde superior o inferior durante ~0.3 s para desplazar la página. Vuelve al centro para parar.",
                 "chip": "Web / documentos",
             },
+            {
+                "icon": "shield-lock",
+                "badge": "0-DWELL",
+                "title": "Eliminación Toque de Midas (Zero-Dwell)",
+                "text": "La mirada solo orienta y enfoca el elemento; nunca dispara un clic por tiempo de fijación. La confirmación reside exclusivamente en el canal motor voluntario de la boca (MAR) o ratón.",
+                "chip": "Anti-Midas absoluto",
+            },
+            {
+                "icon": "mouth",
+                "badge": "MAR+",
+                "title": "Línea Base MAR Adaptativa (Anti-Midas)",
+                "text": "Mide continuamente la apertura en reposo de tus labios (~0.15). Si hablas o sonríes, el umbral se recalcula dinámicamente (+0.30 sobre reposo) evitando falsos clics sin fatiga.",
+                "chip": "Baseline dinámico",
+            },
         ],
     },
     {
@@ -711,6 +725,56 @@ FALLBACK_SIMULATOR: Dict[str, Dict[str, Any]] = {
             },
         ],
     },
+    "data_math": {
+        "name": "Datos / Math",
+        "cells": [
+            {
+                "label": "SQL BÁSICO",
+                "hint": "SELECT / FROM / WHERE",
+                "snippet": "SELECT id, user_name, mar_score, created_at\nFROM eye_tracking_sessions\nWHERE fps >= 60.0 AND zero_dwell = TRUE;\n",
+            },
+            {
+                "label": "SQL AVANZ",
+                "hint": "JOIN / GROUP / ORDER",
+                "snippet": "SELECT session_id, AVG(mar_ratio) AS avg_mar\nFROM gaze_telemetry\nGROUP BY session_id\nHAVING COUNT(*) > 100\nORDER BY avg_mar DESC;\n",
+            },
+            {
+                "label": "JSON/YAML",
+                "hint": "objetos y arrays",
+                "snippet": "{\n  \"mode\": \"data_math\",\n  \"calibration\": {\"mar_baseline\": 0.15, \"threshold\": 0.45},\n  \"zero_dwell\": true\n}\n",
+            },
+            {
+                "label": "FÓRMULAS",
+                "hint": "LaTeX frac y sum",
+                "snippet": "# LaTeX Formula: One Euro Filter Cutoff\n# f_c = f_{min} + \\beta |\\dot{x}|\n# \\hat{x}_t = \\alpha x_t + (1 - \\alpha) \\hat{x}_{t-1}\n",
+            },
+            {
+                "label": "PAUSA",
+                "hint": "descanso visual",
+                "snippet": "# [Datos / Math en pausa: descanso visual activo]\n",
+            },
+            {
+                "label": "OPERADORES",
+                "hint": "+ - * / ^ % ()",
+                "snippet": "variance = math.sqrt(sum((x - mean) ** 2 for x in mar_samples) / n)\n",
+            },
+            {
+                "label": "CURSOR",
+                "hint": "navegación de celdas",
+                "snippet": "# [Navegación SQL: salto a cláusula WHERE]\n",
+            },
+            {
+                "label": "BORRAR",
+                "hint": "retroceso y limpiar",
+                "snippet": "-- [Query reseteada para nueva consulta]\n",
+            },
+            {
+                "label": "IA SUGIERE",
+                "hint": "consultas y LaTeX",
+                "snippet": "-- [IA Query Optimizer]: Índice compuesto sugerido en (session_id, mar_ratio)\nEXPLAIN ANALYZE SELECT * FROM gaze_telemetry;\n",
+            },
+        ],
+    },
 }
 
 DOJO_CHALLENGES: List[Dict[str, Any]] = [
@@ -819,7 +883,7 @@ def _simulator() -> Dict[str, Dict[str, Any]]:
     simulator = {key: {"name": value["name"], "cells": [dict(c) for c in value["cells"]]} for key, value in FALLBACK_SIMULATOR.items()}
     try:
         manager = ModeManager(initial_mode="coding", auto_switch_enabled=False)
-        for mode_id in ("coding", "writing", "terminal"):
+        for mode_id in ("coding", "writing", "terminal", "data_math"):
             mode = manager.modes.get(mode_id)
             if mode is None or not hasattr(mode, "get_root_menu"):
                 continue
@@ -862,7 +926,7 @@ def build_catalog() -> Dict[str, Any]:
         "modes": _display_modes(),
         "simulator": _simulator(),
         "dojo_challenges": DOJO_CHALLENGES,
-        "test_summary": "702 tests, 89 subtests, 22.15s",
+        "test_summary": "704 tests, 89 subtests, 16.55s",
     }
 
 

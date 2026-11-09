@@ -12,7 +12,7 @@
 [![Release: v0.5.0](https://img.shields.io/badge/Release-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-702%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-704%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--qa)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=for-the-badge)](LICENSE)
 
 *Write real production code using only a standard webcam, hybrid gaze tracking, and discrete facial gestures. No hands. No voice commands. No expensive infrared hardware.*
@@ -239,7 +239,7 @@ IDEye/
 │   ├── ui/                          # Transparent PyQt6 overlay, calibration & icons
 │   ├── actions/                     # AST extractor, AI predictor, and code injector
 │   └── assets/                      # High-DPI neon SVG icons & word prediction data
-└── tests/                           # 42 automated test suites (702 tests, hardware-mocked)
+└── tests/                           # 42 automated test suites (704 tests, hardware-mocked)
 ```
 
 ---
@@ -252,11 +252,11 @@ IDEye features an automated hardware-mocked test suite covering mathematical edg
 pytest -q
 ```
 ```text
-702 passed, 89 subtests in 22.15s
+704 passed, 89 subtests in 16.55s
 ```
 
 > [!NOTE]
-> All 702 tests execute headlessly without requiring a physical webcam, display server, or network connection.
+> All 704 tests execute headlessly without requiring a physical webcam, display server, or network connection.
 
 ---
 

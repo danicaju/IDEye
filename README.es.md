@@ -12,7 +12,7 @@
 [![Lanzamiento: v0.5.0](https://img.shields.io/badge/Lanzamiento-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-702%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-704%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
 [![Licencia: AGPL v3](https://img.shields.io/badge/Licencia-AGPL_v3-blue.svg?style=for-the-badge)](LICENSE)
 
 *Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
@@ -240,7 +240,7 @@ IDEye/
 │   ├── ui/                          # Overlay PyQt6 transparente, calibración e iconos
 │   ├── actions/                     # Extractor AST, predictor de IA e inyector de código
 │   └── assets/                      # Iconos vectoriales de alto DPI y datos de predicción
-└── tests/                           # 42 suites con 702 tests automatizados (hardware simulado)
+└── tests/                           # 42 suites con 704 tests automatizados (hardware simulado)
 ```
 
 ---
@@ -253,11 +253,11 @@ IDEye incorpora una batería automatizada con hardware simulado que cubre casos 
 pytest -q
 ```
 ```text
-702 passed, 89 subtests in 22.15s
+704 passed, 89 subtests in 16.55s
 ```
 
 > [!NOTE]
-> La totalidad de las 702 pruebas se ejecutan de forma desatendida (*headless*) sin necesidad de cámara web física, servidor gráfico ni conexión a internet.
+> La totalidad de las 704 pruebas se ejecutan de forma desatendida (*headless*) sin necesidad de cámara web física, servidor gráfico ni conexión a internet.
 
 ---
 

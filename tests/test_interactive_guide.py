@@ -49,6 +49,31 @@ class TestGuideCatalog(unittest.TestCase):
         self.assertIn("Explorando IDEye", text)
         self.assertIn("Guiño", text)
 
+    def test_catalog_has_dojo_challenges_and_snippets(self):
+        catalog = build_catalog()
+        self.assertIn("dojo_challenges", catalog)
+        self.assertEqual(len(catalog["dojo_challenges"]), 6)
+        for ch in catalog["dojo_challenges"]:
+            for key in ("id", "badge", "title", "desc", "action_label"):
+                self.assertIn(key, ch)
+        for mode_id, mode in catalog["simulator"].items():
+            for cell in mode["cells"]:
+                self.assertIn("snippet", cell)
+                self.assertTrue(len(cell["snippet"]) > 0)
+
+    def test_html_has_dojo_editor_sound_and_reticle(self):
+        text = build_interactive_guide_html(build_catalog())
+        self.assertIn('id="soundToggle"', text)
+        self.assertIn('id="gazeReticle"', text)
+        self.assertIn('id="simEditor"', text)
+        self.assertIn('id="jawMeterContainer"', text)
+        self.assertIn('id="dojoContainer"', text)
+        self.assertIn("AudioContext", text)
+        self.assertIn("Zero-Dwell", text)
+        self.assertIn("Sniper", text)
+        self.assertIn("Agentic", text)
+        self.assertIn("MODE_COLORS", text)
+
     def test_generator_writes_a_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "guia.html"

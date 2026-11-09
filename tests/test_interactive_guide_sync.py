@@ -53,6 +53,13 @@ class TestInteractiveGuideSync(unittest.TestCase):
             "Head-Joystick",
             "Editor de Macros",
             "M\u00e1quina del Tiempo",
+            "Modo Gorra y Visera",
+            "Visi\u00f3n Nocturna Adaptativa",
+            "Lupa Sniper Zoom",
+            "Salto Sem\u00e1ntico AST",
+            "Agentic Prompt Launcher",
+            "Gaze Scroll Wheel El\u00e1stico",
+            "Modo Eco-Sleep de Bajo Consumo",
         ):
             self.assertIn(required, titles)
         self.assertEqual(len(catalog["pages"]), 5)
@@ -71,6 +78,11 @@ class TestInteractiveGuideSync(unittest.TestCase):
             'class="ribbon-star"',
             'class="badge sticker"',
             'id="themeToggle"',
+            'id="soundToggle"',
+            'id="gazeReticle"',
+            'id="simEditor"',
+            'id="jawMeterContainer"',
+            'id="dojoContainer"',
         ):
             self.assertIn(required, text)
         self.assertIn('viewBox="0 0 64 64"', text)

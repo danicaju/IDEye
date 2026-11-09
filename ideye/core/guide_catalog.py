@@ -38,6 +38,14 @@ SVG_ICONS: Dict[str, str] = {
     "sparkles": '<path d="m12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3ZM19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14ZM5 14l.6 1.4L7 16l-1.4.6L5 18l-.6-1.4L3 16l1.4-.6L5 14Z"/>',
     "terminal": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/>',
     "wand": '<path d="m4 20 11-11M12 4l1 2M4 12l2 1M18 10l2 1M14 3l1 2M19 18l1 2"/><path d="m14 6 4 4"/>',
+    "volume-2": '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>',
+    "volume-x": '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>',
+    "crosshair": '<circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>',
+    "trophy": '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H8v4h8v-4h-1c-.55 0-1-.45-1-1v-2.34"/><path d="M6 4h12a2 2 0 0 1 2 2v3a6 6 0 0 1-6 6h0a6 6 0 0 1-6-6V6a2 2 0 0 1 2-2Z"/>',
+    "check-circle": '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    "code-bracket": '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+    "cpu": '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>',
+    "zap": '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
 }
 
 
@@ -506,60 +514,267 @@ FALLBACK_SIMULATOR: Dict[str, Dict[str, Any]] = {
     "coding": {
         "name": "Código",
         "cells": [
-            {"label": "FLUJO", "hint": "if / for / while"},
-            {"label": "FUNC", "hint": "def / class"},
-            {"label": "OPERADORES", "hint": "símbolos y comparaciones"},
-            {"label": "CURSOR", "hint": "movimiento y selección"},
-            {"label": "PAUSA", "hint": "modo lectura"},
-            {"label": "KEYWORDS", "hint": "return / import / pass"},
-            {"label": "EDIT", "hint": "deshacer y borrar"},
-            {"label": "ENTER/TAB", "hint": "saltos y sangría"},
-            {"label": "IA", "hint": "predicciones de código"},
+            {
+                "label": "FLUJO",
+                "hint": "if / for / while",
+                "snippet": "if condition:\n    # Bloque condicional asistido por AST\n    process_stream()\n",
+            },
+            {
+                "label": "FUNC",
+                "hint": "def / class",
+                "snippet": "def compute_gaze(landmarks: list) -> float:\n    \"\"\"Calcula apertura MAR sin manos.\"\"\"\n    return round(mar_ratio, 3)\n",
+            },
+            {
+                "label": "OPERADORES",
+                "hint": "símbolos y comparaciones",
+                "snippet": "if mar > 0.45 and ear_score < 0.16:\n    trigger_click()\n",
+            },
+            {
+                "label": "CURSOR",
+                "hint": "movimiento y selección",
+                "snippet": "# [Caret Jump] -> Línea 42, Columna 8\n",
+            },
+            {
+                "label": "PAUSA",
+                "hint": "modo lectura",
+                "snippet": "# [HUD PAUSADO] Modo Lectura Activo (0% CPU)\n",
+            },
+            {
+                "label": "KEYWORDS",
+                "hint": "return / import / pass",
+                "snippet": "import math\nfrom ideye.core import GestureDetector\n",
+            },
+            {
+                "label": "EDIT",
+                "hint": "deshacer y borrar",
+                "snippet": "# [Deshacer] Última acción revertida con éxito\n",
+            },
+            {
+                "label": "ENTER/TAB",
+                "hint": "saltos y sangría",
+                "snippet": "\n    # Bloque anidado con sangría de 4 espacios\n",
+            },
+            {
+                "label": "IA",
+                "hint": "predicciones de código",
+                "snippet": "# [IA Prompt] Optimizar pipeline de visión con vectorización NumPy\n",
+            },
         ],
     },
     "writing": {
         "name": "Redacción",
         "cells": [
-            {"label": "CONECTORES", "hint": "además, sin embargo…"},
-            {"label": "FORMATO", "hint": "títulos y Markdown"},
-            {"label": "PUNTUACIÓN", "hint": "signos y comillas"},
-            {"label": "CURSOR", "hint": "mover y seleccionar"},
-            {"label": "PAUSA", "hint": "descanso visual"},
-            {"label": "LETRAS", "hint": "teclado a-z + ñ"},
-            {"label": "BORRAR", "hint": "deshacer y borrar"},
-            {"label": "SALTOS", "hint": "enter, tab, párrafo"},
-            {"label": "IA", "hint": "sugerencias de redacción"},
+            {
+                "label": "CONECTORES",
+                "hint": "además, sin embargo…",
+                "snippet": "Por consiguiente, la tecnología de mirada sin dwell elimina la fatiga ocular.\n",
+            },
+            {
+                "label": "FORMATO",
+                "hint": "títulos y Markdown",
+                "snippet": "## 1. Arquitectura del Sistema\n\nEl pipeline opera a 60 Hz estables.\n",
+            },
+            {
+                "label": "PUNTUACIÓN",
+                "hint": "signos y comillas",
+                "snippet": "«IDEye: mirada como intención, boca como confirmación.»\n",
+            },
+            {
+                "label": "CURSOR",
+                "hint": "mover y seleccionar",
+                "snippet": "[Cursor de texto: selección del párrafo anterior]\n",
+            },
+            {
+                "label": "PAUSA",
+                "hint": "descanso visual",
+                "snippet": "[Pausa de redacción: descanso visual activo]\n",
+            },
+            {
+                "label": "LETRAS",
+                "hint": "teclado a-z + ñ",
+                "snippet": "Árbol semántico adaptativo con teclado T9 y diccionario español.\n",
+            },
+            {
+                "label": "BORRAR",
+                "hint": "deshacer y borrar",
+                "snippet": "[Retroceso de carácter: texto corregido]\n",
+            },
+            {
+                "label": "SALTOS",
+                "hint": "enter, tab, párrafo",
+                "snippet": "\n\n### Nuevo Bloque Temático\n",
+            },
+            {
+                "label": "IA",
+                "hint": "sugerencias de redacción",
+                "snippet": "[Asistente IA]: Sugerencia de estilo formal y conciso aplicada.\n",
+            },
         ],
     },
     "terminal": {
         "name": "Terminal",
         "cells": [
-            {"label": "GIT", "hint": "status / add / commit"},
-            {"label": "RAMAS", "hint": "checkout / merge"},
-            {"label": "ARCHIVOS", "hint": "ls / cd / cat"},
-            {"label": "CURSOR", "hint": "movimiento de línea"},
-            {"label": "PAUSA", "hint": "descanso visual"},
-            {"label": "COMANDOS", "hint": "pip / npm / make"},
-            {"label": "BORRAR", "hint": "limpiar y deshacer"},
-            {"label": "EJECUTAR", "hint": "enter y flags"},
-            {"label": "AYUDA", "hint": "git help y man"},
+            {
+                "label": "GIT",
+                "hint": "status / add / commit",
+                "snippet": "$ git status\nOn branch main\nYour branch is up to date with 'origin/main'.\n",
+            },
+            {
+                "label": "RAMAS",
+                "hint": "checkout / merge",
+                "snippet": "$ git checkout -b feat/interactive-dojo\nSwitched to a new branch 'feat/interactive-dojo'\n",
+            },
+            {
+                "label": "ARCHIVOS",
+                "hint": "ls / cd / cat",
+                "snippet": "$ ls -lh docs/\n-rw-r--r-- 1 user 102K guia_interactiva.html\n",
+            },
+            {
+                "label": "CURSOR",
+                "hint": "movimiento de línea",
+                "snippet": "$ [Cursor de terminal: inicio de comando]\n",
+            },
+            {
+                "label": "PAUSA",
+                "hint": "descanso visual",
+                "snippet": "$ [Terminal pausada: modo reposo]\n",
+            },
+            {
+                "label": "COMANDOS",
+                "hint": "pip / npm / make",
+                "snippet": "$ pytest tests/test_interactive_guide.py -v\n",
+            },
+            {
+                "label": "BORRAR",
+                "hint": "limpiar y deshacer",
+                "snippet": "$ clear\n",
+            },
+            {
+                "label": "EJECUTAR",
+                "hint": "enter y flags",
+                "snippet": "$ make run-dev\n[INFO] IDEye L2C Engine iniciado en puerto 8765...\n",
+            },
+            {
+                "label": "AYUDA",
+                "hint": "git help y man",
+                "snippet": "$ git log --oneline -n 5\n",
+            },
         ],
     },
     "sniper": {
         "name": "Gaming",
         "cells": [
-            {"label": "W", "hint": "avanzar"},
-            {"label": "A", "hint": "izquierda"},
-            {"label": "S", "hint": "retroceder"},
-            {"label": "D", "hint": "derecha"},
-            {"label": "PAUSA", "hint": "descanso visual"},
-            {"label": "SALTO", "hint": "guiño izquierdo"},
-            {"label": "CLIC", "hint": "boca / clic actual"},
-            {"label": "CURSOR", "hint": "guiño derecho"},
-            {"label": "360°", "hint": "cámara con mirada"},
+            {
+                "label": "W",
+                "hint": "avanzar",
+                "snippet": "[Head-Joystick] WASD: Avanzar (W activo)\n",
+            },
+            {
+                "label": "A",
+                "hint": "izquierda",
+                "snippet": "[Head-Joystick] WASD: Desplazamiento lateral izquierdo (A activo)\n",
+            },
+            {
+                "label": "S",
+                "hint": "retroceder",
+                "snippet": "[Head-Joystick] WASD: Retroceder (S activo)\n",
+            },
+            {
+                "label": "D",
+                "hint": "derecha",
+                "snippet": "[Head-Joystick] WASD: Desplazamiento lateral derecho (D activo)\n",
+            },
+            {
+                "label": "PAUSA",
+                "hint": "descanso visual",
+                "snippet": "[Gaming] Pausa segura: Todas las teclas sintéticas liberadas\n",
+            },
+            {
+                "label": "SALTO",
+                "hint": "guiño izquierdo",
+                "snippet": "[Gaming] Guiño izquierdo: Salto / Acción secundaria\n",
+            },
+            {
+                "label": "CLIC",
+                "hint": "boca / clic actual",
+                "snippet": "[Gaming] Clic mandibular MAR: Disparo / Acción principal sin mover cámara\n",
+            },
+            {
+                "label": "CURSOR",
+                "hint": "guiño derecho",
+                "snippet": "[Gaming] Guiño derecho: Alternado a Cursor de Menú / HUD táctico\n",
+            },
+            {
+                "label": "360°",
+                "hint": "cámara con mirada",
+                "snippet": "[Gaming] Mirada directa: Giro de cámara 360° a 60 Hz\n",
+            },
         ],
     },
 }
+
+DOJO_CHALLENGES: List[Dict[str, Any]] = [
+    {
+        "id": "zero-dwell",
+        "num": "01",
+        "title": "Fijación Zero-Dwell",
+        "kicker": "EXPLORACIÓN OCULAR",
+        "badge": "FIX",
+        "desc": "Mueve el retículo sobre cualquier celda del HUD. Zero-Dwell garantiza que mirar solo enfoca e ilumina, NUNCA hace clic por dwell accidental.",
+        "hint": "Pasa el ratón o mirada sobre 2 celdas del simulador",
+        "action_label": "Probar Fijación",
+    },
+    {
+        "id": "mar-click",
+        "num": "02",
+        "title": "Disparo MAR con la Boca",
+        "kicker": "CONFIRMACIÓN SIN MANOS",
+        "badge": "MAR",
+        "desc": "Abre la boca o pulsa la barra espaciadora para superar el umbral MAR (0.45). Observa el Jaw-Meter dinámico y la onda expansiva.",
+        "hint": "Pulsa [Espacio] o el botón de disparo MAR",
+        "action_label": "Disparar MAR",
+    },
+    {
+        "id": "code-inject",
+        "num": "03",
+        "title": "Inyección Atómica de Código",
+        "kicker": "EDITOR VS CODE SIMULADO",
+        "badge": "AST",
+        "desc": "Enfoca y haz clic en una celda de Código (FLUJO, FUNC u OPERADORES) para inyectar sintaxis viva estructurada directamente en el editor.",
+        "hint": "Haz clic en una celda de código para inyectarla",
+        "action_label": "Inyectar Snippet",
+    },
+    {
+        "id": "gaze-scroll",
+        "num": "04",
+        "title": "Scroll Ocular Inercial",
+        "kicker": "DESPLAZAMIENTO ELÁSTICO",
+        "badge": "W",
+        "desc": "Activa el scroll ocular inercial proporcional a la mirada. La zona central de lectura no se mueve y los márgenes frenan con suavidad.",
+        "hint": "Pulsa 'Scroll Ocular' o usa el atajo Ctrl+Alt+W",
+        "action_label": "Probar Scroll",
+    },
+    {
+        "id": "sniper-lens",
+        "num": "05",
+        "title": "Lupa Sniper Precisión x3.5",
+        "kicker": "APUNTADO SUBPÍXEL",
+        "badge": "3.5x",
+        "desc": "Activa el modo Sniper para ampliar 3.5x la región del cursor y desacelerar la mirada al 28% para apuntar a caracteres individuales.",
+        "hint": "Pulsa 'Sniper x3.5' o el atajo Ctrl+Alt+Z",
+        "action_label": "Activar Sniper",
+    },
+    {
+        "id": "agentic-mcp",
+        "num": "06",
+        "title": "Agentic Prompt Launcher & MCP",
+        "kicker": "INGENIERÍA ASISTIDA & IA",
+        "badge": "AI",
+        "desc": "Dispara una orden estructurada con contexto AST, código y diagnósticos hacia el chat de IA de VS Code o la cola MCP local.",
+        "hint": "Pulsa 'Agentic Launcher' o el atajo Ctrl+Alt+I",
+        "action_label": "Lanzar Agentic",
+    },
+]
 
 
 def _display_shortcuts() -> List[Dict[str, str]]:
@@ -601,7 +816,7 @@ def _display_modes() -> List[Dict[str, str]]:
 
 
 def _simulator() -> Dict[str, Dict[str, Any]]:
-    simulator = {key: {"name": value["name"], "cells": list(value["cells"])} for key, value in FALLBACK_SIMULATOR.items()}
+    simulator = {key: {"name": value["name"], "cells": [dict(c) for c in value["cells"]]} for key, value in FALLBACK_SIMULATOR.items()}
     try:
         manager = ModeManager(initial_mode="coding", auto_switch_enabled=False)
         for mode_id in ("coding", "writing", "terminal"):
@@ -609,10 +824,13 @@ def _simulator() -> Dict[str, Dict[str, Any]]:
             if mode is None or not hasattr(mode, "get_root_menu"):
                 continue
             root = mode.get_root_menu()
-            cells = [
-                {"label": str(getattr(item, "label", "—")), "hint": str(getattr(item, "hint", "Acción del modo"))}
-                for item in root.items
-            ]
+            fallback_cells = FALLBACK_SIMULATOR.get(mode_id, {}).get("cells", [])
+            cells = []
+            for i, item in enumerate(root.items):
+                lbl = str(getattr(item, "label", "—"))
+                hnt = str(getattr(item, "hint", "Acción del modo"))
+                snp = fallback_cells[i].get("snippet", f"# {lbl}: {hnt}\n") if i < len(fallback_cells) else f"# {lbl}\n"
+                cells.append({"label": lbl, "hint": hnt, "snippet": snp})
             if len(cells) == 9:
                 simulator[mode_id] = {"name": str(getattr(mode, "display_name", mode_id)), "cells": cells}
     except Exception:
@@ -643,6 +861,7 @@ def build_catalog() -> Dict[str, Any]:
         "shortcuts": _display_shortcuts(),
         "modes": _display_modes(),
         "simulator": _simulator(),
+        "dojo_challenges": DOJO_CHALLENGES,
         "test_summary": "702 tests, 89 subtests, 22.15s",
     }
 

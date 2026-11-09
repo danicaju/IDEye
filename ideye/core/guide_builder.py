@@ -63,6 +63,12 @@ def _icon(kind: str) -> str:
         "scroll": '<path d="M32 18v60M32 18l-8 8M32 18l8 8M64 78V18M64 78l-8-8M64 78l8-8"/>',
         "health": '<path d="M48 14v68M14 48h68"/><circle cx="48" cy="48" r="30"/><path d="M33 60c8 8 22 8 30 0"/>',
         "brow": '<circle cx="48" cy="50" r="28"/><path d="M25 35c7-7 16-7 23 0M48 35c7-7 16-7 23 0M33 45h.1M63 45h.1M36 62c8 5 16 5 24 0"/>',
+        "trophy": '<path d="M24 36h-6a10 10 0 0 1 0-20h6M72 36h6a10 10 0 0 0 0-20h-6M16 88h64M40 58v10c0 4-3 6-6 6h-2v14h32V74h-2c-3 0-6-2-6-6V58M24 16h48v12a24 24 0 0 1-48 0V16Z"/>',
+        "crosshair": '<circle cx="48" cy="48" r="36"/><path d="M48 4v20M48 72v20M4 48h20M72 48h20"/>',
+        "zap": '<path d="M52 8 16 54h28l-4 34 36-46H48l4-34Z"/>',
+        "cpu": '<rect x="16" y="16" width="64" height="64" rx="8"/><rect x="36" y="36" width="24" height="24"/><path d="M36 4v12M60 4v12M36 80v12M60 80v12M80 36h12M80 60h12M4 36h12M4 60h12"/>',
+        "volume-2": '<polygon points="44 20 24 36 8 36 8 60 24 60 44 76 44 20"/><path d="M62 34a20 20 0 0 1 0 28M76 20a40 40 0 0 1 0 56"/>',
+        "volume-x": '<polygon points="44 20 24 36 8 36 8 60 24 60 44 76 44 20"/><line x1="88" y1="36" x2="64" y2="60"/><line x1="64" y1="36" x2="88" y2="60"/>',
     }
     body = icons.get(kind, icons["grid"])
     return f'<svg class="icon" {common} aria-hidden="true">{body}</svg>'
@@ -155,35 +161,227 @@ def _shortcut_grid(shortcuts: List[Dict[str, Any]]) -> str:
     return f'<div class="shortcut-grid">{"".join(cards)}</div>'
 
 
-def _simulator(simulator: Dict[str, Any]) -> str:
+def _simulator(simulator: Dict[str, Any], dojo_challenges: Optional[List[Dict[str, Any]]] = None) -> str:
+    if dojo_challenges is None:
+        dojo_challenges = []
     modes = []
     for index, (mode_id, mode) in enumerate(simulator.items()):
         active = " active" if index == 0 else ""
         modes.append(
             f'<button class="sim-mode{active}" data-mode="{_esc(mode_id)}">{_esc(mode.get("name", mode_id))}</button>'
         )
+
+    challenge_cards = []
+    for ch in dojo_challenges:
+        ch_id = _esc(ch.get("id", ""))
+        challenge_cards.append(
+            f'''<div class="dojo-card" id="dojoCard_{ch_id}" data-challenge="{ch_id}">
+  <div class="dojo-card-header">
+    <span class="dojo-badge">{_esc(ch.get("badge", "FIX"))}</span>
+    <span class="dojo-kicker">{_esc(ch.get("kicker", "DESAFÍO"))}</span>
+    <span class="dojo-status pending" id="dojoStatus_{ch_id}">PENDIENTE</span>
+  </div>
+  <h4>{_esc(ch.get("title", ""))}</h4>
+  <p>{_esc(ch.get("desc", ""))}</p>
+  <div class="dojo-card-footer">
+    <button type="button" class="btn dojo-action-btn" onclick="triggerDojoChallenge('{ch_id}')">
+      {_ui_icon("play")}<span>{_esc(ch.get("action_label", "Probar"))}</span>
+    </button>
+    <span class="dojo-hint">{_esc(ch.get("hint", ""))}</span>
+  </div>
+</div>'''
+        )
+
     return f'''
-    <section class="simulator" aria-label="Simulador interactivo 3x3">
+    <section class="simulator" id="simSection" aria-label="Simulador interactivo 3x3 y Dojo de Entrenamiento">
       <div class="sim-heading">
-        <div><span class="mini-kicker">SIMULADOR EN VIVO</span><h3>Prueba las 9 casillas</h3></div>
+        <div><span class="mini-kicker">SIMULADOR EN VIVO · DOJO 60 HZ</span><h3>Centro de Mando Interactivo 3x3</h3></div>
         <div class="sim-modes">{"".join(modes)}</div>
       </div>
-      <div class="sim-body">
-        <div id="simGrid" class="sim-grid" aria-live="polite"></div>
-        <aside id="simInfo" class="sim-info">
-          <span class="mini-kicker">CASILLA</span>
-          <h4>Elige una celda</h4>
-          <p>Haz clic en cualquier casilla para ver qué hace en el modo activo.</p>
-        </aside>
+      <div class="sim-workspace">
+        <div class="sim-left-pane">
+          <div id="simGrid" class="sim-grid" aria-live="polite"></div>
+          <div class="jaw-meter-container" id="jawMeterContainer">
+            <div class="jaw-meter-header">
+              <span class="mini-kicker">JAW-METER (APERTURA MAR)</span>
+              <span class="jaw-value" id="jawValue">MAR: 0.15 (Reposo)</span>
+            </div>
+            <div class="jaw-track">
+              <div class="jaw-fill" id="jawFill" style="width:15%"></div>
+              <div class="jaw-threshold-line" title="Umbral Clic MAR = 0.45" style="left:45%"><span class="threshold-label">0.45</span></div>
+            </div>
+            <div class="jaw-actions">
+              <button type="button" class="btn sim-action-btn" id="btnTriggerMAR" onclick="triggerMARClick()">{_ui_icon("zap")}<span>Disparar MAR [Espacio]</span></button>
+              <button type="button" class="btn sim-action-btn" id="btnToggleSniper" onclick="toggleSniperLens()">{_ui_icon("crosshair")}<span>Sniper x3.5 (Ctrl+Alt+Z)</span></button>
+              <button type="button" class="btn sim-action-btn" id="btnGazeScroll" onclick="triggerGazeScrollSim()">{_ui_icon("compass")}<span>Scroll Ocular (Ctrl+Alt+W)</span></button>
+              <button type="button" class="btn sim-action-btn" id="btnAgenticPrompt" onclick="triggerAgenticPromptSim()">{_ui_icon("wand")}<span>Agentic Launcher (Ctrl+Alt+I)</span></button>
+            </div>
+          </div>
+          <aside id="simInfo" class="sim-info">
+            <span class="mini-kicker">CASILLA ENFOCADA</span>
+            <h4>Elige una celda</h4>
+            <p>Haz clic en cualquier casilla para ver qué hace e inyectar su código en el editor VS Code simulado.</p>
+          </aside>
+        </div>
+        <div class="sim-right-pane">
+          <div class="vscode-pane" id="simEditor">
+            <div class="vsc-titlebar">
+              <div class="vsc-tabs">
+                <div class="vsc-tab active">
+                  {_ui_icon("code-bracket", "vsc-tab-icon")}
+                  <span>solution.py</span>
+                  <span class="vsc-tab-close">×</span>
+                </div>
+                <div class="vsc-tab">
+                  <span>diagnostics.log</span>
+                </div>
+              </div>
+              <div class="vsc-breadcrumbs">ideye &gt; core &gt; solution.py</div>
+              <div class="vsc-actions">
+                <button type="button" class="vsc-btn" id="btnResetEditor" onclick="resetSimEditor()" title="Limpiar y restaurar código">{_ui_icon("rotate-ccw")}<span>Limpiar</span></button>
+                <button type="button" class="vsc-btn" id="btnCopyEditor" onclick="copySimEditor()" title="Copiar código">{_ui_icon("clipboard")}<span>Copiar</span></button>
+                <button type="button" class="vsc-btn vsc-btn-primary" id="btnRunSnippet" onclick="runSimSnippet()" title="Ejecutar">{_ui_icon("play")}<span>Ejecutar</span></button>
+              </div>
+            </div>
+            <div class="vsc-editor-body">
+              <div class="vsc-line-numbers" id="vscLineNumbers"></div>
+              <pre class="vsc-code-content" id="vscCodeContent" spellcheck="false" contenteditable="true"></pre>
+            </div>
+            <div class="vsc-statusbar">
+              <div class="vsc-status-left">
+                <span class="vsc-status-item"><span class="vsc-dot"></span> IDEye 60Hz: Conectado</span>
+                <span class="vsc-status-item">Ln <span id="vscLn">1</span>, Col <span id="vscCol">1</span></span>
+                <span class="vsc-status-item">Modo: <b id="vscModeStatus">Código</b></span>
+              </div>
+              <div class="vsc-status-right">
+                <span class="vsc-status-item">Spaces: 4</span>
+                <span class="vsc-status-item">UTF-8</span>
+                <span class="vsc-status-item">Python 3.12</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dojo-section" id="dojoContainer" aria-label="Dojo de entrenamiento con micro-desafíos">
+        <div class="dojo-header">
+          <div class="dojo-title-box">
+            <span class="dojo-trophy-icon">{_ui_icon("trophy")}</span>
+            <div>
+              <span class="mini-kicker">TRAINING DOJO · MICRO-DESAFÍOS GAMIFICADOS</span>
+              <h3>Dojo de Entrenamiento Ocular</h3>
+              <p>Supera los 6 micro-desafíos para dominar la interacción sin manos con Zero-Dwell y MAR.</p>
+            </div>
+          </div>
+          <div class="dojo-progress-box">
+            <div class="dojo-progress-label">
+              <span>Progreso del Dojo:</span>
+              <b><span id="dojoCompleted">0</span> / 6 (<span id="dojoPercent">0%</span>)</b>
+            </div>
+            <div class="dojo-meter">
+              <div class="dojo-meter-fill" id="dojoMeterFill" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="dojo-celebration" id="dojoCelebration" style="display:none">
+          <div class="celebration-badge">{_ui_icon("trophy")}</div>
+          <div class="celebration-text">
+            <h4>¡MAESTRO DE IDEYE DESBLOQUEADO!</h4>
+            <p>Has completado todos los desafíos: fijación Zero-Dwell, disparo bucal MAR, inyección de código, scroll inercial, lente Sniper y Agentic Launcher.</p>
+          </div>
+          <button type="button" class="btn celebration-btn" onclick="resetDojoProgress()">{_ui_icon("rotate-ccw")}<span>Reiniciar Retos</span></button>
+        </div>
+        <div class="dojo-grid">
+          {"".join(challenge_cards)}
+        </div>
       </div>
     </section>'''
 
 
 THEME_JS = """
+// Procedural Web Audio API Synthesizer (100% self-contained & offline)
+const SoundFX = (() => {
+  let ctx = null;
+  let enabled = true;
+  try {
+    const saved = localStorage.getItem("ideye_sound_enabled");
+    if (saved !== null) enabled = (saved === "true");
+  } catch (e) {}
+
+  function getContext() {
+    if (!ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) ctx = new AudioCtx();
+    }
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+    return ctx;
+  }
+
+  function playTone(freq, type, duration, gainVal, rampTo) {
+    if (!enabled) return;
+    try {
+      const c = getContext();
+      if (!c) return;
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = type || "sine";
+      osc.frequency.setValueAtTime(freq, c.currentTime);
+      if (rampTo) {
+        osc.frequency.exponentialRampToValueAtTime(rampTo, c.currentTime + duration);
+      }
+      gain.gain.setValueAtTime(gainVal || 0.08, c.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(c.destination);
+      osc.start();
+      osc.stop(c.currentTime + duration);
+    } catch (e) {}
+  }
+
+  return {
+    isEnabled: () => enabled,
+    setEnabled: (val) => {
+      enabled = !!val;
+      try { localStorage.setItem("ideye_sound_enabled", enabled ? "true" : "false"); } catch (e) {}
+      updateSoundUI();
+    },
+    tick: () => playTone(980, "sine", 0.025, 0.035),
+    click: () => {
+      playTone(540, "triangle", 0.12, 0.08);
+      setTimeout(() => playTone(1080, "sine", 0.08, 0.05), 25);
+    },
+    fanfare: () => {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((f, i) => {
+        setTimeout(() => playTone(f, "triangle", 0.22, 0.09), i * 90);
+      });
+    },
+    whoosh: () => playTone(440, "sine", 0.14, 0.05, 180),
+    shockwave: () => playTone(300, "triangle", 0.16, 0.1, 110),
+  };
+})();
+
+function toggleSound() {
+  SoundFX.setEnabled(!SoundFX.isEnabled());
+  if (SoundFX.isEnabled()) SoundFX.click();
+}
+
+function updateSoundUI() {
+  const btn = document.getElementById("soundToggle");
+  const label = document.getElementById("soundLabel");
+  if (!btn || !label) return;
+  const on = SoundFX.isEnabled();
+  label.textContent = on ? "Sonido: ON" : "Sonido: OFF";
+  btn.classList.toggle("muted", !on);
+}
+
+// Multi-Theme Selector
 const themeButton = document.getElementById("themeToggle");
 function applyTheme(theme) {
   const selected = theme === "cyber-glass" ? "cyber-glass" : "nintendo-booklet";
   document.body.dataset.theme = selected;
+  try { localStorage.setItem("ideye_guide_theme", selected); } catch (e) {}
   if (themeButton) {
     const label = document.getElementById("themeLabel");
     if (label) {
@@ -195,8 +393,350 @@ function applyTheme(theme) {
 }
 function toggleTheme() {
   applyTheme(document.body.dataset.theme === "nintendo-booklet" ? "cyber-glass" : "nintendo-booklet");
+  SoundFX.whoosh();
 }
-applyTheme("nintendo-booklet");
+
+// Reactive Mode Accents
+const MODE_COLORS = {
+  coding: { accent: "#06b6d4", rgb: "6, 182, 212", name: "Código (AST)" },
+  writing: { accent: "#10b981", rgb: "16, 185, 129", name: "Redacción (T9)" },
+  terminal: { accent: "#a855f7", rgb: "168, 85, 247", name: "Terminal (Git)" },
+  sniper: { accent: "#ef4444", rgb: "239, 68, 68", name: "Gaming (60Hz)" },
+};
+
+function applyModeAccent(modeId) {
+  const conf = MODE_COLORS[modeId] || MODE_COLORS.coding;
+  document.documentElement.style.setProperty("--mode-accent", conf.accent);
+  document.documentElement.style.setProperty("--mode-accent-rgb", conf.rgb);
+  const statusEl = document.getElementById("vscModeStatus");
+  if (statusEl) statusEl.textContent = conf.name;
+}
+
+// Simulated VS Code Editor
+const INITIAL_CODE = `# IDEye L2C Engine — Editor Asistivo
+# Mirada como intención, boca como confirmación
+import math
+from ideye.core import GestureDetector, OneEuroFilter
+
+class GazeController:
+    def __init__(self, fps: int = 60):
+        self.fps = fps
+        self.reticle_filter = OneEuroFilter(freq=fps, mincutoff=1.2, beta=0.02)
+        self.resting_mar_baseline = 0.15
+        self.zero_dwell_active = True
+
+    def on_frame(self, iris_x: float, iris_y: float, mar: float):
+        smooth_x, smooth_y = self.reticle_filter(iris_x, iris_y)
+        # Mirar solo enfoca (Zero-Dwell Midas Elimination)
+        if mar > 0.45:
+            self.execute_mar_click(smooth_x, smooth_y)
+`;
+
+function initSimEditor() {
+  const editor = document.getElementById("vscCodeContent");
+  if (editor && !editor.dataset.initialized) {
+    editor.dataset.initialized = "true";
+    setEditorCode(INITIAL_CODE);
+  }
+}
+
+function setEditorCode(codeText) {
+  const editor = document.getElementById("vscCodeContent");
+  if (!editor) return;
+  editor.innerHTML = highlightSyntax(codeText);
+  updateLineNumbers();
+}
+
+function highlightSyntax(code) {
+  const escaped = code
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return escaped.split("\\n").map(line => {
+    if (line.trim().startsWith("#") || line.trim().startsWith("//") || line.trim().startsWith("$")) {
+      return '<span class="syn-com">' + line + '</span>';
+    }
+    let hl = line
+      .replace(/(".*?"|'.*?'|«.*?»)/g, '<span class="syn-str">$1</span>')
+      .replace(/\\b(def|class|import|from|return|if|else|elif|for|while|await|async|pass|and|or|not|in|is|None|True|False)\\b/g, '<span class="syn-kw">$1</span>')
+      .replace(/\\b([a-zA-Z_]\\w*)(?=\\s*\\()/g, '<span class="syn-fn">$1</span>')
+      .replace(/\\b(\\d+(\\.\\d+)?)\\b/g, '<span class="syn-num">$1</span>');
+    return hl;
+  }).join("\\n");
+}
+
+function updateLineNumbers() {
+  const editor = document.getElementById("vscCodeContent");
+  const lineBox = document.getElementById("vscLineNumbers");
+  if (!editor || !lineBox) return;
+  const lineCount = editor.innerText.split("\\n").length;
+  let html = "";
+  for (let i = 1; i <= Math.max(lineCount, 12); i++) {
+    html += "<span>" + i + "</span>";
+  }
+  lineBox.innerHTML = html;
+  const lnEl = document.getElementById("vscLn");
+  if (lnEl) lnEl.textContent = lineCount;
+}
+
+function injectCodeIntoEditor(snippet) {
+  const editor = document.getElementById("vscCodeContent");
+  if (!editor) return;
+  const current = editor.innerText;
+  const updated = current + (current.endsWith("\\n") ? "" : "\\n") + snippet;
+  setEditorCode(updated);
+  editor.scrollTop = editor.scrollHeight;
+  SoundFX.click();
+  completeDojoChallenge("code-inject");
+}
+
+function resetSimEditor() {
+  setEditorCode(INITIAL_CODE);
+  SoundFX.whoosh();
+}
+
+function copySimEditor() {
+  const editor = document.getElementById("vscCodeContent");
+  if (editor && navigator.clipboard) {
+    navigator.clipboard.writeText(editor.innerText).catch(() => {});
+    SoundFX.click();
+  }
+}
+
+function runSimSnippet() {
+  injectCodeIntoEditor("# [Ejecución IA] Pipeline verificado: 0 errores de sintaxis, 60 FPS estables\\n");
+  SoundFX.fanfare();
+}
+
+// Training Dojo Challenges Engine
+const completedChallenges = new Set();
+
+function completeDojoChallenge(id) {
+  if (completedChallenges.has(id)) return;
+  completedChallenges.add(id);
+
+  const card = document.getElementById("dojoCard_" + id);
+  const status = document.getElementById("dojoStatus_" + id);
+  if (card) card.classList.add("completed");
+  if (status) {
+    status.classList.remove("pending");
+    status.classList.add("done");
+    status.textContent = "COMPLETADO";
+  }
+
+  const count = completedChallenges.size;
+  const countEl = document.getElementById("dojoCompleted");
+  const percentEl = document.getElementById("dojoPercent");
+  const meterEl = document.getElementById("dojoMeterFill");
+  if (countEl) countEl.textContent = count;
+  const percent = Math.round((count / 6) * 100);
+  if (percentEl) percentEl.textContent = percent + "%";
+  if (meterEl) meterEl.style.width = percent + "%";
+
+  if (count === 6) {
+    const celebration = document.getElementById("dojoCelebration");
+    if (celebration) {
+      celebration.style.display = "flex";
+      celebration.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    SoundFX.fanfare();
+  } else {
+    SoundFX.click();
+  }
+}
+
+function triggerDojoChallenge(id) {
+  if (id === "zero-dwell") {
+    const firstCell = document.querySelector(".sim-cell");
+    if (firstCell) {
+      firstCell.classList.add("gaze-focused");
+      setTimeout(() => firstCell.classList.remove("gaze-focused"), 1200);
+    }
+    completeDojoChallenge("zero-dwell");
+  } else if (id === "mar-click") {
+    triggerMARClick();
+  } else if (id === "code-inject") {
+    injectCodeIntoEditor("if mar > 0.45:\\n    # Snippet inyectado desde el Dojo\\n    trigger_action()\\n");
+  } else if (id === "gaze-scroll") {
+    triggerGazeScrollSim();
+  } else if (id === "sniper-lens") {
+    toggleSniperLens();
+    completeDojoChallenge("sniper-lens");
+  } else if (id === "agentic-mcp") {
+    triggerAgenticPromptSim();
+  }
+}
+
+function resetDojoProgress() {
+  completedChallenges.clear();
+  document.querySelectorAll(".dojo-card").forEach(c => c.classList.remove("completed"));
+  document.querySelectorAll(".dojo-status").forEach(s => {
+    s.classList.remove("done");
+    s.classList.add("pending");
+    s.textContent = "PENDIENTE";
+  });
+  const countEl = document.getElementById("dojoCompleted");
+  const percentEl = document.getElementById("dojoPercent");
+  const meterEl = document.getElementById("dojoMeterFill");
+  const celebration = document.getElementById("dojoCelebration");
+  if (countEl) countEl.textContent = "0";
+  if (percentEl) percentEl.textContent = "0%";
+  if (meterEl) meterEl.style.width = "0%";
+  if (celebration) celebration.style.display = "none";
+  SoundFX.whoosh();
+}
+
+// MAR Mouth Aperture & Shockwave
+let hoveredCell = null;
+
+function triggerMARClick(originX, originY) {
+  const jawFill = document.getElementById("jawFill");
+  const jawValue = document.getElementById("jawValue");
+  if (jawFill) {
+    jawFill.style.width = "62%";
+    jawFill.classList.add("triggered");
+  }
+  if (jawValue) {
+    jawValue.textContent = "MAR: 0.62 [CLIC DISPARADO > 0.45]";
+    jawValue.classList.add("triggered");
+  }
+
+  createShockwave(originX, originY);
+  SoundFX.shockwave();
+  completeDojoChallenge("mar-click");
+
+  const targetCell = hoveredCell;
+  if (targetCell) {
+    targetCell.click();
+  }
+
+  setTimeout(() => {
+    if (jawFill) {
+      jawFill.style.width = "15%";
+      jawFill.classList.remove("triggered");
+    }
+    if (jawValue) {
+      jawValue.textContent = "MAR: 0.15 (Línea Base Reposo)";
+      jawValue.classList.remove("triggered");
+    }
+  }, 480);
+}
+
+function createShockwave(x, y) {
+  const shock = document.createElement("div");
+  shock.className = "gaze-shockwave";
+  const posX = (x !== undefined && x !== null) ? x : reticleX;
+  const posY = (y !== undefined && y !== null) ? y : reticleY;
+  shock.style.left = posX + "px";
+  shock.style.top = posY + "px";
+  document.body.appendChild(shock);
+  setTimeout(() => shock.remove(), 650);
+}
+
+// Sniper Lens Toggle
+let isSniperActive = false;
+function toggleSniperLens() {
+  isSniperActive = !isSniperActive;
+  const reticle = document.getElementById("gazeReticle");
+  const btn = document.getElementById("btnToggleSniper");
+  if (reticle) reticle.classList.toggle("sniper-mode", isSniperActive);
+  if (btn) btn.classList.toggle("active", isSniperActive);
+  SoundFX.whoosh();
+  if (isSniperActive) completeDojoChallenge("sniper-lens");
+}
+
+// Gaze Scroll Simulation
+function triggerGazeScrollSim() {
+  const editor = document.getElementById("vscCodeContent");
+  if (editor) {
+    editor.scrollTop += 60;
+  }
+  SoundFX.tick();
+  completeDojoChallenge("gaze-scroll");
+}
+
+// Agentic Prompt Simulation
+function triggerAgenticPromptSim() {
+  injectCodeIntoEditor(
+    "# [Agentic Prompt Launcher & MCP Queue]\\n" +
+    "# Tarea: Implementar optimización de landmarks con AST & NumPy\\n" +
+    "# Diagnósticos: 0 errores, 1 advertencia de precisión subpíxel\\n" +
+    "# Enviado a VS Code Chat y cola MCP local en 127.0.0.1:8765\\n"
+  );
+  completeDojoChallenge("agentic-mcp");
+}
+
+// Floating Gaze Reticle & Zero-Dwell Mouse Tracking
+let reticleX = window.innerWidth / 2;
+let reticleY = window.innerHeight / 2;
+let targetX = reticleX;
+let targetY = reticleY;
+
+window.addEventListener("mousemove", (e) => {
+  targetX = e.clientX;
+  targetY = e.clientY;
+
+  // Zero-Dwell rule: Looking / hovering ONLY focuses, NEVER triggers a click
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const cell = el ? el.closest(".sim-cell") : null;
+  if (cell !== hoveredCell) {
+    if (hoveredCell) hoveredCell.classList.remove("gaze-focused");
+    hoveredCell = cell;
+    if (hoveredCell) {
+      hoveredCell.classList.add("gaze-focused");
+      SoundFX.tick();
+      completeDojoChallenge("zero-dwell");
+    }
+  }
+});
+
+function animateReticle() {
+  const factor = isSniperActive ? 0.08 : 0.32;
+  reticleX += (targetX - reticleX) * factor;
+  reticleY += (targetY - reticleY) * factor;
+
+  const reticle = document.getElementById("gazeReticle");
+  if (reticle) {
+    reticle.style.left = reticleX + "px";
+    reticle.style.top = reticleY + "px";
+  }
+  requestAnimationFrame(animateReticle);
+}
+requestAnimationFrame(animateReticle);
+
+// Global Keyboard Shortcuts
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA" && !e.target.isContentEditable) {
+    e.preventDefault();
+    triggerMARClick();
+  }
+  if (e.altKey && e.ctrlKey && e.key.toLowerCase() === "z") {
+    e.preventDefault();
+    toggleSniperLens();
+  }
+  if (e.altKey && e.ctrlKey && e.key.toLowerCase() === "w") {
+    e.preventDefault();
+    triggerGazeScrollSim();
+  }
+  if (e.altKey && e.ctrlKey && e.key.toLowerCase() === "i") {
+    e.preventDefault();
+    triggerAgenticPromptSim();
+  }
+  if (e.altKey && e.ctrlKey && e.key.toLowerCase() === "o") {
+    e.preventDefault();
+    toggleTheme();
+  }
+});
+
+// Initialize settings from localStorage
+let initialTheme = "nintendo-booklet";
+try {
+  const savedTheme = localStorage.getItem("ideye_guide_theme");
+  if (savedTheme === "cyber-glass" || savedTheme === "nintendo-booklet") initialTheme = savedTheme;
+} catch (e) {}
+applyTheme(initialTheme);
+updateSoundUI();
 """
 
 NINTENDO_CSS = """
@@ -781,6 +1321,35 @@ body[data-theme="nintendo-booklet"] .page-numbers span {
 }
 body[data-theme="nintendo-booklet"] .page-numbers span:first-child { left: 24px; }
 body[data-theme="nintendo-booklet"] .page-numbers span:last-child { right: 24px; transform: rotate(5deg); }
+body[data-theme="nintendo-booklet"] .sound-toggle { background: #38bdf8; color: #111; }
+body[data-theme="nintendo-booklet"] .sim-workspace { gap: 20px; }
+body[data-theme="nintendo-booklet"] .jaw-meter-container { border: 3px solid #111; background: #fffdf5; box-shadow: 4px 4px 0 #111; }
+body[data-theme="nintendo-booklet"] .jaw-value { color: #b91c2c; }
+body[data-theme="nintendo-booklet"] .jaw-track { background: #f1f5f9; border: 2px solid #111; }
+body[data-theme="nintendo-booklet"] .sim-action-btn { border: 2px solid #111; background: #fef3c7; color: #111; font-weight: 800; box-shadow: 2px 2px 0 #111; }
+body[data-theme="nintendo-booklet"] .sim-action-btn:hover { background: #fde047; }
+body[data-theme="nintendo-booklet"] .vscode-pane { background: #182234; border: 4px solid #111; box-shadow: 6px 6px 0 #111; color: #f8fafc; }
+body[data-theme="nintendo-booklet"] .vsc-titlebar { background: #0f172a; border-bottom: 2px solid #111; }
+body[data-theme="nintendo-booklet"] .vsc-tab { background: #1e293b; color: #f8fafc; border-top: 3px solid #b91c2c; }
+body[data-theme="nintendo-booklet"] .vsc-btn { border: 2px solid #111; background: #fde047; color: #111; font-weight: 900; }
+body[data-theme="nintendo-booklet"] .vsc-btn:hover { background: #facc15; }
+body[data-theme="nintendo-booklet"] .vsc-editor-body { background: #0b1322; color: #f8fafc; }
+body[data-theme="nintendo-booklet"] .vsc-line-numbers { background: #0e1726; border-right: 2px solid #111; color: #94a3b8; }
+body[data-theme="nintendo-booklet"] .vsc-code-content { color: #f8fafc; }
+body[data-theme="nintendo-booklet"] .vsc-statusbar { background: #facc15; color: #111; border-top: 3px solid #111; }
+body[data-theme="nintendo-booklet"] .dojo-section { border: 4px solid #111; background: #fffdf5; box-shadow: 8px 8px 0 #111; }
+body[data-theme="nintendo-booklet"] .dojo-header { border-bottom: 3px solid #111; }
+body[data-theme="nintendo-booklet"] .dojo-trophy-icon { border: 2px solid #111; box-shadow: 2px 2px 0 #111; }
+body[data-theme="nintendo-booklet"] .dojo-meter { border: 2px solid #111; background: #f1f5f9; }
+body[data-theme="nintendo-booklet"] .dojo-card { border: 3px solid #111; background: #fffdf7; box-shadow: 4px 4px 0 #111; color: #111; }
+body[data-theme="nintendo-booklet"] .dojo-card.completed { background: #f0fdf4; border-color: #16a34a; }
+body[data-theme="nintendo-booklet"] .dojo-badge { border: 1px solid #111; background: #fde047; color: #111; }
+body[data-theme="nintendo-booklet"] .dojo-card p { color: #334155; }
+body[data-theme="nintendo-booklet"] .dojo-action-btn { border: 2px solid #111; background: #facc15; color: #111; font-weight: 800; box-shadow: 2px 2px 0 #111; }
+body[data-theme="nintendo-booklet"] .dojo-celebration { border: 3px solid #111; background: #fef08a; box-shadow: 4px 4px 0 #111; color: #111; }
+body[data-theme="nintendo-booklet"] .celebration-badge { border: 2px solid #111; }
+body[data-theme="nintendo-booklet"] .celebration-text h4 { color: #b91c2c; }
+body[data-theme="nintendo-booklet"] .celebration-text p { color: #111; }
 @media (max-width: 980px) and (min-width: 641px) {
   body[data-theme="nintendo-booklet"] .page.active { padding: 18px 18px 58px; }
   body[data-theme="nintendo-booklet"] .double-page-container { gap: 28px; }
@@ -832,7 +1401,7 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
         if page_id == "gestures":
             extra = _gesture_strip(catalog.get("gestures", []), catalog.get("gesture_thresholds", {}))
         if page_id == "modes":
-            extra = _simulator(simulator) + _shortcut_grid(catalog.get("shortcuts", []))
+            extra = _simulator(simulator, catalog.get("dojo_challenges", [])) + _shortcut_grid(catalog.get("shortcuts", []))
         if page_id == "custom":
             extra = _shortcut_grid(catalog.get("shortcuts", []))
         page_cards = list(page.get("cards", []))
@@ -950,14 +1519,96 @@ button {{ font:inherit; cursor:pointer; }}
 .sim-modes {{ display:flex; gap:7px; flex-wrap:wrap; }}
 .sim-mode {{ border:1px solid var(--line); border-radius:999px; background:#111c33; color:#cbd5e1; padding:7px 11px; font-size:12px; font-weight:800; }}
 .sim-mode.active {{ background:var(--yellow); border-color:var(--yellow); color:#1c1200; }}
-.sim-body {{ display:grid; grid-template-columns:minmax(0,1.2fr) minmax(220px,.8fr); gap:16px; margin-top:14px; }}
+.sim-workspace {{ display:grid; grid-template-columns:minmax(300px, 1fr) minmax(360px, 1.25fr); gap:18px; margin-top:16px; }}
+.sim-left-pane, .sim-right-pane {{ display:flex; flex-direction:column; gap:14px; }}
 .sim-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }}
 .sim-cell {{ min-height:82px; border:1px solid #31435e; border-radius:12px; background:linear-gradient(150deg,#15233b,#0f172a); color:#dbeafe; padding:8px; text-align:left; font-weight:800; font-size:12px; line-height:1.25; box-shadow:2px 2px 0 rgba(0,0,0,.35); }}
 .sim-cell:hover, .sim-cell.selected {{ border-color:var(--yellow); background:linear-gradient(150deg,#263651,#15233b); transform:translateY(-2px); }}
 .sim-cell small {{ display:block; color:#7dd3fc; font-size:10px; font-weight:600; margin-top:4px; }}
-.sim-info {{ border:1px solid var(--line); border-radius:14px; padding:15px; background:#0d1729; min-height:130px; }}
+.sim-info {{ border:1px solid var(--line); border-radius:14px; padding:15px; background:#0d1729; min-height:100px; }}
 .sim-info h4 {{ margin:3px 0 8px; color:var(--yellow); font-size:20px; }}
 .sim-info p {{ margin:0; color:#b6c2d6; line-height:1.55; font-size:14px; }}
+.jaw-meter-container {{ border:1px solid var(--line); border-radius:14px; padding:14px; background:#0d1729; }}
+.jaw-meter-header {{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }}
+.jaw-value {{ font-size:11px; font-weight:800; color:var(--mode-accent, var(--cyan)); }}
+.jaw-value.triggered {{ color:#22c55e; }}
+.jaw-track {{ position:relative; height:14px; background:#1e293b; border-radius:999px; border:1px solid #334155; }}
+.jaw-fill {{ height:100%; background:linear-gradient(90deg, #22c55e, var(--mode-accent, var(--cyan))); border-radius:999px; transition:width .14s ease; }}
+.jaw-fill.triggered {{ background:linear-gradient(90deg, #eab308, #ef4444); box-shadow:0 0 12px #ef4444; }}
+.jaw-threshold-line {{ position:absolute; top:-3px; bottom:-3px; width:2px; background:#ef4444; }}
+.threshold-label {{ position:absolute; top:-16px; left:-10px; font-size:9px; color:#ef4444; font-weight:900; }}
+.jaw-actions {{ display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-top:10px; }}
+.sim-action-btn {{ font-size:11px; padding:7px 10px; justify-content:flex-start; text-align:left; }}
+.sim-action-btn.active {{ border-color:var(--yellow); color:var(--yellow); }}
+.vscode-pane {{ display:flex; flex-direction:column; border-radius:14px; overflow:hidden; background:#0b1120; color:#e2e8f0; border:1px solid var(--line); box-shadow:0 14px 40px rgba(0,0,0,.45); font-family:ui-monospace,SFMono-Regular,"Cascadia Code","Roboto Mono",Consolas,monospace; min-height:400px; }}
+.vsc-titlebar {{ display:flex; align-items:center; justify-content:space-between; background:#0f172a; border-bottom:1px solid var(--line); padding:6px 12px; gap:8px; flex-wrap:wrap; }}
+.vsc-tabs {{ display:flex; gap:4px; }}
+.vsc-tab {{ display:flex; align-items:center; gap:6px; padding:5px 12px; background:#0b1120; border-top:2px solid var(--mode-accent, var(--cyan)); color:#f8fafc; font-size:12px; border-radius:4px 4px 0 0; }}
+.vsc-tab-icon {{ width:14px; height:14px; }}
+.vsc-tab-close {{ opacity:.6; cursor:pointer; margin-left:4px; }}
+.vsc-breadcrumbs {{ font-size:11px; color:#64748b; flex:1; }}
+.vsc-actions {{ display:flex; gap:5px; }}
+.vsc-btn {{ background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:6px; padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-weight:700; }}
+.vsc-btn:hover {{ background:#334155; color:#fff; }}
+.vsc-btn-primary {{ background:var(--mode-accent, var(--cyan)); color:#05101a; border-color:transparent; }}
+.vsc-editor-body {{ display:flex; flex:1; min-height:280px; max-height:360px; overflow-y:auto; background:#070d19; }}
+.vsc-line-numbers {{ padding:12px 10px; color:#475569; text-align:right; user-select:none; font-size:12px; line-height:1.6; border-right:1px solid #1e293b; display:flex; flex-direction:column; background:#0a101d; }}
+.vsc-code-content {{ margin:0; padding:12px 14px; flex:1; font-size:12.5px; line-height:1.6; white-space:pre-wrap; word-break:break-word; outline:none; color:#f1f5f9; overflow-x:auto; }}
+.syn-kw {{ color:#f43f5e; font-weight:700; }}
+.syn-fn {{ color:#c084fc; }}
+.syn-str {{ color:#34d399; }}
+.syn-com {{ color:#64748b; font-style:italic; }}
+.syn-num {{ color:#38bdf8; }}
+.vsc-statusbar {{ display:flex; justify-content:space-between; align-items:center; background:var(--mode-accent, var(--cyan)); color:#06111f; padding:4px 12px; font-size:11px; font-weight:800; transition:background .25s ease; }}
+.vsc-status-left, .vsc-status-right {{ display:flex; gap:14px; align-items:center; }}
+.vsc-dot {{ width:8px; height:8px; background:#22c55e; border-radius:50%; display:inline-block; box-shadow:0 0 6px #22c55e; }}
+.dojo-section {{ margin-top:22px; padding:20px; border-radius:18px; background:#0c1527; border:1px solid var(--line); box-shadow:0 12px 40px rgba(0,0,0,.3); }}
+.dojo-header {{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:16px; }}
+.dojo-title-box {{ display:flex; align-items:center; gap:14px; }}
+.dojo-trophy-icon {{ width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#111; display:grid; place-items:center; flex-shrink:0; }}
+.dojo-trophy-icon .ui-icon {{ width:24px; height:24px; }}
+.dojo-progress-box {{ min-width:210px; }}
+.dojo-progress-label {{ display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; }}
+.dojo-meter {{ height:10px; border-radius:999px; background:#1e293b; overflow:hidden; border:1px solid #334155; }}
+.dojo-meter-fill {{ height:100%; background:linear-gradient(90deg,#22c55e,#10b981); transition:width .3s ease; }}
+.dojo-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:12px; }}
+.dojo-card {{ padding:15px; border-radius:14px; background:rgba(15,23,42,.8); border:1px solid var(--line); display:flex; flex-direction:column; justify-content:space-between; transition:transform .18s ease,border-color .18s ease; }}
+.dojo-card:hover {{ transform:translateY(-2px); border-color:var(--mode-accent, var(--cyan)); }}
+.dojo-card.completed {{ border-color:#22c55e; background:rgba(34,197,94,.08); }}
+.dojo-card-header {{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }}
+.dojo-badge {{ font-size:10px; font-weight:900; padding:2px 7px; border-radius:999px; background:var(--mode-accent, var(--cyan)); color:#05101a; }}
+.dojo-kicker {{ font-size:10px; color:var(--muted); font-weight:800; }}
+.dojo-status {{ font-size:10px; font-weight:900; padding:2px 7px; border-radius:999px; }}
+.dojo-status.pending {{ background:#334155; color:#94a3b8; }}
+.dojo-status.done {{ background:#22c55e; color:#06111f; }}
+.dojo-card h4 {{ margin:4px 0 6px; font-size:15px; }}
+.dojo-card p {{ font-size:12px; color:#94a3b8; line-height:1.45; margin:0 0 12px; }}
+.dojo-card-footer {{ display:flex; flex-direction:column; gap:6px; }}
+.dojo-action-btn {{ width:100%; font-size:11px; }}
+.dojo-hint {{ font-size:10.5px; color:#64748b; font-style:italic; }}
+.dojo-celebration {{ display:flex; align-items:center; gap:14px; padding:14px 18px; border-radius:14px; background:linear-gradient(135deg,rgba(234,179,8,.2),rgba(34,197,94,.2)); border:2px solid #eab308; margin-bottom:16px; animation:pop .3s ease both; }}
+.celebration-badge {{ width:44px; height:44px; border-radius:50%; background:#eab308; color:#111; display:grid; place-items:center; flex-shrink:0; }}
+.celebration-badge .ui-icon {{ width:24px; height:24px; }}
+.celebration-text {{ flex:1; }}
+.celebration-text h4 {{ margin:0 0 3px; color:#fef08a; font-size:17px; }}
+.celebration-text p {{ margin:0; font-size:12px; color:#f1f5f9; line-height:1.35; }}
+.celebration-btn {{ white-space:nowrap; font-size:11px; }}
+.gaze-reticle {{ position:fixed; pointer-events:none; z-index:9999; width:32px; height:32px; margin-left:-16px; margin-top:-16px; transition:transform .08s ease; }}
+.reticle-ring {{ width:100%; height:100%; border:2px solid var(--mode-accent, #06b6d4); border-radius:50%; box-shadow:0 0 10px var(--mode-accent, #06b6d4); box-sizing:border-box; }}
+.reticle-dot {{ position:absolute; top:50%; left:50%; width:4px; height:4px; margin-left:-2px; margin-top:-2px; background:#fff; border-radius:50%; }}
+.reticle-ch {{ position:absolute; background:var(--mode-accent, #06b6d4); }}
+.ch-top {{ top:-5px; left:50%; width:2px; height:5px; margin-left:-1px; }}
+.ch-bottom {{ bottom:-5px; left:50%; width:2px; height:5px; margin-left:-1px; }}
+.ch-left {{ left:-5px; top:50%; width:5px; height:2px; margin-top:-1px; }}
+.ch-right {{ right:-5px; top:50%; width:5px; height:2px; margin-top:-1px; }}
+.reticle-sniper-badge {{ display:none; position:absolute; top:-16px; right:-20px; background:#ef4444; color:#fff; font-size:9px; font-weight:900; padding:1px 5px; border-radius:999px; }}
+.gaze-reticle.sniper-mode {{ width:60px; height:60px; margin-left:-30px; margin-top:-30px; }}
+.gaze-reticle.sniper-mode .reticle-ring {{ border-width:3px; border-color:#ef4444; box-shadow:0 0 20px rgba(239,68,68,.7); }}
+.gaze-reticle.sniper-mode .reticle-sniper-badge {{ display:block; }}
+.gaze-shockwave {{ position:fixed; pointer-events:none; z-index:9998; border:3px solid var(--mode-accent, #06b6d4); border-radius:50%; width:24px; height:24px; margin-left:-12px; margin-top:-12px; animation:shockwave-expand .6s cubic-bezier(.1,.8,.3,1) forwards; }}
+@keyframes shockwave-expand {{ 0% {{ transform:scale(1); opacity:1; border-width:4px; }} 100% {{ transform:scale(6.5); opacity:0; border-width:1px; }} }}
+.sim-cell.gaze-focused, .card.gaze-focused {{ outline:2px solid var(--mode-accent, #06b6d4); outline-offset:2px; box-shadow:0 0 14px var(--mode-accent, #06b6d4); }}
+.sound-toggle.muted {{ opacity:.65; filter:grayscale(1); }}
 .shortcut-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:9px; margin-top:18px; }}
 .shortcut {{ display:flex; align-items:center; gap:12px; border:1px solid var(--line); background:rgba(15,23,42,.78); border-radius:12px; padding:10px 12px; }}
 kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-radius:7px; background:#1e293b; color:#e0f2fe; padding:5px 7px; font-size:11px; font-weight:900; }}
@@ -978,7 +1629,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
 {NINTENDO_CSS}
 @media (max-width:760px) {{
   .hero {{ align-items:flex-start; flex-direction:column; }}
-  .sim-body {{ grid-template-columns:1fr; }}
+  .sim-workspace {{ grid-template-columns:1fr; }}
   .ribbon {{ transform:rotate(-.8deg); }}
 }}
 @media print {{
@@ -986,17 +1637,17 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
   body {{ background:#fff !important; color:#111; }}
   .app {{ width:100%; padding:0; }}
   .hero {{ border:0; box-shadow:none; background:#fff; padding:0 0 8px; }}
-  .hero-actions, .tabs, .pager, .sim-modes {{ display:none !important; }}
+  .hero-actions, .tabs, .pager, .sim-modes, #gazeReticle, #soundToggle, .gaze-shockwave, .dojo-celebration .celebration-btn {{ display:none !important; }}
   .page {{ display:block !important; break-after:page; page-break-after:always; color:#111; }}
   .page:last-of-type {{ break-after:auto; page-break-after:auto; }}
   .ribbon {{ box-shadow:3px 3px 0 #999; border-color:#777; }}
   .intro, .card p, .gesture-card p, .sim-info p, .shortcut span {{ color:#333; }}
-  .card, .gesture-card, .simulator, .shortcut, .legal-item {{ background:#fff; border-color:#bbb; box-shadow:none; break-inside:avoid; }}
-  .legal-item b, .legal-item p {{ color:#222; }}
+  .card, .gesture-card, .simulator, .shortcut, .legal-item, .dojo-section, .dojo-card, .vscode-pane {{ background:#fff; border-color:#bbb; box-shadow:none; break-inside:avoid; }}
+  .legal-item b, .legal-item p, .dojo-card h4, .dojo-card p {{ color:#222; }}
   .card h3, .card p, .sim-info h4, .shortcut b {{ color:#111; }}
   .sim-cell {{ background:#f4f4f4; color:#111; border-color:#999; box-shadow:none; }}
   .sim-cell small {{ color:#333; }}
-  .badge, .chip {{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }}
+  .badge, .chip, .dojo-badge {{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }}
 }}
 </style>
 </head>
@@ -1008,6 +1659,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
       <div><h1>IDEye — Manual Interactivo</h1><p>Game Manual Edition · Vistax L2C Engine</p></div>
     </div>
     <div class="hero-actions">
+<button class="btn sound-toggle" id="soundToggle" type="button" onclick="toggleSound()">{_ui_icon("volume-2", "sound-icon")}<span id="soundLabel">Sonido: ON</span></button>
 <button class="btn theme-toggle" id="themeToggle" type="button" onclick="toggleTheme()">{_ui_icon("palette")}<span id="themeLabel">Estilo: Nintendo Booklet / Cyber-Glass</span></button>
 <button class="btn" onclick="window.print()">{_ui_icon("printer")}<span>Guardar como PDF</span></button>
     </div>
@@ -1024,6 +1676,15 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
     <div class="legal-grid">{legal_html}</div>
     <p class="build-stamp">{_esc(catalog.get("test_summary", ""))}</p>
   </section>
+</div>
+<div id="gazeReticle" class="gaze-reticle" aria-hidden="true">
+  <div class="reticle-ring"></div>
+  <div class="reticle-dot"></div>
+  <div class="reticle-ch ch-top"></div>
+  <div class="reticle-ch ch-bottom"></div>
+  <div class="reticle-ch ch-left"></div>
+  <div class="reticle-ch ch-right"></div>
+  <div class="reticle-sniper-badge" id="reticleSniperBadge">3.5x</div>
 </div>
 <script>
 const GUIDE = {data_json};
@@ -1046,17 +1707,28 @@ function renderSimulator(modeId) {{
   const mode = (GUIDE.simulator || {{}})[modeId];
   if (!mode) return;
   currentMode = modeId;
+  applyModeAccent(modeId);
   document.querySelectorAll(".sim-mode").forEach(btn => btn.classList.toggle("active", btn.dataset.mode === modeId));
   const grid = document.getElementById("simGrid");
+  if (!grid) return;
   grid.innerHTML = "";
   mode.cells.forEach((cell, index) => {{
     const button = document.createElement("button");
+    button.type = "button";
     button.className = "sim-cell";
     button.innerHTML = `<span>${{cell.label}}</span><small>${{cell.hint}}</small>`;
     button.addEventListener("click", () => {{
       document.querySelectorAll(".sim-cell").forEach(c => c.classList.remove("selected"));
       button.classList.add("selected");
-      document.getElementById("simInfo").innerHTML = `<span class="mini-kicker">${{mode.name.toUpperCase()}} · CASILLA ${{index + 1}}</span><h4>${{cell.label}}</h4><p>${{cell.hint}}</p>`;
+      const info = document.getElementById("simInfo");
+      if (info) {{
+        info.innerHTML = `<span class="mini-kicker">${{mode.name.toUpperCase()}} · CASILLA ${{index + 1}}</span><h4>${{cell.label}}</h4><p>${{cell.hint}}</p>`;
+      }}
+      if (cell.snippet) {{
+        injectCodeIntoEditor(cell.snippet);
+      }} else {{
+        injectCodeIntoEditor(`# Acción: ${{cell.label}}\\n`);
+      }}
     }});
     grid.appendChild(button);
   }});
@@ -1072,6 +1744,7 @@ window.addEventListener("keydown", event => {{
   if (event.key === "ArrowRight") showPage(currentPage + 1);
 }});
 renderSimulator(currentMode);
+initSimEditor();
 </script>
 </body>
 </html>'''

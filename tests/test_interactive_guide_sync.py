@@ -40,6 +40,7 @@ class TestInteractiveGuideSync(unittest.TestCase):
         self.assertIn('class="cards-subgrid"', text)
         self.assertNotIn("repeating-radial-gradient", text)
         self.assertIn("body[data-theme=\"nintendo-booklet\"]", text)
+        self.assertIn("body[data-theme=\"cyber-glass\"]", text)
         self.assertIn("@media print", text)
 
     def test_all_booklet_cards_survive_regeneration(self):
@@ -50,6 +51,8 @@ class TestInteractiveGuideSync(unittest.TestCase):
             "Calibraci\u00f3n 5 + 1",
             "Abre la boca para confirmar",
             "Scroll sin manos",
+            "Eliminaci\u00f3n Toque de Midas (Zero-Dwell)",
+            "L\u00ednea Base MAR Adaptativa (Anti-Midas)",
             "Head-Joystick",
             "Editor de Macros",
             "M\u00e1quina del Tiempo",
@@ -83,6 +86,7 @@ class TestInteractiveGuideSync(unittest.TestCase):
             'id="simEditor"',
             'id="jawMeterContainer"',
             'id="dojoContainer"',
+            'id="dojoJumpBtn"',
         ):
             self.assertIn(required, text)
         self.assertIn('viewBox="0 0 64 64"', text)

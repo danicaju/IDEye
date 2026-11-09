@@ -318,6 +318,15 @@ const SoundFX = (() => {
     return ctx;
   }
 
+  // Pre-unlock audio context on first user pointer or key gesture
+  const unlock = () => {
+    getContext();
+    window.removeEventListener("pointerdown", unlock);
+    window.removeEventListener("keydown", unlock);
+  };
+  window.addEventListener("pointerdown", unlock);
+  window.addEventListener("keydown", unlock);
+
   function playTone(freq, type, duration, gainVal, rampTo) {
     if (!enabled) return;
     try {
@@ -359,8 +368,15 @@ const SoundFX = (() => {
     },
     whoosh: () => playTone(440, "sine", 0.14, 0.05, 180),
     shockwave: () => playTone(300, "triangle", 0.16, 0.1, 110),
+    chime: () => {
+      playTone(659.25, "triangle", 0.12, 0.07);
+      setTimeout(() => playTone(987.77, "sine", 0.16, 0.07), 70);
+    },
   };
 })();
+
+const VOL_ON_SVG = '<polygon points="44 20 24 36 8 36 8 60 24 60 44 76 44 20"/><path d="M62 34a20 20 0 0 1 0 28M76 20a40 40 0 0 1 0 56"/>';
+const VOL_OFF_SVG = '<polygon points="44 20 24 36 8 36 8 60 24 60 44 76 44 20"/><line x1="88" y1="36" x2="64" y2="60"/><line x1="64" y1="36" x2="88" y2="60"/>';
 
 function toggleSound() {
   SoundFX.setEnabled(!SoundFX.isEnabled());
@@ -374,6 +390,10 @@ function updateSoundUI() {
   const on = SoundFX.isEnabled();
   label.textContent = on ? "Sonido: ON" : "Sonido: OFF";
   btn.classList.toggle("muted", !on);
+  const icon = btn.querySelector("svg");
+  if (icon) {
+    icon.innerHTML = on ? VOL_ON_SVG : VOL_OFF_SVG;
+  }
 }
 
 // Multi-Theme Selector
@@ -396,12 +416,13 @@ function toggleTheme() {
   SoundFX.whoosh();
 }
 
-// Reactive Mode Accents
+// Reactive Mode Accents (Cyan for Coding, Emerald for Writing, Purple for Terminal, Crimson for Gaming, Amber for Data/Math)
 const MODE_COLORS = {
   coding: { accent: "#06b6d4", rgb: "6, 182, 212", name: "Código (AST)" },
   writing: { accent: "#10b981", rgb: "16, 185, 129", name: "Redacción (T9)" },
   terminal: { accent: "#a855f7", rgb: "168, 85, 247", name: "Terminal (Git)" },
   sniper: { accent: "#ef4444", rgb: "239, 68, 68", name: "Gaming (60Hz)" },
+  data_math: { accent: "#f59e0b", rgb: "245, 158, 11", name: "Datos / Math (SQL & LaTeX)" },
 };
 
 function applyModeAccent(modeId) {
@@ -454,12 +475,12 @@ function highlightSyntax(code) {
     .replace(/>/g, "&gt;");
 
   return escaped.split("\\n").map(line => {
-    if (line.trim().startsWith("#") || line.trim().startsWith("//") || line.trim().startsWith("$")) {
+    if (line.trim().startsWith("#") || line.trim().startsWith("//") || line.trim().startsWith("$") || line.trim().startsWith("--")) {
       return '<span class="syn-com">' + line + '</span>';
     }
     let hl = line
       .replace(/(".*?"|'.*?'|«.*?»)/g, '<span class="syn-str">$1</span>')
-      .replace(/\\b(def|class|import|from|return|if|else|elif|for|while|await|async|pass|and|or|not|in|is|None|True|False)\\b/g, '<span class="syn-kw">$1</span>')
+      .replace(/\\b(def|class|import|from|return|if|else|elif|for|while|await|async|pass|and|or|not|in|is|None|True|False|SELECT|FROM|WHERE|JOIN|GROUP|BY|ORDER|HAVING|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|UNION)\\b/g, '<span class="syn-kw">$1</span>')
       .replace(/\\b([a-zA-Z_]\\w*)(?=\\s*\\()/g, '<span class="syn-fn">$1</span>')
       .replace(/\\b(\\d+(\\.\\d+)?)\\b/g, '<span class="syn-num">$1</span>');
     return hl;
@@ -509,12 +530,16 @@ function runSimSnippet() {
   SoundFX.fanfare();
 }
 
-// Training Dojo Challenges Engine
+// Training Dojo Challenges Engine with LocalStorage Persistence
 const completedChallenges = new Set();
 
-function completeDojoChallenge(id) {
+function completeDojoChallenge(id, silent) {
   if (completedChallenges.has(id)) return;
   completedChallenges.add(id);
+
+  try {
+    localStorage.setItem("ideye_dojo_progress", JSON.stringify([...completedChallenges]));
+  } catch (e) {}
 
   const card = document.getElementById("dojoCard_" + id);
   const status = document.getElementById("dojoStatus_" + id);
@@ -534,19 +559,22 @@ function completeDojoChallenge(id) {
   if (percentEl) percentEl.textContent = percent + "%";
   if (meterEl) meterEl.style.width = percent + "%";
 
-  if (count === 6) {
-    const celebration = document.getElementById("dojoCelebration");
-    if (celebration) {
-      celebration.style.display = "flex";
-      celebration.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (!silent) {
+    if (count === 6) {
+      const celebration = document.getElementById("dojoCelebration");
+      if (celebration) {
+        celebration.style.display = "flex";
+        celebration.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      SoundFX.fanfare();
+    } else {
+      SoundFX.chime();
     }
-    SoundFX.fanfare();
-  } else {
-    SoundFX.click();
   }
 }
 
 function triggerDojoChallenge(id) {
+  showPage(2);
   if (id === "zero-dwell") {
     const firstCell = document.querySelector(".sim-cell");
     if (firstCell) {
@@ -562,14 +590,21 @@ function triggerDojoChallenge(id) {
     triggerGazeScrollSim();
   } else if (id === "sniper-lens") {
     toggleSniperLens();
-    completeDojoChallenge("sniper-lens");
   } else if (id === "agentic-mcp") {
     triggerAgenticPromptSim();
   }
 }
 
+function jumpToDojo() {
+  showPage(2);
+  const dojo = document.getElementById("dojoContainer");
+  if (dojo) dojo.scrollIntoView({ behavior: "smooth", block: "start" });
+  SoundFX.tick();
+}
+
 function resetDojoProgress() {
   completedChallenges.clear();
+  try { localStorage.removeItem("ideye_dojo_progress"); } catch (e) {}
   document.querySelectorAll(".dojo-card").forEach(c => c.classList.remove("completed"));
   document.querySelectorAll(".dojo-status").forEach(s => {
     s.classList.remove("done");
@@ -587,10 +622,24 @@ function resetDojoProgress() {
   SoundFX.whoosh();
 }
 
-// MAR Mouth Aperture & Shockwave
+// MAR Mouth Aperture & Zero-Dwell Click Confirmation
 let hoveredCell = null;
 
-function triggerMARClick(originX, originY) {
+function selectAndExecuteCell(btn, cell, index, modeName) {
+  document.querySelectorAll(".sim-cell").forEach(c => c.classList.remove("selected"));
+  if (btn) btn.classList.add("selected");
+  const info = document.getElementById("simInfo");
+  if (info) {
+    info.innerHTML = `<span class="mini-kicker">${modeName.toUpperCase()} · CASILLA ${index + 1}</span><h4>${cell.label}</h4><p>${cell.hint}</p>`;
+  }
+  if (cell.snippet) {
+    injectCodeIntoEditor(cell.snippet);
+  } else {
+    injectCodeIntoEditor(`# Acción: ${cell.label}\\n`);
+  }
+}
+
+function triggerMARClick(originX, originY, targetBtn) {
   const jawFill = document.getElementById("jawFill");
   const jawValue = document.getElementById("jawValue");
   if (jawFill) {
@@ -606,9 +655,13 @@ function triggerMARClick(originX, originY) {
   SoundFX.shockwave();
   completeDojoChallenge("mar-click");
 
-  const targetCell = hoveredCell;
-  if (targetCell) {
-    targetCell.click();
+  const btn = targetBtn || hoveredCell || document.querySelector(".sim-cell.selected") || document.querySelector(".sim-cell");
+  if (btn && btn.dataset && btn.dataset.cellIndex !== undefined) {
+    const idx = Number(btn.dataset.cellIndex);
+    const mode = (GUIDE.simulator || {})[currentMode];
+    if (mode && mode.cells && mode.cells[idx]) {
+      selectAndExecuteCell(btn, mode.cells[idx], idx, mode.name);
+    }
   }
 
   setTimeout(() => {
@@ -687,6 +740,16 @@ window.addEventListener("mousemove", (e) => {
       hoveredCell.classList.add("gaze-focused");
       SoundFX.tick();
       completeDojoChallenge("zero-dwell");
+      if (hoveredCell.dataset && hoveredCell.dataset.cellIndex !== undefined) {
+        const idx = Number(hoveredCell.dataset.cellIndex);
+        const mode = (GUIDE.simulator || {})[currentMode];
+        if (mode && mode.cells && mode.cells[idx]) {
+          const info = document.getElementById("simInfo");
+          if (info) {
+            info.innerHTML = `<span class="mini-kicker">${mode.name.toUpperCase()} · ENFOQUE ZERO-DWELL (CASILLA ${idx + 1})</span><h4>${mode.cells[idx].label}</h4><p>${mode.cells[idx].hint}</p>`;
+          }
+        }
+      }
     }
   }
 });
@@ -737,6 +800,288 @@ try {
 } catch (e) {}
 applyTheme(initialTheme);
 updateSoundUI();
+
+// Restore Dojo progress
+try {
+  const savedProg = JSON.parse(localStorage.getItem("ideye_dojo_progress") || "[]");
+  if (Array.isArray(savedProg)) {
+    savedProg.forEach(id => completeDojoChallenge(id, true));
+  }
+} catch (e) {}
+"""
+
+CYBER_GLASS_CSS = """
+/* ======================================================================
+   CYBER-GLASS THEME - OLED Dark Mode with Translucent Glassmorphism
+   ====================================================================== */
+body[data-theme="cyber-glass"] {
+  color: #e2e8f0;
+  background-color: #030712;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(var(--mode-accent-rgb), 0.16) 0px, transparent 55%),
+    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.12) 0px, transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.95), #030712);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+body[data-theme="cyber-glass"] .app {
+  width: min(1360px, calc(100% - 32px));
+}
+body[data-theme="cyber-glass"] .hero {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+body[data-theme="cyber-glass"] .brand h1 {
+  background: linear-gradient(135deg, #fff 0%, #cbd5e1 50%, var(--mode-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+body[data-theme="cyber-glass"] .btn {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  border-radius: 999px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+body[data-theme="cyber-glass"] .btn:hover {
+  background: rgba(var(--mode-accent-rgb), 0.2);
+  border-color: var(--mode-accent);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(var(--mode-accent-rgb), 0.35);
+}
+body[data-theme="cyber-glass"] .tabs {
+  gap: 10px;
+}
+body[data-theme="cyber-glass"] .tab {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+body[data-theme="cyber-glass"] .tab:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(30, 41, 59, 0.6);
+}
+body[data-theme="cyber-glass"] .tab.active {
+  background: var(--mode-accent);
+  color: #030712;
+  border-color: transparent;
+  box-shadow: 0 0 25px rgba(var(--mode-accent-rgb), 0.5);
+}
+body[data-theme="cyber-glass"] .double-page-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+}
+body[data-theme="cyber-glass"] .double-page-container > .page {
+  display: flex !important;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0;
+}
+body[data-theme="cyber-glass"] .book-spine {
+  display: none;
+}
+body[data-theme="cyber-glass"] .page-numbers {
+  display: none;
+}
+body[data-theme="cyber-glass"] .ribbon {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 4px solid var(--mode-accent);
+  border-radius: 14px;
+  transform: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color: #f8fafc;
+}
+body[data-theme="cyber-glass"] .ribbon h2 {
+  color: #f8fafc;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+body[data-theme="cyber-glass"] .ribbon-star {
+  color: var(--mode-accent);
+}
+body[data-theme="cyber-glass"] .intro {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px 20px;
+  color: #cbd5e1;
+  transform: none;
+  box-shadow: none;
+}
+body[data-theme="cyber-glass"] .card {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transform: none !important;
+}
+body[data-theme="cyber-glass"] .card::before {
+  display: none;
+}
+body[data-theme="cyber-glass"] .card:hover {
+  border-color: var(--mode-accent);
+  box-shadow: 0 0 25px rgba(var(--mode-accent-rgb), 0.25);
+  transform: translateY(-3px) !important;
+}
+body[data-theme="cyber-glass"] .brush-title {
+  background: transparent;
+  color: #f1f5f9;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  border-radius: 0;
+  border: none;
+  padding: 0;
+  margin: 12px 0 8px;
+  transform: none;
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 18px;
+}
+body[data-theme="cyber-glass"] .illustration {
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  outline: none;
+  border-radius: 12px;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+  clip-path: none;
+}
+body[data-theme="cyber-glass"] .sticker {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(var(--mode-accent-rgb), 0.2);
+  color: var(--mode-accent);
+  box-shadow: 0 0 15px rgba(var(--mode-accent-rgb), 0.3);
+  transform: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  top: 12px;
+  right: 12px;
+}
+body[data-theme="cyber-glass"] .sticker::after {
+  display: none;
+}
+body[data-theme="cyber-glass"] .chip {
+  background: rgba(var(--mode-accent-rgb), 0.15);
+  color: var(--mode-accent);
+  border: 1px solid rgba(var(--mode-accent-rgb), 0.3);
+  border-radius: 999px;
+  transform: none;
+  box-shadow: none;
+}
+body[data-theme="cyber-glass"] .simulator {
+  background: rgba(11, 19, 38, 0.65);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(var(--mode-accent-rgb), 0.3);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(var(--mode-accent-rgb), 0.08);
+  transform: none;
+}
+body[data-theme="cyber-glass"] .sim-mode {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  border-radius: 999px;
+  transform: none;
+  box-shadow: none;
+}
+body[data-theme="cyber-glass"] .sim-mode.active {
+  background: var(--mode-accent);
+  color: #030712;
+  border-color: transparent;
+  box-shadow: 0 0 15px rgba(var(--mode-accent-rgb), 0.4);
+}
+body[data-theme="cyber-glass"] .sim-cell {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border-radius: 12px;
+  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  font-family: inherit;
+}
+body[data-theme="cyber-glass"] .sim-cell:hover,
+body[data-theme="cyber-glass"] .sim-cell.selected {
+  border-color: var(--mode-accent);
+  background: rgba(var(--mode-accent-rgb), 0.15);
+  box-shadow: 0 0 20px rgba(var(--mode-accent-rgb), 0.25);
+  transform: translateY(-2px);
+}
+body[data-theme="cyber-glass"] .jaw-meter-container {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: none;
+}
+body[data-theme="cyber-glass"] .vscode-pane {
+  background: #030712;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+body[data-theme="cyber-glass"] .dojo-section {
+  background: rgba(11, 19, 38, 0.65);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+body[data-theme="cyber-glass"] .dojo-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+body[data-theme="cyber-glass"] .dojo-card.completed {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+}
+body[data-theme="cyber-glass"] .dojo-badge {
+  background: var(--mode-accent);
+  color: #030712;
+  border: none;
+}
+body[data-theme="cyber-glass"] .shortcut,
+body[data-theme="cyber-glass"] .legal-item,
+body[data-theme="cyber-glass"] .gesture-card {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #cbd5e1;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  transform: none !important;
+}
+body[data-theme="cyber-glass"] .legal-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+@media (max-width: 980px) {
+  body[data-theme="cyber-glass"] .double-page-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
 """
 
 NINTENDO_CSS = """
@@ -1455,6 +1800,7 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
 :root {{
   --bg:#070b16; --paper:#0f172a; --paper-2:#111c33; --line:#26364f;
   --text:#e2e8f0; --muted:#94a3b8; --cyan:#22d3ee; --yellow:#fbbf24;
+  --mode-accent:#06b6d4; --mode-accent-rgb:6, 182, 212;
 }}
 * {{ box-sizing:border-box; }}
 html {{ scroll-behavior:smooth; }}
@@ -1488,6 +1834,8 @@ button {{ font:inherit; cursor:pointer; }}
 .tab.active {{ color:#06111f; background:var(--cyan); border-color:var(--cyan); box-shadow:3px 3px 0 rgba(0,0,0,.5); }}
 .page {{ display:none; animation:pop .28s ease both; }}
 .page.active {{ display:block; }}
+.double-page-container {{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:28px; width:100%; }}
+.double-page-container > .page {{ display:flex !important; flex-direction:column; gap:20px; width:100%; }}
 @keyframes pop {{ from {{ opacity:0; transform:translateY(8px); }} to {{ opacity:1; transform:none; }} }}
 .ribbon {{ display:inline-block; max-width:100%; margin:12px 0 8px 4px; padding:13px 22px 14px; border-radius:12px; background:var(--ribbon); color:#0b1020; transform:rotate(-1.4deg); box-shadow:5px 5px 0 rgba(0,0,0,.6); border:2px solid rgba(255,255,255,.35); }}
 .kicker, .mini-kicker {{ display:block; font-size:11px; letter-spacing:.16em; font-weight:900; opacity:.78; }}
@@ -1626,6 +1974,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
 .legal-item b {{ display:block; color:#e2e8f0; font-size:12px; margin-bottom:3px; }}
 .legal-item p {{ margin:0; color:var(--muted); font-size:11px; line-height:1.45; }}
 
+{CYBER_GLASS_CSS}
 {NINTENDO_CSS}
 @media (max-width:760px) {{
   .hero {{ align-items:flex-start; flex-direction:column; }}
@@ -1659,6 +2008,7 @@ kbd {{ flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-
       <div><h1>IDEye — Manual Interactivo</h1><p>Game Manual Edition · Vistax L2C Engine</p></div>
     </div>
     <div class="hero-actions">
+<button class="btn dojo-jump-btn" id="dojoJumpBtn" type="button" onclick="jumpToDojo()">{_ui_icon("trophy")}<span>Dojo 60 Hz</span></button>
 <button class="btn sound-toggle" id="soundToggle" type="button" onclick="toggleSound()">{_ui_icon("volume-2", "sound-icon")}<span id="soundLabel">Sonido: ON</span></button>
 <button class="btn theme-toggle" id="themeToggle" type="button" onclick="toggleTheme()">{_ui_icon("palette")}<span id="themeLabel">Estilo: Nintendo Booklet / Cyber-Glass</span></button>
 <button class="btn" onclick="window.print()">{_ui_icon("printer")}<span>Guardar como PDF</span></button>
@@ -1716,19 +2066,10 @@ function renderSimulator(modeId) {{
     const button = document.createElement("button");
     button.type = "button";
     button.className = "sim-cell";
+    button.dataset.cellIndex = index;
     button.innerHTML = `<span>${{cell.label}}</span><small>${{cell.hint}}</small>`;
-    button.addEventListener("click", () => {{
-      document.querySelectorAll(".sim-cell").forEach(c => c.classList.remove("selected"));
-      button.classList.add("selected");
-      const info = document.getElementById("simInfo");
-      if (info) {{
-        info.innerHTML = `<span class="mini-kicker">${{mode.name.toUpperCase()}} · CASILLA ${{index + 1}}</span><h4>${{cell.label}}</h4><p>${{cell.hint}}</p>`;
-      }}
-      if (cell.snippet) {{
-        injectCodeIntoEditor(cell.snippet);
-      }} else {{
-        injectCodeIntoEditor(`# Acción: ${{cell.label}}\\n`);
-      }}
+    button.addEventListener("click", (e) => {{
+      triggerMARClick(e.clientX, e.clientY, button);
     }});
     grid.appendChild(button);
   }});

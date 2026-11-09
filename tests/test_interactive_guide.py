@@ -68,11 +68,16 @@ class TestGuideCatalog(unittest.TestCase):
         self.assertIn('id="simEditor"', text)
         self.assertIn('id="jawMeterContainer"', text)
         self.assertIn('id="dojoContainer"', text)
+        self.assertIn('id="dojoJumpBtn"', text)
         self.assertIn("AudioContext", text)
         self.assertIn("Zero-Dwell", text)
         self.assertIn("Sniper", text)
         self.assertIn("Agentic", text)
         self.assertIn("MODE_COLORS", text)
+        self.assertIn('body[data-theme="cyber-glass"]', text)
+        self.assertIn("ideye_dojo_progress", text)
+        self.assertIn("data_math", text)
+        self.assertIn("dataset.cellIndex", text)
 
     def test_generator_writes_a_file(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -10,6 +10,7 @@
 :root {
   --bg:#070b16; --paper:#0f172a; --paper-2:#111c33; --line:#26364f;
   --text:#e2e8f0; --muted:#94a3b8; --cyan:#22d3ee; --yellow:#fbbf24;
+  --mode-accent:#06b6d4; --mode-accent-rgb:6, 182, 212;
 }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -43,6 +44,8 @@ button { font:inherit; cursor:pointer; }
 .tab.active { color:#06111f; background:var(--cyan); border-color:var(--cyan); box-shadow:3px 3px 0 rgba(0,0,0,.5); }
 .page { display:none; animation:pop .28s ease both; }
 .page.active { display:block; }
+.double-page-container { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:28px; width:100%; }
+.double-page-container > .page { display:flex !important; flex-direction:column; gap:20px; width:100%; }
 @keyframes pop { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 .ribbon { display:inline-block; max-width:100%; margin:12px 0 8px 4px; padding:13px 22px 14px; border-radius:12px; background:var(--ribbon); color:#0b1020; transform:rotate(-1.4deg); box-shadow:5px 5px 0 rgba(0,0,0,.6); border:2px solid rgba(255,255,255,.35); }
 .kicker, .mini-kicker { display:block; font-size:11px; letter-spacing:.16em; font-weight:900; opacity:.78; }
@@ -180,6 +183,279 @@ kbd { flex:0 0 auto; border:1px solid #475569; border-bottom-width:3px; border-r
 .legal-icon { color:#b91c2c; display:inline-flex; width:22px; height:22px; flex:0 0 22px; } .legal-icon .ui-icon { width:22px; height:22px; }
 .legal-item b { display:block; color:#e2e8f0; font-size:12px; margin-bottom:3px; }
 .legal-item p { margin:0; color:var(--muted); font-size:11px; line-height:1.45; }
+
+
+/* ======================================================================
+   CYBER-GLASS THEME - OLED Dark Mode with Translucent Glassmorphism
+   ====================================================================== */
+body[data-theme="cyber-glass"] {
+  color: #e2e8f0;
+  background-color: #030712;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(var(--mode-accent-rgb), 0.16) 0px, transparent 55%),
+    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.12) 0px, transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.95), #030712);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+body[data-theme="cyber-glass"] .app {
+  width: min(1360px, calc(100% - 32px));
+}
+body[data-theme="cyber-glass"] .hero {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+body[data-theme="cyber-glass"] .brand h1 {
+  background: linear-gradient(135deg, #fff 0%, #cbd5e1 50%, var(--mode-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+body[data-theme="cyber-glass"] .btn {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  border-radius: 999px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+body[data-theme="cyber-glass"] .btn:hover {
+  background: rgba(var(--mode-accent-rgb), 0.2);
+  border-color: var(--mode-accent);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(var(--mode-accent-rgb), 0.35);
+}
+body[data-theme="cyber-glass"] .tabs {
+  gap: 10px;
+}
+body[data-theme="cyber-glass"] .tab {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+body[data-theme="cyber-glass"] .tab:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(30, 41, 59, 0.6);
+}
+body[data-theme="cyber-glass"] .tab.active {
+  background: var(--mode-accent);
+  color: #030712;
+  border-color: transparent;
+  box-shadow: 0 0 25px rgba(var(--mode-accent-rgb), 0.5);
+}
+body[data-theme="cyber-glass"] .double-page-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+}
+body[data-theme="cyber-glass"] .double-page-container > .page {
+  display: flex !important;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0;
+}
+body[data-theme="cyber-glass"] .book-spine {
+  display: none;
+}
+body[data-theme="cyber-glass"] .page-numbers {
+  display: none;
+}
+body[data-theme="cyber-glass"] .ribbon {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 4px solid var(--mode-accent);
+  border-radius: 14px;
+  transform: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color: #f8fafc;
+}
+body[data-theme="cyber-glass"] .ribbon h2 {
+  color: #f8fafc;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+body[data-theme="cyber-glass"] .ribbon-star {
+  color: var(--mode-accent);
+}
+body[data-theme="cyber-glass"] .intro {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px 20px;
+  color: #cbd5e1;
+  transform: none;
+  box-shadow: none;
+}
+body[data-theme="cyber-glass"] .card {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transform: none !important;
+}
+body[data-theme="cyber-glass"] .card::before {
+  display: none;
+}
+body[data-theme="cyber-glass"] .card:hover {
+  border-color: var(--mode-accent);
+  box-shadow: 0 0 25px rgba(var(--mode-accent-rgb), 0.25);
+  transform: translateY(-3px) !important;
+}
+body[data-theme="cyber-glass"] .brush-title {
+  background: transparent;
+  color: #f1f5f9;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  border-radius: 0;
+  border: none;
+  padding: 0;
+  margin: 12px 0 8px;
+  transform: none;
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 18px;
+}
+body[data-theme="cyber-glass"] .illustration {
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  outline: none;
+  border-radius: 12px;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+  clip-path: none;
+}
+body[data-theme="cyber-glass"] .sticker {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(var(--mode-accent-rgb), 0.2);
+  color: var(--mode-accent);
+  box-shadow: 0 0 15px rgba(var(--mode-accent-rgb), 0.3);
+  transform: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  top: 12px;
+  right: 12px;
+}
+body[data-theme="cyber-glass"] .sticker::after {
+  display: none;
+}
+body[data-theme="cyber-glass"] .chip {
+  background: rgba(var(--mode-accent-rgb), 0.15);
+  color: var(--mode-accent);
+  border: 1px solid rgba(var(--mode-accent-rgb), 0.3);
+  border-radius: 999px;
+  transform: none;
+  box-shadow: none;
+}
+body[data-theme="cyber-glass"] .simulator {
+  background: rgba(11, 19, 38, 0.65);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(var(--mode-accent-rgb), 0.3);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(var(--mode-accent-rgb), 0.08);
+  transform: none;
+}
+body[data-theme="cyber-glass"] .sim-mode {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  border-radius: 999px;
+  transform: none;
+  box-shadow: none;
+}
+body[data-theme="cyber-glass"] .sim-mode.active {
+  background: var(--mode-accent);
+  color: #030712;
+  border-color: transparent;
+  box-shadow: 0 0 15px rgba(var(--mode-accent-rgb), 0.4);
+}
+body[data-theme="cyber-glass"] .sim-cell {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border-radius: 12px;
+  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  font-family: inherit;
+}
+body[data-theme="cyber-glass"] .sim-cell:hover,
+body[data-theme="cyber-glass"] .sim-cell.selected {
+  border-color: var(--mode-accent);
+  background: rgba(var(--mode-accent-rgb), 0.15);
+  box-shadow: 0 0 20px rgba(var(--mode-accent-rgb), 0.25);
+  transform: translateY(-2px);
+}
+body[data-theme="cyber-glass"] .jaw-meter-container {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: none;
+}
+body[data-theme="cyber-glass"] .vscode-pane {
+  background: #030712;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+body[data-theme="cyber-glass"] .dojo-section {
+  background: rgba(11, 19, 38, 0.65);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+body[data-theme="cyber-glass"] .dojo-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+body[data-theme="cyber-glass"] .dojo-card.completed {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+}
+body[data-theme="cyber-glass"] .dojo-badge {
+  background: var(--mode-accent);
+  color: #030712;
+  border: none;
+}
+body[data-theme="cyber-glass"] .shortcut,
+body[data-theme="cyber-glass"] .legal-item,
+body[data-theme="cyber-glass"] .gesture-card {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #cbd5e1;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  transform: none !important;
+}
+body[data-theme="cyber-glass"] .legal-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+@media (max-width: 980px) {
+  body[data-theme="cyber-glass"] .double-page-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
 
 
 /* ======================================================================
@@ -846,6 +1122,7 @@ body[data-theme="nintendo-booklet"] .celebration-text p { color: #111; }
       <div><h1>IDEye — Manual Interactivo</h1><p>Game Manual Edition · Vistax L2C Engine</p></div>
     </div>
     <div class="hero-actions">
+<button class="btn dojo-jump-btn" id="dojoJumpBtn" type="button" onclick="jumpToDojo()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H8v4h8v-4h-1c-.55 0-1-.45-1-1v-2.34"/><path d="M6 4h12a2 2 0 0 1 2 2v3a6 6 0 0 1-6 6h0a6 6 0 0 1-6-6V6a2 2 0 0 1 2-2Z"/></svg><span>Dojo 60 Hz</span></button>
 <button class="btn sound-toggle" id="soundToggle" type="button" onclick="toggleSound()"><svg class="ui-icon sound-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg><span id="soundLabel">Sonido: ON</span></button>
 <button class="btn theme-toggle" id="themeToggle" type="button" onclick="toggleTheme()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a1.8 1.8 0 0 0 0-3.6H12a2 2 0 0 1 0-4h4a5 5 0 0 0 0-10h-4Z"/><circle cx="7.5" cy="9" r="1"/><circle cx="9.5" cy="6" r="1"/><circle cx="14" cy="6" r="1"/></svg><span id="themeLabel">Estilo: Nintendo Booklet / Cyber-Glass</span></button>
 <button class="btn" onclick="window.print()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V3h12v5M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/><path d="M8 18h8"/></svg><span>Guardar como PDF</span></button>
@@ -2009,7 +2286,7 @@ body[data-theme="nintendo-booklet"] .celebration-text p { color: #111; }
   <div class="reticle-sniper-badge" id="reticleSniperBadge">3.5x</div>
 </div>
 <script>
-const GUIDE = {"pages": [{"id": "basics", "icon": "compass", "tab": "Explorando IDEye", "title": "¡Bienvenido a IDEye!", "kicker": "TU CENTRO DE MANDO OCULAR", "ribbon": "#fb7185", "intro": "Un IDE asistivo que convierte la mirada en intención y la boca en confirmación. Sin teclado, sin ratón, sin voz obligatoria.", "cards": [{"icon": "face", "badge": "01", "title": "Mira para mover", "text": "El cursor ocular sigue tu mirada con filtrado One Euro. Mirar solo ilumina: nunca activa una acción por sí solo.", "chip": "Seguimiento < 35 ms"}, {"icon": "calibration", "badge": "02", "title": "Calibración 5 + 1", "text": "Mira al centro y a las cuatro esquinas; el mapeo se ancla al centro para que los bordes izquierdo y derecho sigan siendo alcanzables. El sexto paso mide tu MAR con 3 aperturas y cierres reales de boca o aprovecha la linea base adaptativa en reposo.", "chip": "Perfil por monitor"}, {"icon": "mouth", "badge": "03", "title": "Abre la boca para confirmar", "text": "Una apertura breve equivale a un clic con proteccion anti-Midas adaptativa al reposo. Mantenerla activa el arrastre Jaw-Lock. Nada de dwell-time accidental.", "chip": "Clic sin manos"}, {"icon": "rest", "badge": "04", "title": "Descansa la vista", "text": "Pausa el HUD con Ctrl+Alt+P o un guiño derecho. Las zonas de reposo evitan el efecto Midas mientras lees.", "chip": "Lectura segura"}, {"icon": "scroll", "badge": "↕", "title": "Scroll sin manos", "text": "En FreeLook, deja la mirada en el borde superior o inferior durante ~0.3 s para desplazar la página. Vuelve al centro para parar.", "chip": "Web / documentos"}, {"icon": "shield-lock", "badge": "0-DWELL", "title": "Eliminación Toque de Midas (Zero-Dwell)", "text": "La mirada solo orienta y enfoca el elemento; nunca dispara un clic por tiempo de fijación. La confirmación reside exclusivamente en el canal motor voluntario de la boca (MAR) o ratón.", "chip": "Anti-Midas absoluto"}, {"icon": "mouth", "badge": "MAR+", "title": "Línea Base MAR Adaptativa (Anti-Midas)", "text": "Mide continuamente la apertura en reposo de tus labios (~0.15). Si hablas o sonríes, el umbral se recalcula dinámicamente (+0.30 sobre reposo) evitando falsos clics sin fatiga.", "chip": "Baseline dinámico"}]}, {"id": "gestures", "icon": "eye-scan", "tab": "Dominando los Gestos", "title": "Tu cara es el mando", "kicker": "BOCA, OJOS Y CABEZA", "ribbon": "#22d3ee", "intro": "Tres canales de entrada, una sola intención. Aprende el timing y el HUD responderá como un gamepad orgánico.", "cards": [{"icon": "mouth", "badge": "MAR", "title": "¡Dispara el clic con la boca!", "text": "Abre la boca por encima del umbral MAR durante un instante: IDEye inyecta el snippet o activa la casilla enfocada.", "chip": "Zero-dwell click"}, {"icon": "jaw", "badge": "55%", "title": "Jaw-Lock: arrastra sin soltar", "text": "Mantén la boca abierta para entrar en modo arrastre. Suelta para cerrar el gesto. Ideal para seleccionar bloques.", "chip": "Drag & drop"}, {"icon": "wink", "badge": "R", "title": "Guiño derecho: pausa", "text": "Cierra el ojo derecho ~200 ms para ocultar el HUD o despertarlo. En Gaming alterna joystick y cursor de menú.", "chip": "Pausa / Gaming"}, {"icon": "wink-left", "badge": "L", "title": "Guiño izquierdo: atrás", "text": "Un guiño izquierdo vuelve al menú anterior, deshace o hace saltar al personaje según el modo activo.", "chip": "Back / Undo / Jump"}, {"icon": "brow", "badge": "18+", "title": "Micro-gestos expresivos", "text": "Levanta las cejas para abrir Auto-Fix o la IA. Inclina la cabeza a la derecha para indentar y a la izquierda para des-indentar.", "chip": "Cejas + tilt"}]}, {"id": "modes", "icon": "grid-3x3", "tab": "Los 6 Modos de Poder", "title": "Seis formas de trabajar", "kicker": "ELIGE TU PODER", "ribbon": "#fbbf24", "intro": "Cada modo reconfigura las 9 casillas para el contexto correcto. Prueba el simulador y descubre qué hace cada celda.", "cards": [{"icon": "code", "badge": "01", "title": "Código", "text": "Árboles AST, snippets y operadores con cursor inteligente: al insertar condicionales como if () el cursor se posiciona dentro de los paréntesis para escribir la condición al momento; al seleccionar una sugerencia relacionada con if, el prefijo previo se sustituye automáticamente.", "chip": "AST + IA"}, {"icon": "writing", "badge": "02", "title": "Redacción", "text": "Teclado T9 con ñ, acentos y mayúsculas, predicción de palabras y asistente de redacción con IA para reformular, corregir ortografía/puntuación o expandir párrafos sin texto predeterminado.", "chip": "T9 + Asistencia IA"}, {"icon": "terminal", "badge": "03", "title": "Terminal / Git", "text": "Comandos, ramas, commits y reparaciones de Git en una cuadrícula táctil ocular.", "chip": "Git sin teclado"}, {"icon": "data", "badge": "04", "title": "Datos / Mates", "text": "SQL, JSON, YAML, fórmulas y operadores matemáticos agrupados por intención.", "chip": "SQL / LaTeX"}, {"icon": "navigation", "badge": "05", "title": "Navegación", "text": "Salta a definiciones, archivos, símbolos y paneles de VS Code con la mirada.", "chip": "Ir a…"}, {"icon": "mouse", "badge": "06", "title": "FreeLook", "text": "Ratón directo por mirada a 60 Hz con imán superior, umbral de boca adaptado a tu MAR de reposo y carril magnético para la barra de tareas.", "chip": "60 Hz"}]}, {"id": "gaming", "icon": "gamepad", "tab": "Modo Gaming & Roblox", "title": "Juega con la cabeza", "kicker": "HEAD-JOYSTICK EDITION", "ribbon": "#a78bfa", "intro": "Sin mareos: la cabeza mueve al personaje y la boca dispara. El cursor de menú queda para los botones del juego.", "cards": [{"icon": "gamepad", "badge": "WASD", "title": "Head-Joystick", "text": "Mueve la cabeza dentro del área de juego para generar W/A/S/D con zona muerta central. El cursor no se mueve.", "chip": "WASD analógico"}, {"icon": "cursor", "badge": "R", "title": "Guiño derecho: cambia de control", "text": "Alterna entre joystick de cabeza y cursor de menú para pulsar botones, tiendas o inventarios.", "chip": "Joystick ⇄ cursor"}, {"icon": "click", "badge": "MAR", "title": "Boca = clic actual", "text": "En modo joystick, la boca hace clic donde está el cursor del juego sin moverlo. En cursor, apunta y confirma.", "chip": "Clic sin ratón"}, {"icon": "release", "badge": "SAFE", "title": "Salida segura", "text": "Al pausar, cambiar de modo o salir de Gaming se liberan todas las teclas y botones para evitar atascos.", "chip": "Release-all"}]}, {"id": "custom", "icon": "compass", "tab": " Personalización", "title": "Hazlo tuyo", "kicker": "MACROS, PANTALLAS Y PORTAPAPELES", "ribbon": "#34d399", "intro": "IDEye se adapta a tu flujo: macros propias, varios monitores y una máquina del tiempo para el portapapeles.", "cards": [{"icon": "grid", "badge": "3×3", "title": "Editor de Macros", "text": "Asigna snippets, comandos o teclas del sistema a las 9 celdas. Los cambios se guardan en custom_macros.json.", "chip": "Persistente"}, {"icon": "monitor", "badge": "N", "title": "Multi-Monitor", "text": "Ctrl+Alt+N mueve el HUD y el mapeo al siguiente monitor. Cada pantalla conserva su perfil de calibración.", "chip": "Handover"}, {"icon": "clipboard", "badge": "6", "title": "Máquina del Tiempo", "text": "Ctrl+Alt+B abre las últimas seis copias en 3×3. Las escrituras internas de IDEye no contaminan el historial.", "chip": "3×3 history"}, {"icon": "telemetry", "badge": "L2C", "title": "Telemetría Look-To-Code", "text": "Consulta clics de boca, caracteres inyectados, teclas ahorradas y el mapa de calor de tus celdas.", "chip": "Ahorro visible"}, {"icon": "edit", "badge": "FIX", "title": "Auto-Fix de Errores", "text": "Los diagnósticos de VS Code se convierten en reparaciones de un solo gesto: imports, dos puntos, paréntesis y sugerencias de IA.", "chip": "1 clic ocular"}, {"icon": "health", "badge": "28 s", "title": "Health Guard", "text": "Avisa si pasas 28 s sin parpadear o si te acercas demasiado al monitor. Cuida ojos y cuello sin interrumpir tu flujo.", "chip": "Bienestar"}, {"icon": "eye", "badge": "CLAHE", "title": "Visión Nocturna Adaptativa", "text": "Si la luz baja de 85 de luminancia, aplica CLAHE al canal L y una gamma suave. En buena luz no toca ni un píxel.", "chip": "Bajo consumo"}, {"icon": "shield-lock", "badge": "CAP", "title": "Modo Gorra y Visera", "text": "Activa anclajes subnasales rígidos y compensación de sombras oculares (Eye ROI CLAHE). Permite programar con viseras o sombreros sin perder el iris ni sufrir falsos clics de cejas.", "chip": "Anti-sombra"}, {"icon": "cursor", "badge": "3.5x", "title": "Lupa Sniper Zoom", "text": "Pulsa Ctrl+Alt+Z para ampliar 3.5x y reducir el cursor al 28% de velocidad. Se cierra con boca o guiño izquierdo; ya no se activa sola al fijar la mirada.", "chip": "Precisión subpíxel"}, {"icon": "navigation", "badge": "AST", "title": "Salto Semántico AST", "text": "Ctrl+Alt+J extrae clases, métodos y funciones del archivo activo y los reparte en una cuadrícula 3x3 paginada. Un clic salta a la línea exacta.", "chip": "3x3 símbolos"}, {"icon": "gamepad", "badge": "PROFILE", "title": "Perfiles de Juego Dinámicos", "text": "game_profiles.json adapta el control al género activo: sandbox 3D, twin-stick roguelike o estrategia/RPG con edge-scrolling y puntero táctico.", "chip": "Cambios automáticos"}, {"icon": "wand", "badge": "AI", "title": "Agentic Prompt Launcher", "text": "Ctrl+Alt+I abre seis órdenes de ingeniería con el código, los símbolos AST y los diagnósticos del bloque activo. El prompt viaja al chat de VS Code o a la cola MCP local.", "chip": "VS Code + MCP"}, {"icon": "shield-lock", "badge": "V1.0", "title": "Blindaje de Resiliencia", "text": "Landmarks no finitos, cámaras desconectadas, JSON corrupto, portapapeles bloqueado y teclas atascadas se recuperan sin cerrar la app ni perder el control ocular.", "chip": "Chaos tested"}, {"icon": "scroll", "badge": "W", "title": "Gaze Scroll Wheel Elástico", "text": "Ctrl+Alt+W activa una rueda vertical y horizontal proporcional a la mirada. La zona central de lectura no desplaza y la inercia frena con suavidad al volver.", "chip": "Scroll inercial"}, {"icon": "health", "badge": "ECO", "title": "Modo Eco-Sleep de Bajo Consumo", "text": "El pipeline baja a 10 FPS durante la pausa y a 2 FPS tras diez segundos sin rostro. Cualquier rostro detectado despierta de inmediato a máxima frecuencia.", "chip": "CPU casi cero"}, {"icon": "mouse", "badge": "GHOST", "title": "Ghost-Peek HUD + System Tray", "text": "El grid se atenúa al 15% tras 30 segundos de lectura tranquila (configurable en user_settings.json) y reaparece al instante con un gesto o sácada. La bandeja nativa ofrece pausa, modos y calibración.", "chip": "HUD discreto"}, {"icon": "eye-scan", "badge": "WINK", "title": "Guinos a prueba de parpadeos", "text": "Cada ojo aprende su propia apertura. Un parpadeo bilateral, una cara lejana, una cabeza muy girada o una apertura demasiado breve se descartan. Los guinos válidos duran 180-300 ms, tienen enfriamiento y un segundo guino confirma acciones delicadas.", "chip": "Anti-blink adaptativo"}, {"icon": "grid-3x3", "badge": "PHASE 12", "title": "Taxonomía Semántica Profunda", "text": "Código se organiza en ocho categorías: condicionales, bucles, funciones, variables, errores, imports, operadores e IA en vivo. Cada categoría abre un 3x3 adaptado a Python, C, Java, JavaScript, SQL, GDScript y Lua.", "chip": "8 categorías"}, {"icon": "eye-scan", "badge": "LIVE", "title": "Contexto en Vivo: VS Code y Google Docs", "text": "VS Code envía prefijo, línea actual, sufijo, selección, símbolos y diagnósticos. Google Docs, Notion, Overleaf y Word usan un búfer espejo para generar seis sugerencias de escritura coherentes.", "chip": "Código + redacción"}, {"icon": "terminal", "badge": "ENV", "title": "Terminal, Navegación y Debug Conscientes", "text": "Terminal lee rama, estado Git y tipo de proyecto. Navegación cambia entre IDE y documento web. Debug inspecciona variables locales, breakpoints, pila y pasos con la mirada.", "chip": "Entorno real"}, {"icon": "grid-3x3", "badge": "30%", "title": "Dock Lateral Derecho (30%)", "text": "Pulsa D o usa Spotlight para alternar el HUD como columna lateral derecha (~460-480px), dejando libre el 70% de la pantalla para el editor sin oclusiones visuales.", "chip": "Ergonomia visual"}, {"icon": "eye-scan", "badge": "1-PUNTO", "title": "Snap to Caret (Micro-recalibracion)", "text": "Pulsa C o seleccionalo en Spotlight para reajustar al instante el offset de la mirada al cursor de VS Code sin repetir la calibracion de 5 puntos.", "chip": "Precision agil"}, {"icon": "heart-pulse", "badge": "PRE-VUELO", "title": "Asistente Pre-Vuelo Ergonomico", "text": "La pantalla de calibracion supervisa distancia optima (50-70 cm) y luminosidad con distintivos visuales verdes antes de iniciar el seguimiento.", "chip": "Postura y luz"}, {"icon": "shield-lock", "badge": "ADAPTIVE", "title": "Dwell Dinamico y Safe Rest", "text": "Fijacion rapida de 300 ms en navegacion, segura de 850 ms en acciones destructivas y desactivada en casilla 5 para descansar sin Toque de Midas.", "chip": "Anti-Midas Touch"}, {"icon": "wand", "badge": "SPOTLIGHT", "title": "Gaze Command Palette (Spotlight)", "text": "Pulsa P o la casilla 9 para abrir la paleta 3x3 de comandos rapidos: guardar, formatear, terminal, deshacer universal y conmutar layouts.", "chip": "Acceso veloz"}, {"icon": "palette", "badge": "WCAG AAA", "title": "Temas OLED Black y Solarized", "text": "Pulsa O para alternar entre Cyber Glass, negro puro OLED Black (WCAG AAA) para monitores OLED y Solarized Dark para sesiones prolongadas.", "chip": "Alto contraste"}, {"icon": "compass", "badge": "F2", "title": "Mini-Tutorial Guiado de 3 Pasos", "text": "Pulsa F2 para repasar interactivamente la fijacion (Dwell), confirmacion por gesto bucal (MAR) y descanso seguro sin Midas Touch.", "chip": "Onboarding rapido"}]}], "gestures": [{"name": "Apertura de boca (MAR)", "action": "Clic / inyectar / navegar", "description": "Abre la boca brevemente para activar la casilla enfocada. Proteccion adaptativa al reposo anti-Midas.", "icon": "mouth"}, {"name": "Jaw-Lock", "action": "Arrastrar / seleccionar", "description": "Mantén la boca abierta para arrastrar sin botones.", "icon": "jaw"}, {"name": "Guiño derecho", "action": "Pausa / Gaming: joystick ⇄ cursor", "description": "Cierra el ojo derecho ~200 ms para ocultar el HUD o cambiar el control de juego.", "icon": "wink"}, {"name": "Guiño izquierdo", "action": "Volver / deshacer / saltar", "description": "Cierra el ojo izquierdo ~200 ms para retroceder o deshacer.", "icon": "wink-left"}, {"name": "Head-Joystick", "action": "WASD en Gaming", "description": "Mueve la cabeza fuera de la zona muerta para caminar sin tocar el cursor.", "icon": "gamepad"}], "legal": [{"icon": "shield-lock", "title": "100% Privado en RAM Local", "text": "Webcam y landmarks se procesan en memoria volátil; IDEye no graba ni transmite datos biométricos."}, {"icon": "heart-pulse", "title": "Uso Ergonómico / No Médico", "text": "Herramienta de productividad, no un dispositivo médico. Haz pausas y detén el uso si aparece fatiga mandibular, cervical u ocular."}, {"icon": "gamepad", "title": "Aviso Anti-Cheat en Juegos Competitivos", "text": "Gaming usa entrada sintética del SO; verifica compatibilidad antes de usarlo en multijugador con anti-cheat kernel."}], "gesture_thresholds": {"mar_threshold": 0.45, "ear_close": 0.16, "wink_ms": 150, "wink_max_ms": 450}, "shortcuts": [{"key": "Ctrl+Alt+Q", "label": "Salida de emergencia", "description": "Cierra IDEye de inmediato desde cualquier ventana."}, {"key": "Ctrl+Alt+R", "label": "Reset de calibración", "description": "Limpia la calibración y vuelve a un mapeo neutral seguro."}, {"key": "Ctrl+Alt+V", "label": "Selector de modos", "description": "Abre el hub de 6 modos para elegir el contexto de trabajo."}, {"key": "Ctrl+Alt+K", "label": "Auto-switch", "description": "Activa o desactiva el cambio automático según la ventana activa."}, {"key": "Ctrl+Alt+S", "label": "Sonido", "description": "Activa o silencia la retroalimentación acústica."}, {"key": "Ctrl+Alt+F", "label": "FreeLook", "description": "Activa el ratón directo por mirada."}, {"key": "Ctrl+Alt+G", "label": "Gaming", "description": "Entra en el perfil Gaming con head-joystick."}, {"key": "Ctrl+Alt+M", "label": "Monitor", "description": "Colapsa o expande el panel de depuración."}, {"key": "Ctrl+Alt+A", "label": "Menús inteligentes", "description": "Adapta las casillas al AST y al contexto del editor."}, {"key": "Ctrl+Alt+B", "label": "Portapapeles 3x3", "description": "Abre las últimas 6 copias para reinyectarlas con un gesto."}, {"key": "Ctrl+Alt+T", "label": "Modo de tracking", "description": "Alterna Cabeza, Híbrido e Iris puro."}, {"key": "Ctrl+Alt+C", "label": "Calibrar centro", "description": "Fija la mirada actual como centro neutro."}, {"key": "Ctrl+Alt+P", "label": "Pausa / lectura", "description": "Oculta el HUD para leer o descansar la vista."}, {"key": "Ctrl+Alt+L", "label": "Cambiar lenguaje", "description": "Cicla Python, TypeScript, Rust, C++, Go."}, {"key": "Ctrl+Alt+H", "label": "Ayuda", "description": "Abre o cierra la guía rápida de gestos y atajos."}, {"key": "Ctrl+Alt+N", "label": "Siguiente pantalla", "description": "Mueve HUD y mapeo de mirada al siguiente monitor."}, {"key": "Ctrl+Alt+Z", "label": "Z", "description": "Atajo global de IDEye."}, {"key": "Ctrl+Alt+J", "label": "J", "description": "Atajo global de IDEye."}, {"key": "Ctrl+Alt+I", "label": "Agentic Launcher", "description": "Ctrl+Alt+I abre las seis órdenes de ingeniería para VS Code y la cola MCP."}, {"key": "Ctrl+Alt+W", "label": "Scroll ocular", "description": "Ctrl+Alt+W activa o desactiva la rueda de scroll inercial por mirada."}, {"key": "Ctrl+Alt+D", "label": "Dock 30% / 100%", "description": "Ctrl+Alt+D alterna la columna lateral derecha 30% y la cuadrícula completa."}, {"key": "Ctrl+Alt+O", "label": "Tema visual", "description": "Ctrl+Alt+O alterna entre Cyber Glass, OLED Black y Solarized Dark."}], "modes": [{"id": "coding", "name": "Código", "color": "#00F0FF"}, {"id": "writing", "name": "Redacción", "color": "#10B981"}, {"id": "terminal", "name": "Terminal", "color": "#A855F7"}, {"id": "data_math", "name": "Datos", "color": "#F59E0B"}, {"id": "navigation", "name": "Navegación", "color": "#E2E8F0"}, {"id": "sniper", "name": "FREELOOK (RATÓN)", "color": "#F43F5E"}], "simulator": {"coding": {"name": "Código", "cells": [{"label": "1: CONDICIONALES Y RAMAS", "hint": "Abrir condicionales y ramas", "snippet": "if condition:\n    # Bloque condicional asistido por AST\n    process_stream()\n"}, {"label": "2: BUCLES E ITERADORES", "hint": "Abrir bucles e iteradores", "snippet": "def compute_gaze(landmarks: list) -> float:\n    \"\"\"Calcula apertura MAR sin manos.\"\"\"\n    return round(mar_ratio, 3)\n"}, {"label": "3: FUNCIONES Y CLASES", "hint": "Abrir funciones y clases", "snippet": "if mar > 0.45 and ear_score < 0.16:\n    trigger_click()\n"}, {"label": "4: VARIABLES Y ESTRUCTURAS", "hint": "Abrir variables y estructuras", "snippet": "# [Caret Jump] -> Línea 42, Columna 8\n"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)", "snippet": "# [HUD PAUSADO] Modo Lectura Activo (0% CPU)\n"}, {"label": "6: ERRORES, LOGS Y TESTS", "hint": "Abrir errores, logs y tests", "snippet": "import math\nfrom ideye.core import GestureDetector\n"}, {"label": "7: IMPORTS, E/S Y ASYNC", "hint": "Abrir imports, e/s y async", "snippet": "# [Deshacer] Última acción revertida con éxito\n"}, {"label": "8: OPERADORES Y EDICIÓN", "hint": "Abrir operadores y edición", "snippet": "\n    # Bloque anidado con sangría de 4 espacios\n"}, {"label": "9: SUGERENCIAS IA EN VIVO", "hint": "Abrir sugerencias ia en vivo", "snippet": "# [IA Prompt] Optimizar pipeline de visión con vectorización NumPy\n"}]}, "writing": {"name": "Redacción", "cells": [{"label": "1: CONECTORES", "hint": "Conectores y transiciones", "snippet": "Por consiguiente, la tecnología de mirada sin dwell elimina la fatiga ocular.\n"}, {"label": "2: Formato de texto", "hint": "Títulos, listas y negritas", "snippet": "## 1. Arquitectura del Sistema\n\nEl pipeline opera a 60 Hz estables.\n"}, {"label": "3: PUNTUACIÓN", "hint": "Signos de puntuación", "snippet": "«IDEye: mirada como intención, boca como confirmación.»\n"}, {"label": "4: CURSOR / SELECCIÓN", "hint": "Movimiento y selección", "snippet": "[Cursor de texto: selección del párrafo anterior]\n"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)", "snippet": "[Pausa de redacción: descanso visual activo]\n"}, {"label": "6: Escribir letras", "hint": "Teclado de letras, acentos y predicción", "snippet": "Árbol semántico adaptativo con teclado T9 y diccionario español.\n"}, {"label": "7: Borrar y deshacer", "hint": "Borrado y deshacer", "snippet": "[Retroceso de carácter: texto corregido]\n"}, {"label": "8: Saltos y párrafos", "hint": "Saltos y párrafos", "snippet": "\n\n### Nuevo Bloque Temático\n"}, {"label": "9: Sugerencias", "hint": "Ideas para seguir escribiendo", "snippet": "[Asistente IA]: Sugerencia de estilo formal y conciso aplicada.\n"}]}, "terminal": {"name": "Terminal", "cells": [{"label": "1: GIT INTELIGENTE", "hint": "main · 3 cambios", "snippet": "$ git status\nOn branch main\nYour branch is up to date with 'origin/main'.\n"}, {"label": "2: EJECUTAR Y COMPILAR", "hint": "main · 3 cambios", "snippet": "$ git checkout -b feat/interactive-dojo\nSwitched to a new branch 'feat/interactive-dojo'\n"}, {"label": "3: PYTEST Y COBERTURA", "hint": "main · 3 cambios", "snippet": "$ ls -lh docs/\n-rw-r--r-- 1 user 102K guia_interactiva.html\n"}, {"label": "4: ENTORNOS Y PAQUETES", "hint": "main · 3 cambios", "snippet": "$ [Cursor de terminal: inicio de comando]\n"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)", "snippet": "$ [Terminal pausada: modo reposo]\n"}, {"label": "6: RUTAS Y ARCHIVOS", "hint": "main · 3 cambios", "snippet": "$ pytest tests/test_interactive_guide.py -v\n"}, {"label": "7: LIMPIEZA Y SEÑALES", "hint": "main · 3 cambios", "snippet": "$ clear\n"}, {"label": "8: TUBERÍAS Y FLAGS", "hint": "main · 3 cambios", "snippet": "$ make run-dev\n[INFO] IDEye L2C Engine iniciado en puerto 8765...\n"}, {"label": "9: SUGERENCIAS IA", "hint": "main · 3 cambios", "snippet": "$ git log --oneline -n 5\n"}]}, "sniper": {"name": "Gaming", "cells": [{"label": "W", "hint": "avanzar", "snippet": "[Head-Joystick] WASD: Avanzar (W activo)\n"}, {"label": "A", "hint": "izquierda", "snippet": "[Head-Joystick] WASD: Desplazamiento lateral izquierdo (A activo)\n"}, {"label": "S", "hint": "retroceder", "snippet": "[Head-Joystick] WASD: Retroceder (S activo)\n"}, {"label": "D", "hint": "derecha", "snippet": "[Head-Joystick] WASD: Desplazamiento lateral derecho (D activo)\n"}, {"label": "PAUSA", "hint": "descanso visual", "snippet": "[Gaming] Pausa segura: Todas las teclas sintéticas liberadas\n"}, {"label": "SALTO", "hint": "guiño izquierdo", "snippet": "[Gaming] Guiño izquierdo: Salto / Acción secundaria\n"}, {"label": "CLIC", "hint": "boca / clic actual", "snippet": "[Gaming] Clic mandibular MAR: Disparo / Acción principal sin mover cámara\n"}, {"label": "CURSOR", "hint": "guiño derecho", "snippet": "[Gaming] Guiño derecho: Alternado a Cursor de Menú / HUD táctico\n"}, {"label": "360°", "hint": "cámara con mirada", "snippet": "[Gaming] Mirada directa: Giro de cámara 360° a 60 Hz\n"}]}, "data_math": {"name": "Datos", "cells": [{"label": "1: SQL básico", "hint": "Consultas SQL básicas", "snippet": "SELECT id, user_name, mar_score, created_at\nFROM eye_tracking_sessions\nWHERE fps >= 60.0 AND zero_dwell = TRUE;\n"}, {"label": "2: SQL avanzado", "hint": "DDL y avanzado", "snippet": "SELECT session_id, AVG(mar_ratio) AS avg_mar\nFROM gaze_telemetry\nGROUP BY session_id\nHAVING COUNT(*) > 100\nORDER BY avg_mar DESC;\n"}, {"label": "3: JSON / YAML", "hint": "Datos estructurados", "snippet": "{\n  \"mode\": \"data_math\",\n  \"calibration\": {\"mar_baseline\": 0.15, \"threshold\": 0.45},\n  \"zero_dwell\": true\n}\n"}, {"label": "4: Fórmulas", "hint": "Fórmulas matemáticas", "snippet": "# LaTeX Formula: One Euro Filter Cutoff\n# f_c = f_{min} + \\beta |\\dot{x}|\n# \\hat{x}_t = \\alpha x_t + (1 - \\alpha) \\hat{x}_{t-1}\n"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)", "snippet": "# [Datos / Math en pausa: descanso visual activo]\n"}, {"label": "6: Operadores", "hint": "Operadores matemáticos", "snippet": "variance = math.sqrt(sum((x - mean) ** 2 for x in mar_samples) / n)\n"}, {"label": "7: Mover cursor", "hint": "Navegación", "snippet": "# [Navegación SQL: salto a cláusula WHERE]\n"}, {"label": "8: Borrar", "hint": "Borrado", "snippet": "-- [Query reseteada para nueva consulta]\n"}, {"label": "9: Sugerencias", "hint": "Consultas y fórmulas sugeridas", "snippet": "-- [IA Query Optimizer]: Índice compuesto sugerido en (session_id, mar_ratio)\nEXPLAIN ANALYZE SELECT * FROM gaze_telemetry;\n"}]}}, "dojo_challenges": [{"id": "zero-dwell", "num": "01", "title": "Fijación Zero-Dwell", "kicker": "EXPLORACIÓN OCULAR", "badge": "FIX", "desc": "Mueve el retículo sobre cualquier celda del HUD. Zero-Dwell garantiza que mirar solo enfoca e ilumina, NUNCA hace clic por dwell accidental.", "hint": "Pasa el ratón o mirada sobre 2 celdas del simulador", "action_label": "Probar Fijación"}, {"id": "mar-click", "num": "02", "title": "Disparo MAR con la Boca", "kicker": "CONFIRMACIÓN SIN MANOS", "badge": "MAR", "desc": "Abre la boca o pulsa la barra espaciadora para superar el umbral MAR (0.45). Observa el Jaw-Meter dinámico y la onda expansiva.", "hint": "Pulsa [Espacio] o el botón de disparo MAR", "action_label": "Disparar MAR"}, {"id": "code-inject", "num": "03", "title": "Inyección Atómica de Código", "kicker": "EDITOR VS CODE SIMULADO", "badge": "AST", "desc": "Enfoca y haz clic en una celda de Código (FLUJO, FUNC u OPERADORES) para inyectar sintaxis viva estructurada directamente en el editor.", "hint": "Haz clic en una celda de código para inyectarla", "action_label": "Inyectar Snippet"}, {"id": "gaze-scroll", "num": "04", "title": "Scroll Ocular Inercial", "kicker": "DESPLAZAMIENTO ELÁSTICO", "badge": "W", "desc": "Activa el scroll ocular inercial proporcional a la mirada. La zona central de lectura no se mueve y los márgenes frenan con suavidad.", "hint": "Pulsa 'Scroll Ocular' o usa el atajo Ctrl+Alt+W", "action_label": "Probar Scroll"}, {"id": "sniper-lens", "num": "05", "title": "Lupa Sniper Precisión x3.5", "kicker": "APUNTADO SUBPÍXEL", "badge": "3.5x", "desc": "Activa el modo Sniper para ampliar 3.5x la región del cursor y desacelerar la mirada al 28% para apuntar a caracteres individuales.", "hint": "Pulsa 'Sniper x3.5' o el atajo Ctrl+Alt+Z", "action_label": "Activar Sniper"}, {"id": "agentic-mcp", "num": "06", "title": "Agentic Prompt Launcher & MCP", "kicker": "INGENIERÍA ASISTIDA & IA", "badge": "AI", "desc": "Dispara una orden estructurada con contexto AST, código y diagnósticos hacia el chat de IA de VS Code o la cola MCP local.", "hint": "Pulsa 'Agentic Launcher' o el atajo Ctrl+Alt+I", "action_label": "Lanzar Agentic"}], "test_summary": "704 tests, 89 subtests, 16.55s"};
+const GUIDE = {"pages": [{"id": "basics", "icon": "compass", "tab": "Explorando IDEye", "title": "¡Bienvenido a IDEye!", "kicker": "TU CENTRO DE MANDO OCULAR", "ribbon": "#fb7185", "intro": "Un IDE asistivo que convierte la mirada en intención y la boca en confirmación. Sin teclado, sin ratón, sin voz obligatoria.", "cards": [{"icon": "face", "badge": "01", "title": "Mira para mover", "text": "El cursor ocular sigue tu mirada con filtrado One Euro. Mirar solo ilumina: nunca activa una acción por sí solo.", "chip": "Seguimiento < 35 ms"}, {"icon": "calibration", "badge": "02", "title": "Calibración 5 + 1", "text": "Mira al centro y a las cuatro esquinas; el mapeo se ancla al centro para que los bordes izquierdo y derecho sigan siendo alcanzables. El sexto paso mide tu MAR con 3 aperturas y cierres reales de boca o aprovecha la linea base adaptativa en reposo.", "chip": "Perfil por monitor"}, {"icon": "mouth", "badge": "03", "title": "Abre la boca para confirmar", "text": "Una apertura breve equivale a un clic con proteccion anti-Midas adaptativa al reposo. Mantenerla activa el arrastre Jaw-Lock. Nada de dwell-time accidental.", "chip": "Clic sin manos"}, {"icon": "rest", "badge": "04", "title": "Descansa la vista", "text": "Pausa el HUD con Ctrl+Alt+P o un guiño derecho. Las zonas de reposo evitan el efecto Midas mientras lees.", "chip": "Lectura segura"}, {"icon": "scroll", "badge": "↕", "title": "Scroll sin manos", "text": "En FreeLook, deja la mirada en el borde superior o inferior durante ~0.3 s para desplazar la página. Vuelve al centro para parar.", "chip": "Web / documentos"}, {"icon": "shield-lock", "badge": "0-DWELL", "title": "Eliminación Toque de Midas (Zero-Dwell)", "text": "La mirada solo orienta y enfoca el elemento; nunca dispara un clic por tiempo de fijación. La confirmación reside exclusivamente en el canal motor voluntario de la boca (MAR) o ratón.", "chip": "Anti-Midas absoluto"}, {"icon": "mouth", "badge": "MAR+", "title": "Línea Base MAR Adaptativa (Anti-Midas)", "text": "Mide continuamente la apertura en reposo de tus labios (~0.15). Si hablas o sonríes, el umbral se recalcula dinámicamente (+0.30 sobre reposo) evitando falsos clics sin fatiga.", "chip": "Baseline dinámico"}]}, {"id": "gestures", "icon": "eye-scan", "tab": "Dominando los Gestos", "title": "Tu cara es el mando", "kicker": "BOCA, OJOS Y CABEZA", "ribbon": "#22d3ee", "intro": "Tres canales de entrada, una sola intención. Aprende el timing y el HUD responderá como un gamepad orgánico.", "cards": [{"icon": "mouth", "badge": "MAR", "title": "¡Dispara el clic con la boca!", "text": "Abre la boca por encima del umbral MAR durante un instante: IDEye inyecta el snippet o activa la casilla enfocada.", "chip": "Zero-dwell click"}, {"icon": "jaw", "badge": "55%", "title": "Jaw-Lock: arrastra sin soltar", "text": "Mantén la boca abierta para entrar en modo arrastre. Suelta para cerrar el gesto. Ideal para seleccionar bloques.", "chip": "Drag & drop"}, {"icon": "wink", "badge": "R", "title": "Guiño derecho: pausa", "text": "Cierra el ojo derecho ~200 ms para ocultar el HUD o despertarlo. En Gaming alterna joystick y cursor de menú.", "chip": "Pausa / Gaming"}, {"icon": "wink-left", "badge": "L", "title": "Guiño izquierdo: atrás", "text": "Un guiño izquierdo vuelve al menú anterior, deshace o hace saltar al personaje según el modo activo.", "chip": "Back / Undo / Jump"}, {"icon": "brow", "badge": "18+", "title": "Micro-gestos expresivos", "text": "Levanta las cejas para abrir Auto-Fix o la IA. Inclina la cabeza a la derecha para indentar y a la izquierda para des-indentar.", "chip": "Cejas + tilt"}]}, {"id": "modes", "icon": "grid-3x3", "tab": "Los 6 Modos de Poder", "title": "Seis formas de trabajar", "kicker": "ELIGE TU PODER", "ribbon": "#fbbf24", "intro": "Cada modo reconfigura las 9 casillas para el contexto correcto. Prueba el simulador y descubre qué hace cada celda.", "cards": [{"icon": "code", "badge": "01", "title": "Código", "text": "Árboles AST, snippets y operadores con cursor inteligente: al insertar condicionales como if () el cursor se posiciona dentro de los paréntesis para escribir la condición al momento; al seleccionar una sugerencia relacionada con if, el prefijo previo se sustituye automáticamente.", "chip": "AST + IA"}, {"icon": "writing", "badge": "02", "title": "Redacción", "text": "Teclado T9 con ñ, acentos y mayúsculas, predicción de palabras y asistente de redacción con IA para reformular, corregir ortografía/puntuación o expandir párrafos sin texto predeterminado.", "chip": "T9 + Asistencia IA"}, {"icon": "terminal", "badge": "03", "title": "Terminal / Git", "text": "Comandos, ramas, commits y reparaciones de Git en una cuadrícula táctil ocular.", "chip": "Git sin teclado"}, {"icon": "data", "badge": "04", "title": "Datos / Mates", "text": "SQL, JSON, YAML, fórmulas y operadores matemáticos agrupados por intención.", "chip": "SQL / LaTeX"}, {"icon": "navigation", "badge": "05", "title": "Navegación", "text": "Salta a definiciones, archivos, símbolos y paneles de VS Code con la mirada.", "chip": "Ir a…"}, {"icon": "mouse", "badge": "06", "title": "FreeLook", "text": "Ratón directo por mirada a 60 Hz con imán superior, umbral de boca adaptado a tu MAR de reposo y carril magnético para la barra de tareas.", "chip": "60 Hz"}]}, {"id": "gaming", "icon": "gamepad", "tab": "Modo Gaming & Roblox", "title": "Juega con la cabeza", "kicker": "HEAD-JOYSTICK EDITION", "ribbon": "#a78bfa", "intro": "Sin mareos: la cabeza mueve al personaje y la boca dispara. El cursor de menú queda para los botones del juego.", "cards": [{"icon": "gamepad", "badge": "WASD", "title": "Head-Joystick", "text": "Mueve la cabeza dentro del área de juego para generar W/A/S/D con zona muerta central. El cursor no se mueve.", "chip": "WASD analógico"}, {"icon": "cursor", "badge": "R", "title": "Guiño derecho: cambia de control", "text": "Alterna entre joystick de cabeza y cursor de menú para pulsar botones, tiendas o inventarios.", "chip": "Joystick ⇄ cursor"}, {"icon": "click", "badge": "MAR", "title": "Boca = clic actual", "text": "En modo joystick, la boca hace clic donde está el cursor del juego sin moverlo. En cursor, apunta y confirma.", "chip": "Clic sin ratón"}, {"icon": "release", "badge": "SAFE", "title": "Salida segura", "text": "Al pausar, cambiar de modo o salir de Gaming se liberan todas las teclas y botones para evitar atascos.", "chip": "Release-all"}]}, {"id": "custom", "icon": "compass", "tab": " Personalización", "title": "Hazlo tuyo", "kicker": "MACROS, PANTALLAS Y PORTAPAPELES", "ribbon": "#34d399", "intro": "IDEye se adapta a tu flujo: macros propias, varios monitores y una máquina del tiempo para el portapapeles.", "cards": [{"icon": "grid", "badge": "3×3", "title": "Editor de Macros", "text": "Asigna snippets, comandos o teclas del sistema a las 9 celdas. Los cambios se guardan en custom_macros.json.", "chip": "Persistente"}, {"icon": "monitor", "badge": "N", "title": "Multi-Monitor", "text": "Ctrl+Alt+N mueve el HUD y el mapeo al siguiente monitor. Cada pantalla conserva su perfil de calibración.", "chip": "Handover"}, {"icon": "clipboard", "badge": "6", "title": "Máquina del Tiempo", "text": "Ctrl+Alt+B abre las últimas seis copias en 3×3. Las escrituras internas de IDEye no contaminan el historial.", "chip": "3×3 history"}, {"icon": "telemetry", "badge": "L2C", "title": "Telemetría Look-To-Code", "text": "Consulta clics de boca, caracteres inyectados, teclas ahorradas y el mapa de calor de tus celdas.", "chip": "Ahorro visible"}, {"icon": "edit", "badge": "FIX", "title": "Auto-Fix de Errores", "text": "Los diagnósticos de VS Code se convierten en reparaciones de un solo gesto: imports, dos puntos, paréntesis y sugerencias de IA.", "chip": "1 clic ocular"}, {"icon": "health", "badge": "28 s", "title": "Health Guard", "text": "Avisa si pasas 28 s sin parpadear o si te acercas demasiado al monitor. Cuida ojos y cuello sin interrumpir tu flujo.", "chip": "Bienestar"}, {"icon": "eye", "badge": "CLAHE", "title": "Visión Nocturna Adaptativa", "text": "Si la luz baja de 85 de luminancia, aplica CLAHE al canal L y una gamma suave. En buena luz no toca ni un píxel.", "chip": "Bajo consumo"}, {"icon": "shield-lock", "badge": "CAP", "title": "Modo Gorra y Visera", "text": "Activa anclajes subnasales rígidos y compensación de sombras oculares (Eye ROI CLAHE). Permite programar con viseras o sombreros sin perder el iris ni sufrir falsos clics de cejas.", "chip": "Anti-sombra"}, {"icon": "cursor", "badge": "3.5x", "title": "Lupa Sniper Zoom", "text": "Pulsa Ctrl+Alt+Z para ampliar 3.5x y reducir el cursor al 28% de velocidad. Se cierra con boca o guiño izquierdo; ya no se activa sola al fijar la mirada.", "chip": "Precisión subpíxel"}, {"icon": "navigation", "badge": "AST", "title": "Salto Semántico AST", "text": "Ctrl+Alt+J extrae clases, métodos y funciones del archivo activo y los reparte en una cuadrícula 3x3 paginada. Un clic salta a la línea exacta.", "chip": "3x3 símbolos"}, {"icon": "gamepad", "badge": "PROFILE", "title": "Perfiles de Juego Dinámicos", "text": "game_profiles.json adapta el control al género activo: sandbox 3D, twin-stick roguelike o estrategia/RPG con edge-scrolling y puntero táctico.", "chip": "Cambios automáticos"}, {"icon": "wand", "badge": "AI", "title": "Agentic Prompt Launcher", "text": "Ctrl+Alt+I abre seis órdenes de ingeniería con el código, los símbolos AST y los diagnósticos del bloque activo. El prompt viaja al chat de VS Code o a la cola MCP local.", "chip": "VS Code + MCP"}, {"icon": "shield-lock", "badge": "V1.0", "title": "Blindaje de Resiliencia", "text": "Landmarks no finitos, cámaras desconectadas, JSON corrupto, portapapeles bloqueado y teclas atascadas se recuperan sin cerrar la app ni perder el control ocular.", "chip": "Chaos tested"}, {"icon": "scroll", "badge": "W", "title": "Gaze Scroll Wheel Elástico", "text": "Ctrl+Alt+W activa una rueda vertical y horizontal proporcional a la mirada. La zona central de lectura no desplaza y la inercia frena con suavidad al volver.", "chip": "Scroll inercial"}, {"icon": "health", "badge": "ECO", "title": "Modo Eco-Sleep de Bajo Consumo", "text": "El pipeline baja a 10 FPS durante la pausa y a 2 FPS tras diez segundos sin rostro. Cualquier rostro detectado despierta de inmediato a máxima frecuencia.", "chip": "CPU casi cero"}, {"icon": "mouse", "badge": "GHOST", "title": "Ghost-Peek HUD + System Tray", "text": "El grid se atenúa al 15% tras 30 segundos de lectura tranquila (configurable en user_settings.json) y reaparece al instante con un gesto o sácada. La bandeja nativa ofrece pausa, modos y calibración.", "chip": "HUD discreto"}, {"icon": "eye-scan", "badge": "WINK", "title": "Guinos a prueba de parpadeos", "text": "Cada ojo aprende su propia apertura. Un parpadeo bilateral, una cara lejana, una cabeza muy girada o una apertura demasiado breve se descartan. Los guinos válidos duran 180-300 ms, tienen enfriamiento y un segundo guino confirma acciones delicadas.", "chip": "Anti-blink adaptativo"}, {"icon": "grid-3x3", "badge": "PHASE 12", "title": "Taxonomía Semántica Profunda", "text": "Código se organiza en ocho categorías: condicionales, bucles, funciones, variables, errores, imports, operadores e IA en vivo. Cada categoría abre un 3x3 adaptado a Python, C, Java, JavaScript, SQL, GDScript y Lua.", "chip": "8 categorías"}, {"icon": "eye-scan", "badge": "LIVE", "title": "Contexto en Vivo: VS Code y Google Docs", "text": "VS Code envía prefijo, línea actual, sufijo, selección, símbolos y diagnósticos. Google Docs, Notion, Overleaf y Word usan un búfer espejo para generar seis sugerencias de escritura coherentes.", "chip": "Código + redacción"}, {"icon": "terminal", "badge": "ENV", "title": "Terminal, Navegación y Debug Conscientes", "text": "Terminal lee rama, estado Git y tipo de proyecto. Navegación cambia entre IDE y documento web. Debug inspecciona variables locales, breakpoints, pila y pasos con la mirada.", "chip": "Entorno real"}, {"icon": "grid-3x3", "badge": "30%", "title": "Dock Lateral Derecho (30%)", "text": "Pulsa D o usa Spotlight para alternar el HUD como columna lateral derecha (~460-480px), dejando libre el 70% de la pantalla para el editor sin oclusiones visuales.", "chip": "Ergonomia visual"}, {"icon": "eye-scan", "badge": "1-PUNTO", "title": "Snap to Caret (Micro-recalibracion)", "text": "Pulsa C o seleccionalo en Spotlight para reajustar al instante el offset de la mirada al cursor de VS Code sin repetir la calibracion de 5 puntos.", "chip": "Precision agil"}, {"icon": "heart-pulse", "badge": "PRE-VUELO", "title": "Asistente Pre-Vuelo Ergonomico", "text": "La pantalla de calibracion supervisa distancia optima (50-70 cm) y luminosidad con distintivos visuales verdes antes de iniciar el seguimiento.", "chip": "Postura y luz"}, {"icon": "shield-lock", "badge": "ADAPTIVE", "title": "Dwell Dinamico y Safe Rest", "text": "Fijacion rapida de 300 ms en navegacion, segura de 850 ms en acciones destructivas y desactivada en casilla 5 para descansar sin Toque de Midas.", "chip": "Anti-Midas Touch"}, {"icon": "wand", "badge": "SPOTLIGHT", "title": "Gaze Command Palette (Spotlight)", "text": "Pulsa P o la casilla 9 para abrir la paleta 3x3 de comandos rapidos: guardar, formatear, terminal, deshacer universal y conmutar layouts.", "chip": "Acceso veloz"}, {"icon": "palette", "badge": "WCAG AAA", "title": "Temas OLED Black y Solarized", "text": "Pulsa O para alternar entre Cyber Glass, negro puro OLED Black (WCAG AAA) para monitores OLED y Solarized Dark para sesiones prolongadas.", "chip": "Alto contraste"}, {"icon": "compass", "badge": "F2", "title": "Mini-Tutorial Guiado de 3 Pasos", "text": "Pulsa F2 para repasar interactivamente la fijacion (Dwell), confirmacion por gesto bucal (MAR) y descanso seguro sin Midas Touch.", "chip": "Onboarding rapido"}]}], "gestures": [{"name": "Apertura de boca (MAR)", "action": "Clic / inyectar / navegar", "description": "Abre la boca brevemente para activar la casilla enfocada. Proteccion adaptativa al reposo anti-Midas.", "icon": "mouth"}, {"name": "Jaw-Lock", "action": "Arrastrar / seleccionar", "description": "Mantén la boca abierta para arrastrar sin botones.", "icon": "jaw"}, {"name": "Guiño derecho", "action": "Pausa / Gaming: joystick ⇄ cursor", "description": "Cierra el ojo derecho ~200 ms para ocultar el HUD o cambiar el control de juego.", "icon": "wink"}, {"name": "Guiño izquierdo", "action": "Volver / deshacer / saltar", "description": "Cierra el ojo izquierdo ~200 ms para retroceder o deshacer.", "icon": "wink-left"}, {"name": "Head-Joystick", "action": "WASD en Gaming", "description": "Mueve la cabeza fuera de la zona muerta para caminar sin tocar el cursor.", "icon": "gamepad"}], "legal": [{"icon": "shield-lock", "title": "100% Privado en RAM Local", "text": "Webcam y landmarks se procesan en memoria volátil; IDEye no graba ni transmite datos biométricos."}, {"icon": "heart-pulse", "title": "Uso Ergonómico / No Médico", "text": "Herramienta de productividad, no un dispositivo médico. Haz pausas y detén el uso si aparece fatiga mandibular, cervical u ocular."}, {"icon": "gamepad", "title": "Aviso Anti-Cheat en Juegos Competitivos", "text": "Gaming usa entrada sintética del SO; verifica compatibilidad antes de usarlo en multijugador con anti-cheat kernel."}], "gesture_thresholds": {"mar_threshold": 0.45, "ear_close": 0.16, "wink_ms": 150, "wink_max_ms": 450}, "shortcuts": [{"key": "Ctrl+Alt+Q", "label": "Salida de emergencia", "description": "Cierra IDEye de inmediato desde cualquier ventana."}, {"key": "Ctrl+Alt+R", "label": "Reset de calibración", "description": "Limpia la calibración y vuelve a un mapeo neutral seguro."}, {"key": "Ctrl+Alt+V", "label": "Selector de modos", "description": "Abre el hub de 6 modos para elegir el contexto de trabajo."}, {"key": "Ctrl+Alt+K", "label": "Auto-switch", "description": "Activa o desactiva el cambio automático según la ventana activa."}, {"key": "Ctrl+Alt+S", "label": "Sonido", "description": "Activa o silencia la retroalimentación acústica."}, {"key": "Ctrl+Alt+F", "label": "FreeLook", "description": "Activa el ratón directo por mirada."}, {"key": "Ctrl+Alt+G", "label": "Gaming", "description": "Entra en el perfil Gaming con head-joystick."}, {"key": "Ctrl+Alt+M", "label": "Monitor", "description": "Colapsa o expande el panel de depuración."}, {"key": "Ctrl+Alt+A", "label": "Menús inteligentes", "description": "Adapta las casillas al AST y al contexto del editor."}, {"key": "Ctrl+Alt+B", "label": "Portapapeles 3x3", "description": "Abre las últimas 6 copias para reinyectarlas con un gesto."}, {"key": "Ctrl+Alt+T", "label": "Modo de tracking", "description": "Alterna Cabeza, Híbrido e Iris puro."}, {"key": "Ctrl+Alt+C", "label": "Calibrar centro", "description": "Fija la mirada actual como centro neutro."}, {"key": "Ctrl+Alt+P", "label": "Pausa / lectura", "description": "Oculta el HUD para leer o descansar la vista."}, {"key": "Ctrl+Alt+L", "label": "Cambiar lenguaje", "description": "Cicla Python, TypeScript, Rust, C++, Go."}, {"key": "Ctrl+Alt+H", "label": "Ayuda", "description": "Abre o cierra la guía rápida de gestos y atajos."}, {"key": "Ctrl+Alt+N", "label": "Siguiente pantalla", "description": "Mueve HUD y mapeo de mirada al siguiente monitor."}, {"key": "Ctrl+Alt+Z", "label": "Z", "description": "Atajo global de IDEye."}, {"key": "Ctrl+Alt+J", "label": "J", "description": "Atajo global de IDEye."}, {"key": "Ctrl+Alt+I", "label": "Agentic Launcher", "description": "Ctrl+Alt+I abre las seis órdenes de ingeniería para VS Code y la cola MCP."}, {"key": "Ctrl+Alt+W", "label": "Scroll ocular", "description": "Ctrl+Alt+W activa o desactiva la rueda de scroll inercial por mirada."}, {"key": "Ctrl+Alt+D", "label": "Dock 30% / 100%", "description": "Ctrl+Alt+D alterna la columna lateral derecha 30% y la cuadrícula completa."}, {"key": "Ctrl+Alt+O", "label": "Tema visual", "description": "Ctrl+Alt+O alterna entre Cyber Glass, OLED Black y Solarized Dark."}], "modes": [{"id": "coding", "name": "Código", "color": "#00F0FF"}, {"id": "writing", "name": "Redacción", "color": "#10B981"}, {"id": "terminal", "name": "Terminal", "color": "#A855F7"}, {"id": "data_math", "name": "Datos", "color": "#F59E0B"}, {"id": "navigation", "name": "Navegación", "color": "#E2E8F0"}, {"id": "sniper", "name": "FREELOOK (RATÓN)", "color": "#F43F5E"}], "simulator": {"coding": {"name": "Código", "cells": [{"label": "1: CONDICIONALES Y RAMAS", "hint": "Abrir condicionales y ramas", "snippet": "if condition:\n    # Bloque condicional asistido por AST\n    process_stream()\n"}, {"label": "2: BUCLES E ITERADORES", "hint": "Abrir bucles e iteradores", "snippet": "def compute_gaze(landmarks: list) -> float:\n    \"\"\"Calcula apertura MAR sin manos.\"\"\"\n    return round(mar_ratio, 3)\n"}, {"label": "3: FUNCIONES Y CLASES", "hint": "Abrir funciones y clases", "snippet": "if mar > 0.45 and ear_score < 0.16:\n    trigger_click()\n"}, {"label": "4: VARIABLES Y ESTRUCTURAS", "hint": "Abrir variables y estructuras", "snippet": "# [Caret Jump] -> Línea 42, Columna 8\n"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)", "snippet": "# [HUD PAUSADO] Modo Lectura Activo (0% CPU)\n"}, {"label": "6: ERRORES, LOGS Y TESTS", "hint": "Abrir errores, logs y tests", "snippet": "import math\nfrom ideye.core import GestureDetector\n"}, {"label": "7: IMPORTS, E/S Y ASYNC", "hint": "Abrir imports, e/s y async", "snippet": "# [Deshacer] Última acción revertida con éxito\n"}, {"label": "8: OPERADORES Y EDICIÓN", "hint": "Abrir operadores y edición", "snippet": "\n    # Bloque anidado con sangría de 4 espacios\n"}, {"label": "9: SUGERENCIAS IA EN VIVO", "hint": "Abrir sugerencias ia en vivo", "snippet": "# [IA Prompt] Optimizar pipeline de visión con vectorización NumPy\n"}]}, "writing": {"name": "Redacción", "cells": [{"label": "1: CONECTORES", "hint": "Conectores y transiciones", "snippet": "Por consiguiente, la tecnología de mirada sin dwell elimina la fatiga ocular.\n"}, {"label": "2: Formato de texto", "hint": "Títulos, listas y negritas", "snippet": "## 1. Arquitectura del Sistema\n\nEl pipeline opera a 60 Hz estables.\n"}, {"label": "3: PUNTUACIÓN", "hint": "Signos de puntuación", "snippet": "«IDEye: mirada como intención, boca como confirmación.»\n"}, {"label": "4: CURSOR / SELECCIÓN", "hint": "Movimiento y selección", "snippet": "[Cursor de texto: selección del párrafo anterior]\n"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)", "snippet": "[Pausa de redacción: descanso visual activo]\n"}, {"label": "6: Escribir letras", "hint": "Teclado de letras, acentos y predicción", "snippet": "Árbol semántico adaptativo con teclado T9 y diccionario español.\n"}, {"label": "7: Borrar y deshacer", "hint": "Borrado y deshacer", "snippet": "[Retroceso de carácter: texto corregido]\n"}, {"label": "8: Saltos y párrafos", "hint": "Saltos y párrafos", "snippet": "\n\n### Nuevo Bloque Temático\n"}, {"label": "9: Sugerencias", "hint": "Ideas para seguir escribiendo", "snippet": "[Asistente IA]: Sugerencia de estilo formal y conciso aplicada.\n"}]}, "terminal": {"name": "Terminal", "cells": [{"label": "1: GIT INTELIGENTE", "hint": "main · 6 cambios", "snippet": "$ git status\nOn branch main\nYour branch is up to date with 'origin/main'.\n"}, {"label": "2: EJECUTAR Y COMPILAR", "hint": "main · 6 cambios", "snippet": "$ git checkout -b feat/interactive-dojo\nSwitched to a new branch 'feat/interactive-dojo'\n"}, {"label": "3: PYTEST Y COBERTURA", "hint": "main · 6 cambios", "snippet": "$ ls -lh docs/\n-rw-r--r-- 1 user 102K guia_interactiva.html\n"}, {"label": "4: ENTORNOS Y PAQUETES", "hint": "main · 6 cambios", "snippet": "$ [Cursor de terminal: inicio de comando]\n"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)", "snippet": "$ [Terminal pausada: modo reposo]\n"}, {"label": "6: RUTAS Y ARCHIVOS", "hint": "main · 6 cambios", "snippet": "$ pytest tests/test_interactive_guide.py -v\n"}, {"label": "7: LIMPIEZA Y SEÑALES", "hint": "main · 6 cambios", "snippet": "$ clear\n"}, {"label": "8: TUBERÍAS Y FLAGS", "hint": "main · 6 cambios", "snippet": "$ make run-dev\n[INFO] IDEye L2C Engine iniciado en puerto 8765...\n"}, {"label": "9: SUGERENCIAS IA", "hint": "main · 6 cambios", "snippet": "$ git log --oneline -n 5\n"}]}, "sniper": {"name": "Gaming", "cells": [{"label": "W", "hint": "avanzar", "snippet": "[Head-Joystick] WASD: Avanzar (W activo)\n"}, {"label": "A", "hint": "izquierda", "snippet": "[Head-Joystick] WASD: Desplazamiento lateral izquierdo (A activo)\n"}, {"label": "S", "hint": "retroceder", "snippet": "[Head-Joystick] WASD: Retroceder (S activo)\n"}, {"label": "D", "hint": "derecha", "snippet": "[Head-Joystick] WASD: Desplazamiento lateral derecho (D activo)\n"}, {"label": "PAUSA", "hint": "descanso visual", "snippet": "[Gaming] Pausa segura: Todas las teclas sintéticas liberadas\n"}, {"label": "SALTO", "hint": "guiño izquierdo", "snippet": "[Gaming] Guiño izquierdo: Salto / Acción secundaria\n"}, {"label": "CLIC", "hint": "boca / clic actual", "snippet": "[Gaming] Clic mandibular MAR: Disparo / Acción principal sin mover cámara\n"}, {"label": "CURSOR", "hint": "guiño derecho", "snippet": "[Gaming] Guiño derecho: Alternado a Cursor de Menú / HUD táctico\n"}, {"label": "360°", "hint": "cámara con mirada", "snippet": "[Gaming] Mirada directa: Giro de cámara 360° a 60 Hz\n"}]}, "data_math": {"name": "Datos", "cells": [{"label": "1: SQL básico", "hint": "Consultas SQL básicas", "snippet": "SELECT id, user_name, mar_score, created_at\nFROM eye_tracking_sessions\nWHERE fps >= 60.0 AND zero_dwell = TRUE;\n"}, {"label": "2: SQL avanzado", "hint": "DDL y avanzado", "snippet": "SELECT session_id, AVG(mar_ratio) AS avg_mar\nFROM gaze_telemetry\nGROUP BY session_id\nHAVING COUNT(*) > 100\nORDER BY avg_mar DESC;\n"}, {"label": "3: JSON / YAML", "hint": "Datos estructurados", "snippet": "{\n  \"mode\": \"data_math\",\n  \"calibration\": {\"mar_baseline\": 0.15, \"threshold\": 0.45},\n  \"zero_dwell\": true\n}\n"}, {"label": "4: Fórmulas", "hint": "Fórmulas matemáticas", "snippet": "# LaTeX Formula: One Euro Filter Cutoff\n# f_c = f_{min} + \\beta |\\dot{x}|\n# \\hat{x}_t = \\alpha x_t + (1 - \\alpha) \\hat{x}_{t-1}\n"}, {"label": "5: Pausa / Descanso", "hint": "Descansa la vista (mira y abre la boca)", "snippet": "# [Datos / Math en pausa: descanso visual activo]\n"}, {"label": "6: Operadores", "hint": "Operadores matemáticos", "snippet": "variance = math.sqrt(sum((x - mean) ** 2 for x in mar_samples) / n)\n"}, {"label": "7: Mover cursor", "hint": "Navegación", "snippet": "# [Navegación SQL: salto a cláusula WHERE]\n"}, {"label": "8: Borrar", "hint": "Borrado", "snippet": "-- [Query reseteada para nueva consulta]\n"}, {"label": "9: Sugerencias", "hint": "Consultas y fórmulas sugeridas", "snippet": "-- [IA Query Optimizer]: Índice compuesto sugerido en (session_id, mar_ratio)\nEXPLAIN ANALYZE SELECT * FROM gaze_telemetry;\n"}]}}, "dojo_challenges": [{"id": "zero-dwell", "num": "01", "title": "Fijación Zero-Dwell", "kicker": "EXPLORACIÓN OCULAR", "badge": "FIX", "desc": "Mueve el retículo sobre cualquier celda del HUD. Zero-Dwell garantiza que mirar solo enfoca e ilumina, NUNCA hace clic por dwell accidental.", "hint": "Pasa el ratón o mirada sobre 2 celdas del simulador", "action_label": "Probar Fijación"}, {"id": "mar-click", "num": "02", "title": "Disparo MAR con la Boca", "kicker": "CONFIRMACIÓN SIN MANOS", "badge": "MAR", "desc": "Abre la boca o pulsa la barra espaciadora para superar el umbral MAR (0.45). Observa el Jaw-Meter dinámico y la onda expansiva.", "hint": "Pulsa [Espacio] o el botón de disparo MAR", "action_label": "Disparar MAR"}, {"id": "code-inject", "num": "03", "title": "Inyección Atómica de Código", "kicker": "EDITOR VS CODE SIMULADO", "badge": "AST", "desc": "Enfoca y haz clic en una celda de Código (FLUJO, FUNC u OPERADORES) para inyectar sintaxis viva estructurada directamente en el editor.", "hint": "Haz clic en una celda de código para inyectarla", "action_label": "Inyectar Snippet"}, {"id": "gaze-scroll", "num": "04", "title": "Scroll Ocular Inercial", "kicker": "DESPLAZAMIENTO ELÁSTICO", "badge": "W", "desc": "Activa el scroll ocular inercial proporcional a la mirada. La zona central de lectura no se mueve y los márgenes frenan con suavidad.", "hint": "Pulsa 'Scroll Ocular' o usa el atajo Ctrl+Alt+W", "action_label": "Probar Scroll"}, {"id": "sniper-lens", "num": "05", "title": "Lupa Sniper Precisión x3.5", "kicker": "APUNTADO SUBPÍXEL", "badge": "3.5x", "desc": "Activa el modo Sniper para ampliar 3.5x la región del cursor y desacelerar la mirada al 28% para apuntar a caracteres individuales.", "hint": "Pulsa 'Sniper x3.5' o el atajo Ctrl+Alt+Z", "action_label": "Activar Sniper"}, {"id": "agentic-mcp", "num": "06", "title": "Agentic Prompt Launcher & MCP", "kicker": "INGENIERÍA ASISTIDA & IA", "badge": "AI", "desc": "Dispara una orden estructurada con contexto AST, código y diagnósticos hacia el chat de IA de VS Code o la cola MCP local.", "hint": "Pulsa 'Agentic Launcher' o el atajo Ctrl+Alt+I", "action_label": "Lanzar Agentic"}], "test_summary": "704 tests, 89 subtests, 16.55s"};
 
 // Procedural Web Audio API Synthesizer (100% self-contained & offline)
 const SoundFX = (() => {
@@ -2030,6 +2307,15 @@ const SoundFX = (() => {
     }
     return ctx;
   }
+
+  // Pre-unlock audio context on first user pointer or key gesture
+  const unlock = () => {
+    getContext();
+    window.removeEventListener("pointerdown", unlock);
+    window.removeEventListener("keydown", unlock);
+  };
+  window.addEventListener("pointerdown", unlock);
+  window.addEventListener("keydown", unlock);
 
   function playTone(freq, type, duration, gainVal, rampTo) {
     if (!enabled) return;
@@ -2072,8 +2358,15 @@ const SoundFX = (() => {
     },
     whoosh: () => playTone(440, "sine", 0.14, 0.05, 180),
     shockwave: () => playTone(300, "triangle", 0.16, 0.1, 110),
+    chime: () => {
+      playTone(659.25, "triangle", 0.12, 0.07);
+      setTimeout(() => playTone(987.77, "sine", 0.16, 0.07), 70);
+    },
   };
 })();
+
+const VOL_ON_SVG = '<polygon points="44 20 24 36 8 36 8 60 24 60 44 76 44 20"/><path d="M62 34a20 20 0 0 1 0 28M76 20a40 40 0 0 1 0 56"/>';
+const VOL_OFF_SVG = '<polygon points="44 20 24 36 8 36 8 60 24 60 44 76 44 20"/><line x1="88" y1="36" x2="64" y2="60"/><line x1="64" y1="36" x2="88" y2="60"/>';
 
 function toggleSound() {
   SoundFX.setEnabled(!SoundFX.isEnabled());
@@ -2087,6 +2380,10 @@ function updateSoundUI() {
   const on = SoundFX.isEnabled();
   label.textContent = on ? "Sonido: ON" : "Sonido: OFF";
   btn.classList.toggle("muted", !on);
+  const icon = btn.querySelector("svg");
+  if (icon) {
+    icon.innerHTML = on ? VOL_ON_SVG : VOL_OFF_SVG;
+  }
 }
 
 // Multi-Theme Selector
@@ -2109,12 +2406,13 @@ function toggleTheme() {
   SoundFX.whoosh();
 }
 
-// Reactive Mode Accents
+// Reactive Mode Accents (Cyan for Coding, Emerald for Writing, Purple for Terminal, Crimson for Gaming, Amber for Data/Math)
 const MODE_COLORS = {
   coding: { accent: "#06b6d4", rgb: "6, 182, 212", name: "Código (AST)" },
   writing: { accent: "#10b981", rgb: "16, 185, 129", name: "Redacción (T9)" },
   terminal: { accent: "#a855f7", rgb: "168, 85, 247", name: "Terminal (Git)" },
   sniper: { accent: "#ef4444", rgb: "239, 68, 68", name: "Gaming (60Hz)" },
+  data_math: { accent: "#f59e0b", rgb: "245, 158, 11", name: "Datos / Math (SQL & LaTeX)" },
 };
 
 function applyModeAccent(modeId) {
@@ -2167,12 +2465,12 @@ function highlightSyntax(code) {
     .replace(/>/g, "&gt;");
 
   return escaped.split("\n").map(line => {
-    if (line.trim().startsWith("#") || line.trim().startsWith("//") || line.trim().startsWith("$")) {
+    if (line.trim().startsWith("#") || line.trim().startsWith("//") || line.trim().startsWith("$") || line.trim().startsWith("--")) {
       return '<span class="syn-com">' + line + '</span>';
     }
     let hl = line
       .replace(/(".*?"|'.*?'|«.*?»)/g, '<span class="syn-str">$1</span>')
-      .replace(/\b(def|class|import|from|return|if|else|elif|for|while|await|async|pass|and|or|not|in|is|None|True|False)\b/g, '<span class="syn-kw">$1</span>')
+      .replace(/\b(def|class|import|from|return|if|else|elif|for|while|await|async|pass|and|or|not|in|is|None|True|False|SELECT|FROM|WHERE|JOIN|GROUP|BY|ORDER|HAVING|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|UNION)\b/g, '<span class="syn-kw">$1</span>')
       .replace(/\b([a-zA-Z_]\w*)(?=\s*\()/g, '<span class="syn-fn">$1</span>')
       .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="syn-num">$1</span>');
     return hl;
@@ -2222,12 +2520,16 @@ function runSimSnippet() {
   SoundFX.fanfare();
 }
 
-// Training Dojo Challenges Engine
+// Training Dojo Challenges Engine with LocalStorage Persistence
 const completedChallenges = new Set();
 
-function completeDojoChallenge(id) {
+function completeDojoChallenge(id, silent) {
   if (completedChallenges.has(id)) return;
   completedChallenges.add(id);
+
+  try {
+    localStorage.setItem("ideye_dojo_progress", JSON.stringify([...completedChallenges]));
+  } catch (e) {}
 
   const card = document.getElementById("dojoCard_" + id);
   const status = document.getElementById("dojoStatus_" + id);
@@ -2247,19 +2549,22 @@ function completeDojoChallenge(id) {
   if (percentEl) percentEl.textContent = percent + "%";
   if (meterEl) meterEl.style.width = percent + "%";
 
-  if (count === 6) {
-    const celebration = document.getElementById("dojoCelebration");
-    if (celebration) {
-      celebration.style.display = "flex";
-      celebration.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (!silent) {
+    if (count === 6) {
+      const celebration = document.getElementById("dojoCelebration");
+      if (celebration) {
+        celebration.style.display = "flex";
+        celebration.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      SoundFX.fanfare();
+    } else {
+      SoundFX.chime();
     }
-    SoundFX.fanfare();
-  } else {
-    SoundFX.click();
   }
 }
 
 function triggerDojoChallenge(id) {
+  showPage(2);
   if (id === "zero-dwell") {
     const firstCell = document.querySelector(".sim-cell");
     if (firstCell) {
@@ -2275,14 +2580,21 @@ function triggerDojoChallenge(id) {
     triggerGazeScrollSim();
   } else if (id === "sniper-lens") {
     toggleSniperLens();
-    completeDojoChallenge("sniper-lens");
   } else if (id === "agentic-mcp") {
     triggerAgenticPromptSim();
   }
 }
 
+function jumpToDojo() {
+  showPage(2);
+  const dojo = document.getElementById("dojoContainer");
+  if (dojo) dojo.scrollIntoView({ behavior: "smooth", block: "start" });
+  SoundFX.tick();
+}
+
 function resetDojoProgress() {
   completedChallenges.clear();
+  try { localStorage.removeItem("ideye_dojo_progress"); } catch (e) {}
   document.querySelectorAll(".dojo-card").forEach(c => c.classList.remove("completed"));
   document.querySelectorAll(".dojo-status").forEach(s => {
     s.classList.remove("done");
@@ -2300,10 +2612,24 @@ function resetDojoProgress() {
   SoundFX.whoosh();
 }
 
-// MAR Mouth Aperture & Shockwave
+// MAR Mouth Aperture & Zero-Dwell Click Confirmation
 let hoveredCell = null;
 
-function triggerMARClick(originX, originY) {
+function selectAndExecuteCell(btn, cell, index, modeName) {
+  document.querySelectorAll(".sim-cell").forEach(c => c.classList.remove("selected"));
+  if (btn) btn.classList.add("selected");
+  const info = document.getElementById("simInfo");
+  if (info) {
+    info.innerHTML = `<span class="mini-kicker">${modeName.toUpperCase()} · CASILLA ${index + 1}</span><h4>${cell.label}</h4><p>${cell.hint}</p>`;
+  }
+  if (cell.snippet) {
+    injectCodeIntoEditor(cell.snippet);
+  } else {
+    injectCodeIntoEditor(`# Acción: ${cell.label}\n`);
+  }
+}
+
+function triggerMARClick(originX, originY, targetBtn) {
   const jawFill = document.getElementById("jawFill");
   const jawValue = document.getElementById("jawValue");
   if (jawFill) {
@@ -2319,9 +2645,13 @@ function triggerMARClick(originX, originY) {
   SoundFX.shockwave();
   completeDojoChallenge("mar-click");
 
-  const targetCell = hoveredCell;
-  if (targetCell) {
-    targetCell.click();
+  const btn = targetBtn || hoveredCell || document.querySelector(".sim-cell.selected") || document.querySelector(".sim-cell");
+  if (btn && btn.dataset && btn.dataset.cellIndex !== undefined) {
+    const idx = Number(btn.dataset.cellIndex);
+    const mode = (GUIDE.simulator || {})[currentMode];
+    if (mode && mode.cells && mode.cells[idx]) {
+      selectAndExecuteCell(btn, mode.cells[idx], idx, mode.name);
+    }
   }
 
   setTimeout(() => {
@@ -2400,6 +2730,16 @@ window.addEventListener("mousemove", (e) => {
       hoveredCell.classList.add("gaze-focused");
       SoundFX.tick();
       completeDojoChallenge("zero-dwell");
+      if (hoveredCell.dataset && hoveredCell.dataset.cellIndex !== undefined) {
+        const idx = Number(hoveredCell.dataset.cellIndex);
+        const mode = (GUIDE.simulator || {})[currentMode];
+        if (mode && mode.cells && mode.cells[idx]) {
+          const info = document.getElementById("simInfo");
+          if (info) {
+            info.innerHTML = `<span class="mini-kicker">${mode.name.toUpperCase()} · ENFOQUE ZERO-DWELL (CASILLA ${idx + 1})</span><h4>${mode.cells[idx].label}</h4><p>${mode.cells[idx].hint}</p>`;
+          }
+        }
+      }
     }
   }
 });
@@ -2451,6 +2791,14 @@ try {
 applyTheme(initialTheme);
 updateSoundUI();
 
+// Restore Dojo progress
+try {
+  const savedProg = JSON.parse(localStorage.getItem("ideye_dojo_progress") || "[]");
+  if (Array.isArray(savedProg)) {
+    savedProg.forEach(id => completeDojoChallenge(id, true));
+  }
+} catch (e) {}
+
 let currentPage = 0;
 let currentMode = Object.keys(GUIDE.simulator || {})[0] || "coding";
 
@@ -2478,19 +2826,10 @@ function renderSimulator(modeId) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "sim-cell";
+    button.dataset.cellIndex = index;
     button.innerHTML = `<span>${cell.label}</span><small>${cell.hint}</small>`;
-    button.addEventListener("click", () => {
-      document.querySelectorAll(".sim-cell").forEach(c => c.classList.remove("selected"));
-      button.classList.add("selected");
-      const info = document.getElementById("simInfo");
-      if (info) {
-        info.innerHTML = `<span class="mini-kicker">${mode.name.toUpperCase()} · CASILLA ${index + 1}</span><h4>${cell.label}</h4><p>${cell.hint}</p>`;
-      }
-      if (cell.snippet) {
-        injectCodeIntoEditor(cell.snippet);
-      } else {
-        injectCodeIntoEditor(`# Acción: ${cell.label}\n`);
-      }
+    button.addEventListener("click", (e) => {
+      triggerMARClick(e.clientX, e.clientY, button);
     });
     grid.appendChild(button);
   });

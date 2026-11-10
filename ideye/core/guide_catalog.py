@@ -46,6 +46,9 @@ SVG_ICONS: Dict[str, str] = {
     "code-bracket": '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
     "cpu": '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>',
     "zap": '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    "play": '<polygon points="5 3 19 12 5 21 5 3"/>',
+    "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+    "moon": '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
 }
 
 
@@ -79,7 +82,7 @@ PAGES: List[Dict[str, Any]] = [
         "tab": "Explorando IDEye",
         "title": "¡Bienvenido a IDEye!",
         "kicker": "TU CENTRO DE MANDO OCULAR",
-        "ribbon": "#fb7185",
+        "ribbon": "#0284c7",
         "intro": "Un IDE asistivo que convierte la mirada en intención y la boca en confirmación. Sin teclado, sin ratón, sin voz obligatoria.",
         "cards": [
             {
@@ -112,24 +115,31 @@ PAGES: List[Dict[str, Any]] = [
             },
             {
                 "icon": "scroll",
-                "badge": "↕",
+                "badge": "05",
                 "title": "Scroll sin manos",
                 "text": "En FreeLook, deja la mirada en el borde superior o inferior durante ~0.3 s para desplazar la página. Vuelve al centro para parar.",
                 "chip": "Web / documentos",
             },
             {
                 "icon": "shield-lock",
-                "badge": "0-DWELL",
+                "badge": "06",
                 "title": "Eliminación Toque de Midas (Zero-Dwell)",
                 "text": "La mirada solo orienta y enfoca el elemento; nunca dispara un clic por tiempo de fijación. La confirmación reside exclusivamente en el canal motor voluntario de la boca (MAR) o ratón.",
                 "chip": "Anti-Midas absoluto",
             },
             {
                 "icon": "mouth",
-                "badge": "MAR+",
+                "badge": "07",
                 "title": "Línea Base MAR Adaptativa (Anti-Midas)",
                 "text": "Mide continuamente la apertura en reposo de tus labios (~0.15). Si hablas o sonríes, el umbral se recalcula dinámicamente (+0.30 sobre reposo) evitando falsos clics sin fatiga.",
                 "chip": "Baseline dinámico",
+            },
+            {
+                "icon": "sparkles",
+                "badge": "08",
+                "title": "Filtro One Euro Adaptativo",
+                "text": "Suprime el micro-temblor involuntario en fijaciones sin introducir retraso en sacadas rápidas. Respuesta instantánea bajo 35 ms.",
+                "chip": "Suavizado dinámico",
             },
         ],
     },
@@ -155,6 +165,13 @@ PAGES: List[Dict[str, Any]] = [
                 "title": "Jaw-Lock: arrastra sin soltar",
                 "text": "Mantén la boca abierta para entrar en modo arrastre. Suelta para cerrar el gesto. Ideal para seleccionar bloques.",
                 "chip": "Drag & drop",
+            },
+            {
+                "icon": "gamepad",
+                "badge": "WASD",
+                "title": "Head-Joystick Continuo",
+                "text": "Inclina levemente la cabeza fuera de la zona muerta para emitir vectores analógicos de movimiento continuo sin tocar el teclado.",
+                "chip": "Cabeza = joystick",
             },
             {
                 "icon": "wink",
@@ -274,7 +291,7 @@ PAGES: List[Dict[str, Any]] = [
     {
         "id": "custom",
         "icon": "compass",
-        "tab": " Personalización",
+        "tab": "Personalización",
         "title": "Hazlo tuyo",
         "kicker": "MACROS, PANTALLAS Y PORTAPAPELES",
         "ribbon": "#34d399",

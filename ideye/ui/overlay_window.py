@@ -4932,13 +4932,30 @@ class OverlayWindow(QWidget):
             painter.setFont(self._font_card_number)
             painter.drawText(number_rect, Qt.AlignmentFlag.AlignCenter, str(number))
 
-            # Adaptive dwell radial progress indicator
-            if (
-                getattr(self, "adaptive_dwell_enabled", True)
-                and getattr(self, "_dwell_progress", 0.0) > 0.0
-                and i == getattr(self, "_dwell_block", None)
-                and i != 4
-            ):
+            # Card activation progress indicator (top-left badge)
+            # Only visible when the user actively attempts to access the cell/mode:
+            # - Intentional facial confirmation (mouth opening / MAR towards threshold)
+            # - Intentional dwell auto-click (if dwell_click_enabled is explicitly active)
+            # - Interactive onboarding tutorial (step 1 gaze fixation)
+            activation_progress = 0.0
+            if is_active and i != 4:
+                # 1. Mouth opening gesture: user deliberately confirming access to this card/mode
+                mar_threshold = max(0.01, float(getattr(self, "mar_threshold", 0.35)))
+                mar_rest = float(getattr(self, "_mar_rest_baseline", 0.20))
+                current_mar = float(getattr(self, "current_mar", 0.0))
+                if current_mar > mar_rest + 0.015:
+                    mar_ratio = max(0.0, min(1.0, (current_mar - mar_rest) / max(0.01, mar_threshold - mar_rest)))
+                    if mar_ratio > 0.08:
+                        activation_progress = mar_ratio
+
+                # 2. Dwell-click enabled (accessibility opt-in) or tutorial step 1
+                if activation_progress == 0.0:
+                    is_tutorial_dwell = bool(getattr(self, "show_tutorial_modal", False) and getattr(self, "tutorial_step", 0) == 1)
+                    is_dwell_click_active = bool(getattr(self, "dwell_click_enabled", False))
+                    if (is_dwell_click_active or is_tutorial_dwell) and getattr(self, "adaptive_dwell_enabled", True):
+                        activation_progress = float(getattr(self, "_dwell_progress", 0.0))
+
+            if activation_progress > 0.0:
                 dwell_rect = number_rect.adjusted(-3.0, -3.0, 3.0, 3.0)
                 theme_accent = QColor(self.theme_color or "#3b82f6")
                 dwell_pen = QPen(QColor(theme_accent.red(), theme_accent.green(), theme_accent.blue(), 230), 2.5)
@@ -4946,7 +4963,7 @@ class OverlayWindow(QWidget):
                     dwell_pen.setColor(QColor(239, 68, 68, 230))
                 painter.setPen(dwell_pen)
                 painter.setBrush(Qt.BrushStyle.NoBrush)
-                span_angle = int(-self._dwell_progress * 360 * 16)
+                span_angle = int(-activation_progress * 360 * 16)
                 painter.drawArc(dwell_rect, 90 * 16, span_angle)
 
             # Status badge (right side of the band)

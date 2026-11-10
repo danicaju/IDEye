@@ -1,66 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="256" height="256">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <linearGradient id="bgGradA" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0a0f1d"/>
-      <stop offset="50%" stop-color="#081026"/>
-      <stop offset="100%" stop-color="#030712"/>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#080e1d"/>
+      <stop offset="100%" stop-color="#020409"/>
     </linearGradient>
-    <linearGradient id="sapphireBorderA" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.8"/>
-      <stop offset="50%" stop-color="#1d4ed8" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#2563eb" stop-opacity="0.7"/>
+    <linearGradient id="glassTop4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd" stop-opacity="0.5"/>
+      <stop offset="40%" stop-color="#3b82f6" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0.05"/>
     </linearGradient>
-    <linearGradient id="bracketGradA" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#60a5fa"/>
-      <stop offset="100%" stop-color="#2563eb"/>
-    </linearGradient>
-    <linearGradient id="eyeContourA" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#2563eb"/>
-      <stop offset="50%" stop-color="#60a5fa"/>
+    <linearGradient id="bracketGlass4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
       <stop offset="100%" stop-color="#1d4ed8"/>
     </linearGradient>
-    <radialGradient id="irisGlowA" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#60a5fa" stop-opacity="1"/>
-      <stop offset="40%" stop-color="#2563eb" stop-opacity="0.9"/>
-      <stop offset="75%" stop-color="#1d4ed8" stop-opacity="0.6"/>
-      <stop offset="100%" stop-color="#0a193b" stop-opacity="0.2"/>
-    </radialGradient>
-    <radialGradient id="pupilGradA" cx="40%" cy="40%" r="60%">
-      <stop offset="0%" stop-color="#0a1329"/>
-      <stop offset="100%" stop-color="#020617"/>
+    <radialGradient id="irisSphere4" cx="42%" cy="42%" r="58%">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="30%" stop-color="#3b82f6"/>
+      <stop offset="70%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#070c1e"/>
     </radialGradient>
   </defs>
 
-  <!-- Background squircle -->
-  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#bgGradA)" stroke="#1e293b" stroke-width="1.5"/>
-  <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#sapphireBorderA)" stroke-width="1.5"/>
+  <!-- Squircle Base with Glass Rim -->
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#bg4)" stroke="#1e293b" stroke-width="1.5"/>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#glassTop4)" stroke-width="1.5"/>
 
-  <!-- Left Code Bracket -->
-  <path d="M 32 44 L 18 64 L 32 84" fill="none" stroke="url(#bracketGradA)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Left Code Bracket < -->
+  <path d="M 32 45 L 18 64 L 32 83" fill="none" stroke="url(#bracketGlass4)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Right Code Bracket -->
-  <path d="M 96 44 L 110 64 L 96 84" fill="none" stroke="url(#bracketGradA)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right Code Bracket > -->
+  <path d="M 96 45 L 110 64 L 96 83" fill="none" stroke="url(#bracketGlass4)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Cybernetic Eye Contour Outer Arc -->
-  <path d="M 34 64 C 44 46, 84 46, 94 64 C 84 82, 44 82, 34 64 Z" fill="#0a1024" fill-opacity="0.85" stroke="url(#eyeContourA)" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Cyber Eye Contour with Internal Depth -->
+  <path d="M 35 64 C 44 47, 84 47, 93 64 C 84 81, 44 81, 35 64 Z" fill="#050a16" stroke="url(#bracketGlass4)" stroke-width="2.6" stroke-linejoin="round"/>
 
-  <!-- Outer Iris Ring with Aperture Ticks -->
-  <circle cx="64" cy="64" r="18" fill="url(#irisGlowA)" stroke="#3b82f6" stroke-width="2"/>
-  <circle cx="64" cy="64" r="21" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="4, 5" stroke-opacity="0.85"/>
+  <!-- 3D Convex Iris Sphere -->
+  <circle cx="64" cy="64" r="19" fill="url(#irisSphere4)" stroke="#3b82f6" stroke-width="1.5"/>
 
-  <!-- Pupil Center -->
-  <circle cx="64" cy="64" r="9" fill="url(#pupilGradA)" stroke="#2563eb" stroke-width="1.5"/>
+  <!-- Deep Pupil Core -->
+  <circle cx="64" cy="64" r="8.5" fill="#02050e" stroke="#2563eb" stroke-width="1.2"/>
 
-  <!-- Aperture crosshair guides -->
-  <line x1="64" y1="40" x2="64" y2="46" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
-  <line x1="64" y1="82" x2="64" y2="88" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
-  <line x1="40" y1="64" x2="46" y2="64" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
-  <line x1="82" y1="64" x2="88" y2="64" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
-
-  <!-- Eye Specular Glint Reflection -->
-  <circle cx="61" cy="60" r="3.2" fill="#ffffff" fill-opacity="0.95"/>
-  <circle cx="67" cy="67" r="1.5" fill="#ffffff" fill-opacity="0.75"/>
-
-  <!-- Center Laser Target Node -->
-  <circle cx="64" cy="64" r="2.5" fill="#3b82f6"/>
+  <!-- Soft Specular Arc Glint -->
+  <circle cx="60.5" cy="59.5" r="3.2" fill="#ffffff" fill-opacity="0.95"/>
+  <circle cx="66.5" cy="65.5" r="1.6" fill="#93c5fd" fill-opacity="0.7"/>
 </svg>

@@ -28,9 +28,12 @@ def main():
     trans_lines = [
         line for line in lines
         if not (
-            'fill="url(#bgGradA)"' in line
-            or 'stroke="url(#sapphireBorderA)"' in line
-            or "Background squircle" in line
+            'rx="28"' in line
+            or 'rx="26"' in line
+            or 'width="116"' in line
+            or 'width="112"' in line
+            or "Squircle Base" in line
+            or "Background" in line
         )
     ]
     transparent_svg = "\n".join(trans_lines)

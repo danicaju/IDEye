@@ -136,6 +136,21 @@ def _clean_action_label(label: str) -> str:
     return label or ""
 
 
+def _soften_caps(text: str) -> str:
+    """Turns SHOUTED menu labels into sentence case, keeping short acronyms (SQL, JSON)."""
+    words = text.split(" ")
+    if not any(len(w) > 4 and w.isupper() for w in words):
+        return text
+    small = {"Y", "E", "O", "U", "A", "DE", "EN", "EL", "LA", "AL", "DEL", "CON", "POR", "LOS", "LAS"}
+    out = [
+        w.lower() if w.isupper() and (len(w) > 4 or w in small) else w
+        for w in words
+    ]
+    if out and out[0] and out[0][0].isalpha():
+        out[0] = out[0][0].upper() + out[0][1:]
+    return " ".join(out)
+
+
 def _menu_card_label(item) -> str:
     """Returns the human-facing card label, never the internal icon id.
 
@@ -1093,8 +1108,7 @@ class OverlayWindow(QWidget):
                 part = part.strip()
                 if not part:
                     continue
-                if len(part) > 14:
-                    part = part[:14] + "…"
+                part = _soften_caps(part)
                 key = part.lower()
                 if key in seen:
                     continue
@@ -1123,12 +1137,13 @@ class OverlayWindow(QWidget):
 
         painter.setFont(self._font_card_subtitle)
         for label in chip_labels:
-            available = max_right - start_x - 10.0
-            if available < 18.0:
-                break
-            text = fm.elidedText(str(label), Qt.TextElideMode.ElideRight, int(available))
+            # Only whole labels are drawn: a chip that does not fit is dropped,
+            # never cut mid-word with an ellipsis.
+            text = str(label)
             text_w = fm.horizontalAdvance(text)
-            chip_w = float(text_w) + 10.0
+            chip_w = float(text_w) + 12.0
+            if start_x + chip_w > max_right:
+                break
             chip_rect = QRectF(start_x, y, chip_w, chip_h)
             painter.setBrush(QColor(255, 255, 255, 12))
             painter.setPen(QPen(QColor(255, 255, 255, 28), 1.0))

@@ -172,12 +172,12 @@ def _menu_card_label(item) -> str:
 
 
 MODE_SHORT_LABELS = {
-    "coding": "CÓDIGO",
-    "writing": "REDACCIÓN",
-    "terminal": "TERMINAL",
-    "data_math": "DATOS",
-    "navigation": "NAV",
-    "sniper": "FREELOOK",
+    "coding": "Código",
+    "writing": "Redacción",
+    "terminal": "Terminal",
+    "data_math": "Datos",
+    "navigation": "Navegación",
+    "sniper": "FreeLook",
 }
 
 # (mode_id, display label, hint, icon) in the order shown in the mode hub.
@@ -427,7 +427,7 @@ class OverlayWindow(QWidget):
         if start_in_mode_selector:
             self.current_node_id = "MODE_SELECT"
             self.last_action_desc = "Elige un modo"
-            self._mode_banner_text = "ELIGE UN MODO"
+            self._mode_banner_text = "Elige un modo"
             try:
                 self._mode_banner_start = time.time()
                 self._mode_banner_until = self._mode_banner_start + 3.0
@@ -2633,7 +2633,7 @@ class OverlayWindow(QWidget):
         target = self._freelook_last_pos
         self.sniper_lens.activate(float(target[0]), float(target[1]))
         self._capture_sniper_lens()
-        self.last_action_desc = "Lupa Sniper: ON"
+        self.last_action_desc = "Lupa Sniper activada"
         self.update()
 
     def toggle_sniper_lens(self) -> None:
@@ -2641,7 +2641,7 @@ class OverlayWindow(QWidget):
             return
         target = self._freelook_last_pos
         active = self.sniper_lens.toggle(float(target[0]), float(target[1]))
-        self.last_action_desc = "Lupa Sniper: ON" if active else "Lupa Sniper: OFF"
+        self.last_action_desc = "Lupa Sniper activada" if active else "Lupa Sniper desactivada"
         if active:
             self._capture_sniper_lens()
         self.update()
@@ -2863,7 +2863,7 @@ class OverlayWindow(QWidget):
                 return
             if self._active_diagnostics and "AUTO_FIX" in self.menu_tree:
                 self.navigate_to("AUTO_FIX")
-                self.last_action_desc = "Auto-Fix: elige reparaci?n"
+                self.last_action_desc = "Auto-Fix: elige una reparación"
             else:
                 self._trigger_ai_prediction()
                 self.last_action_desc = "Sugerencias de contexto"
@@ -2898,7 +2898,7 @@ class OverlayWindow(QWidget):
         if gesture_name == "WINK_LEFT":
             if self.sniper_lens.active:
                 self.sniper_lens.deactivate()
-                self.last_action_desc = "Lupa Sniper: OFF"
+                self.last_action_desc = "Lupa Sniper desactivada"
                 self.update()
                 return
             if self.current_context_mode_id == "sniper":
@@ -3369,7 +3369,7 @@ class OverlayWindow(QWidget):
         """Builds the current file symbol map and opens its 3x3 page."""
         symbols = self.ast_code_jumper.extract_symbols() if refresh else self.ast_code_jumper.symbols
         if not symbols:
-            self.last_action_desc = "AST: sin s?mbolos en el archivo activo"
+            self.last_action_desc = "AST: no hay símbolos en el archivo activo"
             self.update()
             return
         self._ast_page = 0
@@ -3377,7 +3377,7 @@ class OverlayWindow(QWidget):
             symbols, self._ast_page, parent_id="ROOT"
         )
         self.navigate_to("AST_SYMBOLS")
-        self.last_action_desc = f"AST: {len(symbols)} s?mbolos"
+        self.last_action_desc = f"AST: {len(symbols)} símbolos"
         self.update()
 
     def open_agentic_launcher(self, refresh: bool = True) -> None:
@@ -3444,7 +3444,7 @@ class OverlayWindow(QWidget):
                 self.ast_code_jumper.symbols, self._ast_page, parent_id="ROOT"
             )
             self.navigate_to("AST_SYMBOLS")
-            self.last_action_desc = f"AST p?gina {self._ast_page + 1}"
+            self.last_action_desc = f"AST: página {self._ast_page + 1}"
             self.update()
             return
 
@@ -3480,7 +3480,7 @@ class OverlayWindow(QWidget):
         if item.action_type == "GAZE_SCROLL":
             enabled = self.toggle_gaze_scroll()
             self.last_action_desc = (
-                "Scroll continuo: ON" if enabled else "Scroll continuo: OFF"
+                "Scroll continuo activado" if enabled else "Scroll continuo desactivado"
             )
             self.action_executed.emit(item.id, self.last_action_desc)
             self.block_activated.emit(target_block, item.id)
@@ -3877,7 +3877,7 @@ class OverlayWindow(QWidget):
 
             titles = {
                 1: "1. Fijacion de la mirada (Adaptive Dwell)",
-                2: "2. Confirmacion por Gesto (MAR / Clic)",
+                2: "2. Confirmación con la boca (MAR)",
                 3: "3. Zona de Reposo (Safe Rest Anti-Midas)",
                 4: "Listo para programar con IDEye!",
             }
@@ -4212,7 +4212,7 @@ class OverlayWindow(QWidget):
         self._cached_adaptive_node = None
         self._last_ast_eval_time = 0.0
         self.last_action_desc = f"Modo: {display_name}"
-        self._mode_banner_text = f"MODO ACTIVO: {display_name}"
+        self._mode_banner_text = f"Modo activo: {display_name}"
         try:
             self._mode_banner_start = time.time()
             self._mode_banner_until = self._mode_banner_start + 2.2
@@ -4252,7 +4252,7 @@ class OverlayWindow(QWidget):
         if "EXIT_CONFIRM" not in self.menu_tree:
             self.menu_tree["EXIT_CONFIRM"] = MenuNode(
                 id="EXIT_CONFIRM",
-                title="CONFIRMAR SALIDA",
+                title="Confirmar salida",
                 breadcrumb_label="SALIR",
                 items=populate_exit_confirm_items(parent_id="ROOT"),
                 parent_id="ROOT",
@@ -4347,7 +4347,7 @@ class OverlayWindow(QWidget):
             self.menu_tree["MODE_SELECT"] = self._build_mode_select_node()
         self.navigate_to("MODE_SELECT")
         self.last_action_desc = "Elegir modo"
-        self._mode_banner_text = "ELIGE UN MODO"
+        self._mode_banner_text = "Elige un modo"
         try:
             self._mode_banner_start = time.time()
             self._mode_banner_until = self._mode_banner_start + 2.2
@@ -4526,7 +4526,7 @@ class OverlayWindow(QWidget):
             self.gaze_scroller.stop()
         self._gaze_scroll_enabled = next_state
         self.gaze_scroll_toggled.emit(next_state)
-        self.last_action_desc = "Scroll ocular: ON" if next_state else "Scroll ocular: OFF"
+        self.last_action_desc = "Scroll ocular activado" if next_state else "Scroll ocular desactivado"
         self.update()
         return next_state
 
@@ -5167,8 +5167,8 @@ class OverlayWindow(QWidget):
             title = _soften_caps(_clean_action_label(_menu_card_label(item)) or item.label)
             subtitle = _soften_caps(item.hint or "")
             if self.reading_mode and i == 4:
-                title = "REANUDAR"
-                subtitle = "Modo lectura activo · mira y abre la boca"
+                title = "Reanudar"
+                subtitle = "Modo lectura. Mira y abre la boca para seguir."
 
             title_left = rect.x() + 42.0
             first_right = min(

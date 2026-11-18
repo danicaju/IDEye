@@ -436,12 +436,14 @@ STUDIO_CSS = """
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
   --mode-accent: #0ea5e9;
+  --r-s: 8px;
+  --r-l: 14px;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
   --mode-accent-rgb: 14, 165, 233;
 
   /* Switch Booklet Light (Editorial Nintendo Style) */
   --bg-page: #f8fafc;
   --bg-body-grad: radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.05) 0%, transparent 40%),
-                  radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.04) 0%, transparent 40%),
                   #f8fafc;
   --bg-card: #ffffff;
   --bg-card-hover: #fcfdfe;
@@ -459,15 +461,13 @@ STUDIO_CSS = """
   --chip-text: #334155;
   --badge-bg: #f1f5f9;
   --badge-text: #475569;
-  --hero-glow: radial-gradient(ellipse at 15% 30%, rgba(var(--mode-accent-rgb), 0.1) 0%, transparent 65%),
-               radial-gradient(ellipse at 85% 70%, rgba(16, 185, 129, 0.06) 0%, transparent 60%);
+  --hero-glow: radial-gradient(ellipse at 15% 30%, rgba(var(--mode-accent-rgb), 0.1) 0%, transparent 65%);
 }
 
 body[data-theme="nintendo-booklet"],
 body[data-theme="switch"] {
   --bg-page: #f8fafc;
   --bg-body-grad: radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.05) 0%, transparent 40%),
-                  radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.04) 0%, transparent 40%),
                   #f8fafc;
   --bg-card: #ffffff;
   --bg-card-hover: #fcfdfe;
@@ -485,14 +485,12 @@ body[data-theme="switch"] {
   --chip-text: #334155;
   --badge-bg: #f1f5f9;
   --badge-text: #475569;
-  --hero-glow: radial-gradient(ellipse at 15% 30%, rgba(var(--mode-accent-rgb), 0.1) 0%, transparent 65%),
-               radial-gradient(ellipse at 85% 70%, rgba(16, 185, 129, 0.06) 0%, transparent 60%);
+  --hero-glow: radial-gradient(ellipse at 15% 30%, rgba(var(--mode-accent-rgb), 0.1) 0%, transparent 65%);
 }
 
 body[data-theme="cyber-glass"] {
   --bg-page: #070b14;
   --bg-body-grad: radial-gradient(circle at 12% 15%, rgba(14, 165, 233, 0.1) 0%, transparent 45%),
-                  radial-gradient(circle at 88% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 45%),
                   #070b14;
   --bg-card: rgba(15, 23, 42, 0.72);
   --bg-card-hover: rgba(24, 34, 58, 0.85);
@@ -510,8 +508,7 @@ body[data-theme="cyber-glass"] {
   --chip-text: #e2e8f0;
   --badge-bg: rgba(255, 255, 255, 0.06);
   --badge-text: #cbd5e1;
-  --hero-glow: radial-gradient(ellipse at 15% 30%, rgba(var(--mode-accent-rgb), 0.2) 0%, transparent 65%),
-               radial-gradient(ellipse at 85% 70%, rgba(99, 102, 241, 0.12) 0%, transparent 60%);
+  --hero-glow: radial-gradient(ellipse at 15% 30%, rgba(var(--mode-accent-rgb), 0.16) 0%, transparent 65%);
 }
 
 * { box-sizing: border-box; }
@@ -555,7 +552,7 @@ svg {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--header-border);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   padding: 6px 12px;
   display: flex;
   align-items: center;
@@ -575,7 +572,7 @@ svg {
 .brand-icon-frame {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: var(--r-s);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -667,7 +664,6 @@ svg {
   border-radius: 50%;
   background: #10b981;
   margin-right: 4px;
-  animation: pulseLive 1.8s infinite;
 }
 @keyframes pulseLive {
   0% { transform: scale(1); opacity: 1; }
@@ -757,7 +753,7 @@ section.page.active {
 .page-hero {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: var(--r-l);
   padding: 24px 28px;
   margin-bottom: 20px;
   box-shadow: var(--card-shadow);
@@ -767,10 +763,10 @@ section.page.active {
   gap: 20px;
   flex-wrap: wrap;
   position: relative;
-  overflow: hidden;
 }
 .page-hero::before {
   content: "";
+  border-radius: inherit;
   position: absolute;
   top: 0;
   left: 0;
@@ -787,11 +783,10 @@ section.page.active {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
-  background: rgba(var(--mode-accent-rgb), 0.1);
-  border: 1px solid rgba(var(--mode-accent-rgb), 0.2);
-  border-radius: 999px;
-  margin-bottom: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  margin-bottom: 6px;
 }
 .ribbon-star {
   display: inline-flex;
@@ -804,9 +799,10 @@ section.page.active {
   height: 14px;
 }
 .page-hero-text h2 {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 4px 0 6px;
   color: var(--text-main);
   line-height: 1.25;
@@ -820,16 +816,14 @@ section.page.active {
 }
 .kicker {
   font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.7px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
   color: var(--mode-accent);
 }
 .mini-kicker {
   font-size: 9.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
   color: var(--mode-accent);
 }
 
@@ -843,7 +837,7 @@ section.page.active {
 .stat-pill {
   background: var(--bg-page);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   padding: 10px 14px;
   text-align: center;
   min-width: 95px;
@@ -864,63 +858,51 @@ section.page.active {
 
 /* Double Page Booklet Container */
 .double-page-container {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-  gap: 20px;
   position: relative;
 }
-@media (max-width: 960px) {
-  .double-page-container {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-}
 
+/* Clean spine: one hairline between the two columns, no binding rings. */
 .book-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
   width: 1px;
-  background: linear-gradient(180deg, transparent 0%, var(--border-color) 20%, var(--border-color) 80%, transparent 100%);
-  opacity: 0.6;
-}
-@media (max-width: 960px) {
-  .book-spine {
-    display: none;
-  }
-}
-
-.page-left, .page-right {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  transform: translateX(-0.5px);
+  background: linear-gradient(180deg, transparent 0%, var(--border-color) 12%, var(--border-color) 88%, transparent 100%);
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 /* Cards Grid */
 .cards-subgrid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
-.page#custom .cards-subgrid {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  align-items: stretch;
+  gap: 20px 40px;
 }
-@media (max-width: 1100px) {
-  .page#custom .cards-subgrid {
-    grid-template-columns: 1fr;
+@media (max-width: 960px) {
+  .cards-subgrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .book-spine {
+    display: none;
   }
 }
 
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   padding: 18px 20px;
   box-shadow: var(--card-shadow);
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .card::before {
   content: "";
@@ -928,15 +910,15 @@ section.page.active {
   top: 0;
   left: 0;
   right: 0;
+  border-radius: var(--r-l) var(--r-l) 0 0;
   height: 2.5px;
   background: linear-gradient(90deg, var(--accent, var(--mode-accent)), transparent 85%);
   opacity: 0.6;
   transition: opacity 0.2s ease;
 }
 .card:hover {
-  transform: translateY(-3px);
   border-color: var(--accent, var(--mode-accent));
-  box-shadow: var(--card-hover-shadow);
+  box-shadow: var(--card-shadow);
 }
 .card:hover::before {
   opacity: 1;
@@ -951,7 +933,7 @@ section.page.active {
 .card-icon-clean {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--r-s);
   background: rgba(var(--accent-rgb, var(--mode-accent-rgb)), 0.12);
   border: 1px solid rgba(var(--accent-rgb, var(--mode-accent-rgb)), 0.22);
   color: var(--accent, var(--mode-accent));
@@ -962,7 +944,6 @@ section.page.active {
   transition: transform 0.2s ease, background 0.2s ease;
 }
 .card:hover .card-icon-clean {
-  transform: scale(1.06);
   background: rgba(var(--accent-rgb, var(--mode-accent-rgb)), 0.18);
 }
 .card-icon-clean svg {
@@ -982,18 +963,20 @@ section.page.active {
 }
 
 .card-title {
-  font-size: 15.5px;
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 700;
   margin: 0 0 6px;
   color: var(--text-main);
-  letter-spacing: -0.2px;
+  letter-spacing: -0.01em;
   line-height: 1.3;
 }
 .card-desc {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--text-muted);
   margin: 0 0 12px;
-  line-height: 1.55;
+  line-height: 1.6;
+  max-width: 62ch;
   flex: 1;
 }
 .card-footer {
@@ -1008,7 +991,7 @@ section.page.active {
   background: var(--chip-bg);
   color: var(--chip-text);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--r-s);
   padding: 3px 8px;
   display: inline-flex;
   align-items: center;
@@ -1050,7 +1033,7 @@ section.page.active {
   padding: 10px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 12px;
@@ -1081,7 +1064,7 @@ section.page.active {
   padding: 14px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   box-shadow: var(--card-shadow);
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
@@ -1092,7 +1075,7 @@ section.page.active {
 .gesture-icon {
   width: 36px;
   height: 36px;
-  border-radius: 9px;
+  border-radius: var(--r-s);
   background: rgba(var(--mode-accent-rgb), 0.1);
   border: 1px solid rgba(var(--mode-accent-rgb), 0.2);
   color: var(--mode-accent);
@@ -1120,7 +1103,7 @@ section.page.active {
   padding: 10px 14px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--r-s);
   box-shadow: var(--card-shadow);
   transition: all 0.2s ease;
 }
@@ -1136,7 +1119,7 @@ section.page.active {
   background: var(--bg-page);
   border: 1px solid var(--border-color);
   border-bottom-width: 2px;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   color: var(--mode-accent);
   flex-shrink: 0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -1148,7 +1131,7 @@ section.page.active {
 section.simulator {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: var(--r-l);
   padding: 26px 28px;
   box-shadow: var(--card-shadow);
   margin-top: 20px;
@@ -1202,7 +1185,7 @@ section.simulator {
 .sim-cell {
   background: var(--bg-page);
   border: 1.5px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   padding: 14px 10px;
   text-align: center;
   min-height: 84px;
@@ -1233,7 +1216,7 @@ section.simulator {
 .jaw-meter-container {
   background: var(--bg-page);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   padding: 12px 16px;
   margin-bottom: 16px;
 }
@@ -1247,7 +1230,7 @@ section.simulator {
 .jaw-track {
   height: 7px;
   background: var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--r-s);
   overflow: hidden;
 }
 .jaw-fill {
@@ -1266,7 +1249,7 @@ section.simulator {
 .sim-info {
   background: var(--bg-page);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   padding: 14px 16px;
 }
 .sim-info h4 {
@@ -1285,7 +1268,7 @@ section.simulator {
 .vscode-pane {
   background: #090d16;
   border: 1px solid #1e293b;
-  border-radius: 12px;
+  border-radius: var(--r-l);
   overflow: hidden;
   height: 100%;
   display: flex;
@@ -1346,7 +1329,7 @@ section.simulator {
 .dojo-card {
   background: var(--bg-page);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1368,7 +1351,7 @@ section.simulator {
   font-weight: 800;
   background: var(--mode-accent);
   color: #fff;
-  border-radius: 4px;
+  border-radius: var(--r-s);
   padding: 2px 6px;
 }
 .dojo-kicker {
@@ -1417,7 +1400,7 @@ section.simulator {
   display: none;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid #10b981;
-  border-radius: 12px;
+  border-radius: var(--r-l);
   padding: 16px;
   align-items: center;
   gap: 14px;
@@ -1426,7 +1409,7 @@ section.simulator {
 .celebration-badge {
   width: 42px;
   height: 42px;
-  border-radius: 10px;
+  border-radius: var(--r-s);
   background: #10b981;
   color: #fff;
   display: flex;
@@ -1489,13 +1472,13 @@ section.simulator {
   padding: 14px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   box-shadow: var(--card-shadow);
 }
 .legal-icon {
   width: 36px;
   height: 36px;
-  border-radius: 9px;
+  border-radius: var(--r-s);
   background: rgba(var(--mode-accent-rgb), 0.1);
   border: 1px solid rgba(var(--mode-accent-rgb), 0.2);
   color: var(--mode-accent);
@@ -1535,6 +1518,28 @@ section.simulator {
   flex-wrap: wrap;
   gap: 8px;
   opacity: 0.75;
+}
+
+/* Motion, transparency and contrast preferences */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .sticky-header {
+    background: var(--bg-card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  :root { --border-color: #64748b; }
+  body[data-theme="cyber-glass"] { --border-color: rgba(255, 255, 255, 0.4); }
+  .card { border-width: 2px; }
 }
 
 /* Print styling (A4 landscape) */
@@ -1579,10 +1584,9 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
         if page_id == "custom":
             extra = _shortcut_grid(catalog.get("shortcuts", []))
 
+        mode_count = len(catalog.get("modes", [])) or 6
         page_cards = list(page.get("cards", []))
-        mid = (len(page_cards) + 1) // 2
-        left_cards = _cards(page_cards[:mid], accent)
-        right_cards = _cards(page_cards[mid:], accent)
+        all_cards = _cards(page_cards, accent)
 
         sections.append(
             f'''
@@ -1597,19 +1601,14 @@ def build_interactive_guide_html(catalog: Dict[str, Any]) -> str:
                   <p class="intro">{_esc(page.get("intro", ""))}</p>
                 </div>
                 <div class="hero-stats">
-                  <div class="stat-pill"><div class="stat-val">&lt; 35ms</div><div class="stat-lbl">One Euro</div></div>
-                  <div class="stat-pill"><div class="stat-val">Zero-Dwell</div><div class="stat-lbl">Anti-Midas</div></div>
-                  <div class="stat-pill"><div class="stat-val">6 Modos</div><div class="stat-lbl">Sniper / AST</div></div>
+                  <div class="stat-pill"><div class="stat-val">&lt; 35 ms</div><div class="stat-lbl">De la cámara al cursor</div></div>
+                  <div class="stat-pill"><div class="stat-val">Zero-Dwell</div><div class="stat-lbl">Mirar no acciona nada</div></div>
+                  <div class="stat-pill"><div class="stat-val">{mode_count} modos</div><div class="stat-lbl">Cada uno con su menú</div></div>
                 </div>
               </div>
               <div class="double-page-container">
-                <div class="page page-left">
-                  <div class="cards-subgrid">{left_cards}</div>
-                </div>
+                <div class="cards-subgrid">{all_cards}</div>
                 <div class="book-spine" aria-hidden="true"></div>
-                <div class="page page-right">
-                  <div class="cards-subgrid">{right_cards}</div>
-                </div>
               </div>
               {f'<div class="page-extra-section">{extra}</div>' if extra else ''}
               <div class="page-numbers"><span>{index * 2 + 1}</span><span>{index * 2 + 2}</span></div>

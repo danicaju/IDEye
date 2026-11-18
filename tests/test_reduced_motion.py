@@ -47,3 +47,25 @@ def test_wake_is_instant_and_never_queued():
     overlay._ghost_opacity = 0.15
     overlay._wake_ghost_peek()
     assert overlay._ghost_opacity == 1.0
+
+
+def test_focus_transition_is_interruptible_and_never_queues():
+    overlay = OverlayWindow()
+    overlay.set_reduced_motion(False, emit_signal=False)
+    overlay.hovered_block = 0
+    first = overlay._focus_anim
+    overlay.hovered_block = 1  # saccade to another cell before the first fade ends
+    overlay.hovered_block = 2
+    assert overlay._focus_anim is not first
+    assert overlay._focus_prev == 1
+    assert overlay._focus_in == 0.0  # restarts from the live value, no stale queue
+    assert overlay._focus_halo_weight(2, True) == 0.0
+
+
+def test_focus_transition_is_instant_with_reduced_motion():
+    overlay = OverlayWindow()
+    overlay.set_reduced_motion(True, emit_signal=False)
+    overlay.hovered_block = 3
+    assert overlay._focus_in == 1.0
+    assert overlay._focus_out == 0.0
+    assert overlay._focus_halo_weight(3, True) == 1.0

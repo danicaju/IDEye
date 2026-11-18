@@ -125,8 +125,10 @@ from ideye.core.logging_config import get_logger
 from ideye.ui.design_tokens import (
     ACCENT_HEX,
     INACTIVE_OUTLINE_ALPHA,
+    MOTION_FOCUS_MS,
     RADIUS_L,
     RADIUS_S,
+    duration,
 )
 
 # Extra header-band height reserved for the command-preview chip row.
@@ -813,6 +815,67 @@ class OverlayWindow(QWidget):
 
     def _on_debug_widget_visible_changed(self, _visible: bool = False) -> None:
         self.refresh_grid_right_margin()
+
+    @property
+    def hovered_block(self) -> Optional[int]:
+        return getattr(self, "_hovered_block", None)
+
+    @hovered_block.setter
+    def hovered_block(self, value: Optional[int]) -> None:
+        old = getattr(self, "_hovered_block", None)
+        self._hovered_block = value
+        if old != value:
+            self._start_focus_transition(old)
+
+    def _start_focus_transition(self, previous: Optional[int]) -> None:
+        """Cross-fades the focus halo between cells; always restarts from the live value.
+
+        Any running transition is stopped first, so rapid focus changes (a
+        saccade across the grid) never queue: the halo of the cell the user
+        left fades from wherever it currently is, and the new one fades in.
+        """
+        running = getattr(self, "_focus_anim", None)
+        if running is not None:
+            running.stop()
+            self._focus_anim = None
+        live_in = float(getattr(self, "_focus_in", 1.0))
+        self._focus_prev = previous
+        self._focus_out_start = live_in if previous is not None else 0.0
+        self._focus_out = self._focus_out_start
+        self._focus_in = 0.0
+        ms = duration(MOTION_FOCUS_MS, bool(getattr(self, "reduced_motion", False)))
+        if ms <= 0:
+            self._focus_in = 1.0
+            self._focus_out = 0.0
+            self.update()
+            return
+        anim = QVariantAnimation(self)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setDuration(ms)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        anim.valueChanged.connect(self._on_focus_animated)
+        self._focus_anim = anim
+        anim.start()
+
+    def _on_focus_animated(self, value: Any) -> None:
+        try:
+            t = float(value)
+        except (TypeError, ValueError):
+            return
+        self._focus_in = t
+        self._focus_out = float(getattr(self, "_focus_out_start", 0.0)) * (1.0 - t)
+        self.update()
+
+    def _focus_halo_weight(self, index: int, is_active: bool) -> float:
+        """Returns the 0..1 halo strength for a cell during the focus transition."""
+        if is_active:
+            if index == getattr(self, "_hovered_block", None):
+                return float(getattr(self, "_focus_in", 1.0))
+            return 1.0
+        if index == getattr(self, "_focus_prev", None):
+            return float(getattr(self, "_focus_out", 0.0))
+        return 0.0
 
     def refresh_grid_right_margin(self, animate: bool = True) -> None:
         """Animates the grid between docked and expanded layouts."""
@@ -4960,9 +5023,12 @@ class OverlayWindow(QWidget):
             # 2. The focused card is the only element of the grid with a glow:
             #    one soft halo that fades in and out with the focus transition.
             chip_labels = [] if self.reading_mode else self._preview_chip_labels(item)
-            if is_active and not self.reading_mode:
-                theme = border_pen.color()
-                halo_pen = QPen(QColor(theme.red(), theme.green(), theme.blue(), 60), 3.0)
+            halo_weight = self._focus_halo_weight(i, is_active)
+            if halo_weight > 0.01 and not self.reading_mode:
+                theme = border_pen.color() if is_active else self._pen_card_active.color()
+                halo_pen = QPen(
+                    QColor(theme.red(), theme.green(), theme.blue(), int(60 * halo_weight)), 3.0
+                )
                 painter.setBrush(Qt.BrushStyle.NoBrush)
                 painter.setPen(halo_pen)
                 painter.drawRoundedRect(rect.adjusted(-2.0, -2.0, 2.0, 2.0), RADIUS_L + 2.0, RADIUS_L + 2.0)

@@ -272,7 +272,7 @@ def _simulator(simulator: Dict[str, Any], dojo_challenges: Optional[List[Dict[st
       </div>
       <div class="dojo-section" id="dojoContainer">
         <div class="dojo-header">
-          <div><span class="mini-kicker">DESAFÍOS DOJO</span><h3>Supera los 6 Micro-Retos de Control Manos Libres</h3></div>
+          <div><span class="mini-kicker">DESAFÍOS DOJO</span><h3>Completa los 6 desafíos de control sin manos</h3></div>
           <button type="button" class="btn" id="dojoJumpBtn" onclick="window.scrollTo({{top: document.getElementById('dojoContainer').offsetTop - 80, behavior: 'smooth'}})">
             {_ui_icon("star-badge")}<span>Retos Dojo</span>
           </button>
@@ -280,7 +280,7 @@ def _simulator(simulator: Dict[str, Any], dojo_challenges: Optional[List[Dict[st
         <div class="celebration-banner" id="dojoCelebration">
           <div class="celebration-badge">{_ui_icon("trophy")}</div>
           <div class="celebration-text">
-            <h4>¡MAESTRO DE IDEYE DESBLOQUEADO!</h4>
+            <h4>Completaste los 6 desafíos</h4>
             <p>Has completado todos los desafíos: fijación Zero-Dwell, disparo bucal MAR, inyección de código, scroll inercial, lente Sniper y Agentic Launcher.</p>
           </div>
           <button type="button" class="btn celebration-btn" onclick="resetDojoProgress()">{_ui_icon("sparkles")}<span>Reiniciar Retos</span></button>

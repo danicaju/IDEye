@@ -341,6 +341,13 @@ PAGES: List[Dict[str, Any]] = [
             },
             {
                 "icon": "eye",
+                "badge": "REDUC",
+                "title": "Movimiento reducido",
+                "text": "Si prefieres que todo cambie al instante, activa Reducir movimiento en el panel de depuración. El foco entre casillas, el atenuado de Ghost-Peek y los avisos de modo dejan de animarse. Se guarda como reduced_motion en user_settings.json.",
+                "chip": "Sin transiciones",
+            },
+            {
+                "icon": "eye",
                 "badge": "CLAHE",
                 "title": "Visión Nocturna Adaptativa",
                 "text": "Si la luz baja de 85 de luminancia, aplica CLAHE al canal L y una gamma suave. En buena luz no toca ni un píxel.",

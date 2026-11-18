@@ -1,7 +1,7 @@
 <div align="center">
 
 # IDEye (Motor Vistax L2C)
-**El motor de programación Look-To-Code (L2C) para ingeniería de software manos libres y silenciosa**
+**Look-To-Code (L2C): programa con los ojos, la cabeza y la cara, sin manos ni voz**
 
 <p align="right">
   <strong>Idioma:</strong>
@@ -12,36 +12,34 @@
 [![Lanzamiento: v0.5.0](https://img.shields.io/badge/Lanzamiento-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Pruebas](https://img.shields.io/badge/Pruebas-704%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-testing-y-qa)
+[![Pruebas](https://img.shields.io/badge/Pruebas-721%20Aprobadas-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#testing-y-qa)
 [![Licencia: AGPL v3](https://img.shields.io/badge/Licencia-AGPL_v3-blue.svg?style=for-the-badge)](LICENSE)
 
-*Escribe código de producción real usando únicamente una webcam estándar, seguimiento ocular híbrido y gestos faciales discretos. Sin manos. Sin comandos de voz. Sin hardware infrarrojo caro.*
+*Escribe código con una webcam estándar, seguimiento ocular híbrido y unos pocos gestos faciales. Sin teclado, sin comandos de voz, sin hardware infrarrojo.*
 
-[Descargas Rápidas](#-descargas-y-versiones-precompiladas) • [Cómo Funciona](#-cómo-funciona-en-3-pasos) • [Innovaciones](#-innovaciones-principales) • [Inicio Rápido](#-inicio-rápido) • [Controles y Atajos](#-controles-y-atajos-en-tiempo-real) • [Arquitectura](#-arquitectura-del-sistema) • [Hoja de Ruta](#-hoja-de-ruta)
+[Descargas](#inicio-rápido) • [Cómo funciona](#cómo-funciona-en-3-pasos) • [Innovaciones](#innovaciones-principales) • [Inicio rápido](#inicio-rápido) • [Controles y atajos](#controles-y-atajos-en-tiempo-real) • [Arquitectura](#arquitectura-del-sistema) • [Hoja de ruta](#hoja-de-ruta)
 
 ---
 
 </div>
 
 > [!TIP]
-> **¿Solo quieres usar IDEye sin programar ni instalar Python?**
->
-> Descarga la versión portátil precompilada y la extensión de VS Code directamente desde **[GitHub Releases](https://github.com/danicaju/IDEye/releases)**:
-> - **`IDEye-Windows-v0.5.0.zip`** — Aplicación de escritorio lista para usar (descomprimir y ejecutar `IDEye.exe`).
-> - **`ideye-vscode-bridge-0.5.0.vsix`** — Extensión compañera para VS Code (arrastrar y soltar en la ventana del editor).
+> ¿Quieres usar IDEye sin instalar Python ni abrir una terminal? Descarga la versión portátil y la extensión de VS Code desde [GitHub Releases](https://github.com/danicaju/IDEye/releases):
+> - `IDEye-Windows-v0.5.0.zip`: aplicación de Windows lista para usar. Descomprímela y ejecuta `IDEye.exe`.
+> - `ideye-vscode-bridge-0.5.0.vsix`: extensión de VS Code. Arrástrala a la ventana del editor.
 
 ---
 
-## El Problema y Por Qué Existe IDEye
+## El problema que resuelve IDEye
 
-Los desarrolladores que sufren lesiones por esfuerzo repetitivo (RSI), síndrome del túnel carpiano, discapacidades motoras o lesiones temporales encuentran barreras críticas para programar:
-1. **Herramientas de voz (Talon, Cursorless):** Requieren vocalización continua, lo que falla en oficinas compartidas, bibliotecas, sesiones nocturnas o para usuarios con dificultades en el habla.
-2. **Teclados en pantalla (OptiKey):** Obligan a teclear letra por letra y prácticamente exigen hardware infrarrojo de 300 € a 1.000 € (Tobii) para mitigar el temblor de las webcams.
-3. **Controladores de ratón por webcam (Project Gameface, eViacam):** Solo mueven el cursor del sistema operativo y sufren el problema del *Toque de Midas* (fatiga por temporizadores de fijación).
+Quien tiene lesiones por esfuerzo repetitivo (RSI), síndrome del túnel carpiano, una discapacidad motora o una lesión temporal suele no poder teclear durante mucho tiempo. Las alternativas actuales se quedan cortas:
+1. **Herramientas de voz (Talon, Cursorless):** necesitan hablar sin parar, así que no sirven en una oficina compartida, en una biblioteca o con dificultades del habla.
+2. **Teclados en pantalla (OptiKey):** se escribe letra por letra y, por el temblor de las webcams, en la práctica hace falta hardware infrarrojo (Tobii) de 300 € a 1.000 €.
+3. **Controladores de ratón por webcam (Project Gameface, eViacam):** solo mueven el cursor del sistema y sufren el Toque de Midas: cualquier cosa que mires puede activarse y esperar el temporizador de fijación cansa.
 
-**IDEye (Vistax)** replantea la interacción desde los fundamentos: uniendo un **HUD 3x3 de macrozonas AST**, **seguimiento híbrido cabeza + iris en webcam estándar**, **disparadores inmediatos por gestos faciales sin temporizador**, **puente WebSocket bidireccional con VS Code** y **predicción de contexto sintáctico en vivo**.
+IDEye (Vistax) reúne un HUD 3x3 de macrozonas basado en el AST, seguimiento híbrido de cabeza e iris con una webcam estándar, gestos faciales que activan sin esperar, un puente WebSocket bidireccional con VS Code y predicción de contexto en vivo.
 
-### Comparativa con el Estado del Arte
+### Comparativa
 
 | Característica / Capacidad | Webcam Estándar (0 €) | 100% Silencioso (Sin Voz) | Inyección de Código por AST / Macros | Detección de Variables Locales en Vivo | WebSocket Bidireccional con VS Code | FreeLook 60 Hz y Gaming |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -52,7 +50,7 @@ Los desarrolladores que sufren lesiones por esfuerzo repetitivo (RSI), síndrome
 
 ---
 
-## Cómo Funciona en 3 Pasos
+## Cómo funciona en 3 pasos
 
 ```mermaid
 flowchart LR
@@ -89,35 +87,35 @@ flowchart LR
 
 ---
 
-## Innovaciones Principales
+## Innovaciones principales
 
-El sistema se estructura en cuatro pilares arquitectónicos:
+IDEye tiene cuatro piezas principales.
 
 ### 1. Seguimiento Híbrido Sub-Píxel y Centroide Craneal
-La captura pupilar estándar carece de rango dinámico a distancias de escritorio. IDEye fusiona el desplazamiento del iris con el vector de anclaje de la nariz:
+A la distancia habitual de un monitor, una webcam no distingue por sí sola el movimiento de la pupila con suficiente precisión. IDEye fusiona el desplazamiento del iris con el vector de anclaje de la nariz:
 $$\mathbf{P}_{raw} = \alpha_{head} \cdot \mathbf{V}_{nose} + (1 - \alpha_{head}) \cdot \mathbf{V}_{iris}$$
 Puntos de anclaje craneales ponderados en MediaPipe FaceMesh (`[1, 4, 6, 168, 195, 197]`) combinados con una puerta de histéresis (`STATIC_LOCK_RADIUS=0.0035`, deriva `0.0px`) suprimen el microtemblor en fijaciones sin añadir latencia a las sacadas. Incluye tolerancia a gorras y compensación ocular por CLAHE en baja iluminación.
 
 ### 2. Eliminación del Toque de Midas y Gestos Biométricos
-La navegación y la activación están completamente desacopladas: mirar solo resalta, jamás acciona. Una apertura breve de la boca (Mouth Aspect Ratio, MAR) ejecuta un clic o inyección instantánea. Mantener la boca abierta activa el modo de arrastre **Jaw-Lock**. Un **umbral dinámico adaptativo de reposo (Anti-Midas)** aprende la apertura natural del usuario en tiempo real, evitando clics fantasma y fatiga por fijación. Los guiños independientes gestionan el retroceso/deshacer (guiño izquierdo) y la pausa del HUD (guiño derecho).
+Mirar y activar son cosas separadas: la mirada solo resalta una celda. Una apertura breve de la boca (Mouth Aspect Ratio, MAR) ejecuta un clic o inyección instantánea. Mantener la boca abierta activa el modo de arrastre **Jaw-Lock**. Un umbral dinámico de reposo (Anti-Midas) aprende cómo tienes la boca cuando estás relajado y evita clics accidentales. Los guiños independientes gestionan el retroceso/deshacer (guiño izquierdo) y la pausa del HUD (guiño derecho).
 
 ### 3. Puente WebSocket Bidireccional con VS Code y AST en Vivo
-`WebSocketBridge` sincroniza diagnósticos del editor, selecciones y árboles sintácticos en tiempo real (`ws://127.0.0.1:54321`). `ContextReader` extrae variables locales, funciones y clases incluso en archivos con errores sintácticos (`ast.walk` + motor regex de respaldo). Dispone de **6 modos de trabajo**: `CODING`, `WRITING` (teclado de letras con predicción de palabras y frases), `TERMINAL_GIT`, `DATA_MATH`, `NAVIGATION` y `FREELOOK_GAMING` (joystick craneal a 60 Hz con zona muerta central).
+`WebSocketBridge` sincroniza diagnósticos del editor, selecciones y árboles sintácticos en tiempo real (`ws://127.0.0.1:54321`). `ContextReader` extrae variables locales, funciones y clases incluso en archivos con errores sintácticos (`ast.walk` + motor regex de respaldo). Tiene 6 modos de trabajo: `CODING`, `WRITING` (teclado de letras con predicción de palabras y frases), `TERMINAL_GIT`, `DATA_MATH`, `NAVIGATION` y `FREELOOK_GAMING` (joystick craneal a 60 Hz con zona muerta central).
 
 ### 4. HUD PyQt6 No Invasivo, Ergonomía y Multimonitor
-La interfaz superpuesta funciona con PyQt6 mediante `WindowDoesNotAcceptFocus` y `WS_EX_TRANSPARENT`, permitiendo que los clics del ratón físico atraviesen el HUD sin robar el foco del teclado ni perder el cursor del editor. Soporta **modo columna Right Dock** (30% de ancho), **Ghost Mode** (atenuación al 15% de opacidad durante la lectura), **traspaso visual entre monitores** y síntesis procedural de sonido sin dependencias de audio externas.
+La interfaz superpuesta funciona con PyQt6 mediante `WindowDoesNotAcceptFocus` y `WS_EX_TRANSPARENT`, permitiendo que los clics del ratón físico atraviesen el HUD sin robar el foco del teclado ni perder el cursor del editor. Admite columna Right Dock (30% de ancho), Ghost Mode (atenúa al 15% de opacidad mientras lees), traspaso de la mirada entre monitores y síntesis de sonido sin dependencias de audio externas. Un único acento cian marca la celda enfocada y el ajuste de movimiento reducido convierte todos los fundidos en cambios instantáneos.
 
 ---
 
-## Inicio Rápido
+## Inicio rápido
 
-### Descargas y Versiones Precompiladas (Recomendado para Usuarios)
-1. **Descargar `IDEye-Windows-v0.5.0.zip`** desde **[GitHub Releases](https://github.com/danicaju/IDEye/releases)** y descomprimirlo.
-2. **Ejecutar `IDEye.exe`** (incluye los entornos de ejecución de Python, OpenCV, MediaPipe y PyQt6).
-3. **Instalar la extensión en VS Code**: Arrastrar `ideye-vscode-bridge-0.5.0.vsix` dentro de VS Code.
-4. **Programar manos libres**: La cámara se calibra automáticamente y se conecta con el editor mediante WebSocket local.
+### Versión precompilada (recomendada)
+1. Descarga `IDEye-Windows-v0.5.0.zip` desde [GitHub Releases](https://github.com/danicaju/IDEye/releases) y descomprímelo.
+2. Ejecuta `IDEye.exe`. Incluye los entornos de Python, OpenCV, MediaPipe y PyQt6.
+3. Instala la extensión arrastrando `ideye-vscode-bridge-0.5.0.vsix` a VS Code.
+4. Empieza a programar. La cámara se calibra y se conecta con el editor por WebSocket local.
 
-### Instalación para Desarrolladores (Compilar desde Código Fuente)
+### Compilar desde el código fuente
 ```bash
 # 1. Clonar el repositorio
 git clone https://github.com/danicaju/IDEye.git
@@ -134,9 +132,9 @@ python main.py
 
 ---
 
-## Controles y Atajos en Tiempo Real
+## Controles y atajos en tiempo real
 
-### Atajos Esenciales de Uso Diario
+### Atajos de uso diario
 
 | Acción | Entrada / Atajo | Descripción |
 | :--- | :--- | :--- |
@@ -150,7 +148,7 @@ python main.py
 | **Deshacer Universal** | **`Z`** / **Guiño Izq.** | Retrocede en los menús o envía un Deshacer (Ctrl+Z) al editor activo |
 
 <details>
-<summary><b>Ver todos los 34 atajos avanzados, controles de modo y gaming</b></summary>
+<summary>Los 34 atajos, controles de modo y asignaciones de gaming</summary>
 
 <br>
 
@@ -183,7 +181,7 @@ python main.py
 
 ---
 
-## Arquitectura del Sistema
+## Arquitectura del sistema
 
 ```text
 +-------------------------------------------------------------------------+
@@ -223,7 +221,7 @@ python main.py
 
 ---
 
-## Estructura del Proyecto
+## Estructura del proyecto
 
 ```text
 IDEye/
@@ -240,28 +238,28 @@ IDEye/
 │   ├── ui/                          # Overlay PyQt6 transparente, calibración e iconos
 │   ├── actions/                     # Extractor AST, predictor de IA e inyector de código
 │   └── assets/                      # Iconos vectoriales de alto DPI y datos de predicción
-└── tests/                           # 42 suites con 704 tests automatizados (hardware simulado)
+└── tests/                           # 49 módulos con 721 tests (hardware simulado)
 ```
 
 ---
 
 ## Testing y QA
 
-IDEye incorpora una batería automatizada con hardware simulado que cubre casos límite matemáticos, integridad de árboles de menús recursivos, tolerancia a fallos sintácticos en el AST y estabilidad de la mirada:
+La batería de pruebas simula el hardware y cubre casos límite numéricos, la integridad de los árboles de menús, la tolerancia a fallos del AST y la estabilidad de la mirada:
 
 ```bash
 pytest -q
 ```
 ```text
-704 passed, 89 subtests in 16.55s
+721 passed, 89 subtests in 29.7s
 ```
 
 > [!NOTE]
-> La totalidad de las 704 pruebas se ejecutan de forma desatendida (*headless*) sin necesidad de cámara web física, servidor gráfico ni conexión a internet.
+> Las 721 pruebas se ejecutan sin interfaz (*headless*). No necesitan cámara, servidor gráfico ni conexión a internet.
 
 ---
 
-## Hoja de Ruta
+## Hoja de ruta
 
 ### Versión Actual (`v0.5.0`)
 - [x] Lanzamiento completo en producción: paquete portátil para Windows + extensión de VS Code.
@@ -274,7 +272,7 @@ pytest -q
 - [ ] Aceleración de modelos pupilares cuantizados en local con ONNX Runtime.
 
 <details>
-<summary><b>Historial de Fases de Ingeniería Completadas (Fases 1 a 12.1)</b></summary>
+<summary>Fases completadas 1 a 12.1</summary>
 
 <br>
 
@@ -295,17 +293,19 @@ pytest -q
 
 ---
 
-## Privacidad, Seguridad y Avisos Legales
+## Privacidad, seguridad y avisos legales
 
-- **Procesamiento Biométrico 100% Local**: Todos los fotogramas de la cámara y las referencias faciales 3D se procesan exclusivamente en memoria RAM volátil local. IDEye nunca graba, almacena ni transmite datos biométricos por ninguna red.
-- **Aviso Ergonómico**: IDEye es una herramienta de productividad asistiva, no un dispositivo médico certificado. Se recomienda tomar descansos periódicos para prevenir fatiga cervical o mandibular.
-- **Aviso para Juegos Online**: El modo Gaming utiliza inyección sintética a nivel de sistema operativo (`Win32 API` / `pynput`) con fines de accesibilidad. Compruebe la compatibilidad antes de usarlo en títulos competitivos multijugador con sistemas antitrampas a nivel de kernel.
+- El procesamiento biométrico es local. Los fotogramas de la cámara y los puntos faciales 3D se quedan en memoria RAM volátil. IDEye nunca graba, almacena ni envía datos biométricos por la red.
+- IDEye es una herramienta de productividad asistiva, no un dispositivo médico certificado. Haz descansos periódicos para evitar fatiga cervical o mandibular.
+- El modo Gaming inyecta entrada sintética a nivel de sistema operativo (`Win32 API` / `pynput`) con fines de accesibilidad. Comprueba la compatibilidad antes de usarlo en juegos competitivos con antitrampas a nivel de kernel.
 
 ---
 
-## Contribuciones y Licencia
+## Contribuciones y licencia
 
-IDEye se distribuye bajo los términos de la licencia **GNU Affero General Public License v3.0 (AGPL-3.0-or-later)**. Cualquier modificación, redistribución o despliegue como servicio en red debe permanecer con código abierto bajo esta misma licencia.
+Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para preparar el entorno, ejecutar las pruebas y conocer las reglas del proyecto.
+
+IDEye se distribuye bajo la GNU Affero General Public License v3.0 (AGPL-3.0-or-later). Cualquier modificación, redistribución o despliegue como servicio en red debe seguir siendo de código abierto bajo esta misma licencia.
 
 <div align="center">
   <sub>Desarrollado por <b>Daniel Casado Juan</b> &middot; Universitat de les Illes Balears (UIB)</sub>

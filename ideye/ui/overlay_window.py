@@ -122,6 +122,15 @@ except ImportError:
 
 
 from ideye.core.logging_config import get_logger
+from ideye.ui.design_tokens import (
+    ACCENT_HEX,
+    INACTIVE_OUTLINE_ALPHA,
+    RADIUS_L,
+    RADIUS_S,
+)
+
+# Extra header-band height reserved for the command-preview chip row.
+_CHIP_BAND_EXTRA = 28.0
 
 logger = get_logger(__name__)
 
@@ -330,7 +339,13 @@ class OverlayWindow(QWidget):
             pass
         self.current_context_mode_id: str = getattr(self.mode_manager, "current_mode_id", "coding")
         self.current_context_mode_name: str = getattr(self.mode_manager, "current_mode", None).display_name if getattr(self.mode_manager, "current_mode", None) is not None else "Código"
-        self.theme_color: str = getattr(self.mode_manager, "current_mode", None).theme_color if getattr(self.mode_manager, "current_mode", None) is not None else "#3b82f6"
+        # One accent for the whole HUD; the mode's own color is only a small dot.
+        self.theme_color: str = ACCENT_HEX
+        self.mode_color: str = (
+            getattr(self.mode_manager, "current_mode", None).theme_color
+            if getattr(self.mode_manager, "current_mode", None) is not None
+            else ACCENT_HEX
+        )
         self._mode_banner_text: str = ""
         self._mode_banner_until: float = 0.0
         self._mode_banner_start: float = 0.0
@@ -557,10 +572,10 @@ class OverlayWindow(QWidget):
         self._pen_header_right = QPen(QColor(96, 165, 250))
 
         # Focus hierarchy: neutral inactive cards, theme-colored active card.
-        self._brush_card_inactive = QBrush(QColor(10, 15, 29, 220))
-        self._pen_card_inactive = QPen(QColor(30, 41, 59, 180), 1.0)
+        self._brush_card_inactive = QBrush(QColor(10, 15, 29, 120))
+        self._pen_card_inactive = QPen(QColor(148, 163, 184, INACTIVE_OUTLINE_ALPHA), 1.0)
         self._brush_card_active = QBrush(QColor(15, 23, 42, 235))
-        self._pen_card_active = QPen(QColor("#3b82f6"), 2.0)
+        self._pen_card_active = QPen(QColor(ACCENT_HEX), 2.0)
         self._pen_card_danger = QPen(QColor(239, 68, 68), 2.0)
         self._brush_band_inactive = QBrush(QColor(10, 15, 29, 230))
         self._brush_band_active = QBrush(QColor(15, 23, 42, 240))
@@ -1083,6 +1098,37 @@ class OverlayWindow(QWidget):
 
         return badge_rect, cell_rect
 
+    @staticmethod
+    def _fit_text(text: str, width: float, base_font: QFont, min_scale: float = 0.72) -> tuple[QFont, str]:
+        """Fits text into `width` without ever drawing an ellipsis.
+
+        The font shrinks in small steps down to `min_scale`. If the text still
+        does not fit, whole trailing words are dropped (a lone oversized word is
+        trimmed by characters), so nothing is shown cut mid-word with dots.
+        """
+        text = str(text or "")
+        limit = max(1, int(width))
+        font = QFont(base_font)
+        use_point = base_font.pointSizeF() > 0
+        base_size = base_font.pointSizeF() if use_point else float(max(1, base_font.pixelSize()))
+        scale = 1.0
+        while QFontMetrics(font).horizontalAdvance(text) > limit and scale > min_scale:
+            scale = max(min_scale, scale - 0.06)
+            if use_point:
+                font.setPointSizeF(base_size * scale)
+            else:
+                font.setPixelSize(max(1, int(base_size * scale)))
+        metrics = QFontMetrics(font)
+        if metrics.horizontalAdvance(text) <= limit:
+            return font, text
+        words = text.split(" ")
+        while len(words) > 1 and metrics.horizontalAdvance(" ".join(words)) > limit:
+            words.pop()
+        out = " ".join(words)
+        while len(out) > 1 and metrics.horizontalAdvance(out) > limit:
+            out = out[:-1]
+        return font, out
+
     def _preview_chip_labels(self, item: MenuAction) -> list[str]:
         """Returns up to 4 preview labels for MODE_SWITCH and SUBMENU cards."""
         source_items: list = []
@@ -1132,7 +1178,7 @@ class OverlayWindow(QWidget):
         fm = QFontMetrics(self._font_card_subtitle)
         chip_h = 18.0
         gap = 4.0
-        radius = 5.0
+        radius = RADIUS_S
         start_x = card_rect.x() + 12.0
         y = card_rect.y() + 58.0
         max_right = card_rect.right() - 12.0
@@ -1147,10 +1193,10 @@ class OverlayWindow(QWidget):
             if start_x + chip_w > max_right:
                 break
             chip_rect = QRectF(start_x, y, chip_w, chip_h)
-            painter.setBrush(QColor(255, 255, 255, 12))
-            painter.setPen(QPen(QColor(255, 255, 255, 28), 1.0))
+            painter.setBrush(QColor(30, 41, 59, 255))
+            painter.setPen(QPen(QColor(71, 85, 105, 255), 1.0))
             painter.drawRoundedRect(chip_rect, radius, radius)
-            painter.setPen(QColor(203, 213, 225))
+            painter.setPen(QColor(241, 245, 249))
             painter.drawText(chip_rect, Qt.AlignmentFlag.AlignCenter, text)
             start_x += chip_w + gap
 
@@ -3558,7 +3604,7 @@ class OverlayWindow(QWidget):
             self._brush_card_active = QBrush(QColor(15, 15, 15, 245))
             self._brush_band_inactive = QBrush(QColor(12, 12, 12, 255))
             self._brush_band_active = QBrush(QColor(20, 20, 20, 255))
-            self._pen_card_inactive = QPen(QColor(255, 255, 255, 90), 1.5)
+            self._pen_card_inactive = QPen(QColor(255, 255, 255, 48), 1.0)
             self._color_card_text_active = QColor(255, 255, 255, 255)
             self._color_card_text_inactive = QColor(240, 240, 240, 255)
             self._color_card_subtitle = QColor(200, 200, 200, 240)
@@ -3571,7 +3617,7 @@ class OverlayWindow(QWidget):
             self._brush_card_active = QBrush(QColor(7, 54, 66, 235))
             self._brush_band_inactive = QBrush(QColor(7, 54, 66, 245))
             self._brush_band_active = QBrush(QColor(14, 65, 78, 250))
-            self._pen_card_inactive = QPen(QColor(88, 110, 117, 120), 1.2)
+            self._pen_card_inactive = QPen(QColor(88, 110, 117, 56), 1.0)
             self._color_card_text_active = QColor(253, 246, 227, 255)
             self._color_card_text_inactive = QColor(147, 161, 161, 255)
             self._color_card_subtitle = QColor(131, 148, 150, 240)
@@ -3580,16 +3626,16 @@ class OverlayWindow(QWidget):
         else:
             self.current_theme = "CYBER_GLASS"
             self._brush_header_bg = QBrush(QColor(10, 15, 29, 225))
-            self._brush_card_inactive = QBrush(QColor(10, 15, 29, 220))
+            self._brush_card_inactive = QBrush(QColor(10, 15, 29, 120))
             self._brush_card_active = QBrush(QColor(15, 23, 42, 235))
             self._brush_band_inactive = QBrush(QColor(10, 15, 29, 230))
             self._brush_band_active = QBrush(QColor(15, 23, 42, 240))
-            self._pen_card_inactive = QPen(QColor(30, 41, 59, 180), 1.0)
+            self._pen_card_inactive = QPen(QColor(148, 163, 184, INACTIVE_OUTLINE_ALPHA), 1.0)
             self._color_card_text_active = QColor(248, 250, 252, 255)
             self._color_card_text_inactive = QColor(226, 232, 240, 255)
             self._color_card_subtitle = QColor(148, 163, 184, 220)
             self._color_card_subtitle_inactive = QColor(148, 163, 184, 255)
-            self._set_theme_color("#3b82f6")
+            self._set_theme_color(ACCENT_HEX)
         self.theme_changed.emit(self.current_theme)
         self.update()
 
@@ -4046,8 +4092,7 @@ class OverlayWindow(QWidget):
         was_sniper = self.current_context_mode_id == "sniper"
         self.current_context_mode_id = mode_id
         self.current_context_mode_name = display_name
-        self.theme_color = theme_color
-        self._set_theme_color(theme_color)
+        self.mode_color = str(theme_color or ACCENT_HEX)
         if mode_id != "sniper":
             if was_sniper:
                 self.release_freelook_controls()
@@ -4565,7 +4610,7 @@ class OverlayWindow(QWidget):
         # Unified floating command bar (Dynamic Island / Linear style)
         painter.setBrush(self._brush_header_bg)
         painter.setPen(self._pen_header_border)
-        painter.drawRoundedRect(header_rect, 10.0, 10.0)
+        painter.drawRoundedRect(header_rect, RADIUS_L, RADIUS_L)
 
         IconManager.instance().render_icon(painter, "ideye_logo", logo_rect, dpr=dpr)
 
@@ -4583,9 +4628,8 @@ class OverlayWindow(QWidget):
         painter.setPen(self._color_card_text_active)
         painter.setFont(self._font_header_bold_btn)
         if brand_draw_w >= 20.0:
-            brand_text = painter.fontMetrics().elidedText(
-                "IDEye", Qt.TextElideMode.ElideRight, int(brand_draw_w)
-            )
+            brand_font, brand_text = self._fit_text("IDEye", brand_draw_w, painter.font())
+            painter.setFont(brand_font)
             painter.drawText(
                 QRectF(brand_x, header_rect.y() + 6.0, brand_draw_w, pill_h),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
@@ -4603,53 +4647,52 @@ class OverlayWindow(QWidget):
                     text_w = max(0.0, status_right - (ws_x + 11.0))
                     if text_w > 10.0:
                         painter.setPen(self._pen_header_left)
-                        painter.setFont(self._font_header_left)
+                        ws_font, ws_fit = self._fit_text(ws_text, text_w, self._font_header_left)
+                        painter.setFont(ws_font)
                         painter.drawText(
                             QRectF(ws_x + 11.0, header_rect.y() + 6.0, text_w, pill_h),
                             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                            painter.fontMetrics().elidedText(
-                                ws_text, Qt.TextElideMode.ElideRight, int(text_w)
-                            ),
+                            ws_fit,
                         )
 
         # Multi-monitor selector.
         if screen_pill_rect.isValid():
-            painter.setBrush(QBrush(QColor(37, 99, 235, 30)))
-            painter.setPen(QPen(QColor(59, 130, 246, 180), 1.0))
-            painter.drawRoundedRect(screen_pill_rect, 7.0, 7.0)
-            painter.setPen(QColor(219, 234, 254))
+            painter.setBrush(self._brush_status_pill)
+            painter.setPen(self._pen_status_pill)
+            painter.drawRoundedRect(screen_pill_rect, RADIUS_S, RADIUS_S)
+            painter.setPen(self._pen_header_right)
             painter.setFont(self._font_header_bold_btn)
             painter.drawText(
                 screen_pill_rect,
                 Qt.AlignmentFlag.AlignCenter,
-                f"MON {self.screen_index + 1}/{self.screen_count}",
+                f"Pantalla {self.screen_index + 1}/{self.screen_count}",
             )
         # Sniper action selector, or compact last-action status.
         elif sniper_pill_rect.isValid():
             mode = self._sniper_mode()
             action_label = getattr(mode, "action_label", "Clic Izq") if mode else "Clic Izq"
-            painter.setBrush(QBrush(QColor(244, 63, 94, 38)))
-            painter.setPen(QPen(QColor(244, 63, 94, 220), 1.2))
-            painter.drawRoundedRect(sniper_pill_rect, 7.0, 7.0)
-            painter.setPen(QColor(254, 205, 211))
-            painter.setFont(self._font_header_bold_btn)
-            action_text = painter.fontMetrics().elidedText(
-                f"RATÓN: {action_label}",
-                Qt.TextElideMode.ElideRight,
-                int(max(0.0, sniper_pill_rect.width() - 14.0)),
+            painter.setBrush(self._brush_status_pill)
+            painter.setPen(self._pen_status_pill)
+            painter.drawRoundedRect(sniper_pill_rect, RADIUS_S, RADIUS_S)
+            painter.setPen(self._pen_header_right)
+            action_font, action_text = self._fit_text(
+                f"Ratón: {action_label}",
+                max(0.0, sniper_pill_rect.width() - 14.0),
+                self._font_header_bold_btn,
             )
+            painter.setFont(action_font)
             painter.drawText(sniper_pill_rect, Qt.AlignmentFlag.AlignCenter, action_text)
         elif last_pill_rect.isValid():
             painter.setBrush(self._brush_status_pill)
             painter.setPen(self._pen_status_pill)
-            painter.drawRoundedRect(last_pill_rect, 7.0, 7.0)
+            painter.drawRoundedRect(last_pill_rect, RADIUS_S, RADIUS_S)
             painter.setPen(self._pen_header_right)
-            painter.setFont(self._font_header_right)
-            status_text = painter.fontMetrics().elidedText(
+            status_font, status_text = self._fit_text(
                 f"Última: {self.last_action_desc}",
-                Qt.TextElideMode.ElideRight,
-                int(max(0.0, last_pill_rect.width() - 14.0)),
+                max(0.0, last_pill_rect.width() - 14.0),
+                self._font_header_right,
             )
+            painter.setFont(status_font)
             painter.drawText(last_pill_rect, Qt.AlignmentFlag.AlignCenter, status_text)
 
         icon_size = 20.0
@@ -4658,15 +4701,12 @@ class OverlayWindow(QWidget):
         if self.active_click_header_exit:
             exit_brush, exit_pen, exit_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_exit:
-            painter.setBrush(self._brush_exit_glow)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(self.header_exit_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
             exit_brush, exit_pen, exit_text_color = QBrush(QColor(239, 68, 68, 230)), QPen(QColor(254, 202, 202), 2.0), QColor(255, 255, 255)
         else:
             exit_brush, exit_pen, exit_text_color = self._brush_exit_idle, self._pen_exit_idle, self._color_exit_text
         painter.setBrush(exit_brush)
         painter.setPen(exit_pen)
-        painter.drawRoundedRect(self.header_exit_rect, 10.0, 10.0)
+        painter.drawRoundedRect(self.header_exit_rect, RADIUS_S, RADIUS_S)
         exit_icon_rect = QRectF(
             self.header_exit_rect.x() + 12.0,
             self.header_exit_rect.y() + (pill_h - icon_size) * 0.5,
@@ -4679,22 +4719,19 @@ class OverlayWindow(QWidget):
         painter.drawText(
             QRectF(self.header_exit_rect.x() + 34.0, self.header_exit_rect.y(), self.header_exit_rect.width() - 38.0, pill_h),
             Qt.AlignmentFlag.AlignCenter,
-            "SALIR?" if time.time() < self._exit_armed_until else "SALIR",
+            "¿Salir?" if time.time() < self._exit_armed_until else "Salir",
         )
 
         # Help
         if self.active_click_header_help:
             help_brush, help_pen, help_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_help:
-            painter.setBrush(self._brush_help_glow)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(self.header_help_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
             help_brush, help_pen, help_text_color = QBrush(QColor(37, 99, 235, 230)), QPen(QColor(219, 234, 254), 2.0), QColor(255, 255, 255)
         else:
             help_brush, help_pen, help_text_color = self._brush_help_idle, self._pen_help_idle, self._color_help_text
         painter.setBrush(help_brush)
         painter.setPen(help_pen)
-        painter.drawRoundedRect(self.header_help_rect, 10.0, 10.0)
+        painter.drawRoundedRect(self.header_help_rect, RADIUS_S, RADIUS_S)
         help_vpad = 2.0
         help_icon_rect = QRectF(
             self.header_help_rect.x() + 12.0,
@@ -4713,40 +4750,49 @@ class OverlayWindow(QWidget):
                 pill_h - help_vpad * 2.0,
             ),
             Qt.AlignmentFlag.AlignCenter,
-            "AYUDA",
+            "Ayuda",
         )
 
         # Mode selector: single interactive button (mode + dropdown hint)
         if self.active_click_header_mode:
             mode_brush, mode_pen, mode_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_mode:
-            painter.setBrush(self._brush_mode_glow)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(self.header_mode_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
-            mode_brush, mode_pen, mode_text_color = self._brush_mode_idle, QPen(QColor(96, 165, 250, 220), 1.5), QColor(255, 255, 255)
+            mode_brush, mode_pen, mode_text_color = self._brush_mode_idle, QPen(QColor(ACCENT_HEX), 1.5), QColor(255, 255, 255)
         else:
             mode_brush, mode_pen, mode_text_color = self._brush_mode_idle, self._pen_mode_idle, self._color_mode_text
         painter.setBrush(mode_brush)
         painter.setPen(mode_pen)
-        painter.drawRoundedRect(self.header_mode_rect, 10.0, 10.0)
+        painter.drawRoundedRect(self.header_mode_rect, RADIUS_S, RADIUS_S)
         mode_icon_rect = QRectF(
             self.header_mode_rect.x() + 9.0,
             self.header_mode_rect.y() + (pill_h - 18.0) * 0.5,
             18.0,
             18.0,
         )
-        mode_icon_color = self.theme_color or "#3b82f6"
-        IconManager.instance().render_icon(painter, "mode", mode_icon_rect, color=mode_icon_color, dpr=dpr)
-        painter.setPen(mode_text_color)
-        painter.setFont(self._font_header_bold_btn)
-        mode_label = f"MODO: {self._short_mode_label()}  ▾  (V)"
-        mode_label = painter.fontMetrics().elidedText(
-            mode_label,
-            Qt.TextElideMode.ElideRight,
-            int(max(20.0, self.header_mode_rect.width() - 36.0)),
+        IconManager.instance().render_icon(
+            painter, "mode", mode_icon_rect, color=self.theme_color or ACCENT_HEX, dpr=dpr
         )
+        # The mode's own color lives only in this 6px dot; everything else is accent.
+        painter.setBrush(QBrush(QColor(self.mode_color or ACCENT_HEX)))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(
+            QRectF(
+                self.header_mode_rect.x() + 31.0,
+                self.header_mode_rect.y() + (pill_h - 6.0) * 0.5,
+                6.0,
+                6.0,
+            )
+        )
+        painter.setPen(mode_text_color)
+        mode_text_w = max(20.0, self.header_mode_rect.width() - 50.0)
+        mode_font, mode_label = self._fit_text(
+            f"{_soften_caps(self._short_mode_label())} (V)",
+            mode_text_w,
+            self._font_header_bold_btn,
+        )
+        painter.setFont(mode_font)
         painter.drawText(
-            QRectF(self.header_mode_rect.x() + 31.0, self.header_mode_rect.y(), self.header_mode_rect.width() - 36.0, pill_h),
+            QRectF(self.header_mode_rect.x() + 42.0, self.header_mode_rect.y(), mode_text_w, pill_h),
             Qt.AlignmentFlag.AlignCenter,
             mode_label,
         )
@@ -4760,7 +4806,7 @@ class OverlayWindow(QWidget):
             lang_brush, lang_pen, lang_text_color = self._brush_btn_idle, self._pen_btn_idle, QColor(147, 197, 253)
         painter.setBrush(lang_brush)
         painter.setPen(lang_pen)
-        painter.drawRoundedRect(self.header_lang_rect, 10.0, 10.0)
+        painter.drawRoundedRect(self.header_lang_rect, RADIUS_S, RADIUS_S)
         lang_badge = get_language_badge(self.current_language)
         painter.setPen(lang_text_color)
         painter.setFont(self._font_header_bold_btn)
@@ -4805,14 +4851,15 @@ class OverlayWindow(QWidget):
                 )
                 painter.save()
                 painter.setOpacity(alpha_factor)
-                color = QColor(self.theme_color or "#3b82f6")
-                color.setAlpha(220)
-                painter.setBrush(QBrush(color))
-                painter.setPen(QPen(QColor(255, 255, 255, 200), 2.0))
-                painter.drawRoundedRect(banner_rect, 10.0, 10.0)
-                painter.setPen(QColor(255, 255, 255))
-                painter.setFont(self._font_header_bold_btn)
-                painter.drawText(banner_rect, Qt.AlignmentFlag.AlignCenter, self._mode_banner_text)
+                painter.setBrush(QBrush(QColor(10, 15, 29, 240)))
+                painter.setPen(QPen(QColor(self.theme_color or ACCENT_HEX), 1.5))
+                painter.drawRoundedRect(banner_rect, RADIUS_L, RADIUS_L)
+                painter.setPen(QColor(248, 250, 252))
+                banner_font, banner_text = self._fit_text(
+                    self._mode_banner_text, banner_rect.width() - 24.0, self._font_header_bold_btn
+                )
+                painter.setFont(banner_font)
+                painter.drawText(banner_rect, Qt.AlignmentFlag.AlignCenter, banner_text)
                 painter.restore()
         except Exception:
             pass
@@ -4826,7 +4873,7 @@ class OverlayWindow(QWidget):
             self.autofix_badge_rect = QRectF(w * 0.5 - bw * 0.5, header_rect.bottom() + 8.0, bw, 30.0)
             painter.setBrush(QColor(120, 53, 15, 235))
             painter.setPen(QPen(QColor(251, 146, 60, 245), 1.6))
-            painter.drawRoundedRect(self.autofix_badge_rect, 8.0, 8.0)
+            painter.drawRoundedRect(self.autofix_badge_rect, RADIUS_S, RADIUS_S)
             painter.setPen(QColor(255, 237, 213))
             painter.setFont(self._font_header_bold_btn)
             painter.drawText(self.autofix_badge_rect, Qt.AlignmentFlag.AlignCenter, badge)
@@ -4908,40 +4955,29 @@ class OverlayWindow(QWidget):
             painter.setOpacity(card_alpha)
             painter.setBrush(body_brush)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRoundedRect(rect, 10.0, 10.0)
+            painter.drawRoundedRect(rect, RADIUS_L, RADIUS_L)
 
-            # 2. Focused card gets a subtle sapphire glow and 2px soft halo
+            # 2. The focused card is the only element of the grid with a glow:
+            #    one soft halo that fades in and out with the focus transition.
+            chip_labels = [] if self.reading_mode else self._preview_chip_labels(item)
             if is_active and not self.reading_mode:
                 theme = border_pen.color()
-                # 2px soft halo around card perimeter
-                halo_pen = QPen(QColor(theme.red(), theme.green(), theme.blue(), 50), 2.0)
+                halo_pen = QPen(QColor(theme.red(), theme.green(), theme.blue(), 60), 3.0)
                 painter.setBrush(Qt.BrushStyle.NoBrush)
                 painter.setPen(halo_pen)
-                painter.drawRoundedRect(rect.adjusted(-2.0, -2.0, 2.0, 2.0), 10.0, 10.0)
+                painter.drawRoundedRect(rect.adjusted(-2.0, -2.0, 2.0, 2.0), RADIUS_L + 2.0, RADIUS_L + 2.0)
 
-                # Micro-elevation top highlight shimmer
-                gradient = QLinearGradient(rect.x(), rect.y(), rect.right(), rect.y())
-                transparent = QColor(theme)
-                transparent.setAlpha(0)
-                middle = QColor(theme)
-                middle.setAlpha(120)
-                gradient.setColorAt(0.0, transparent)
-                gradient.setColorAt(0.5, middle)
-                gradient.setColorAt(1.0, transparent)
-                painter.fillRect(
-                    QRectF(rect.x() + 10.0, rect.y() + 1.0, max(1.0, rect.width() - 20.0), 2.5),
-                    QBrush(gradient),
-                )
-
-            # 3. Neutral 1px frame, or 2px theme frame for the focused card.
+            # 3. Hairline frame for idle cards, 2px accent frame for the focused one.
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(border_pen)
-            painter.drawRoundedRect(rect, 10.0, 10.0)
+            painter.drawRoundedRect(rect, RADIUS_L, RADIUS_L)
 
-            # 4. High-contrast header band with rounded top corners.
-            band_h = min(52.0, rect.height())
+            # 4. Solid header band with rounded top corners. When the card has
+            #    command chips the band grows to wrap them, so they always sit on
+            #    a solid dark surface instead of the desktop behind the HUD.
+            band_h = min(52.0 + (_CHIP_BAND_EXTRA if chip_labels else 0.0), rect.height())
             if band_h > 4.0:
-                radius = 10.0
+                radius = RADIUS_L
                 path = QPainterPath()
                 path.moveTo(rect.x(), rect.y() + radius)
                 path.quadTo(rect.x(), rect.y(), rect.x() + radius, rect.y())
@@ -4962,7 +4998,7 @@ class OverlayWindow(QWidget):
             number_rect = QRectF(rect.x() + 10.0, rect.y() + 8.0, 24.0, 24.0)
             painter.setBrush(self._brush_badge_theme if is_active else self._brush_badge_inactive)
             painter.setPen(self._pen_badge_theme if is_active else self._pen_badge_active)
-            painter.drawRoundedRect(number_rect, 7.0, 7.0)
+            painter.drawRoundedRect(number_rect, RADIUS_S, RADIUS_S)
             painter.setPen(self._color_theme_text if is_active else self._color_card_text_inactive)
             painter.setFont(self._font_card_number)
             painter.drawText(number_rect, Qt.AlignmentFlag.AlignCenter, str(number))
@@ -4992,7 +5028,7 @@ class OverlayWindow(QWidget):
 
             if activation_progress > 0.0:
                 dwell_rect = number_rect.adjusted(-3.0, -3.0, 3.0, 3.0)
-                theme_accent = QColor(self.theme_color or "#3b82f6")
+                theme_accent = QColor(self.theme_color or ACCENT_HEX)
                 dwell_pen = QPen(QColor(theme_accent.red(), theme_accent.green(), theme_accent.blue(), 230), 2.5)
                 if is_danger:
                     dwell_pen.setColor(QColor(239, 68, 68, 230))
@@ -5006,32 +5042,47 @@ class OverlayWindow(QWidget):
             badge_color = self._color_badge_default
             if item.action_type == "MODE_SWITCH":
                 badge_text = (
-                    "ACTUAL"
+                    "Actual"
                     if item.mode_id == getattr(self, "current_context_mode_id", "")
-                    else "ELEGIR"
+                    else "Elegir"
                 )
                 badge_color = self._color_badge_sticky
             elif item.action_type == "SUBMENU":
-                badge_text = "SUBMENÚ"
+                # A chevron replaces the old "SUBMENÚ" capsule, freeing width for the title.
+                badge_text = ""
                 badge_color = self._color_badge_submenu
             elif item.action_type == "BACK":
-                badge_text = "VOLVER"
+                badge_text = "Volver"
                 badge_color = self._color_badge_back
             elif item.sticky:
-                badge_text = "FIJO"
+                badge_text = "Fijo"
                 badge_color = self._color_badge_sticky
             elif is_danger:
-                badge_text = "SALIR"
+                badge_text = "Salir"
                 badge_color = self._color_badge_back
 
             # Status badge + vector icon at the right of the band.
             icon_name = item.icon if item.action_type == "MODE_SWITCH" and item.icon else icon_map.get(cat)
             badge_rect, icon_rect = self._card_header_rects(rect, badge_text, bool(icon_name))
+            chevron_rect = QRectF()
+            if item.action_type == "SUBMENU":
+                chevron_rect = QRectF(rect.right() - 10.0 - 14.0, rect.y() + 19.0, 14.0, 14.0)
+                if icon_rect.isValid():
+                    icon_rect = icon_rect.translated(-20.0, 0.0)
+
+            if chevron_rect.isValid():
+                IconManager.instance().render_icon(
+                    painter,
+                    "chevron_right",
+                    chevron_rect,
+                    color=(border_pen.color() if is_active else QColor("#94A3B8")),
+                    dpr=dpr,
+                )
 
             if badge_rect.isValid():
                 painter.setBrush(self._brush_badge_active if is_active else self._brush_badge_inactive)
                 painter.setPen(self._pen_badge_active if is_active else self._pen_btn_idle)
-                painter.drawRoundedRect(badge_rect, 6.0, 6.0)
+                painter.drawRoundedRect(badge_rect, RADIUS_S, RADIUS_S)
                 painter.setPen(badge_color)
                 painter.setFont(self._font_status)
                 painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, badge_text)
@@ -5047,8 +5098,8 @@ class OverlayWindow(QWidget):
                 )
 
             # Title + subtitle inside the dark band.
-            title = _clean_action_label(_menu_card_label(item)) or item.label
-            subtitle = item.hint or ""
+            title = _soften_caps(_clean_action_label(_menu_card_label(item)) or item.label)
+            subtitle = _soften_caps(item.hint or "")
             if self.reading_mode and i == 4:
                 title = "REANUDAR"
                 subtitle = "Modo lectura activo · mira y abre la boca"
@@ -5057,16 +5108,13 @@ class OverlayWindow(QWidget):
             first_right = min(
                 badge_rect.left() if badge_rect.isValid() else rect.right() - 8.0,
                 icon_rect.left() if icon_rect.isValid() else rect.right() - 8.0,
+                chevron_rect.left() if chevron_rect.isValid() else rect.right() - 8.0,
             )
             title_right = first_right - 8.0
             title_w = max(20.0, title_right - title_left)
             painter.setPen(self._color_card_text_active if is_active else self._color_card_text_inactive)
-            painter.setFont(self._font_label)
-            title_text = painter.fontMetrics().elidedText(
-                title,
-                Qt.TextElideMode.ElideRight,
-                int(title_w),
-            )
+            title_font, title_text = self._fit_text(title, title_w, self._font_label)
+            painter.setFont(title_font)
             painter.drawText(
                 QRectF(title_left, rect.y() + 5.0, title_w, 24.0),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
@@ -5075,20 +5123,18 @@ class OverlayWindow(QWidget):
 
             if subtitle:
                 painter.setPen(self._color_card_subtitle if is_active else self._color_card_subtitle_inactive)
-                painter.setFont(self._font_card_subtitle)
-                subtitle_text = painter.fontMetrics().elidedText(
-                    subtitle,
-                    Qt.TextElideMode.ElideRight,
-                    int(title_w),
+                subtitle_font, subtitle_text = self._fit_text(
+                    subtitle, title_w, self._font_card_subtitle
                 )
+                painter.setFont(subtitle_font)
                 painter.drawText(
                     QRectF(title_left, rect.y() + 27.0, title_w, 17.0),
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                     subtitle_text,
                 )
 
-            if not self.reading_mode:
-                self._paint_preview_chips(painter, rect, self._preview_chip_labels(item))
+            if chip_labels:
+                self._paint_preview_chips(painter, rect, chip_labels)
 
             painter.restore()
 

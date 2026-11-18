@@ -942,6 +942,7 @@ class IDEyeApplication(QObject):
         cap_mode = bool(values.get("cap_mode_enabled", getattr(config, "CAP_MODE_ENABLED", False)))
         eco_enabled = bool(values.get("eco_sleep_enabled", getattr(config, "ECO_SLEEP_ENABLED", True)))
         ghost_enabled = bool(values.get("ghost_peek_enabled", getattr(config, "GHOST_PEEK_ENABLED", True)))
+        reduced_motion = bool(values.get("reduced_motion", getattr(config, "REDUCED_MOTION", False)))
         ghost_idle = float(
             values.get(
                 "ghost_peek_idle_seconds",
@@ -1008,6 +1009,7 @@ class IDEyeApplication(QObject):
         self.overlay.toggle_auto_switch(auto_switch)
         self.overlay.set_ghost_peek_enabled(ghost_enabled, emit_signal=False)
         self.overlay.set_ghost_peek_idle_seconds(ghost_idle)
+        self.overlay.set_reduced_motion(reduced_motion, emit_signal=False)
         if getattr(self.overlay, "_gaze_scroll_enabled", None) != gaze_scroll_enabled:
             self.overlay.toggle_gaze_scroll(gaze_scroll_enabled)
         self.overlay.set_language(lang)
@@ -1021,6 +1023,7 @@ class IDEyeApplication(QObject):
         self.debug_widget.set_cap_mode_enabled(cap_mode)
         self.debug_widget.set_eco_sleep_enabled(eco_enabled)
         self.debug_widget.set_ghost_peek_enabled(ghost_enabled)
+        self.debug_widget.set_reduced_motion(reduced_motion)
         self.debug_widget.set_winks_enabled(wink_enabled)
         self.debug_widget.set_wink_mouth_only(wink_mouth_only)
         if hasattr(self.mode_manager, "set_language"):
@@ -1138,6 +1141,7 @@ class IDEyeApplication(QObject):
             self.tracker.power_state_changed.connect(self._on_power_state_changed)
         self.debug_widget.eco_sleep_toggled.connect(self._on_eco_sleep_toggled)
         self.debug_widget.ghost_peek_toggled.connect(self._on_ghost_peek_toggled)
+        self.debug_widget.reduced_motion_toggled.connect(self._on_reduced_motion_toggled)
         self.debug_widget.winks_toggled.connect(self._on_winks_toggled)
         self.debug_widget.wink_mouth_only_toggled.connect(self._on_wink_mouth_only_toggled)
 
@@ -1312,6 +1316,13 @@ class IDEyeApplication(QObject):
         tray = getattr(self, "tray_icon", None)
         if tray is not None and hasattr(tray, "set_ghost_peek"):
             tray.set_ghost_peek(bool(enabled))
+
+    def _on_reduced_motion_toggled(self, enabled: bool) -> None:
+        if hasattr(self.overlay, "set_reduced_motion"):
+            self.overlay.set_reduced_motion(bool(enabled), emit_signal=False)
+        self.settings_manager.set("reduced_motion", bool(enabled))
+        if hasattr(self.debug_widget, "set_reduced_motion"):
+            self.debug_widget.set_reduced_motion(bool(enabled))
 
     def _on_winks_toggled(self, enabled: bool) -> None:
         detector = getattr(self.tracker, "gesture_detector", None)

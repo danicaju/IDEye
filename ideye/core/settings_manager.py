@@ -40,6 +40,7 @@ _FACTORY_DEFAULTS: Dict[str, Any] = {
     "eco_sleep_enabled": bool(getattr(config, "ECO_SLEEP_ENABLED", True)),
     "ghost_peek_enabled": bool(getattr(config, "GHOST_PEEK_ENABLED", True)),
     "ghost_peek_idle_seconds": float(getattr(config, "GHOST_PEEK_IDLE_SECONDS", 30.0)),
+    "reduced_motion": bool(getattr(config, "REDUCED_MOTION", False)),
     "gaze_scroll_enabled": bool(getattr(config, "GAZE_SCROLL_ENABLED", True)),
     "wink_enabled": bool(getattr(config, "WINK_ENABLED", True)),
     "wink_mouth_only": bool(getattr(config, "WINK_MOUTH_ONLY", False)),

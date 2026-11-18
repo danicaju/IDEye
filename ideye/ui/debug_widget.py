@@ -100,6 +100,7 @@ class DebugWidget(QWidget):
     cap_mode_toggled = pyqtSignal(bool)
     eco_sleep_toggled = pyqtSignal(bool)
     ghost_peek_toggled = pyqtSignal(bool)
+    reduced_motion_toggled = pyqtSignal(bool)
     winks_toggled = pyqtSignal(bool)
     wink_mouth_only_toggled = pyqtSignal(bool)
 
@@ -544,6 +545,15 @@ class DebugWidget(QWidget):
         self.chk_ghost_peek.toggled.connect(self.ghost_peek_toggled.emit)
         content_layout.addWidget(self.chk_ghost_peek)
 
+        self.chk_reduced_motion = QCheckBox("Reducir movimiento (cambios instantáneos)", self)
+        self.chk_reduced_motion.setChecked(bool(getattr(config, "REDUCED_MOTION", False)))
+        self.chk_reduced_motion.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chk_reduced_motion.setToolTip(
+            "Desactiva las transiciones del grid: el foco, el atenuado y los avisos cambian al instante."
+        )
+        self.chk_reduced_motion.toggled.connect(self.reduced_motion_toggled.emit)
+        content_layout.addWidget(self.chk_reduced_motion)
+
         self.chk_winks = QCheckBox("Guiños laterales con anti-blink", self)
         self.chk_winks.setChecked(bool(getattr(config, "WINK_ENABLED", True)))
         self.chk_winks.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -841,6 +851,12 @@ class DebugWidget(QWidget):
             self.chk_eco_sleep.blockSignals(True)
             self.chk_eco_sleep.setChecked(bool(enabled))
             self.chk_eco_sleep.blockSignals(False)
+
+    def set_reduced_motion(self, enabled: bool) -> None:
+        if hasattr(self, "chk_reduced_motion"):
+            self.chk_reduced_motion.blockSignals(True)
+            self.chk_reduced_motion.setChecked(bool(enabled))
+            self.chk_reduced_motion.blockSignals(False)
 
     def set_ghost_peek_enabled(self, enabled: bool) -> None:
         if hasattr(self, "chk_ghost_peek"):

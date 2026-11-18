@@ -502,6 +502,8 @@ CONTEXT_AUTO_SWITCH_ENABLED: bool = False
 ECO_SLEEP_ENABLED: bool = True
 GHOST_PEEK_ENABLED: bool = True
 GHOST_PEEK_IDLE_SECONDS: float = 30.0
+# When True every UI transition (focus, ghost-peek, lens, banner, margin) is instant.
+REDUCED_MOTION: bool = False
 GAZE_SCROLL_ENABLED: bool = True
 
 # ==============================================================================

@@ -252,6 +252,7 @@ class OverlayWindow(QWidget):
     ast_jump_requested = pyqtSignal(int)
     agentic_prompt_requested = pyqtSignal(str, str, bool)  # action_id, prompt, queue_only
     ghost_peek_toggled = pyqtSignal(bool)
+    reduced_motion_toggled = pyqtSignal(bool)
     gaze_scroll_toggled = pyqtSignal(bool)
     micro_recalibration_requested = pyqtSignal(float, float)
     layout_changed = pyqtSignal(str)
@@ -425,6 +426,7 @@ class OverlayWindow(QWidget):
         self.gaze_scroller = GazeScroller()
         self._gaze_scroll_enabled: bool = bool(getattr(config, "GAZE_SCROLL_ENABLED", True))
         self.ghost_peek_enabled: bool = bool(getattr(config, "GHOST_PEEK_ENABLED", True))
+        self.reduced_motion: bool = bool(getattr(config, "REDUCED_MOTION", False))
         self.ghost_peek_idle_seconds: float = max(
             30.0, float(getattr(config, "GHOST_PEEK_IDLE_SECONDS", 30.0))
         )
@@ -815,7 +817,7 @@ class OverlayWindow(QWidget):
             if self._animated_right_margin is not None
             else self._get_effective_right_margin(float(self.width() or 1920.0))
         )
-        if not animate or abs(current - target) < 0.5:
+        if not animate or self.reduced_motion or abs(current - target) < 0.5:
             self._animated_right_margin = target
             self._update_header_exit_rect()
             self.update()
@@ -4350,7 +4352,10 @@ class OverlayWindow(QWidget):
         if idle >= idle_threshold:
             target = max(0.15, min(1.0, float(target_opacity)))
             if self._ghost_opacity > target:
-                self._ghost_opacity = max(target, self._ghost_opacity - 0.08)
+                if self.reduced_motion:
+                    self._ghost_opacity = target
+                else:
+                    self._ghost_opacity = max(target, self._ghost_opacity - 0.08)
             else:
                 self._ghost_opacity = target
         elif self._ghost_opacity < 1.0:
@@ -4387,6 +4392,17 @@ class OverlayWindow(QWidget):
         self.ghost_peek_idle_seconds = max(2.0, value)
         self.update()
         return self.ghost_peek_idle_seconds
+
+    def set_reduced_motion(self, enabled: bool, emit_signal: bool = True) -> None:
+        """Turns gradual transitions off (instant state changes) or back on."""
+        self.reduced_motion = bool(enabled)
+        if self.reduced_motion and self._right_margin_animation is not None:
+            self._right_margin_animation.stop()
+            self._right_margin_animation = None
+            self.refresh_grid_right_margin(animate=False)
+        if emit_signal:
+            self.reduced_motion_toggled.emit(self.reduced_motion)
+        self.update()
 
     def toggle_ghost_peek(self) -> bool:
         self.set_ghost_peek_enabled(not self.ghost_peek_enabled)
@@ -4774,7 +4790,11 @@ class OverlayWindow(QWidget):
                 else:
                     alpha_factor = 1.0
                 alpha_factor = max(0.0, min(1.0, alpha_factor))
-                slide = (1.0 - min(1.0, progress / 0.18)) * 18.0 if progress < 0.18 else 0.0
+                if self.reduced_motion:
+                    alpha_factor = 1.0
+                    slide = 0.0
+                else:
+                    slide = (1.0 - min(1.0, progress / 0.18)) * 18.0 if progress < 0.18 else 0.0
 
                 banner_w = min(float(self.width()) - 2.0 * margin, 420.0)
                 banner_rect = QRectF(

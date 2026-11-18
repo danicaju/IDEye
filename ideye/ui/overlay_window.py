@@ -3167,6 +3167,18 @@ class OverlayWindow(QWidget):
         except Exception:
             pass
 
+    def _erase_typed_prefix(self, mode: Any) -> int:
+        """Deletes the letters already typed for the current word.
+
+        A suggestion replaces the word being written, so the letters the user
+        typed one by one ("f") must go before "Por favor" is inserted, or the
+        text ends up as "fPor favor".
+        """
+        count = len(getattr(mode, "_prefix", "") or "")
+        for _ in range(count):
+            self.code_injector.send_key("BACKSPACE")
+        return count
+
     def _handle_writing_action(self, item: MenuAction, target_block: int = 0) -> bool:
         """Executes T9/writing actions and returns True when handled."""
         action_type = getattr(item, "action_type", "")
@@ -3182,6 +3194,7 @@ class OverlayWindow(QWidget):
             if self.current_node_id == "WRITING_WORDS" and action_type == "SNIPPET":
                 mode = self._writing_mode()
                 if mode is not None:
+                    self._erase_typed_prefix(mode)
                     mode.reset_prefix()
                     self._refresh_writing_predictions()
             return False
@@ -3210,6 +3223,7 @@ class OverlayWindow(QWidget):
         if action_type == "WRITING_WORD":
             word = mode.apply_case_to_word(item.snippet or "")
             if word:
+                self._erase_typed_prefix(mode)
                 self.code_injector.insert_snippet(word + " ")
                 self.text_injected.emit(len(word) + 1)
             mode.reset_prefix()

@@ -140,6 +140,40 @@ class TestWritingLetterOverlayIntegration(unittest.TestCase):
         self.assertFalse(self.overlay._handle_writing_action(phrase))
         self.assertEqual(self.mode._prefix, "")
 
+    def test_prediction_replaces_the_typed_letters(self):
+        self._letter("c")
+        self._letter("a")
+        self.keys.clear()
+        prediction = self.overlay.menu_tree["WRITING_PREDICT"].items[0]
+        self.overlay.execute_action(prediction)
+
+        # "ca" is erased first, then "casa " is inserted: no stray letters.
+        self.assertEqual(self.keys, ["BACKSPACE", "BACKSPACE"])
+        self.assertEqual(self.inserted[-1], "casa ")
+
+    def test_phrase_replaces_the_typed_letter(self):
+        self._letter("c")
+        self.keys.clear()
+        self.overlay.navigate_to("WRITING_WORDS")
+        phrase = next(
+            item for item in self.overlay.menu_tree["WRITING_WORDS"].items
+            if item.action_type == "SNIPPET" and item.snippet
+        )
+        self.overlay._handle_writing_action(phrase)
+        self.assertEqual(self.keys, ["BACKSPACE"])
+
+    def test_word_after_a_space_erases_nothing(self):
+        self._letter("c")
+        space = next(
+            i for i in self.overlay.menu_tree["WRITING_AE"].items
+            if i.action_type == "WRITING_SPACE"
+        )
+        self.overlay.execute_action(space)
+        self.keys.clear()
+        prediction = self.overlay.menu_tree["WRITING_PREDICT"].items[0]
+        self.overlay.execute_action(prediction)
+        self.assertEqual(self.keys, [])
+
     def test_backspace_updates_prefix(self):
         self._letter("c")
         self._letter("a")

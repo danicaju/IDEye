@@ -779,7 +779,7 @@ class OverlayWindow(QWidget):
         return base_right_margin * (w / 1920.0)
 
     def _target_right_margin(self, w: Optional[float] = None) -> float:
-        """Computes the monitor-aware right margin (width + 16px safety gap)."""
+        """Computes the monitor-aware right margin (width + 24px safety gap)."""
         if self.debug_widget is None:
             return 0.0
         if not self.debug_widget.isVisible() or getattr(self.debug_widget, "is_collapsed", False):
@@ -788,7 +788,7 @@ class OverlayWindow(QWidget):
         debug_left = float(self.debug_widget.x() - self.x())
         # The monitor's true left edge determines the gap; the width+16 rule is
         # kept as a floor so the grid never slides under the panel.
-        return max(float(self.debug_widget.width()) + 16.0, width - debug_left + 16.0)
+        return max(float(self.debug_widget.width()) + 24.0, width - debug_left + 24.0)
 
     def set_debug_widget(self, widget: Optional[QWidget]) -> None:
         """Links the docked DebugWidget so the grid can react to its layout."""

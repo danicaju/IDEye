@@ -188,7 +188,7 @@ class DebugWidget(QWidget):
                 color: #f8fafc;
             }
             QProgressBar::chunk {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1d4ed8, stop:1 #3b82f6);
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0e7490, stop:1 #22d3ee);
                 border-radius: 5px;
             }
             QSlider::groove:horizontal {
@@ -198,11 +198,11 @@ class DebugWidget(QWidget):
                 border-radius: 3px;
             }
             QSlider::sub-page:horizontal {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1d4ed8, stop:1 #3b82f6);
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0e7490, stop:1 #22d3ee);
                 border-radius: 3px;
             }
             QSlider::handle:horizontal {
-                background: #3b82f6;
+                background: #22d3ee;
                 border: 1px solid #93c5fd;
                 width: 14px;
                 margin-top: -4px;
@@ -215,7 +215,7 @@ class DebugWidget(QWidget):
             QPushButton {
                 background-color: rgba(30, 41, 59, 0.6);
                 border: 1px solid #1e293b;
-                border-radius: 7px;
+                border-radius: 8px;
                 padding: 6px 10px;
                 font-size: 11px;
                 font-weight: 600;
@@ -223,7 +223,7 @@ class DebugWidget(QWidget):
             }
             QPushButton:hover {
                 background-color: rgba(37, 99, 235, 0.2);
-                border-color: #3b82f6;
+                border-color: #22d3ee;
                 color: #ffffff;
             }
             QPushButton:pressed {
@@ -231,12 +231,12 @@ class DebugWidget(QWidget):
             }
             QPushButton#btnReset {
                 background-color: rgba(37, 99, 235, 0.22);
-                border: 1px solid #2563eb;
+                border: 1px solid #0e7490;
                 color: #93c5fd;
             }
             QPushButton#btnReset:hover {
                 background-color: rgba(37, 99, 235, 0.42);
-                border-color: #3b82f6;
+                border-color: #22d3ee;
                 color: #ffffff;
             }
             QPushButton#btnExit {
@@ -252,37 +252,43 @@ class DebugWidget(QWidget):
             QFrame#cardFrame {
                 background-color: rgba(10, 15, 29, 0.85);
                 border: 1px solid #1e293b;
-                border-radius: 10px;
+                border-radius: 14px;
                 padding: 6px;
             }
         """)
 
         # 2. Top Stats Header: Live FPS Meter & Stability Indicator & Collapse Button
-        stats_layout = QHBoxLayout()
-        stats_layout.setSpacing(8)
+        stats_layout = QVBoxLayout()
+        stats_layout.setSpacing(4)
+        stats_row = QHBoxLayout()
+        stats_row.setSpacing(8)
+        state_row = QHBoxLayout()
+        state_row.setSpacing(12)
 
         self.lbl_fps = QLabel("30.0 FPS", self)
-        self.lbl_fps.setStyleSheet("font-size: 11px; font-weight: bold; color: #38bdf8;")
-        stats_layout.addWidget(self.lbl_fps, alignment=Qt.AlignmentFlag.AlignLeft)
-        self.lbl_power_state = QLabel("ECO: ACTIVE", self)
+        self.lbl_fps.setStyleSheet("font-size: 11px; font-weight: bold; color: #22d3ee;")
+        stats_row.addWidget(self.lbl_fps, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.lbl_power_state = QLabel("Activo", self)
         self.lbl_power_state.setStyleSheet("font-size: 10px; font-weight: bold; color: #22d3ee;")
-        stats_layout.addWidget(self.lbl_power_state, alignment=Qt.AlignmentFlag.AlignLeft)
+        stats_row.addWidget(self.lbl_power_state, alignment=Qt.AlignmentFlag.AlignLeft)
+        stats_row.addStretch(1)
 
-        self.lbl_stability = QLabel("100% Fijación", self)
+        self.lbl_stability = QLabel("Fijación", self)
         self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
-        stats_layout.addWidget(self.lbl_stability, alignment=Qt.AlignmentFlag.AlignHCenter)
+        state_row.addWidget(self.lbl_stability, alignment=Qt.AlignmentFlag.AlignLeft)
 
         self.lbl_lighting = QLabel("Luz: OK", self)
         self.lbl_lighting.setStyleSheet("font-size: 10px; font-weight: bold; color: #fbbf24;")
-        stats_layout.addWidget(self.lbl_lighting, alignment=Qt.AlignmentFlag.AlignHCenter)
+        state_row.addWidget(self.lbl_lighting, alignment=Qt.AlignmentFlag.AlignLeft)
+        state_row.addStretch(1)
 
-        self.btn_collapse = QPushButton("▲ Colapsar", self)
+        self.btn_collapse = QPushButton("Colapsar", self)
         self.btn_collapse.setObjectName("btnCollapse")
         self.btn_collapse.setStyleSheet("""
             QPushButton#btnCollapse {
                 background-color: #1e293b;
                 border: 1px solid #334155;
-                border-radius: 4px;
+                border-radius: 8px;
                 padding: 2px 6px;
                 font-size: 10px;
                 color: #94a3b8;
@@ -293,10 +299,13 @@ class DebugWidget(QWidget):
             }
         """)
         self.btn_collapse.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.btn_collapse.setToolTip("Alternar modo barra compacta")
+        self.btn_collapse.setToolTip("Reduce el panel a una barra compacta")
         self.btn_collapse.clicked.connect(self.toggle_collapse)
-        stats_layout.addWidget(self.btn_collapse, alignment=Qt.AlignmentFlag.AlignRight)
+        self.btn_collapse.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        stats_row.addWidget(self.btn_collapse, alignment=Qt.AlignmentFlag.AlignRight)
 
+        stats_layout.addLayout(stats_row)
+        stats_layout.addLayout(state_row)
         main_layout.addLayout(stats_layout)
 
         # Collapsible content container
@@ -309,7 +318,7 @@ class DebugWidget(QWidget):
         self.video_label = QLabel(self)
         self.video_label.setFixedSize(config.DEBUG_FEED_WIDTH, config.DEBUG_FEED_HEIGHT)
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.video_label.setStyleSheet("background-color: #081026; border: 1px solid #1e293b; border-radius: 12px;")
+        self.video_label.setStyleSheet("background-color: #081026; border: 1px solid #1e293b; border-radius: 14px;")
         self.video_label.setText("Iniciando cámara...")
         content_layout.addWidget(self.video_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -346,7 +355,7 @@ class DebugWidget(QWidget):
         mode_layout.setSpacing(4)
 
         lbl_mode = QLabel("MODO DE SEGUIMIENTO (Ctrl+Alt+T)", mode_frame)
-        lbl_mode.setStyleSheet("font-size: 10px; font-weight: bold; color: #3b82f6;")
+        lbl_mode.setStyleSheet("font-size: 10px; font-weight: bold; color: #22d3ee;")
         mode_layout.addWidget(lbl_mode)
 
         # Live segmented quick-toggle buttons
@@ -380,22 +389,21 @@ class DebugWidget(QWidget):
         self.combo_mode.addItem("Solo Cabeza (Recomendado)", "HEAD_PRIMARY")
         self.combo_mode.setStyleSheet("""
             QComboBox {
-                background-color: #081026;
-                border: 1px solid #1e293b;
-                border-radius: 6px;
-                padding: 4px 8px;
+                background-color: transparent;
+                border: none;
+                padding: 2px 0px;
                 font-size: 11px;
                 font-weight: 600;
-                color: #f8fafc;
+                color: #94a3b8;
             }
             QComboBox::drop-down {
                 border: none;
-                width: 20px;
+                width: 0px;
             }
             QComboBox QAbstractItemView {
                 background-color: #0a0f1d;
                 color: #f8fafc;
-                selection-background-color: #1d4ed8;
+                selection-background-color: #0e7490;
                 selection-color: #ffffff;
                 border: 1px solid #1e293b;
             }
@@ -461,7 +469,7 @@ class DebugWidget(QWidget):
         guide_layout.setSpacing(4)
 
         lbl_guide_title = QLabel("GUÍA DE GESTOS Y ATAJOS", guide_frame)
-        lbl_guide_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #38bdf8;")
+        lbl_guide_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #22d3ee;")
         lbl_guide_title.setWordWrap(True)
         lbl_guide_title.setMinimumWidth(0)
         guide_layout.addWidget(lbl_guide_title)
@@ -498,13 +506,13 @@ class DebugWidget(QWidget):
             label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         content_layout.addWidget(guide_frame)
 
-        self.btn_open_guide = QPushButton(" Abrir Manual Interactivo", self)
+        self.btn_open_guide = QPushButton("Abrir manual interactivo", self)
         self.btn_open_guide.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.btn_open_guide.setToolTip("Abre la gu?a visual interactiva completa en el navegador")
+        self.btn_open_guide.setToolTip("Abre la guía visual interactiva completa en el navegador")
         self.btn_open_guide.setStyleSheet(
-            "QPushButton { background-color: #4c1d95; color: #f5f3ff; border: 1px solid #a78bfa; "
-            "border-radius: 7px; padding: 8px 10px; font-weight: bold; }"
-            "QPushButton:hover { background-color: #6d28d9; }"
+            "QPushButton { background-color: #0e7490; color: #ecfeff; border: 1px solid #22d3ee; "
+            "border-radius: 8px; padding: 8px 10px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #0891b2; }"
         )
         self.btn_open_guide.clicked.connect(self.open_guide_requested.emit)
         content_layout.addWidget(self.btn_open_guide)
@@ -515,13 +523,13 @@ class DebugWidget(QWidget):
         self.chk_health_guard.toggled.connect(self.health_guard_toggled.emit)
         content_layout.addWidget(self.chk_health_guard)
 
-        self.chk_micro_gestures = QCheckBox("Micro-gestos: cejas e inclinaci?n", self)
+        self.chk_micro_gestures = QCheckBox("Micro-gestos: cejas e inclinación", self)
         self.chk_micro_gestures.setChecked(bool(getattr(config, "MICRO_GESTURES_ENABLED", True)))
         self.chk_micro_gestures.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.chk_micro_gestures.toggled.connect(self.micro_gestures_toggled.emit)
         content_layout.addWidget(self.chk_micro_gestures)
 
-        self.chk_low_light = QCheckBox("Visi?n nocturna CLAHE", self)
+        self.chk_low_light = QCheckBox("Visión nocturna (CLAHE)", self)
         self.chk_low_light.setChecked(bool(getattr(config, "AUTO_LOW_LIGHT_CLAHE", True)))
         self.chk_low_light.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.chk_low_light.toggled.connect(self.low_light_toggled.emit)
@@ -574,7 +582,7 @@ class DebugWidget(QWidget):
         lang_bridge_layout.setSpacing(4)
 
         lbl_lang_section = QLabel("LENGUAJE ACTIVO Y PUENTE VS CODE (Ctrl+Alt+L)", lang_bridge_frame)
-        lbl_lang_section.setStyleSheet("font-size: 10px; font-weight: bold; color: #38bdf8;")
+        lbl_lang_section.setStyleSheet("font-size: 10px; font-weight: bold; color: #22d3ee;")
         lang_bridge_layout.addWidget(lbl_lang_section)
 
         lang_row = QHBoxLayout()
@@ -590,8 +598,8 @@ class DebugWidget(QWidget):
         self.combo_language.setStyleSheet("""
             QComboBox {
                 background-color: #1e293b;
-                border: 1px solid #0284c7;
-                border-radius: 4px;
+                border: 1px solid #0e7490;
+                border-radius: 8px;
                 padding: 4px 8px;
                 font-size: 11px;
                 font-weight: 600;
@@ -604,7 +612,7 @@ class DebugWidget(QWidget):
             QComboBox QAbstractItemView {
                 background-color: #0f172a;
                 color: #f8fafc;
-                selection-background-color: #0284c7;
+                selection-background-color: #0e7490;
                 selection-color: #ffffff;
                 border: 1px solid #334155;
             }
@@ -613,7 +621,7 @@ class DebugWidget(QWidget):
         lang_row.addWidget(self.combo_language, stretch=3)
 
         self.lbl_vscode_status = QLabel("VS Code: Desconectado", lang_bridge_frame)
-        self.lbl_vscode_status.setStyleSheet("font-size: 10px; font-weight: bold; color: #94a3b8; padding: 3px 6px; border: 1px solid #334155; border-radius: 4px; background: #0f172a;")
+        self.lbl_vscode_status.setStyleSheet("font-size: 10px; font-weight: bold; color: #94a3b8; padding: 3px 6px; border: 1px solid #334155; border-radius: 8px; background: #0f172a;")
         self.lbl_vscode_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lang_row.addWidget(self.lbl_vscode_status, stretch=3)
 
@@ -625,7 +633,7 @@ class DebugWidget(QWidget):
         ai_layout.setSpacing(2)
 
         self.lbl_active_file = QLabel("Archivo: detección automática", self)
-        self.lbl_active_file.setStyleSheet("font-size: 10px; color: #38bdf8;")
+        self.lbl_active_file.setStyleSheet("font-size: 10px; color: #22d3ee;")
         ai_layout.addWidget(self.lbl_active_file)
 
         provider_name = getattr(config, "LLM_PROVIDER", "ollama").upper()
@@ -724,7 +732,7 @@ class DebugWidget(QWidget):
         self.btn_test_sound.setToolTip("Reproduce un clic de prueba con el motor de audio actual")
         self.btn_test_sound.setStyleSheet(
             "QPushButton { background-color: #0e7490; color: #ecfeff; border: 1px solid #22d3ee; "
-            "border-radius: 6px; padding: 6px 10px; font-weight: bold; }"
+            "border-radius: 8px; padding: 6px 10px; font-weight: bold; }"
             "QPushButton:hover { background-color: #0891b2; }"
         )
         self.btn_test_sound.clicked.connect(self.test_sound_requested.emit)
@@ -753,13 +761,13 @@ class DebugWidget(QWidget):
             self.content_container.hide()
             self.content_scroll.hide()
             self.setFixedHeight(48)
-            self.btn_collapse.setText("▼ Expandir")
+            self.btn_collapse.setText("Expandir")
             self.btn_collapse.setToolTip("Expandir monitor de depuración")
         else:
             self.content_container.show()
             self.content_scroll.show()
             self.setFixedSize(config.DEBUG_WINDOW_WIDTH, config.DEBUG_WINDOW_HEIGHT)
-            self.btn_collapse.setText("▲ Colapsar")
+            self.btn_collapse.setText("Colapsar")
             self.btn_collapse.setToolTip("Colapsar a mini-barra")
         self.collapsed_toggled.emit(self.is_collapsed)
 
@@ -821,7 +829,7 @@ class DebugWidget(QWidget):
             self.set_linked_file(file_path)
             self.file_linked.emit(file_path)
 
-    @pyqtSlot(str)
+    @pyqtSlot(bool)
     def set_health_guard_enabled(self, enabled: bool) -> None:
         if hasattr(self, "chk_health_guard"):
             self.chk_health_guard.blockSignals(True)
@@ -885,15 +893,20 @@ class DebugWidget(QWidget):
             "PAUSED_ECO": "#f59e0b",
             "AWAY_DEEP_SLEEP": "#94a3b8",
         }
-        label = normalized.replace("_", " ")
-        self.lbl_power_state.setText(f"ECO: {label}")
+        label = {
+            "ACTIVE": "Activo",
+            "PAUSED_ECO": "Pausa",
+            "AWAY_DEEP_SLEEP": "Reposo",
+        }.get(normalized, normalized.replace("_", " ").capitalize())
+        self.lbl_power_state.setText(label)
+        self.lbl_power_state.setToolTip("Estado del ahorro de energía")
         self.lbl_power_state.setStyleSheet(
             f"font-size: 10px; font-weight: bold; color: {colors.get(normalized, '#22d3ee')};"
         )
 
     def set_lighting_status(self, active: bool, luma: float) -> None:
         if hasattr(self, "lbl_lighting"):
-            self.lbl_lighting.setText("Visi?n nocturna: ON" if active else f"Luz: {float(luma):.0f}")
+            self.lbl_lighting.setText("Visión nocturna" if active else f"Luz: {float(luma):.0f}")
             self.lbl_lighting.setStyleSheet(
                 "font-size: 10px; font-weight: bold; color: %s;" % ("#fbbf24" if active else "#34d399")
             )
@@ -929,7 +942,7 @@ class DebugWidget(QWidget):
         else:
             self.mar_bar.setStyleSheet("""
                 QProgressBar::chunk {
-                    background-color: #3b82f6;
+                    background-color: #22d3ee;
                 }
             """)
 
@@ -941,7 +954,7 @@ class DebugWidget(QWidget):
         layout.setSpacing(4)
 
         title = QLabel("MÉTRICAS DE EFICIENCIA (LOOK-TO-CODE)", frame)
-        title.setStyleSheet("font-size: 11px; font-weight: bold; color: #3b82f6; letter-spacing: 0.5px;")
+        title.setStyleSheet("font-size: 11px; font-weight: bold; color: #22d3ee; letter-spacing: 0.5px;")
         layout.addWidget(title)
 
         self.lbl_telemetry_saved = QLabel("Ahorro Físico: 0 teclas (0% menos esfuerzo)", frame)
@@ -971,14 +984,14 @@ class DebugWidget(QWidget):
             QPushButton {
                 background-color: rgba(30, 41, 59, 0.7);
                 border: 1px solid #1e293b;
-                border-radius: 5px;
+                border-radius: 8px;
                 padding: 4px 8px;
                 font-size: 10px;
                 color: #cbd5e1;
             }
             QPushButton:hover {
                 background-color: rgba(37, 99, 235, 0.25);
-                border-color: #3b82f6;
+                border-color: #22d3ee;
                 color: #ffffff;
             }
         """)
@@ -1028,10 +1041,10 @@ class DebugWidget(QWidget):
             is_fix = getattr(self.gaze_estimator, "is_fixated", True)
             pct = int(score * 100)
             if is_fix:
-                self.lbl_stability.setText(f"Fijación: {pct}%")
+                self.lbl_stability.setText(f"Fijación {pct}%")
                 self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #34d399;")
             else:
-                self.lbl_stability.setText("Sácada / Movimiento")
+                self.lbl_stability.setText("Sácada")
                 self.lbl_stability.setStyleSheet("font-size: 11px; font-weight: bold; color: #fbbf24;")
 
         if frame_or_qimage is None:
@@ -1077,9 +1090,9 @@ class DebugWidget(QWidget):
 
         style_active = """
             QPushButton {
-                background-color: #0284c7;
-                border: 1px solid #38bdf8;
-                border-radius: 4px;
+                background-color: #0e7490;
+                border: 1px solid #22d3ee;
+                border-radius: 8px;
                 padding: 4px 6px;
                 font-size: 10px;
                 font-weight: bold;
@@ -1090,7 +1103,7 @@ class DebugWidget(QWidget):
             QPushButton {
                 background-color: #1e293b;
                 border: 1px solid #334155;
-                border-radius: 4px;
+                border-radius: 8px;
                 padding: 4px 6px;
                 font-size: 10px;
                 font-weight: 500;
@@ -1179,13 +1192,13 @@ class DebugWidget(QWidget):
                 self.lbl_vscode_status.setText("VS Code: Conectado (WS)")
                 self.lbl_vscode_status.setStyleSheet(
                     "font-size: 10px; font-weight: bold; color: #34d399; padding: 3px 6px; "
-                    "border: 1px solid #10b981; border-radius: 4px; background: #064e3b;"
+                    "border: 1px solid #10b981; border-radius: 8px; background: #064e3b;"
                 )
             else:
                 self.lbl_vscode_status.setText("VS Code: Desconectado")
                 self.lbl_vscode_status.setStyleSheet(
                     "font-size: 10px; font-weight: bold; color: #94a3b8; padding: 3px 6px; "
-                    "border: 1px solid #334155; border-radius: 4px; background: #0f172a;"
+                    "border: 1px solid #334155; border-radius: 8px; background: #0f172a;"
                 )
 
     def toggle_adaptive_ast(self) -> None:
@@ -1213,7 +1226,7 @@ class DebugWidget(QWidget):
                 QPushButton {
                     background-color: #065f46;
                     border: 1px solid #10b981;
-                    border-radius: 4px;
+                    border-radius: 8px;
                     padding: 4px 6px;
                     font-size: 10px;
                     font-weight: bold;
@@ -1228,7 +1241,7 @@ class DebugWidget(QWidget):
                 QPushButton {
                     background-color: #1e293b;
                     border: 1px solid #475569;
-                    border-radius: 4px;
+                    border-radius: 8px;
                     padding: 4px 6px;
                     font-size: 10px;
                     font-weight: bold;

@@ -1471,9 +1471,19 @@ class IDEyeApplication(QObject):
                     screen_geo.width(), screen_geo.height()
                 )
             dw_x = screen_geo.x() + screen_geo.width() - config.DEBUG_WINDOW_WIDTH - 12
-            dw_y = screen_geo.y() + 24
+            # Top-aligned with the HUD header so the panel and the bar share one edge.
+            dw_y = screen_geo.y() + int(getattr(self.overlay, "margin", 12))
             self.debug_widget.move(max(screen_geo.x(), dw_x), max(screen_geo.y(), dw_y))
             self.overlay.refresh_grid_right_margin(animate=False)
+            # Re-anchor if the usable desktop changes (resolution, taskbar, dock).
+            if not getattr(self, "_geometry_signal_connected", False):
+                try:
+                    screen.availableGeometryChanged.connect(
+                        lambda _geo=None: self._configure_geometry()
+                    )
+                    self._geometry_signal_connected = True
+                except Exception:
+                    pass
         else:
             self.overlay.resize(config.FRAME_WIDTH, config.FRAME_HEIGHT)
 

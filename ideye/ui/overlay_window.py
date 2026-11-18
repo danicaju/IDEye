@@ -588,22 +588,22 @@ class OverlayWindow(QWidget):
         self._pen_badge_active = QPen(QColor(255, 255, 255, 90), 1.0)
         self._brush_badge_active = QBrush(QColor(255, 255, 255, 28))
         self._brush_badge_inactive = QBrush(QColor(255, 255, 255, 12))
-        self._brush_status_pill = QBrush(QColor(37, 99, 235, 25))
+        self._brush_status_pill = QBrush(QColor(14, 116, 144, 40))
         self._pen_status_pill = QPen(QColor(59, 130, 246, 80), 1.0)
         self._brush_btn_idle = QBrush(QColor(30, 41, 59, 90))
         self._pen_btn_idle = QPen(QColor(30, 41, 59, 180), 1.0)
-        self._brush_help_idle = QBrush(QColor(37, 99, 235, 25))
-        self._pen_help_idle = QPen(QColor(59, 130, 246, 120), 1.0)
+        self._brush_help_idle = QBrush(QColor(14, 116, 144, 40))
+        self._pen_help_idle = QPen(QColor(34, 211, 238, 110), 1.0)
         self._brush_exit_idle = QBrush(QColor(239, 68, 68, 28))
         self._pen_exit_idle = QPen(QColor(239, 68, 68, 105), 1.0)
         self._brush_exit_glow = QBrush(QColor(239, 68, 68, 55))
-        self._brush_help_glow = QBrush(QColor(37, 99, 235, 65))
+        self._brush_help_glow = QBrush(QColor(14, 116, 144, 90))
         self._color_exit_text = QColor(254, 202, 202)
-        self._color_help_text = QColor(219, 234, 254)
-        self._brush_mode_idle = QBrush(QColor(37, 99, 235, 30))
+        self._color_help_text = QColor(207, 250, 254)
+        self._brush_mode_idle = QBrush(QColor(14, 116, 144, 45))
         self._pen_mode_idle = QPen(QColor("#3b82f6"), 1.0)
         self._brush_mode_glow = QBrush(QColor(59, 130, 246, 60))
-        self._color_mode_text = QColor(239, 246, 255)
+        self._color_mode_text = QColor(236, 254, 255)
 
         # Mode indicator pills
         self._brush_pill_edit = QBrush(QColor(16, 185, 129, 220))
@@ -714,8 +714,8 @@ class OverlayWindow(QWidget):
         self._brush_pointer_glow = QBrush(QColor(59, 130, 246, 40))
         self._pen_pointer_ring = QPen(QColor(248, 250, 252, 210), 1.8)
         self._brush_pointer_dot = QBrush(QColor(248, 250, 252, 245))
-        self._pen_pointer_progress = QPen(QColor(59, 130, 246), 2.2)
-        self._color_progress_cool = QColor(59, 130, 246)
+        self._pen_pointer_progress = QPen(QColor(34, 211, 238), 2.2)
+        self._color_progress_cool = QColor(34, 211, 238)
         self._color_progress_warm = QColor(251, 146, 60)
         self._set_theme_color(self.theme_color)
         self._update_header_exit_rect()
@@ -2665,16 +2665,16 @@ class OverlayWindow(QWidget):
 
         # Outer cyber sapphire precision ring
         painter.setBrush(QColor(10, 15, 29, 30))
-        painter.setPen(QPen(QColor(59, 130, 246, 230), 2.5))
+        painter.setPen(QPen(QColor(34, 211, 238, 230), 2.5))
         painter.drawEllipse(center, radius, radius)
 
         # Concentric inner ring with cyan aperture ticks
         inner_r = radius - 10.0
-        painter.setPen(QPen(QColor(96, 165, 250, 140), 1.0, Qt.PenStyle.DashLine))
+        painter.setPen(QPen(QColor(103, 232, 249, 140), 1.0, Qt.PenStyle.DashLine))
         painter.drawEllipse(center, inner_r, inner_r)
 
         # Precision crosshairs with center aperture clearance
-        painter.setPen(QPen(QColor(96, 165, 250, 200), 1.2))
+        painter.setPen(QPen(QColor(103, 232, 249, 200), 1.2))
         painter.drawLine(QPointF(cx - radius + 4.0, cy), QPointF(cx - 10.0, cy))
         painter.drawLine(QPointF(cx + 10.0, cy), QPointF(cx + radius - 4.0, cy))
         painter.drawLine(QPointF(cx, cy - radius + 4.0), QPointF(cx, cy - 10.0))
@@ -2684,7 +2684,7 @@ class OverlayWindow(QWidget):
         painter.setPen(QPen(QColor(248, 250, 252, 230), 1.0))
         painter.drawLine(QPointF(cx - 5.0, cy), QPointF(cx + 5.0, cy))
         painter.drawLine(QPointF(cx, cy - 5.0), QPointF(cx, cy + 5.0))
-        painter.setBrush(QBrush(QColor(59, 130, 246)))
+        painter.setBrush(QBrush(QColor(34, 211, 238)))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawEllipse(center, 2.0, 2.0)
         painter.restore()
@@ -4789,7 +4789,7 @@ class OverlayWindow(QWidget):
         if self.active_click_header_help:
             help_brush, help_pen, help_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_help:
-            help_brush, help_pen, help_text_color = QBrush(QColor(37, 99, 235, 230)), QPen(QColor(219, 234, 254), 2.0), QColor(255, 255, 255)
+            help_brush, help_pen, help_text_color = QBrush(QColor(14, 116, 144, 235)), QPen(QColor(207, 250, 254), 2.0), QColor(255, 255, 255)
         else:
             help_brush, help_pen, help_text_color = self._brush_help_idle, self._pen_help_idle, self._color_help_text
         painter.setBrush(help_brush)
@@ -4802,7 +4802,7 @@ class OverlayWindow(QWidget):
             icon_size,
             icon_size,
         )
-        IconManager.instance().render_icon(painter, "help", help_icon_rect, color="#93C5FD", dpr=dpr)
+        IconManager.instance().render_icon(painter, "help", help_icon_rect, color="#67E8F9", dpr=dpr)
         painter.setPen(help_text_color)
         painter.setFont(self._font_header_bold_btn)
         painter.drawText(
@@ -4864,9 +4864,9 @@ class OverlayWindow(QWidget):
         if self.active_click_header_lang:
             lang_brush, lang_pen, lang_text_color = self._brush_click, self._pen_click, self._color_click_text
         elif self.hovered_header_lang:
-            lang_brush, lang_pen, lang_text_color = QBrush(QColor(37, 99, 235, 180)), QPen(QColor(191, 219, 254), 1.6), QColor(255, 255, 255)
+            lang_brush, lang_pen, lang_text_color = QBrush(QColor(14, 116, 144, 190)), QPen(QColor(207, 250, 254), 1.6), QColor(255, 255, 255)
         else:
-            lang_brush, lang_pen, lang_text_color = self._brush_btn_idle, self._pen_btn_idle, QColor(147, 197, 253)
+            lang_brush, lang_pen, lang_text_color = self._brush_btn_idle, self._pen_btn_idle, QColor(165, 243, 252)
         painter.setBrush(lang_brush)
         painter.setPen(lang_pen)
         painter.drawRoundedRect(self.header_lang_rect, RADIUS_S, RADIUS_S)
@@ -4952,7 +4952,7 @@ class OverlayWindow(QWidget):
             painter.setBrush(QColor(10, 15, 29, 235))
             painter.setPen(QPen(QColor(59, 130, 246, 230), 1.4))
             painter.drawRoundedRect(self.game_profile_badge_rect, 7.0, 7.0)
-            painter.setPen(QColor(219, 234, 254))
+            painter.setPen(QColor(207, 250, 254))
             painter.setFont(self._font_header_bold_btn)
             painter.drawText(self.game_profile_badge_rect, Qt.AlignmentFlag.AlignCenter, profile_text)
         else:
@@ -5330,7 +5330,7 @@ class OverlayWindow(QWidget):
         # Column 1: gestures.
         gesture_col = columns[0]
         painter.setBrush(QBrush(QColor(15, 23, 42, 210)))
-        painter.setPen(QPen(QColor(59, 130, 246, 120), 1.0))
+        painter.setPen(QPen(QColor(34, 211, 238, 110), 1.0))
         painter.drawRoundedRect(gesture_col, 8.0, 8.0)
         painter.setFont(self._font_modal_section)
         painter.setPen(QColor(96, 165, 250))
@@ -5401,11 +5401,11 @@ class OverlayWindow(QWidget):
 
         self._update_help_modal_rect()
         if getattr(self, "hovered_help_modal_guide", False):
-            painter.setBrush(QBrush(QColor(37, 99, 235, 90)))
+            painter.setBrush(QBrush(QColor(14, 116, 144, 100)))
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRoundedRect(self.help_modal_guide_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
             guide_brush = QBrush(QColor(29, 78, 216, 245))
-            guide_pen = QPen(QColor(191, 219, 254), 2.0)
+            guide_pen = QPen(QColor(207, 250, 254), 2.0)
         else:
             guide_brush = QBrush(QColor(30, 41, 59, 220))
             guide_pen = QPen(QColor(59, 130, 246, 160), 1.0)
@@ -5421,11 +5421,11 @@ class OverlayWindow(QWidget):
         )
 
         if getattr(self, "hovered_help_modal_tutorial", False):
-            painter.setBrush(QBrush(QColor(37, 99, 235, 90)))
+            painter.setBrush(QBrush(QColor(14, 116, 144, 100)))
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRoundedRect(self.help_modal_tutorial_rect.adjusted(-4.0, -4.0, 4.0, 4.0), 10.0, 10.0)
-            tut_brush = QBrush(QColor(37, 99, 235, 245))
-            tut_pen = QPen(QColor(191, 219, 254), 2.0)
+            tut_brush = QBrush(QColor(14, 116, 144, 245))
+            tut_pen = QPen(QColor(207, 250, 254), 2.0)
         else:
             tut_brush = QBrush(QColor(30, 41, 59, 220))
             tut_pen = QPen(QColor(59, 130, 246, 160), 1.0)

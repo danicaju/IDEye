@@ -48,6 +48,12 @@ Verificadas en `tests/test_menu_integrity.py` (no las rompas al tocar `ideye/act
 
 Ninguna tecla modificadora puede quedar atascada. Toda pulsación de teclas/modificadores va en bloques `try ... finally` que llamen a `release_all_modifiers()` (ver `ideye/actions/code_injector.py`). Para mantener modificadores usa el context manager `hold_modifiers()`, que los libera en orden inverso aunque haya excepción o cancelación.
 
+## Modularidad: límite duro de 500 líneas
+
+- **Ningún archivo `.py`, `.ts`, `.js` o `.mjs` dentro de `ideye/`, `vscode-extension/src/`, `tools/` o `tests/` puede superar las 500 líneas** (docstrings, comentarios y líneas en blanco incluidos). Lo verifica `tests/test_modularity_line_limit.py`.
+- **Responsabilidad única y patrón fachada**: cuando un módulo supere o roce las 500 líneas, divídelo en submódulos cohesivos por responsabilidad (cada archivo nuevo idealmente entre 150 y 380 líneas) y re-exporta sus clases y funciones públicas en el archivo original para mantener la retrocompatibilidad de imports.
+- Las clases grandes se reparten en mixins (`class X(MixinA, MixinB)`) dentro de un subpaquete; los datos y el CSS se dividen por dominio.
+
 ## Tests
 
 - Ejecuta `pytest -v` (config en `pytest.ini`, `testpaths = tests`) y mantén el **100 % de los tests en verde** antes de dar una tarea por terminada.

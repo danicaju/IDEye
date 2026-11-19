@@ -4660,7 +4660,20 @@ class OverlayWindow(QWidget):
         if getattr(self, "_lens_capture_in_progress", False):
             painter.end()
             return
+        self._paint_scene(painter, event)
+        painter.end()
 
+    def _paint_scene(self, painter, event) -> None:
+        """Paints header, grid cards, modals and reticle onto an open painter."""
+        h, header_h, items, margin, w = self._paint_setup()
+        dpr, header_rect, pill_h = self._paint_header_brand(header_h, painter)
+        self._paint_header_buttons(dpr, painter, pill_h)
+        self._paint_mode_banner(header_rect, margin, painter)
+        self._paint_status_badges(header_rect, painter, w)
+        self._paint_grid_cards(dpr, items, painter)
+        self._paint_overlays(h, painter, w)
+
+    def _paint_setup(self):
         w = float(self.width())
         h = float(self.height())
         margin = self.margin
@@ -4668,7 +4681,9 @@ class OverlayWindow(QWidget):
 
         curr_node = self.current_node
         items = curr_node.items if curr_node else []
+        return h, header_h, items, margin, w
 
+    def _paint_header_brand(self, header_h, painter):
         # =====================================================================
         # 1. Top Breadcrumb Bar (Acrylic Glassmorphism)
         # =====================================================================
@@ -4771,7 +4786,9 @@ class OverlayWindow(QWidget):
             )
             painter.setFont(status_font)
             painter.drawText(last_pill_rect, Qt.AlignmentFlag.AlignCenter, status_text)
+        return dpr, header_rect, pill_h
 
+    def _paint_header_buttons(self, dpr, painter, pill_h):
         icon_size = 20.0
 
         # Exit: soft red command button
@@ -4893,6 +4910,7 @@ class OverlayWindow(QWidget):
             f"[ {lang_badge} ]",
         )
 
+    def _paint_mode_banner(self, header_rect, margin, painter):
         # =====================================================================
         # 1b. Transient mode-change banner (makes coding/writing switch obvious)
         # =====================================================================
@@ -4941,6 +4959,7 @@ class OverlayWindow(QWidget):
         except Exception:
             pass
 
+    def _paint_status_badges(self, header_rect, painter, w):
         # =====================================================================
         # Live diagnostics badge (amber/coral, non-blocking).
         if self._active_diagnostics and not self.reading_mode:
@@ -4972,6 +4991,7 @@ class OverlayWindow(QWidget):
         else:
             self.game_profile_badge_rect = QRectF()
 
+    def _paint_grid_cards(self, dpr, items, painter):
         # 2. 3x3 Grid Category Cards
         # =====================================================================
         icon_map = {
@@ -5220,6 +5240,7 @@ class OverlayWindow(QWidget):
 
         painter.restore()
 
+    def _paint_overlays(self, h, painter, w):
         # =====================================================================
         # 3. High-Contrast In-App Gesture & Shortcut Cheat Sheet Modal Card
         # =====================================================================
@@ -5274,7 +5295,6 @@ class OverlayWindow(QWidget):
         if getattr(self, "show_tutorial_modal", False):
             self._paint_tutorial_modal(painter, w, h)
 
-        painter.end()
     def _paint_gaze_scroll_indicators(self, painter: QPainter, w: float, h: float) -> None:
         """Draws subtle top/bottom velocity indicators while gaze scroll is active."""
         if not getattr(self, "_gaze_scroll_enabled", False):

@@ -12,7 +12,7 @@
 [![Release: v0.5.0](https://img.shields.io/badge/Release-v0.5.0-blue.svg?style=for-the-badge&logo=github)](https://github.com/danicaju/IDEye/releases)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-FaceMesh%20478-00A8E8?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![PyQt6](https://img.shields.io/badge/GUI-PyQt6%20No--Focus-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
-[![Tests](https://img.shields.io/badge/Tests-721%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#testing)
+[![Tests](https://img.shields.io/badge/Tests-726%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#testing)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=for-the-badge)](LICENSE)
 
 *Write code with a standard webcam, hybrid gaze tracking, and a few facial gestures. No keyboard, no voice commands, no infrared hardware.*
@@ -225,21 +225,41 @@ python main.py
 
 ```text
 IDEye/
-├── main.py                          # Root launcher (`python main.py`)
-├── config.py                        # Central configuration defaults
-├── requirements.txt                 # Dependencies (MediaPipe, PyQt6, OpenCV, numpy)
-├── build_app.py                     # Standalone PyInstaller onedir builder
-├── IDEye.bat / IDEye.vbs            # Windows quick / silent launchers
-├── docs/guia_interactiva.html       # Self-contained offline Interactive Guide
-├── vscode-extension/                # Official VS Code WebSocket companion extension
+├── main.py                                       # Root launcher (`python main.py`)
+├── config.py                                     # Central configuration defaults
+├── requirements.txt                              # Dependencies (MediaPipe, PyQt6, OpenCV, numpy)
+├── build_app.py                                  # Standalone PyInstaller onedir builder
+├── IDEye.bat / IDEye.vbs                         # Windows quick / silent launchers
+├── docs/guia_interactiva.html                    # Self-contained offline Interactive Guide
+├── tools/ideye-mcp/                              # MCP server `ideye-dev-tools` (hardware-free diagnostics)
+├── vscode-extension/src/                         # VS Code companion: extension.ts (bridge) + handlers.ts
 ├── ideye/
-│   ├── core/                        # Tracking, biometrics, audio, and WebSocket bridge
-│   ├── modes/                       # 6-mode strategy engine (Coding, Writing, Gaming...)
-│   ├── ui/                          # Transparent PyQt6 overlay, calibration & icons
-│   ├── actions/                     # AST extractor, AI predictor, and code injector
-│   └── assets/                      # High-DPI neon SVG icons & word prediction data
-└── tests/                           # 49 test modules (721 tests, hardware mocked)
+│   ├── main.py + app_*.py                        # App facade + legacy window, core, shortcuts, settings, calibration
+│   ├── config.py + config_*.py                   # Config facade + vision, gestures, ui, modes constants
+│   ├── core/
+│   │   ├── gaze_estimator.py + gaze_*            # Gaze estimation: filter, geometry, tuning, mapping, calibration, profile
+│   │   ├── gesture_detector.py + gesture_*       # Mouth/wink gestures: EAR, wink state machine, types
+│   │   ├── camera_tracker.py + camera_*          # Capture thread: device lifecycle, synthetic/debug frames
+│   │   ├── guide_catalog.py + catalog_*          # Interactive Guide data (pages, simulator, icons)
+│   │   ├── guide_builder.py + guide_*            # Guide HTML renderer (widgets, CSS, inline JS)
+│   │   └── websocket_bridge.py, ...              # Hotkeys, audio, screens, health, settings, telemetry
+│   ├── modes/                                    # 6-mode strategy engine (Coding, Writing, Gaming...)
+│   ├── ui/
+│   │   ├── overlay_window.py + overlay_*         # HUD overlay: 19 mixins (layout, gaze, paint, modes...)
+│   │   ├── debug_widget.py + debug_*             # Debug panel: builders and handlers
+│   │   ├── calibration_ui.py + calibration_*     # Calibration screen: MAR step and painting
+│   │   └── icon_manager.py, ...                  # Icons, tokens, tray, header layout
+│   ├── actions/
+│   │   ├── menu_trees.py + trees_*               # 3x3 menu trees: model, populators, adaptive, builders, root
+│   │   ├── context_reader.py + context_*         # Live AST reader: buffer, symbols, syntactic detection
+│   │   ├── code_injector.py + injector_*         # Key/snippet injection (release_all_modifiers safe)
+│   │   ├── agentic_*, ai_*, semantic_taxonomy.py # Agent prompts, AI predictor/heuristics, taxonomy
+│   │   └── language_support.py, ...              # Languages, clipboard, diagnostics, AST jumper
+│   └── assets/                                   # High-DPI neon SVG icons & word prediction data
+└── tests/                                        # 60 test files (726 tests, hardware mocked)
 ```
+
+Modularity rule: no source file exceeds 500 lines. Large classes are split into mixins and the original file stays as a facade that re-exports the public API (`tests/test_modularity_line_limit.py` enforces it).
 
 ---
 
@@ -251,11 +271,11 @@ The test suite mocks the hardware and covers numeric edge cases, menu-tree integ
 pytest -q
 ```
 ```text
-721 passed, 89 subtests in 29.7s
+726 passed, 89 subtests in 29.7s
 ```
 
 > [!NOTE]
-> All 721 tests run headless. They need no webcam, display server, or network.
+> All 726 tests run headless. They need no webcam, display server, or network.
 
 ---
 
